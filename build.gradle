@@ -1,0 +1,52 @@
+plugins {
+    // Apply the Java plugin to add support for Java.
+    id 'java'
+
+    // Apply the Spring Boot plugin
+    id 'org.springframework.boot' version '3.3.1' // Use a stable, recent version
+
+    // Apply the Spring Dependency Management plugin
+    id 'io.spring.dependency-management' version '1.1.5'
+}
+
+group = 'com.bankengine.catalog'
+version = '0.0.1-SNAPSHOT'
+
+// Set the Java version
+java {
+    sourceCompatibility = '17' // Match your desired Java version
+}
+
+repositories {
+    // Use Maven Central for dependencies
+    mavenCentral()
+}
+
+dependencies {
+    // --- Spring Boot Core ---
+    // Includes web server, auto-configuration, and logging
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // --- Data Persistence (JPA) ---
+    // Essential for your models (Product, FeatureComponent, etc.)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // --- Database Driver ---
+    // Use PostgreSQL for a robust system
+    // runtimeOnly 'org.postgresql:postgresql'
+
+    // --- Database Driver: H2 for Development ---
+    runtimeOnly 'com.h2database:h2'
+
+    // --- Utilities (Lombok is highly recommended for cleaner code) ---
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // --- Testing ---
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

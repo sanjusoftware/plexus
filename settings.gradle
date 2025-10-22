@@ -1,0 +1,12 @@
+pluginManagement {
+    repositories {
+        // Add Maven Central where the Spring Boot plugin resides
+        mavenCentral()
+
+        // Also good practice to include the Gradle Plugin Portal
+        gradlePluginPortal()
+    }
+}
+
+// Defines the name of your project
+rootProject.name = 'plexus'
