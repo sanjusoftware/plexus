@@ -61,7 +61,7 @@ public class TestDataSeeder implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         System.out.println("--- Seeding Development Data ---");
         seedProductTypes();
         seedFeaturesAndProducts();

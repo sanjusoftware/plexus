@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -75,10 +74,8 @@ public class PricingCalculationService {
             // Check Customer Segment (simple check)
             if (tier.getConditionKey() != null && tier.getConditionValue().equalsIgnoreCase(customerSegment)) {
                 // Check Numeric Threshold (e.g., loan size or spend)
-                boolean matchesThreshold = true;
-                if (tier.getMinThreshold() != null && transactionAmount.compareTo(tier.getMinThreshold()) < 0) {
-                    matchesThreshold = false; // Below min
-                }
+                boolean matchesThreshold = tier.getMinThreshold() == null || transactionAmount.compareTo(tier.getMinThreshold()) >= 0;
+                // Below min
                 if (tier.getMaxThreshold() != null && transactionAmount.compareTo(tier.getMaxThreshold()) > 0) {
                     matchesThreshold = false; // Above max
                 }
