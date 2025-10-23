@@ -13,10 +13,12 @@ import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingComponent.ComponentType;
 import com.bankengine.pricing.model.PricingTier;
+import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 
 import com.bankengine.pricing.repository.PricingTierRepository;
+import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -37,13 +39,17 @@ public class TestDataSeeder implements CommandLineRunner {
     private final PricingComponentRepository pricingComponentRepository;
     private final PricingTierRepository pricingTierRepository;
     private final PriceValueRepository priceValueRepository;
+    private final ProductPricingLinkRepository productPricingLinkRepository;
 
     public TestDataSeeder(
             ProductTypeRepository productTypeRepository,
             FeatureComponentRepository featureComponentRepository,
             ProductRepository productRepository,
             ProductFeatureLinkRepository linkRepository,
-            PricingComponentRepository pricingComponentRepository, PricingTierRepository pricingTierRepository, PriceValueRepository priceValueRepository) {
+            PricingComponentRepository pricingComponentRepository,
+            PricingTierRepository pricingTierRepository,
+            PriceValueRepository priceValueRepository,
+            ProductPricingLinkRepository productPricingLinkRepository) {
         this.productTypeRepository = productTypeRepository;
         this.featureComponentRepository = featureComponentRepository;
         this.productRepository = productRepository;
@@ -51,6 +57,7 @@ public class TestDataSeeder implements CommandLineRunner {
         this.pricingComponentRepository = pricingComponentRepository;
         this.pricingTierRepository = pricingTierRepository;
         this.priceValueRepository = priceValueRepository;
+        this.productPricingLinkRepository = productPricingLinkRepository;
     }
 
     @Override
@@ -162,5 +169,26 @@ public class TestDataSeeder implements CommandLineRunner {
         valueStandard.setCurrency("USD");
         valueStandard.setPricingTier(savedTierStandard);
         priceValueRepository.save(valueStandard); // <-- Saves the linked PriceValue
+
+        // --- 4. Link Product to Pricing Component ---
+
+        // Retrieve seeded Product ("Premium Savings Account")
+        Product premiumAccount = productRepository.findByName("Premium Savings Account")
+                .orElseThrow(() -> new RuntimeException("Product not found for linking."));
+
+        // Retrieve seeded Pricing Component ("Annual_Credit_Card_Fee")
+        PricingComponent annualFeeComponent = pricingComponentRepository.findByName("Annual_Credit_Card_Fee")
+                .orElseThrow(() -> new RuntimeException("Pricing Component not found for linking."));
+
+        // Create the Link
+        ProductPricingLink link = new ProductPricingLink();
+        link.setProduct(premiumAccount);
+        link.setPricingComponent(annualFeeComponent);
+        link.setContext("CORE_FEE"); // Define the purpose of this link
+
+        productPricingLinkRepository.save(link);
+
+        System.out.println("Linked Product '" + premiumAccount.getName() +
+                "' to Pricing Component '" + annualFeeComponent.getName() + "'.");
     }
 }

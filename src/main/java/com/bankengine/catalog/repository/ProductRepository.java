@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
@@ -14,4 +15,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Custom method to find products belonging to a specific bank
     List<Product> findByBankId(String bankId);
+
+    // Custom finder method required by the TestDataSeeder
+    Optional<Product> findByName(String name);
 }
