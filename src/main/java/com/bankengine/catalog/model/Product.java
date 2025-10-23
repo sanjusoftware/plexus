@@ -2,6 +2,8 @@ package com.bankengine.catalog.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.List;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -25,6 +27,9 @@ public class Product {
     @ManyToOne // Many Products belong to one ProductType
     @JoinColumn(name = "product_type_id", nullable = false)
     private ProductType productType;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ProductFeatureLink> productFeatureLinks;
 
     private String bankId; // To support multiple banks on the platform
     private LocalDate effectiveDate;

@@ -4,13 +4,20 @@ import com.bankengine.catalog.dto.ProductFeatureDto;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
+import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.bankengine.catalog.dto.CreateProductRequestDto;
+import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.ProductFeatureLinkDto;
+import com.bankengine.catalog.repository.ProductTypeRepository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -18,12 +25,15 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductFeatureLinkRepository linkRepository;
     private final FeatureComponentService featureComponentService;
+    private final ProductTypeRepository productTypeRepository;
 
     // Constructor Injection (Spring automatically provides the repository instances)
-    public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository, FeatureComponentService featureComponentService) {
+    public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository,
+                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository) {
         this.productRepository = productRepository;
         this.linkRepository = linkRepository;
         this.featureComponentService = featureComponentService;
+        this.productTypeRepository = productTypeRepository;
     }
 
     /**
@@ -51,17 +61,38 @@ public class ProductService {
     }
 
     /**
-     * Saves a new Product definition.
-     * NOTE: This simplified method only saves the core Product.
-     * Full creation would require handling the list of FeatureLinks separately.
+     * Creates a new Product from a DTO, converting to Entity and performing lookups.
      */
     @Transactional
-    public Product createProduct(Product product) {
-        // Basic business logic validation can go here (e.g., checking bankId format)
-        if (product.getBankId() == null || product.getBankId().isEmpty()) {
-            throw new IllegalArgumentException("Bank ID must be provided for the product.");
-        }
-        return productRepository.save(product);
+    public ProductResponseDto createProduct(CreateProductRequestDto requestDto) {
+        // 1. Look up the required ProductType entity
+        ProductType productType = productTypeRepository.findById(requestDto.getProductTypeId())
+                .orElseThrow(() -> new IllegalArgumentException("Product Type not found with ID: " + requestDto.getProductTypeId()));
+
+        // 2. Convert DTO to Entity
+        Product product = new Product();
+        product.setName(requestDto.getName());
+        product.setBankId(requestDto.getBankId());
+        product.setEffectiveDate(requestDto.getEffectiveDate());
+        product.setStatus(requestDto.getStatus());
+        product.setProductType(productType); // Set the looked-up entity
+
+        // 3. Save and convert back to DTO for response
+        Product savedProduct = productRepository.save(product);
+        return convertToResponseDto(savedProduct); // New helper method
+    }
+
+    /**
+     * Retrieves Product by ID and converts it to a Response DTO.
+     */
+    @Transactional // CRITICAL: Ensures the feature links can be loaded from the DB
+    public ProductResponseDto getProductResponseById(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + id));
+
+        // Accessing the feature links here (implicitly in convertToResponseDto)
+        // works because the method is inside a transaction.
+        return convertToResponseDto(product);
     }
 
     /**
@@ -86,5 +117,41 @@ public class ProductService {
         link.setFeatureValue(dto.getFeatureValue());
 
         return linkRepository.save(link);
+    }
+
+    // --- Helper Method for DTO Conversion ---
+    private ProductResponseDto convertToResponseDto(Product product) {
+        ProductResponseDto dto = new ProductResponseDto();
+        dto.setId(product.getId());
+        dto.setName(product.getName());
+        dto.setProductTypeName(product.getProductType() != null ? product.getProductType().getName() : null);
+        dto.setBankId(product.getBankId());
+        dto.setEffectiveDate(product.getEffectiveDate());
+        dto.setStatus(product.getStatus());
+
+        if (product.getProductFeatureLinks() != null) {
+            dto.setFeatures(
+                    product.getProductFeatureLinks().stream()
+                            .map(this::convertLinkToDto) // Use the new helper method
+                            .collect(Collectors.toList())
+            );
+        } else {
+            dto.setFeatures(Collections.emptyList()); // Return an empty list instead of null
+        }
+
+        return dto;
+    }
+
+    /**
+     * Helper Method: Converts a ProductFeatureLink Entity to its DTO.
+     */
+    private ProductFeatureLinkDto convertLinkToDto(ProductFeatureLink link) {
+        ProductFeatureLinkDto dto = new ProductFeatureLinkDto();
+
+        // Ensure you fetch the component name, not the entire component object
+        dto.setFeatureName(link.getFeatureComponent().getName());
+        dto.setFeatureValue(link.getFeatureValue());
+
+        return dto;
     }
 }

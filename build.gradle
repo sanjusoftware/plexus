@@ -27,6 +27,9 @@ dependencies {
     // Includes web server, auto-configuration, and logging
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    // Dependency for Bean Validation (JSR-303/380) and Hibernate Validator
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
     // --- Data Persistence (JPA) ---
     // Essential for your models (Product, FeatureComponent, etc.)
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

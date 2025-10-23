@@ -6,6 +6,9 @@ import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.service.ProductService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.bankengine.catalog.dto.CreateProductRequestDto;
+import com.bankengine.catalog.dto.ProductResponseDto;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -23,14 +26,14 @@ public class ProductController {
 
     /**
      * POST /api/v1/products
-     * Creates a new core Product entry in the catalog.
+     * Creates a new core Product entry in the catalog using DTO and validation.
      */
     @PostMapping
-    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
+    public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody CreateProductRequestDto requestDto) {
         try {
-            Product createdProduct = productService.createProduct(product);
-            // Returns the created product with a 201 Created status
-            return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+            // Service method is updated to accept the DTO
+            ProductResponseDto responseDto = productService.createProduct(requestDto);
+            return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             // Handles the business validation error from the service layer
             return new ResponseEntity(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -39,16 +42,15 @@ public class ProductController {
 
     /**
      * GET /api/v1/products/{id}
-     * Retrieves a Product and its associated features.
+     * Retrieves a Product and its associated features, returning a DTO.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        Optional<Product> product = productService.getProductById(id);
+    public ResponseEntity<ProductResponseDto> getProductById(@PathVariable Long id) {
+        // Service method is updated to return DTO
+        ProductResponseDto responseDto = productService.getProductResponseById(id);
 
-        // Returns the product if found, or a 404 Not Found otherwise
-        return product
-                .map(p -> new ResponseEntity<>(p, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        // Uses a helper method in the service to handle the Optional lookup
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 
     /**
