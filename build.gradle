@@ -18,7 +18,6 @@ java {
 }
 
 repositories {
-    // Use Maven Central for dependencies
     mavenCentral()
     maven { url "https://repository.jboss.org/maven2/" }
 }
@@ -30,6 +29,15 @@ dependencies {
 
     // Dependency for Bean Validation (JSR-303/380) and Hibernate Validator
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Spring Security Core
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // Spring Security OAuth2 Resource Server (for JWT processing)
+    implementation 'org.springframework.security:spring-security-oauth2-resource-server'
+
+    // Spring Security OAuth2 JOSE (Java Object Signing and Encryption, handles HMAC)
+    implementation 'org.springframework.security:spring-security-oauth2-jose'
 
     // Drools Dependencies
     // Drools 8.x Dependencies (Replaces 7.x.x)
