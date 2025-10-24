@@ -7,6 +7,7 @@ import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -15,6 +16,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @Tag(name = "Product Management", description = "Operations for creating and managing product definitions.")
 @RestController
@@ -25,6 +27,20 @@ public class ProductController {
 
     public ProductController(ProductService productService) {
         this.productService = productService;
+    }
+
+    /**
+     * GET /api/v1/products
+     * Retrieves all products in the catalog.
+     */
+    @Operation(summary = "Get a list of all products",
+            description = "Retrieves all products currently defined in the catalog.")
+    @ApiResponse(responseCode = "200", description = "List of products successfully retrieved.",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProductResponseDto.class))))
+    @GetMapping
+    public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
+        List<ProductResponseDto> products = productService.findAllProducts();
+        return new ResponseEntity<>(products, HttpStatus.OK);
     }
 
     /**
@@ -76,5 +92,23 @@ public class ProductController {
     public ResponseEntity<ProductFeatureLink> linkFeatureToProduct(@RequestBody ProductFeatureDto dto) {
         ProductFeatureLink link = productService.linkFeatureToProduct(dto);
         return new ResponseEntity<>(link, HttpStatus.CREATED);
+    }
+
+    /**
+     * DELETE /api/v1/products/{id} (Logical Deletion/Archival)
+     * Archives a product by setting its status to 'ARCHIVED'.
+     */
+    @Operation(summary = "Archive a product (Logical Deletion)",
+            description = "Sets the status of the product to 'ARCHIVED' instead of physical deletion.")
+    @ApiResponse(responseCode = "200", description = "Product successfully archived.",
+            content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Product not found with the given ID.")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ProductResponseDto> archiveProduct(
+            @Parameter(description = "The unique ID of the product to archive", required = true)
+            @PathVariable Long id) {
+
+        ProductResponseDto responseDto = productService.archiveProduct(id);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 }

@@ -17,6 +17,7 @@ import com.bankengine.catalog.repository.ProductTypeRepository;
 
 import java.util.Collections;
 import java.util.stream.Collectors;
+import java.util.List;
 
 @Service
 public class ProductService {
@@ -103,6 +104,28 @@ public class ProductService {
     private ProductType getProductTypeById(Long id) {
         return productTypeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Product Type not found with ID: " + id));
+    }
+
+    /**
+     * Retrieves all Product entities.
+     */
+    @Transactional(readOnly = true)
+    public List<ProductResponseDto> findAllProducts() {
+        return productRepository.findAll().stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Archives a product by setting its status to INACTIVE/ARCHIVED.
+     * This is an update operation, using the existing getProductEntityById for 404 handling.
+     */
+    @Transactional
+    public ProductResponseDto archiveProduct(Long id) {
+        Product product = getProductById(id);
+        product.setStatus("ARCHIVED");
+        Product updatedProduct = productRepository.save(product);
+        return convertToResponseDto(updatedProduct);
     }
 
     /**

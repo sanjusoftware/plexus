@@ -31,7 +31,7 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ProductFeatureLink> productFeatureLinks;
 
-    private String bankId; // To support multiple banks on the platform
+    private String bankId;
     private LocalDate effectiveDate;
     private String status; // e.g., "ACTIVE", "DRAFT", "INACTIVE"
 }
