@@ -1,5 +1,6 @@
 package com.bankengine.web;
 
+import com.bankengine.web.exception.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,11 +14,21 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    // Helper method to create a consistent JSON error map
+    private Map<String, Object> createErrorBody(HttpStatus status, String error, String message) {
+        return Map.of(
+            "timestamp", LocalDateTime.now(),
+            "status", status.value(),
+            "error", error,
+            "message", message
+        );
+    }
+
     /**
-     * Handles validation errors from @Valid annotation.
+     * 1. Handles validation errors from @Valid annotation. (400 BAD REQUEST)
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
 
         Map<String, String> errors = new HashMap<>();
@@ -25,33 +36,44 @@ public class GlobalExceptionHandler {
             errors.put(error.getField(), error.getDefaultMessage());
         });
 
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        // Return a consistent JSON object structure
+        Map<String, Object> body = createErrorBody(
+            HttpStatus.BAD_REQUEST,
+            "Validation Error",
+            "Input validation failed."
+        );
+        body.put("details", errors);
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
     /**
-     * Handles business logic errors (like Product Not Found or Product Type Not Found)
+     * 2. Handles business logic errors (e.g., name conflict). (400 BAD REQUEST)
      */
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        Map<String, Object> body = createErrorBody(status, "Bad Request", ex.getMessage());
+        return new ResponseEntity<>(body, status);
     }
 
-    // Handle the 'No matching pricing tier found' exception
+    /**
+     * 3. Handles resource not found errors. (404 NOT FOUND)
+     */
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFoundException(NotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        Map<String, Object> body = createErrorBody(status, "Not Found", ex.getMessage());
+        return new ResponseEntity<>(body, status);
+    }
+
+    /**
+     * 4. Handles Drools 'No match found' failure. (404 NOT FOUND)
+     */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalStateException(IllegalStateException ex) {
-
-        // This exception means the input (segment/amount) did not match ANY known rule.
-        // We map this to 404 NOT FOUND, implying the specific resource (price) for the given criteria is missing.
         HttpStatus status = HttpStatus.NOT_FOUND;
-
-        // Construct a clear error response body (similar to Spring's default error structure)
-        Map<String, Object> body = Map.of(
-                "timestamp", LocalDateTime.now(),
-                "status", status.value(),
-                "error", "Resource Not Found",
-                "message", ex.getMessage() // <--- **EXPOSE THE DROOLS FAILURE MESSAGE**
-        );
-
+        Map<String, Object> body = createErrorBody(status, "Resource Not Found", ex.getMessage());
         return new ResponseEntity<>(body, status);
     }
 }

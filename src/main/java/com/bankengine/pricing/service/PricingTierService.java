@@ -3,6 +3,7 @@ package com.bankengine.pricing.service;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.repository.PricingTierRepository;
+import com.bankengine.web.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,5 +25,13 @@ public class PricingTierService {
         return pricingTierRepository.findAllByPricingComponent(component);
     }
 
-    // You can add other tier-related methods here if needed
+    /**
+     * Retrieves a PricingTier entity by ID, throwing NotFoundException if not found.
+     * This centralizes the logic for a 404 response.
+     */
+    @Transactional(readOnly = true)
+    public PricingTier getPricingTierById(Long id) {
+        return pricingTierRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("PricingTier not found with ID: " + id));
+    }
 }

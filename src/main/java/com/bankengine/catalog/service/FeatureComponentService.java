@@ -2,13 +2,13 @@ package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
+import com.bankengine.web.exception.NotFoundException; // 💡 NEW IMPORT
 import org.springframework.stereotype.Service;
 import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
 import com.bankengine.catalog.dto.FeatureComponentResponseDto;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,19 +24,19 @@ public class FeatureComponentService {
      * Creates a new reusable Feature Component definition from a DTO.
      */
     public FeatureComponentResponseDto createFeature(CreateFeatureComponentRequestDto requestDto) {
-        // 1. Validation (Unique name check is handled in the original logic)
+        // 1. Validation (Unique name check)
         if (componentRepository.existsByName(requestDto.getName())) {
             throw new IllegalArgumentException("Feature Component name must be unique.");
         }
 
-        // 2. Convert DTO to Entity
+        // 2. Convert DTO to Entity and parse DataType
         FeatureComponent component = new FeatureComponent();
         component.setName(requestDto.getName());
 
-        // Safely parse the String Data Type to the Enum
         try {
             component.setDataType(DataType.valueOf(requestDto.getDataType().toUpperCase()));
         } catch (IllegalArgumentException e) {
+            // This is still a client error (bad data type string) -> 400 Bad Request
             throw new IllegalArgumentException("Invalid data type provided: " + requestDto.getDataType());
         }
 
@@ -46,21 +46,12 @@ public class FeatureComponentService {
     }
 
     /**
-     * Creates a new reusable Feature Component definition.
+     * Retrieves a Feature Component by its ID, throwing NotFoundException if absent.
+     * 💡 Updated to throw NotFoundException instead of returning Optional.
      */
-    public FeatureComponent createFeatureComponent(FeatureComponent component) {
-        // Simple validation: ensure the feature name is unique
-        if (componentRepository.existsByName(component.getName())) {
-            throw new IllegalArgumentException("Feature Component name must be unique.");
-        }
-        return componentRepository.save(component);
-    }
-
-    /**
-     * Retrieves a Feature Component by its ID.
-     */
-    public Optional<FeatureComponent> getFeatureComponent(Long id) {
-        return componentRepository.findById(id);
+    public FeatureComponent getFeatureComponentById(Long id) {
+        return componentRepository.findById(id)
+            .orElseThrow(() -> new NotFoundException("Feature Component not found with ID: " + id));
     }
 
     /**
@@ -69,9 +60,8 @@ public class FeatureComponentService {
     public List<FeatureComponentResponseDto> getAllFeatures() {
         List<FeatureComponent> components = componentRepository.findAll();
 
-        // Use Java Streams to map (convert) each entity to its corresponding DTO
         return components.stream()
-                .map(this::convertToDto) // Use the helper method defined below
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 

@@ -1,17 +1,16 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.pricing.dto.*;
-import com.bankengine.pricing.model.PricingComponent;
-import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.PriceValue;
+import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.PricingComponent.ComponentType;
+import com.bankengine.pricing.model.PricingTier;
+import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
-import com.bankengine.pricing.repository.PriceValueRepository;
+import com.bankengine.web.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.bankengine.pricing.model.PricingComponent.ComponentType;
-
-import java.util.Optional;
 
 @Service
 public class PricingComponentService {
@@ -30,6 +29,14 @@ public class PricingComponentService {
     }
 
     /**
+     * Helper method to retrieve a PricingComponent entity by ID, throwing NotFoundException on failure (404).
+     */
+    public PricingComponent getPricingComponentById(Long id) {
+        return componentRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Pricing Component not found with ID: " + id));
+    }
+
+    /**
      * Creates a new global Pricing Component (e.g., 'Annual Fee') from a DTO.
      */
     @Transactional
@@ -42,6 +49,7 @@ public class PricingComponentService {
         try {
             component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
         } catch (IllegalArgumentException e) {
+            // This is a 400 Bad Request
             throw new IllegalArgumentException("Invalid component type provided: " + requestDto.getType());
         }
 
@@ -60,13 +68,6 @@ public class PricingComponentService {
     }
 
     /**
-     * Retrieves a Pricing Component by ID.
-     */
-    public Optional<PricingComponent> getComponentById(Long id) {
-        return componentRepository.findById(id);
-    }
-
-    /**
      * Links a new Tier and its Price Value (from DTOs) to an existing Pricing Component.
      */
     @Transactional
@@ -74,9 +75,9 @@ public class PricingComponentService {
             Long componentId,
             CreatePricingTierRequestDto tierDto,
             CreatePriceValueRequestDto valueDto) {
-        // 1. Validate the component exists (unchanged)
-        PricingComponent component = componentRepository.findById(componentId)
-                .orElseThrow(() -> new IllegalArgumentException("Pricing Component not found."));
+
+        // 1. Validate the component exists (UPDATED to use centralized lookup)
+        PricingComponent component = getPricingComponentById(componentId);
 
         // 2. Convert Tier DTO to Entity
         PricingTier tier = convertTierDtoToEntity(tierDto);
@@ -110,6 +111,7 @@ public class PricingComponentService {
         try {
             value.setValueType(PriceValue.ValueType.valueOf(dto.getValueType().toUpperCase()));
         } catch (IllegalArgumentException e) {
+            // This is a 400 Bad Request
             throw new IllegalArgumentException("Invalid value type provided: " + dto.getValueType());
         }
         return value;

@@ -7,6 +7,7 @@ import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
+import com.bankengine.web.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.bankengine.catalog.dto.CreateProductRequestDto;
@@ -15,8 +16,6 @@ import com.bankengine.catalog.dto.ProductFeatureLinkDto;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,7 +26,6 @@ public class ProductService {
     private final FeatureComponentService featureComponentService;
     private final ProductTypeRepository productTypeRepository;
 
-    // Constructor Injection (Spring automatically provides the repository instances)
     public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository,
                           FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository) {
         this.productRepository = productRepository;
@@ -37,37 +35,12 @@ public class ProductService {
     }
 
     /**
-     * Retrieves a Product and its associated features by ID.
-     * @param id The ID of the Product.
-     * @return An Optional containing the Product if found.
-     */
-    public Optional<Product> getProductById(Long id) {
-        // Step 1: Get the Product (using JPA's built-in findById)
-        Optional<Product> product = productRepository.findById(id);
-
-        // Step 2: If the Product exists, fetch and set its features
-        product.ifPresent(p -> {
-            // Find all feature links associated with this product ID
-            List<ProductFeatureLink> features = linkRepository.findByProductId(p.getId());
-
-            // NOTE: In a more complex system, we would wrap this data
-            // in a DTO (Data Transfer Object) before returning.
-            // For now, we'll keep the logic simple.
-            System.out.println("Product retrieved with " + features.size() + " features.");
-            // We would typically process and attach these features to the DTO here.
-        });
-
-        return product;
-    }
-
-    /**
      * Creates a new Product from a DTO, converting to Entity and performing lookups.
      */
     @Transactional
     public ProductResponseDto createProduct(CreateProductRequestDto requestDto) {
-        // 1. Look up the required ProductType entity
-        ProductType productType = productTypeRepository.findById(requestDto.getProductTypeId())
-                .orElseThrow(() -> new IllegalArgumentException("Product Type not found with ID: " + requestDto.getProductTypeId()));
+        // 1. Look up the required ProductType entity (using centralized lookup)
+        ProductType productType = getProductTypeById(requestDto.getProductTypeId());
 
         // 2. Convert DTO to Entity
         Product product = new Product();
@@ -75,23 +48,21 @@ public class ProductService {
         product.setBankId(requestDto.getBankId());
         product.setEffectiveDate(requestDto.getEffectiveDate());
         product.setStatus(requestDto.getStatus());
-        product.setProductType(productType); // Set the looked-up entity
+        product.setProductType(productType);
 
         // 3. Save and convert back to DTO for response
         Product savedProduct = productRepository.save(product);
-        return convertToResponseDto(savedProduct); // New helper method
+        return convertToResponseDto(savedProduct);
     }
 
     /**
      * Retrieves Product by ID and converts it to a Response DTO.
      */
-    @Transactional // CRITICAL: Ensures the feature links can be loaded from the DB
+    @Transactional
     public ProductResponseDto getProductResponseById(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + id));
+        // Use the centralized lookup for consistency
+        Product product = getProductById(id);
 
-        // Accessing the feature links here (implicitly in convertToResponseDto)
-        // works because the method is inside a transaction.
         return convertToResponseDto(product);
     }
 
@@ -100,23 +71,79 @@ public class ProductService {
      */
     @Transactional
     public ProductFeatureLink linkFeatureToProduct(ProductFeatureDto dto) {
-        // 1. Validate Product exists
-        Product product = productRepository.findById(dto.getProductId())
-                .orElseThrow(() -> new IllegalArgumentException("Product not found."));
+    // 1. Validate Product exists
+    Product product = getProductById(dto.getProductId());
 
-        // 2. Validate FeatureComponent exists
-        FeatureComponent component = featureComponentService.getFeatureComponent(dto.getFeatureComponentId())
-                .orElseThrow(() -> new IllegalArgumentException("Feature Component not found."));
+    // 2. Validate FeatureComponent exists
+    FeatureComponent component = featureComponentService.getFeatureComponentById(dto.getFeatureComponentId());
 
-        // 3. Optional: Add logic here to validate dto.featureValue against component.dataType
+    // 3. Validate dto.featureValue against component.dataType
+    validateFeatureValue(dto.getFeatureValue(), component.getDataType());
 
-        // 4. Create and save the Link
-        ProductFeatureLink link = new ProductFeatureLink();
-        link.setProduct(product);
-        link.setFeatureComponent(component);
-        link.setFeatureValue(dto.getFeatureValue());
+    // 4. Create and save the Link
+    ProductFeatureLink link = new ProductFeatureLink();
+    link.setProduct(product);
+    link.setFeatureComponent(component);
+    link.setFeatureValue(dto.getFeatureValue());
 
-        return linkRepository.save(link);
+    return linkRepository.save(link);
+}
+
+    /**
+     * Helper method to retrieve a Product entity by ID, throwing NotFoundException on failure (404).
+     */
+    public Product getProductById(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Product not found with ID: " + id));
+    }
+
+    /**
+     * Helper method to retrieve a ProductType entity by ID, throwing NotFoundException on failure (404).
+     */
+    private ProductType getProductTypeById(Long id) {
+        return productTypeRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Product Type not found with ID: " + id));
+    }
+
+    /**
+     * Helper method to validate the feature value type.
+     * Throws IllegalArgumentException (maps to 400 Bad Request) on failure.
+     */
+    private void validateFeatureValue(String value, FeatureComponent.DataType requiredType) {
+        if (value == null || value.trim().isEmpty()) {
+            if (requiredType != FeatureComponent.DataType.STRING) {
+                throw new IllegalArgumentException("Feature value cannot be empty for data type: " + requiredType);
+            }
+        }
+
+        switch (requiredType) {
+            case INTEGER:
+                try {
+                    Integer.parseInt(value);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Feature value '" + value + "' must be a valid INTEGER.");
+                }
+                break;
+            case DECIMAL:
+                try {
+                    Double.parseDouble(value);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Feature value '" + value + "' must be a valid DECIMAL.");
+                }
+                break;
+            case BOOLEAN:
+                String lowerValue = value.toLowerCase();
+                if (!("true".equals(lowerValue) || "false".equals(lowerValue))) {
+                    throw new IllegalArgumentException("Feature value '" + value + "' must be 'true' or 'false' for BOOLEAN.");
+                }
+                break;
+            case STRING:
+                // No specific format validation is needed for strings.
+                break;
+            default:
+                // Should not happen, but defensive programming is good.
+                throw new IllegalArgumentException("Unsupported data type for validation: " + requiredType);
+        }
     }
 
     // --- Helper Method for DTO Conversion ---

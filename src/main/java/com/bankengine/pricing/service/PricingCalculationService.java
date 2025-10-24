@@ -5,6 +5,7 @@ import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.rules.dto.PricingRuleInput;
 // Drools Imports
+import com.bankengine.web.exception.NotFoundException;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.slf4j.Logger;
@@ -42,8 +43,10 @@ public class PricingCalculationService {
             return findMatchingPriceValue(matchedTier.get());
         }
 
-        // Fallback for no match (e.g., use a default tier/price)
-        throw new IllegalStateException("No matching pricing tier found for segment: " + customerSegment);
+        // 4. Fallback for no match: RULE FAILURE (404 NOT FOUND via GlobalExceptionHandler)
+        // This means, for the given input criteria, no price exists.
+        throw new IllegalStateException("No matching pricing tier found for segment: " + customerSegment +
+                                        " and amount: " + transactionAmount);
     }
 
     /**
@@ -96,6 +99,7 @@ public class PricingCalculationService {
             return pricingTier.getPriceValues().iterator().next();
         }
 
-        throw new IllegalStateException("Pricing Tier ID " + pricingTier.getId() + " contains no PriceValues.");
+        throw new IllegalArgumentException("Pricing Tier ID " + pricingTier.getId() +
+                " is matched by rules but contains no PriceValues. Check configuration.");
     }
 }
