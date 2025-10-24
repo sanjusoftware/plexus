@@ -135,12 +135,12 @@ public class TestDataSeeder implements CommandLineRunner {
         PricingComponent savedFeeComponent = pricingComponentRepository.save(annualFee);
 
         // --- 2. Create Tier 1: High Net Worth (Waived Fee) ---
-        PricingTier tierHnw = new PricingTier();
-        tierHnw.setTierName("High Net Worth Waiver");
-        tierHnw.setConditionKey("Customer_Segment"); // Placeholder key
-        tierHnw.setConditionValue("HNW"); // Placeholder value
-        tierHnw.setPricingComponent(savedFeeComponent);
-        PricingTier savedTierHnw = pricingTierRepository.save(tierHnw);
+        PricingTier tierPremium = new PricingTier();
+        tierPremium.setTierName("Premium Tier");
+        tierPremium.setConditionKey("Customer_Segment"); // Placeholder key
+        tierPremium.setConditionValue("PREMIUM"); // Placeholder value
+        tierPremium.setPricingComponent(savedFeeComponent);
+        PricingTier savedTierHnw = pricingTierRepository.save(tierPremium);
 
         PriceValue valueHnw = new PriceValue();
         valueHnw.setPriceAmount(BigDecimal.ZERO);
@@ -154,7 +154,7 @@ public class TestDataSeeder implements CommandLineRunner {
         PricingComponent standardFeeComponent = pricingComponentRepository.findByName("Annual_Credit_Card_Fee")
                 .orElseThrow(() -> new RuntimeException("Fee component not found."));
         PricingTier tierStandard = new PricingTier();
-        tierStandard.setTierName("Standard Client Fee");
+        tierStandard.setTierName("Standard Tier");
         tierStandard.setConditionKey("Annual_Spend"); // Setting the context for the threshold
         tierStandard.setConditionValue("STANDARD");
         tierStandard.setMinThreshold(new BigDecimal("0.00"));

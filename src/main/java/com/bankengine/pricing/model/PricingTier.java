@@ -1,5 +1,6 @@
 package com.bankengine.pricing.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,8 +22,9 @@ public class PricingTier {
     private PricingComponent pricingComponent; // Links to the component it modifies
 
     // Bidirectional link to all price values in this tier
-    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PriceValue> priceValue;
+    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonIgnore
+    private List<PriceValue> priceValues;
 
     private String tierName; // e.g., "Tier 1: High Net Worth", "Loan Size: 500k-1M"
 

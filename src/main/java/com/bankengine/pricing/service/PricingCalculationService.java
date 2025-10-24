@@ -1,99 +1,101 @@
 package com.bankengine.pricing.service;
 
-import com.bankengine.pricing.dto.CalculatedPriceDto;
-import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.PriceValue;
-import com.bankengine.pricing.repository.ProductPricingLinkRepository;
-import com.bankengine.pricing.repository.PricingTierRepository;
+import com.bankengine.rules.dto.PricingRuleInput;
+// Drools Imports
+import org.kie.api.runtime.KieContainer;
+import org.kie.api.runtime.KieSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 public class PricingCalculationService {
 
-    private final ProductPricingLinkRepository linkRepository;
-    private final PricingTierRepository tierRepository;
+    private static final Logger logger = LoggerFactory.getLogger(PricingCalculationService.class);
+    private final PricingTierService pricingTierService;
+    private final KieContainer kieContainer;
 
-    public PricingCalculationService(
-            ProductPricingLinkRepository linkRepository,
-            PricingTierRepository tierRepository) {
-        this.linkRepository = linkRepository;
-        this.tierRepository = tierRepository;
+    public PricingCalculationService(PricingTierService pricingTierService, KieContainer kieContainer) {
+        this.pricingTierService = pricingTierService;
+        this.kieContainer = kieContainer;
     }
 
-    /**
-     * Calculates the price/rate for a product based on customer and transaction data.
-     * This simulates the key Plexus functionality.
-     * * @param productId ID of the product.
-     * @param customerSegment The segment of the customer (e.g., HNW, STANDARD).
-     * @param transactionAmount The amount involved (e.g., loan size, annual spend).
-     * @return A map of components and their final calculated values.
-     */
-    public List<CalculatedPriceDto> calculateProductPrice(
-            Long productId, String customerSegment, BigDecimal transactionAmount) {
+    @Transactional(readOnly = true)
+    public PriceValue getCalculatedPrice(String customerSegment, BigDecimal transactionAmount, PricingComponent component) {
 
-        // 1. Find all relevant pricing components for this product.
-        List<ProductPricingLink> links = linkRepository.findByProductId(productId);
+        // 1. Fetch all relevant Pricing Tiers for the component
+        List<PricingTier> availableTiers = pricingTierService.findAllByPricingComponent(component);
 
-        // 2. Iterate through each component and find the matching price.
-        return links.stream()
-                .map(link -> {
-                    PricingComponent component = link.getPricingComponent();
+        // 2. Determine the correct Tier using the Rules Engine
+        Optional<PricingTier> matchedTier = determineTierWithDrools(customerSegment, transactionAmount, availableTiers);
 
-                    // 3. Find Tiers associated with this component
-                    // NOTE: This repository call needs to be efficient in a real app.
-                    List<PricingTier> tiers = tierRepository.findByPricingComponent(component);
-
-                    // 4. RULE ENGINE SIMULATION: Find the matching Tier/Value
-                    PriceValue finalValue = findMatchingPriceValue(tiers, customerSegment, transactionAmount);
-
-                    return new CalculatedPriceDto(
-                            component.getName(),
-                            finalValue != null ? finalValue.getPriceAmount() : BigDecimal.ZERO,
-                            finalValue != null ? finalValue.getValueType().name() : "N/A"
-                    );
-                })
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Internal method to simulate a complex lookup/Rule Engine decision.
-     */
-    private PriceValue findMatchingPriceValue(
-            List<PricingTier> tiers, String customerSegment, BigDecimal transactionAmount) {
-
-        // This is where the core logic of the Rules Engine (RMS) would live.
-        // It would execute a Drools or proprietary rule set.
-
-        for (PricingTier tier : tiers) {
-            // Check Customer Segment (simple check)
-            if (tier.getConditionKey() != null && tier.getConditionValue().equalsIgnoreCase(customerSegment)) {
-                // Check Numeric Threshold (e.g., loan size or spend)
-                boolean matchesThreshold = tier.getMinThreshold() == null || transactionAmount.compareTo(tier.getMinThreshold()) >= 0;
-                // Below min
-                if (tier.getMaxThreshold() != null && transactionAmount.compareTo(tier.getMaxThreshold()) > 0) {
-                    matchesThreshold = false; // Above max
-                }
-
-                if (matchesThreshold && tier.getPriceValue() != null && !tier.getPriceValue().isEmpty()) {
-                    // For simplicity, assume one PriceValue per Tier for now.
-                    // In reality, this links to PriceValue entity.
-
-                    // We need to fetch the PriceValue from the Tier (requires getter/link in Tier entity)
-                    // For now, let's use a placeholder.
-
-                    // FIX: We need a direct link from PricingTier to PriceValue for simplicity in the seeder.
-                    // Let's assume the first value in the PriceValueRepository linked by tier ID is the one.
-                    // This is messy, so let's simplify the data model retrieval.
-                    return tier.getPriceValue().stream().findFirst().orElse(null);
-                }
-            }
+        // 3. Find the corresponding PriceValue within the matched Tier (unchanged logic)
+        if (matchedTier.isPresent()) {
+            return findMatchingPriceValue(matchedTier.get());
         }
-        return null; // No match found
+
+        // Fallback for no match (e.g., use a default tier/price)
+        throw new IllegalStateException("No matching pricing tier found for segment: " + customerSegment);
+    }
+
+    /**
+     * Executes the Drools Rules Engine to find the correct Pricing Tier ID.
+     */
+    private Optional<PricingTier> determineTierWithDrools(String customerSegment, BigDecimal transactionAmount, List<PricingTier> availableTiers) {
+        // Create a new session for each execution to ensure thread safety and clean working memory
+        KieSession kieSession = kieContainer.newKieSession();
+
+        try {
+            // Set the logger global for DRL logging
+            kieSession.setGlobal("logger", logger);
+
+            // 1. Create the Input Fact
+            PricingRuleInput input = new PricingRuleInput();
+            input.setCustomerSegment(customerSegment);
+            input.setTransactionAmount(transactionAmount);
+            input.setAvailableTiers(availableTiers);
+
+            // 2. Insert the fact into the rules engine's working memory
+            kieSession.insert(input);
+
+            // 3. Fire all matching rules
+            kieSession.fireAllRules();
+
+            // 4. Extract the result
+            if (input.isRuleFired() && input.getMatchedTierId() != null) {
+                Long matchedTierId = input.getMatchedTierId();
+                return availableTiers.stream()
+                        .filter(t -> t.getId().equals(matchedTierId))
+                        .findFirst();
+            }
+
+            return Optional.empty(); // No rule fired
+
+        } finally {
+            // CRITICAL: Always dispose of the session to clean up resources!
+            kieSession.dispose();
+        }
+    }
+
+    /**
+     * Internal method to find the specific PriceValue within the Tier.
+     */
+    private PriceValue findMatchingPriceValue(PricingTier pricingTier) {
+        // For now, let's assume each Tier only has one PriceValue linked to it
+        // This is where more complex logic (like looking for a specific PriceValue by date/region)
+        // would go, but we keep it simple for now.
+        if (pricingTier.getPriceValues() != null && !pricingTier.getPriceValues().isEmpty()) {
+            return pricingTier.getPriceValues().iterator().next();
+        }
+
+        throw new IllegalStateException("Pricing Tier ID " + pricingTier.getId() + " contains no PriceValues.");
     }
 }

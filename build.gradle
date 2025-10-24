@@ -20,6 +20,7 @@ java {
 repositories {
     // Use Maven Central for dependencies
     mavenCentral()
+    maven { url "https://repository.jboss.org/maven2/" }
 }
 
 dependencies {
@@ -29,6 +30,15 @@ dependencies {
 
     // Dependency for Bean Validation (JSR-303/380) and Hibernate Validator
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Drools Dependencies
+    // Drools 8.x Dependencies (Replaces 7.x.x)
+    def droolsVersion = '8.44.2.Final' // Use a stable 8.x version
+
+    implementation "org.drools:drools-core:${droolsVersion}"
+    implementation "org.drools:drools-compiler:${droolsVersion}"
+    implementation "org.kie:kie-api:${droolsVersion}"
+    implementation "org.kie:kie-ci:${droolsVersion}"
 
     // --- Data Persistence (JPA) ---
     // Essential for your models (Product, FeatureComponent, etc.)

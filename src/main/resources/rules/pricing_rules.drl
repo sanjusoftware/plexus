@@ -1,0 +1,48 @@
+package com.bankengine.pricing.rules
+
+// Imports the DTOs (Facts) that the engine will work with
+import com.bankengine.rules.dto.PricingRuleInput;
+import com.bankengine.pricing.model.PricingTier;
+import java.math.BigDecimal;
+
+// Global to log when a rule is executed (optional, but helpful for debugging)
+global org.slf4j.Logger logger;
+
+rule "Tier 1: High-Value Customer Segment Match"
+    when
+        // Input Fact: Match the pricing input object
+        $input: PricingRuleInput(
+            // Condition 1: Check if the segment is 'PREMIUM'
+            customerSegment == "PREMIUM",
+            // Condition 2: Check if the transaction amount is >= 5000
+            transactionAmount.compareTo( new BigDecimal("5000") ) >= 0
+        )
+        // Iterates through the available tiers to find the match
+        $tier: PricingTier( tierName == "Premium Tier" ) from $input.availableTiers
+    then
+        // Action: Set the matched ID in the input object (the output)
+        $input.setMatchedTierId($tier.getId());
+        $input.setRuleFired(true);
+        // Log the decision
+        logger.info("Rule Fired: Matched PREMIUM segment to Tier ID: " + $tier.getId());
+        // Stop execution to prevent other rules from overwriting the result
+        drools.halt();
+end
+
+rule "Tier 2: Standard Customer Segment Match"
+    when
+        // Input Fact: Match the pricing input object
+        $input: PricingRuleInput(
+            // Condition 1: Check if the segment is 'STANDARD'
+            customerSegment == "STANDARD",
+            // Condition 2: Check if the transaction amount is < 5000 (i.e., less than the PREMIUM threshold)
+            transactionAmount.compareTo( new BigDecimal("5000") ) < 0
+        )
+        // Iterates through the available tiers to find the match
+        $tier: PricingTier( tierName == "Standard Tier" ) from $input.availableTiers
+    then
+        $input.setMatchedTierId($tier.getId());
+        $input.setRuleFired(true);
+        logger.info("Rule Fired: Matched STANDARD segment to Tier ID: " + $tier.getId());
+        drools.halt();
+end
