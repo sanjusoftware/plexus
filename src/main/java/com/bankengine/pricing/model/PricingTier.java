@@ -1,5 +1,6 @@
 package com.bankengine.pricing.model;
 
+import com.bankengine.common.model.AuditableEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import java.util.List;
 @Table(name = "pricing_tier")
 @Getter
 @Setter
-public class PricingTier {
+public class PricingTier extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

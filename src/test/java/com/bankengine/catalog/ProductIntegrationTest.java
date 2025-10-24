@@ -1,6 +1,7 @@
 package com.bankengine.catalog;
 
 import com.bankengine.catalog.dto.CreateProductRequestDto;
+import com.bankengine.catalog.dto.ProductResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 
 import java.time.LocalDate;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -125,6 +125,55 @@ public class ProductIntegrationTest {
                 .andExpect(jsonPath("$.status").value(404));
     }
 
-    // NOTE: You would add another test here for the linkFeatureToProduct logic,
-    // checking for a 400 Bad Request on invalid data type validation.
+    // =================================================================
+    // ARCHIVAL AND GET ALL
+    // =================================================================
+
+    @Test
+    @WithMockUser
+    void shouldReturn200AndListOfProducts() throws Exception {
+        // ACT: Call GET /api/v1/products
+        mockMvc.perform(get("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    @WithMockUser
+    void shouldArchiveProductAndSetStatusToInactive() throws Exception {
+        // ARRANGE: Create a product first
+        String productJson = mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(getValidCreateProductRequestDto())))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        ProductResponseDto createdProduct = objectMapper.readValue(productJson, ProductResponseDto.class);
+        Long productId = createdProduct.getId();
+
+        // ACT: Call DELETE /api/v1/products/{id}
+        mockMvc.perform(delete("/api/v1/products/{id}", productId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                // ASSERT: Check that the status is correctly changed to the terminal state
+                .andExpect(jsonPath("$.status").value("INACTIVE"))
+                // ASSERT: Check that the expirationDate is set (to today's date, which is non-null)
+                .andExpect(jsonPath("$.expirationDate").exists())
+                // ASSERT: Check that the updatedAt timestamp is present (due to JPA Auditing)
+                .andExpect(jsonPath("$.updatedAt").exists());
+    }
+
+    @Test
+    @WithMockUser
+    void shouldReturn404WhenArchivingNonExistentProduct() throws Exception {
+        Long nonExistentId = 99999L; // ID guaranteed not to exist
+
+        // ACT: Attempt to archive a non-existent product
+        mockMvc.perform(delete("/api/v1/products/{id}", nonExistentId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                // ASSERT: Expect 404 Not Found due to getProductEntityById() in the service
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
 }

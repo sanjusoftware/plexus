@@ -1,6 +1,7 @@
 package com.bankengine.pricing.model;
 
 import com.bankengine.catalog.model.Product;
+import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,7 +10,7 @@ import lombok.Setter;
 @Table(name = "product_pricing_link")
 @Getter
 @Setter
-public class ProductPricingLink {
+public class ProductPricingLink extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,5 +1,6 @@
 package com.bankengine.catalog.model;
 
+import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.List;
@@ -15,7 +16,7 @@ import lombok.AllArgsConstructor;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Product {
+public class Product extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,6 +24,12 @@ public class Product {
 
     @Column(nullable = false)
     private String name; // e.g., "Premier Home Loan"
+
+    @Column(name = "activation_date")
+    private LocalDate activationDate;
+
+    @Column(name = "expiration_date")
+    private LocalDate expirationDate;
 
     @ManyToOne // Many Products belong to one ProductType
     @JoinColumn(name = "product_type_id", nullable = false)

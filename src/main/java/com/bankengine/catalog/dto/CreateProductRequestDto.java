@@ -25,4 +25,7 @@ public class CreateProductRequestDto {
 
     @NotBlank(message = "Status is required (e.g., DRAFT, ACTIVE).")
     private String status;
+
+    private LocalDate activationDate;
+    private LocalDate expirationDate;
 }

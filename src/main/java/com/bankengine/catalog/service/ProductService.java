@@ -15,6 +15,7 @@ import com.bankengine.catalog.dto.ProductResponseDto;
 import com.bankengine.catalog.dto.ProductFeatureLinkDto;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.List;
@@ -48,6 +49,8 @@ public class ProductService {
         product.setName(requestDto.getName());
         product.setBankId(requestDto.getBankId());
         product.setEffectiveDate(requestDto.getEffectiveDate());
+        product.setActivationDate(requestDto.getActivationDate());
+        product.setExpirationDate(requestDto.getExpirationDate());
         product.setStatus(requestDto.getStatus());
         product.setProductType(productType);
 
@@ -117,13 +120,14 @@ public class ProductService {
     }
 
     /**
-     * Archives a product by setting its status to INACTIVE/ARCHIVED.
+     * Archives a product by setting its status to INACTIVE.
      * This is an update operation, using the existing getProductEntityById for 404 handling.
      */
     @Transactional
     public ProductResponseDto archiveProduct(Long id) {
         Product product = getProductById(id);
-        product.setStatus("ARCHIVED");
+        product.setStatus("INACTIVE");
+        product.setExpirationDate(LocalDate.now());
         Product updatedProduct = productRepository.save(product);
         return convertToResponseDto(updatedProduct);
     }
@@ -178,6 +182,10 @@ public class ProductService {
         dto.setBankId(product.getBankId());
         dto.setEffectiveDate(product.getEffectiveDate());
         dto.setStatus(product.getStatus());
+        dto.setActivationDate(product.getActivationDate());
+        dto.setExpirationDate(product.getExpirationDate());
+        dto.setCreatedAt(product.getCreatedAt());
+        dto.setUpdatedAt(product.getUpdatedAt());
 
         if (product.getProductFeatureLinks() != null) {
             dto.setFeatures(
