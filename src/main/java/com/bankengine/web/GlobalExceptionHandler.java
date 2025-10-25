@@ -1,5 +1,6 @@
 package com.bankengine.web;
 
+import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -74,6 +75,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleIllegalStateException(IllegalStateException ex) {
         HttpStatus status = HttpStatus.NOT_FOUND;
         Map<String, Object> body = createErrorBody(status, "Resource Not Found", ex.getMessage());
+        return new ResponseEntity<>(body, status);
+    }
+
+    /**
+     * 5. Handles dependency violation errors (409 CONFLICT)
+     */
+    @ExceptionHandler(DependencyViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDependencyViolationException(DependencyViolationException ex) {
+        HttpStatus status = HttpStatus.CONFLICT; // 409
+        Map<String, Object> body = createErrorBody(status, "Conflict (Dependency Exists)", ex.getMessage());
         return new ResponseEntity<>(body, status);
     }
 }

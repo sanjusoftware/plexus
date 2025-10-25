@@ -11,4 +11,10 @@ public interface ProductFeatureLinkRepository extends JpaRepository<ProductFeatu
 
     // Method to fetch ALL feature links for a given Product ID
     List<ProductFeatureLink> findByProductId(Long productId);
+
+    // Used by FeatureComponentService to check for dependencies
+    boolean existsByFeatureComponentId(Long featureComponentId);
+
+    // Used to return a helpful message showing the count of dependencies
+    long countByFeatureComponentId(Long featureComponentId);
 }

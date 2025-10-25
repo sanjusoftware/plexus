@@ -29,6 +29,7 @@ public class ProductFeatureLink extends AuditableEntity {
 
     // This is the product-specific value for the feature.
     // e.g., "120" if feature_component is "Max_Tenure" (DataType: INTEGER)
+    // or if the feature is "Monthly Fee", the value might be "10.00"
     @Column(name = "feature_value", nullable = false, length = 1000)
     private String featureValue;
 }
