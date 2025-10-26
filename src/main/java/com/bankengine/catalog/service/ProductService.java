@@ -7,12 +7,18 @@ import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
+import com.bankengine.catalog.repository.specification.ProductSpecification;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.web.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.bankengine.catalog.repository.ProductTypeRepository;
@@ -44,6 +50,26 @@ public class ProductService {
         this.entityManager = entityManager;
         this.pricingLinkRepository = pricingLinkRepository;
         this.pricingComponentService = pricingComponentService;
+    }
+
+    /**
+     * Searches and filters products based on criteria, returning paginated results.
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductResponseDto> searchProducts(ProductSearchRequestDto criteria) {
+
+        // 1. Build the dynamic query specification
+        Specification<Product> specification = ProductSpecification.filterBy(criteria);
+
+        // 2. Create the Pageable object for pagination and sorting
+        Sort sort = Sort.by(Sort.Direction.fromString(criteria.getSortDirection()), criteria.getSortBy());
+        Pageable pageable = PageRequest.of(criteria.getPage(), criteria.getSize(), sort);
+
+        // 3. Execute the search using the specification and pageable
+        Page<Product> productPage = productRepository.findAll(specification, pageable);
+
+        // 4. Map the results to a DTO Page
+        return productPage.map(this::convertToResponseDto);
     }
 
     /**
@@ -204,23 +230,23 @@ public class ProductService {
      */
     @Transactional
     public ProductFeatureLink linkFeatureToProduct(ProductFeatureDto dto) {
-    // 1. Validate Product exists
-    Product product = getProductById(dto.getProductId());
+        // 1. Validate Product exists
+        Product product = getProductById(dto.getProductId());
 
-    // 2. Validate FeatureComponent exists
-    FeatureComponent component = featureComponentService.getFeatureComponentById(dto.getFeatureComponentId());
+        // 2. Validate FeatureComponent exists
+        FeatureComponent component = featureComponentService.getFeatureComponentById(dto.getFeatureComponentId());
 
-    // 3. Validate dto.featureValue against component.dataType
-    validateFeatureValue(dto.getFeatureValue(), component.getDataType());
+        // 3. Validate dto.featureValue against component.dataType
+        validateFeatureValue(dto.getFeatureValue(), component.getDataType());
 
-    // 4. Create and save the Link
-    ProductFeatureLink link = new ProductFeatureLink();
-    link.setProduct(product);
-    link.setFeatureComponent(component);
-    link.setFeatureValue(dto.getFeatureValue());
+        // 4. Create and save the Link
+        ProductFeatureLink link = new ProductFeatureLink();
+        link.setProduct(product);
+        link.setFeatureComponent(component);
+        link.setFeatureValue(dto.getFeatureValue());
 
-    return linkRepository.save(link);
-}
+        return linkRepository.save(link);
+    }
 
     /**
      * Helper method to retrieve a Product entity by ID, throwing NotFoundException on failure (404).

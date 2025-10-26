@@ -5,18 +5,17 @@ import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Tag(name = "Product Management", description = "Operations for creating and managing product definitions.")
 @RestController
@@ -30,33 +29,33 @@ public class ProductController {
     }
 
     /**
-     * GET /api/v1/products
-     * Retrieves all products in the catalog.
-     */
-    @Operation(summary = "Get a list of all products",
-            description = "Retrieves all products currently defined in the catalog.")
-    @ApiResponse(responseCode = "200", description = "List of products successfully retrieved.",
-            content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProductResponseDto.class))))
-    @GetMapping
-    public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
-        List<ProductResponseDto> products = productService.findAllProducts();
-        return new ResponseEntity<>(products, HttpStatus.OK);
-    }
-
-    /**
      * POST /api/v1/products
      * Creates a new core Product entry in the catalog.
      */
     @Operation(summary = "Create a new product definition",
-               description = "Creates a new Product entity using a DTO and returns the details.")
+            description = "Creates a new Product entity using a DTO and returns the details.")
     @ApiResponse(responseCode = "201", description = "Product successfully created",
-                 content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
+            content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
     @ApiResponse(responseCode = "400", description = "Validation or business logic error.",
-                 content = @Content(schema = @Schema(implementation = String.class)))
+            content = @Content(schema = @Schema(implementation = String.class)))
     @PostMapping
     public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody CreateProductRequestDto requestDto) {
         ProductResponseDto responseDto = productService.createProduct(requestDto);
         return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
+    }
+
+    /**
+     * GET /api/v1/products
+     * Retrieves a list of products, allowing for dynamic filtering, pagination, and sorting.
+     */
+    @Operation(summary = "Search and filter products",
+            description = "Retrieves products based on metadata, date ranges, status, with pagination.")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved list of products.")
+    @GetMapping
+    public ResponseEntity<Page<ProductResponseDto>> searchProducts(
+            @Valid ProductSearchRequestDto criteria) { // Spring automatically maps query params to this DTO
+        Page<ProductResponseDto> productPage = productService.searchProducts(criteria);
+        return new ResponseEntity<>(productPage, HttpStatus.OK);
     }
 
     /**
