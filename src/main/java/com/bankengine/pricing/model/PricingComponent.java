@@ -22,6 +22,6 @@ public class PricingComponent extends AuditableEntity {
     private ComponentType type; // e.g., FEE, RATE, WAIVER, BENEFIT
 
     public enum ComponentType {
-        FEE, RATE, WAIVER, BENEFIT
+        FEE, RATE, WAIVER, BENEFIT, DISCOUNT
     }
 }

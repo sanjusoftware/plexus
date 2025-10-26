@@ -1,19 +1,20 @@
 package com.bankengine.catalog.service;
 
-import com.bankengine.catalog.dto.ProductFeatureDto;
+import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
+import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.ProductPricingLink;
+import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.web.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.bankengine.catalog.dto.CreateProductRequestDto;
-import com.bankengine.catalog.dto.ProductResponseDto;
-import com.bankengine.catalog.dto.ProductFeatureLinkDto;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 
 import java.time.LocalDate;
@@ -31,14 +32,18 @@ public class ProductService {
     private final FeatureComponentService featureComponentService;
     private final ProductTypeRepository productTypeRepository;
     private final EntityManager entityManager;
+    private final ProductPricingLinkRepository pricingLinkRepository;
+    private final PricingComponentService pricingComponentService;
 
     public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository,
-                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager) {
+                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService) {
         this.productRepository = productRepository;
         this.linkRepository = linkRepository;
         this.featureComponentService = featureComponentService;
         this.productTypeRepository = productTypeRepository;
         this.entityManager = entityManager;
+        this.pricingLinkRepository = pricingLinkRepository;
+        this.pricingComponentService = pricingComponentService;
     }
 
     /**
@@ -102,12 +107,63 @@ public class ProductService {
             }
         }
         linkRepository.flush(); // Flush 2: Ensures creations/updates hit the DB immediately
-
-        // 5. Clear the Persistence Context and Reload
         entityManager.clear();
 
         Product updatedProduct = getProductById(productId);
         return convertToResponseDto(updatedProduct);
+    }
+
+    /**
+     * Synchronizes the pricing components linked to a product based on the provided list.
+     * Synchronization is based on the composite key: (PricingComponentId, Context).
+     */
+    @Transactional
+    public ProductResponseDto syncProductPricing(Long productId, List<ProductPricingDto> syncDtos) {
+        Product product = getProductById(productId);
+
+        // Define a composite key: ComponentID + Context is unique per product
+        // Map: { ComponentID_Context -> ProductPricingLink }
+        Map<String, ProductPricingLink> currentLinksMap = pricingLinkRepository.findByProductId(productId).stream()
+                .collect(Collectors.toMap(
+                        link -> link.getPricingComponent().getId() + "_" + link.getContext(),
+                        link -> link
+                ));
+
+        // Collect the set of incoming composite keys
+        Set<String> incomingKeys = syncDtos.stream()
+                .map(dto -> dto.getPricingComponentId() + "_" + dto.getContext())
+                .collect(Collectors.toSet());
+
+        // 1. IDENTIFY and DELETE links that are no longer present (Cleanup)
+        List<ProductPricingLink> linksToDelete = currentLinksMap.values().stream()
+                .filter(link -> !incomingKeys.contains(link.getPricingComponent().getId() + "_" + link.getContext()))
+                .collect(Collectors.toList());
+
+        pricingLinkRepository.deleteAll(linksToDelete);
+        pricingLinkRepository.flush(); // Flush deletions to the DB
+
+        // 2. IDENTIFY and CREATE links that are incoming
+        for (ProductPricingDto dto : syncDtos) {
+            String compositeKey = dto.getPricingComponentId() + "_" + dto.getContext();
+
+            if (!currentLinksMap.containsKey(compositeKey)) {
+                // CREATE: Link is new
+                PricingComponent component = pricingComponentService.getPricingComponentById(dto.getPricingComponentId());
+
+                ProductPricingLink newLink = new ProductPricingLink();
+                newLink.setProduct(product);
+                newLink.setPricingComponent(component);
+                newLink.setContext(dto.getContext());
+
+                pricingLinkRepository.save(newLink);
+            }
+        }
+
+        pricingLinkRepository.flush();
+        entityManager.clear();
+
+        // Product entity needs to have the @OneToMany mapping defined for pricing links.
+        return getProductResponseById(productId);
     }
 
     /**

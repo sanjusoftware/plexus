@@ -7,6 +7,9 @@ import java.util.List;
 
 public interface ProductPricingLinkRepository extends JpaRepository<ProductPricingLink, Long> {
 
-    // Crucial method: Find all pricing components linked to a specific product
+    // Find all pricing components linked to a specific product
     List<ProductPricingLink> findByProductId(Long productId);
+
+    // Required for dependency check
+    boolean existsByPricingComponentId(Long pricingComponentId);
 }

@@ -1,9 +1,6 @@
 package com.bankengine.catalog.controller;
 
-import com.bankengine.catalog.dto.CreateProductRequestDto;
-import com.bankengine.catalog.dto.ProductFeatureDto;
-import com.bankengine.catalog.dto.ProductFeatureSyncDto;
-import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,7 +72,6 @@ public class ProductController {
             @PathVariable Long id) {
 
         ProductResponseDto responseDto = productService.getProductResponseById(id);
-        // Assuming the service layer or GlobalExceptionHandler handles the 404/not found case.
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 
@@ -131,6 +127,26 @@ public class ProductController {
             @Valid @RequestBody ProductFeatureSyncDto syncDto) {
 
         ProductResponseDto responseDto = productService.syncProductFeatures(id, syncDto.getFeatures());
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+    }
+
+    /**
+     * PUT /api/v1/products/{id}/pricing
+     * Synchronizes the list of pricing components linked to a product.
+     * This handles creation and deletion of links in one transaction.
+     */
+    @Operation(summary = "Synchronize product pricing components",
+            description = "Sets the complete list of pricing components for a product. Deletes removed links and creates new ones.")
+    @ApiResponse(responseCode = "200", description = "Product pricing successfully synchronized.",
+            content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Product or Pricing Component not found.")
+    @PutMapping("/{id}/pricing")
+    public ResponseEntity<ProductResponseDto> syncProductPricing(
+            @Parameter(description = "The unique ID of the product to update", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody ProductPricingSyncDto syncDto) {
+
+        ProductResponseDto responseDto = productService.syncProductPricing(id, syncDto.getPricingComponents());
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 }
