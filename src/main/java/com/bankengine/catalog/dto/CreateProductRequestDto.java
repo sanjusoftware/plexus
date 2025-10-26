@@ -18,7 +18,7 @@ public class CreateProductRequestDto {
     private String bankId;
 
     @NotNull(message = "Product Type ID is required.")
-    private Long productTypeId; // Expect only the ID from the client, not the whole object
+    private Long productTypeId;
 
     @NotNull(message = "Effective Date is required.")
     private LocalDate effectiveDate;
@@ -26,6 +26,5 @@ public class CreateProductRequestDto {
     @NotBlank(message = "Status is required (e.g., DRAFT, ACTIVE).")
     private String status;
 
-    private LocalDate activationDate;
     private LocalDate expirationDate;
 }

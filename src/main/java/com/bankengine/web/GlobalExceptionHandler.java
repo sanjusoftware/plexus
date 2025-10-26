@@ -69,12 +69,12 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 4. Handles Drools 'No match found' failure. (404 NOT FOUND)
+     * 4. Handles business rule violations and internal state errors. (400 BAD REQUEST)
      */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalStateException(IllegalStateException ex) {
-        HttpStatus status = HttpStatus.NOT_FOUND;
-        Map<String, Object> body = createErrorBody(status, "Resource Not Found", ex.getMessage());
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        Map<String, Object> body = createErrorBody(status, "Illegal State/Business Rule Violation", ex.getMessage());
         return new ResponseEntity<>(body, status);
     }
 

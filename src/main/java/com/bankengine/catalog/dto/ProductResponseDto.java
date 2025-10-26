@@ -14,7 +14,6 @@ public class ProductResponseDto {
     private LocalDate effectiveDate;
     private String status;
     private Long productTypeId;
-    private LocalDate activationDate;
     private LocalDate expirationDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

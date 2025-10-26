@@ -1,8 +1,10 @@
 package com.bankengine.catalog.model;
 
 import com.bankengine.common.model.AuditableEntity;
+import com.bankengine.pricing.model.ProductPricingLink;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Getter;
@@ -25,9 +27,6 @@ public class Product extends AuditableEntity {
     @Column(nullable = false)
     private String name; // e.g., "Premier Home Loan"
 
-    @Column(name = "activation_date")
-    private LocalDate activationDate;
-
     @Column(name = "expiration_date")
     private LocalDate expirationDate;
 
@@ -36,7 +35,10 @@ public class Product extends AuditableEntity {
     private ProductType productType;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ProductFeatureLink> productFeatureLinks;
+    private List<ProductFeatureLink> productFeatureLinks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ProductPricingLink> productPricingLinks = new ArrayList<>();
 
     private String bankId;
     private LocalDate effectiveDate;

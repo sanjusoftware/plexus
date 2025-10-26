@@ -45,7 +45,7 @@ public class PricingCalculationService {
 
         // 4. Fallback for no match: RULE FAILURE (404 NOT FOUND via GlobalExceptionHandler)
         // This means, for the given input criteria, no price exists.
-        throw new IllegalStateException("No matching pricing tier found for segment: " + customerSegment +
+        throw new NotFoundException("No matching pricing tier found for segment: " + customerSegment +
                                         " and amount: " + transactionAmount);
     }
 

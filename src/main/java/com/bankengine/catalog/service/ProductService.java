@@ -179,7 +179,6 @@ public class ProductService {
         product.setName(requestDto.getName());
         product.setBankId(requestDto.getBankId());
         product.setEffectiveDate(requestDto.getEffectiveDate());
-        product.setActivationDate(requestDto.getActivationDate());
         product.setExpirationDate(requestDto.getExpirationDate());
         product.setStatus(requestDto.getStatus());
         product.setProductType(productType);
@@ -250,16 +249,173 @@ public class ProductService {
     }
 
     /**
-     * Archives a product by setting its status to INACTIVE.
-     * This is an update operation, using the existing getProductEntityById for 404 handling.
+     * Performs a metadata-only update on an existing Product entity IF it is in DRAFT status.
+     * Used for administrative updates before launch.
      */
     @Transactional
-    public ProductResponseDto archiveProduct(Long id) {
+    public ProductResponseDto updateProduct(Long id, UpdateProductRequestDto dto) {
         Product product = getProductById(id);
-        product.setStatus("INACTIVE");
-        product.setExpirationDate(LocalDate.now());
+
+        // Don't allow update to INACTIVE/ARCHIVED product
+        if ("INACTIVE".equals(product.getStatus()) || "ARCHIVED".equals(product.getStatus())) {
+            throw new IllegalStateException("Cannot update an INACTIVE or ARCHIVED product version.");
+        }
+
+        // Only allow general metadata update if DRAFT (Otherwise, must use Copy-and-Update)
+        if (!"DRAFT".equals(product.getStatus())) {
+            throw new IllegalStateException("Metadata update requires a new version. Product must be DRAFT.");
+        }
+
+        // Status, Effective Date, and Expiration Date handled by direct methods.
+        // Only update administrative metadata:
+        product.setName(dto.getName());
+        product.setBankId(dto.getBankId());
+
         Product updatedProduct = productRepository.save(product);
         return convertToResponseDto(updatedProduct);
+    }
+
+    /**
+     * Sets the product status to ACTIVE and updates the effective date if provided.
+     */
+    @Transactional
+    public ProductResponseDto activateProduct(Long id, LocalDate effectiveDate) {
+        Product product = getProductById(id);
+
+        if (!"DRAFT".equals(product.getStatus())) {
+            throw new IllegalStateException("Only DRAFT products can be directly ACTIVATED.");
+        }
+
+        product.setStatus("ACTIVE");
+        // Only update effectiveDate if a value is provided, otherwise leave the one set at creation.
+        if (effectiveDate != null) {
+            product.setEffectiveDate(effectiveDate);
+        }
+
+        Product savedProduct = productRepository.save(product);
+        return convertToResponseDto(savedProduct);
+    }
+
+    /**
+     * Sets the product status to INACTIVE.
+     */
+    @Transactional
+    public ProductResponseDto deactivateProduct(Long id) {
+        Product product = getProductById(id);
+
+        if ("INACTIVE".equals(product.getStatus()) || "ARCHIVED".equals(product.getStatus())) {
+            throw new IllegalStateException("Product is already inactive or archived.");
+        }
+
+        product.setStatus("INACTIVE");
+        // It's a good practice to set the expiration date to today on immediate deactivation.
+        product.setExpirationDate(LocalDate.now());
+
+        Product savedProduct = productRepository.save(product);
+        return convertToResponseDto(savedProduct);
+    }
+
+    /**
+     * Updates only the expiration date (Extending life).
+     */
+    @Transactional
+    public ProductResponseDto extendProductExpiration(Long id, LocalDate newExpirationDate) {
+        Product product = getProductById(id);
+
+        if (newExpirationDate == null) {
+            throw new IllegalArgumentException("New expiration date cannot be null.");
+        }
+
+        // Check if the new date is before the CURRENT date (only if CURRENT date exists)
+        if (product.getExpirationDate() != null && newExpirationDate.isBefore(product.getExpirationDate())) {
+            throw new IllegalArgumentException("New expiration date must be after the current expiration date.");
+        }
+
+        // Also, ensure the new date is not in the past
+        if (newExpirationDate.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("New expiration date must be in the future.");
+        }
+
+        product.setExpirationDate(newExpirationDate);
+
+        Product savedProduct = productRepository.save(product);
+        return convertToResponseDto(savedProduct);
+    }
+
+    /**
+     * Creates a new version of a product. This involves archiving the old version
+     * and creating a new entity that inherits all previous features and pricing links.
+     * @param oldProductId The ID of the product version to be replaced.
+     * @param requestDto The metadata for the new version.
+     * @return The response DTO for the newly created product.
+     */
+    @Transactional
+    public ProductResponseDto createNewVersion(Long oldProductId, CreateNewVersionRequestDto requestDto) {
+
+        // 1. Validate and Retrieve the Old Product
+        Product oldProduct = getProductById(oldProductId);
+
+        // Enforce business rule: Only ACTIVE products can be versioned (copied).
+        if (!"ACTIVE".equals(oldProduct.getStatus())) {
+            throw new IllegalStateException("Only ACTIVE products can be used as a base for a new version.");
+        }
+
+        // 2. Archive the Old Product
+        oldProduct.setStatus("ARCHIVED");
+        // Set the expiration date to the day *before* the new version becomes effective
+        oldProduct.setExpirationDate(requestDto.getNewEffectiveDate().minusDays(1));
+        productRepository.save(oldProduct);
+
+        // 3. Create the New Product Entity (Inherits most data)
+        Product newProduct = new Product();
+
+        // Inherited configuration fields
+        newProduct.setProductType(oldProduct.getProductType());
+        newProduct.setBankId(oldProduct.getBankId());
+
+        // New version metadata
+        newProduct.setName(requestDto.getNewName());
+        newProduct.setEffectiveDate(requestDto.getNewEffectiveDate());
+        newProduct.setStatus("DRAFT"); // New versions start as DRAFT for review/modification
+
+        // Save the new product to generate the ID
+        Product savedNewProduct = productRepository.save(newProduct);
+
+        // 4. Copy Links (Features and Pricing)
+
+        // 4a. Copy ProductFeatureLink
+        List<ProductFeatureLink> newFeatureLinks = oldProduct.getProductFeatureLinks().stream()
+                .map(oldLink -> {
+                    ProductFeatureLink newLink = new ProductFeatureLink();
+                    newLink.setProduct(savedNewProduct);
+                    newLink.setFeatureComponent(oldLink.getFeatureComponent());
+                    newLink.setFeatureValue(oldLink.getFeatureValue());
+                    return newLink;
+                })
+                .collect(Collectors.toList());
+
+        linkRepository.saveAll(newFeatureLinks);
+
+        // 4b. Copy ProductPricingLink (Requires fetching the links from the repo if not EAGER)
+        List<ProductPricingLink> oldPricingLinks = pricingLinkRepository.findByProductId(oldProductId);
+
+        List<ProductPricingLink> newPricingLinks = oldPricingLinks.stream()
+                .map(oldLink -> {
+                    ProductPricingLink newLink = new ProductPricingLink();
+                    newLink.setProduct(savedNewProduct);
+                    newLink.setPricingComponent(oldLink.getPricingComponent());
+                    newLink.setContext(oldLink.getContext());
+                    return newLink;
+                })
+                .collect(Collectors.toList());
+
+        pricingLinkRepository.saveAll(newPricingLinks);
+
+        // 5. Ensure new collections are loaded for DTO conversion
+        entityManager.clear();
+        Product finalNewProduct = getProductById(savedNewProduct.getId());
+
+        return convertToResponseDto(finalNewProduct);
     }
 
     /**
@@ -312,7 +468,6 @@ public class ProductService {
         dto.setBankId(product.getBankId());
         dto.setEffectiveDate(product.getEffectiveDate());
         dto.setStatus(product.getStatus());
-        dto.setActivationDate(product.getActivationDate());
         dto.setExpirationDate(product.getExpirationDate());
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());

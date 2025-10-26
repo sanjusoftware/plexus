@@ -14,6 +14,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 import java.util.List;
 
 @Tag(name = "Product Management", description = "Operations for creating and managing product definitions.")
@@ -91,21 +93,62 @@ public class ProductController {
         return new ResponseEntity<>(link, HttpStatus.CREATED);
     }
 
-    /**
-     * DELETE /api/v1/products/{id} (Logical Deletion/Archival)
-     * Archives a product by setting its status to 'ARCHIVED'.
-     */
-    @Operation(summary = "Archive a product (Logical Deletion)",
-            description = "Sets the status of the product to 'ARCHIVED' instead of physical deletion.")
-    @ApiResponse(responseCode = "200", description = "Product successfully archived.",
-            content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
-    @ApiResponse(responseCode = "404", description = "Product not found with the given ID.")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ProductResponseDto> archiveProduct(
-            @Parameter(description = "The unique ID of the product to archive", required = true)
+    // /api/v1/products/{id} (RESTRICTED METADATA UPDATE)
+    @Operation(summary = "Update product metadata (DRAFT status only)",
+            description = "Allows updates to administrative fields (name, bankId) only if the product status is DRAFT. Critical changes require versioning.")
+    @ApiResponse(responseCode = "200", description = "Product successfully updated.")
+    @ApiResponse(responseCode = "400", description = "Validation or business logic error.")
+    @ApiResponse(responseCode = "403", description = "Update not allowed for current product status (ACTIVE/INACTIVE).")
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponseDto> updateProduct(
+            @Parameter(description = "The unique ID of the product to update", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProductRequestDto requestDto) {
+
+        ProductResponseDto responseDto = productService.updateProduct(id, requestDto);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+    }
+
+    // 💡 NEW POST /api/v1/products/{id}/activate (DIRECT ACTION 1)
+    @Operation(summary = "Activate a DRAFT product",
+            description = "Sets the product status to ACTIVE and optionally sets the effective date.")
+    @ApiResponse(responseCode = "200", description = "Product successfully activated.")
+    @ApiResponse(responseCode = "400", description = "Product is not in DRAFT status.")
+    @PostMapping("/{id}/activate")
+    public ResponseEntity<ProductResponseDto> activateProduct(
+            @Parameter(description = "ID of the product to activate", required = true)
+            @PathVariable Long id,
+            @RequestBody(required = false) ProductActivationDto dto) { // DTO might only contain effectiveDate
+
+        LocalDate effectiveDate = (dto != null) ? dto.getEffectiveDate() : null;
+        ProductResponseDto responseDto = productService.activateProduct(id, effectiveDate);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+    }
+
+    // /api/v1/products/{id}/deactivate (DIRECT ACTION 2)
+    @Operation(summary = "Deactivate an ACTIVE product",
+            description = "Sets the product status to INACTIVE and sets the expiration date to today.")
+    @ApiResponse(responseCode = "200", description = "Product successfully deactivated.")
+    @PostMapping("/{id}/deactivate")
+    public ResponseEntity<ProductResponseDto> deactivateProduct(
+            @Parameter(description = "ID of the product to deactivate", required = true)
             @PathVariable Long id) {
 
-        ProductResponseDto responseDto = productService.archiveProduct(id);
+        ProductResponseDto responseDto = productService.deactivateProduct(id);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+    }
+
+    // /api/v1/products/{id}/expiration (DIRECT ACTION 3)
+    @Operation(summary = "Extend product life",
+            description = "Updates the expiration date of an ACTIVE/DRAFT product.")
+    @ApiResponse(responseCode = "200", description = "Product expiration date successfully extended.")
+    @PutMapping("/{id}/expiration")
+    public ResponseEntity<ProductResponseDto> extendProductExpiration(
+            @Parameter(description = "ID of the product to extend", required = true)
+            @PathVariable Long id,
+            @RequestBody LocalDate newExpirationDate) {
+
+        ProductResponseDto responseDto = productService.extendProductExpiration(id, newExpirationDate);
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 
@@ -148,5 +191,22 @@ public class ProductController {
 
         ProductResponseDto responseDto = productService.syncProductPricing(id, syncDto.getPricingComponents());
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
+    }
+
+    // 💡 NEW POST /api/v1/products/{id}/new-version (COPY-AND-UPDATE)
+    @Operation(summary = "Create a new version of an ACTIVE product",
+            description = "Archives the current product and creates a new DRAFT product inheriting its configuration. Used for structural changes.")
+    @ApiResponse(responseCode = "201", description = "New product version successfully created.",
+            content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
+    @ApiResponse(responseCode = "400", description = "Validation error.")
+    @ApiResponse(responseCode = "403", description = "Product is not in ACTIVE status.")
+    @PostMapping("/{id}/new-version")
+    public ResponseEntity<ProductResponseDto> createNewVersion(
+            @Parameter(description = "The ID of the currently ACTIVE product to be versioned/replaced.", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody CreateNewVersionRequestDto requestDto) {
+
+        ProductResponseDto responseDto = productService.createNewVersion(id, requestDto);
+        return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
     }
 }
