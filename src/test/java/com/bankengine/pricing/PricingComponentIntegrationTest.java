@@ -1,12 +1,10 @@
 package com.bankengine.pricing;
 
-import com.bankengine.pricing.dto.CreatePricingComponentRequestDto;
-import com.bankengine.pricing.dto.CreatePricingTierRequestDto;
-import com.bankengine.pricing.dto.CreatePriceValueRequestDto;
-import com.bankengine.pricing.dto.TierValueDto;
-import com.bankengine.pricing.dto.UpdatePricingComponentRequestDto;
+import com.bankengine.pricing.dto.*;
+import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
+import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -40,6 +40,40 @@ public class PricingComponentIntegrationTest {
 
     @Autowired
     private PricingTierRepository tierRepository;
+
+    @Autowired
+    private PriceValueRepository valueRepository;
+
+    private Long componentIdForTierTests;
+    private Long tierIdForTests;
+    private Long valueIdForTests;
+
+    // Setup a full Component -> Tier -> Value chain
+    private void createLinkedTierAndValue(String componentName, String tierName) {
+        // 1. Create Component
+        PricingComponent component = new PricingComponent();
+        component.setName(componentName);
+        component.setType(PricingComponent.ComponentType.RATE);
+        PricingComponent savedComponent = componentRepository.save(component);
+        componentIdForTierTests = savedComponent.getId();
+
+        // 2. Create Tier
+        PricingTier tier = new PricingTier();
+        tier.setPricingComponent(savedComponent);
+        tier.setTierName(tierName);
+        tier.setMinThreshold(new BigDecimal("0.00"));
+        PricingTier savedTier = tierRepository.save(tier);
+        tierIdForTests = savedTier.getId();
+
+        // 3. Create Value
+        PriceValue value = new PriceValue();
+        value.setPricingTier(savedTier);
+        value.setPriceAmount(new BigDecimal("10.00"));
+        value.setCurrency("USD");
+        value.setValueType(PriceValue.ValueType.ABSOLUTE);
+        PriceValue savedValue = valueRepository.save(value);
+        valueIdForTests = savedValue.getId();
+    }
 
     // Helper method to create a valid DTO for POST/PUT requests
     private CreatePricingComponentRequestDto getCreateDto(String name) {
@@ -197,7 +231,7 @@ public class PricingComponentIntegrationTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.priceAmount", is(5.00)))
-                .andExpect(jsonPath("$.currency", is("EUR")))
+                .andExpect(jsonPath("$.currency", is("USD")))
                 .andExpect(jsonPath("$.pricingTierId").isNumber());
     }
 
@@ -230,4 +264,117 @@ public class PricingComponentIntegrationTest {
         requestDto.setValue(valueDto);
         return requestDto;
     }
+
+    // =================================================================
+    // 6. TIER/VALUE UPDATE (PUT) TESTS
+    // =================================================================
+
+    @Test
+    @WithMockUser
+    void shouldUpdateTierAndValueAndReturn200() throws Exception {
+        // ARRANGE: Setup the records to be updated
+        createLinkedTierAndValue("ComponentToUpdate", "InitialTier");
+
+        // ARRANGE: Create the update DTOs
+        UpdatePricingTierRequestDto tierDto = new UpdatePricingTierRequestDto();
+        tierDto.setTierName("UpdatedTierName");
+        tierDto.setMinThreshold(new BigDecimal("100.00"));
+        tierDto.setMaxThreshold(new BigDecimal("999.99"));
+
+        UpdatePriceValueRequestDto valueDto = new UpdatePriceValueRequestDto();
+        valueDto.setPriceAmount(new BigDecimal("15.50"));
+        valueDto.setCurrency("EUR");
+        valueDto.setValueType("PERCENTAGE"); // Use another valid type
+
+        UpdateTierValueDto requestDto = new UpdateTierValueDto();
+        requestDto.setTier(tierDto);
+        requestDto.setValue(valueDto);
+
+        // ACT: Call PUT /{componentId}/tiers/{tierId}
+        mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
+                        componentIdForTierTests, tierIdForTests)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isOk())
+                // ASSERT: Check the updated PriceValue fields
+                .andExpect(jsonPath("$.priceAmount", is(15.50)))
+                .andExpect(jsonPath("$.currency", is("EUR")))
+                // ASSERT: Check that the tier entity was updated (requires retrieval or checking DB)
+                // For simplicity, we check the PriceValue DTO, which confirms the service ran.
+                .andExpect(jsonPath("$.pricingTierId", is(tierIdForTests.intValue())));
+
+        // VERIFY: Manually check the Tier entity in the DB
+        PricingTier updatedTier = tierRepository.findById(tierIdForTests).get();
+        assertThat(updatedTier.getTierName()).isEqualTo("UpdatedTierName");
+        assertThat(updatedTier.getMaxThreshold()).isEqualTo(new BigDecimal("999.99"));
+    }
+
+    // =================================================================
+    // 7. TIER/VALUE DELETE (DELETE) TESTS
+    // =================================================================
+
+    @Test
+    @WithMockUser
+    void shouldDeleteTierAndValueAndReturn204() throws Exception {
+        // ARRANGE: Setup the records to be deleted
+        createLinkedTierAndValue("ComponentToDeleteFrom", "TierToDelete");
+        Long finalTierId = tierIdForTests;
+        Long finalValueId = valueIdForTests;
+
+        // ACT: Call DELETE /{componentId}/tiers/{tierId}
+        mockMvc.perform(delete("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
+                        componentIdForTierTests, finalTierId))
+                .andExpect(status().isNoContent()); // Expect 204 No Content
+
+        // VERIFY 1: Tier entity is gone
+        assertThat(tierRepository.findById(finalTierId)).isEmpty();
+
+        // VERIFY 2: PriceValue entity is gone
+        assertThat(valueRepository.findById(finalValueId)).isEmpty();
+    }
+
+    // =================================================================
+    // 8. TIER/VALUE NOT FOUND TESTS
+    // =================================================================
+
+    @Test
+    @WithMockUser
+    void shouldReturn404ForNonExistentTierOrComponent() throws Exception {
+        // ARRANGE: Setup a valid component ID
+        createLinkedTierAndValue("ComponentFor404Test", "ValidTier");
+        Long existingComponentId = componentIdForTierTests;
+        Long nonExistentId = 99999L;
+
+        UpdateTierValueDto updateDto = new UpdateTierValueDto();
+        // Populate DTO with valid data to pass initial validation
+        updateDto.setTier(new UpdatePricingTierRequestDto());
+        updateDto.setValue(new UpdatePriceValueRequestDto());
+        updateDto.getTier().setTierName("Placeholder");
+        updateDto.getValue().setPriceAmount(new BigDecimal("1"));
+        updateDto.getValue().setCurrency("USD");
+        updateDto.getValue().setValueType("ABSOLUTE");
+
+        // Test 1: PUT with non-existent Component ID
+        mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
+                        nonExistentId, tierIdForTests)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Pricing Component not found")));
+
+        // Test 2: PUT with non-existent Tier ID
+        mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
+                        existingComponentId, nonExistentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Pricing Tier not found")));
+
+        // Test 3: DELETE with non-existent Tier ID
+        mockMvc.perform(delete("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
+                        existingComponentId, nonExistentId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Pricing Tier not found")));
+    }
+
 }

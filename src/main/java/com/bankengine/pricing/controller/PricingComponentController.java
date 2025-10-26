@@ -114,4 +114,43 @@ public class PricingComponentController {
                 dto.getValue());
         return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
     }
+
+    // --- PUT /tiers/{tierId} ---
+
+    @Operation(summary = "Update an existing pricing tier and its value",
+            description = "Modifies the condition, thresholds (tier) and/or the amount/type (value) of an existing tier.")
+    @ApiResponse(responseCode = "200", description = "Pricing Tier and Value successfully updated.",
+            content = @Content(schema = @Schema(implementation = PriceValueResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Pricing Component or Tier not found.")
+    @PutMapping("/{componentId}/tiers/{tierId}")
+    public ResponseEntity<PriceValueResponseDto> updateTieredPricing(
+            @Parameter(description = "ID of the existing Pricing Component.", required = true)
+            @PathVariable Long componentId,
+            @Parameter(description = "ID of the existing Pricing Tier.", required = true)
+            @PathVariable Long tierId,
+            @Valid @RequestBody UpdateTierValueDto dto) {
+
+        PriceValueResponseDto responseDto = pricingComponentService.updateTierAndValue(
+                componentId,
+                tierId,
+                dto);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+    }
+
+    // --- DELETE /tiers/{tierId} ---
+
+    @Operation(summary = "Delete a specific pricing tier and its value",
+            description = "Removes a specific Pricing Tier and its associated Price Value.")
+    @ApiResponse(responseCode = "204", description = "Pricing Tier and Value successfully deleted (No Content).")
+    @ApiResponse(responseCode = "404", description = "Pricing Component or Tier not found.")
+    @DeleteMapping("/{componentId}/tiers/{tierId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTieredPricing(
+            @Parameter(description = "ID of the existing Pricing Component.", required = true)
+            @PathVariable Long componentId,
+            @Parameter(description = "ID of the Pricing Tier to delete.", required = true)
+            @PathVariable Long tierId) {
+
+        pricingComponentService.deleteTierAndValue(componentId, tierId);
+    }
 }

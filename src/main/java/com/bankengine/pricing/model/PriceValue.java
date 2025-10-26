@@ -1,10 +1,10 @@
 package com.bankengine.pricing.model;
 
 import com.bankengine.common.model.AuditableEntity;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.math.BigDecimal;
 
 @Entity

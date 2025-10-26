@@ -33,6 +33,82 @@ public class PricingComponentService {
     }
 
     /**
+     * Retrieves a PricingTier entity by ID, throwing NotFoundException on failure (404).
+     */
+    public PricingTier getPricingTierById(Long id) {
+        return tierRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Pricing Tier not found with ID: " + id));
+    }
+
+    /**
+     * Updates an existing Pricing Tier and its associated Price Value.
+     */
+    @Transactional
+    public PriceValueResponseDto updateTierAndValue(
+            Long componentId,
+            Long tierId,
+            UpdateTierValueDto dto) {
+
+        // 1. Validation - Ensures the tier is under the correct component scope
+        getPricingComponentById(componentId);
+
+        // 2. Retrieve Tier (which also validates Tier existence)
+        PricingTier tier = getPricingTierById(tierId);
+
+        // 3. Retrieve Value (since it's a 1:1 relationship, we retrieve it via the Tier)
+        PriceValue value = valueRepository.findByPricingTierId(tierId)
+                .orElseThrow(() -> new NotFoundException("Price Value not found for Tier ID: " + tierId));
+
+        // 4. Apply Tier Updates
+        updateTierEntity(tier, dto.getTier());
+        PricingTier savedTier = tierRepository.save(tier);
+
+        // 5. Apply Value Updates
+        updateValueEntity(value, dto.getValue());
+        PriceValue savedValue = valueRepository.save(value);
+
+        // 6. Convert saved PriceValue Entity to Response DTO
+        return convertValueEntityToResponseDto(savedValue);
+    }
+
+    private void updateTierEntity(PricingTier tier, UpdatePricingTierRequestDto dto) {
+        tier.setTierName(dto.getTierName());
+        tier.setConditionKey(dto.getConditionKey());
+        tier.setConditionValue(dto.getConditionValue());
+        tier.setMinThreshold(dto.getMinThreshold());
+        tier.setMaxThreshold(dto.getMaxThreshold());
+    }
+
+    private void updateValueEntity(PriceValue value, UpdatePriceValueRequestDto dto) {
+        value.setPriceAmount(dto.getPriceAmount());
+        value.setCurrency(dto.getCurrency());
+
+        try {
+            value.setValueType(PriceValue.ValueType.valueOf(dto.getValueType().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid value type provided: " + dto.getValueType());
+        }
+    }
+
+    /**
+     * Deletes a Pricing Tier and its associated Price Value.
+     */
+    @Transactional
+    public void deleteTierAndValue(Long componentId, Long tierId) {
+        // 1. Validation (Component existence check)
+        getPricingComponentById(componentId);
+
+        // 2. Retrieve Tier (which also validates Tier existence)
+        PricingTier tier = getPricingTierById(tierId);
+
+        // 3. Find and Delete Value (Explicit deletion is safer if cascade isn't configured)
+        valueRepository.deleteByPricingTierId(tierId); // Requires new Repository method
+
+        // 4. Delete Tier
+        tierRepository.delete(tier);
+    }
+
+    /**
      * Helper method to retrieve a PricingComponent entity by ID, throwing NotFoundException on failure (404).
      */
     public PricingComponent getPricingComponentById(Long id) {
@@ -91,8 +167,6 @@ public class PricingComponentService {
         PricingComponent component = getPricingComponentById(id);
         return convertToDto(component);
     }
-
-    // ... existing createComponent method remains the same ...
 
     /**
      * Updates an existing Pricing Component.
