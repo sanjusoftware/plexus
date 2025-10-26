@@ -17,4 +17,7 @@ public interface ProductFeatureLinkRepository extends JpaRepository<ProductFeatu
 
     // Used to return a helpful message showing the count of dependencies
     long countByFeatureComponentId(Long featureComponentId);
+
+    // Used by integration tests to find links by FeatureComponent ID
+    List<ProductFeatureLink> findByFeatureComponentId(Long featureComponentId);
 }

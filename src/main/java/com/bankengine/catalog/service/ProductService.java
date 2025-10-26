@@ -8,6 +8,7 @@ import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.web.exception.NotFoundException;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.bankengine.catalog.dto.CreateProductRequestDto;
@@ -19,6 +20,8 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ProductService {
@@ -27,13 +30,84 @@ public class ProductService {
     private final ProductFeatureLinkRepository linkRepository;
     private final FeatureComponentService featureComponentService;
     private final ProductTypeRepository productTypeRepository;
+    private final EntityManager entityManager;
 
     public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository,
-                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository) {
+                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager) {
         this.productRepository = productRepository;
         this.linkRepository = linkRepository;
         this.featureComponentService = featureComponentService;
         this.productTypeRepository = productTypeRepository;
+        this.entityManager = entityManager;
+    }
+
+    /**
+     * Synchronizes the features linked to a product based on the provided list.
+     * This method handles creation of new links, deletion of missing links, and updates to existing ones.
+     */
+    @Transactional
+    public ProductResponseDto syncProductFeatures(Long productId, List<ProductFeatureDto> syncDtos) {
+        // 1. Validate Product existence and fetch the entity
+        Product product = getProductById(productId);
+
+        // 2. Fetch current links and map them by FeatureComponent ID for fast lookup
+        List<ProductFeatureLink> currentLinks = linkRepository.findByProductId(productId);
+
+        // Map: { FeatureComponentId -> ProductFeatureLink }
+        Map<Long, ProductFeatureLink> currentLinksMap = currentLinks.stream()
+                .collect(Collectors.toMap(
+                        link -> link.getFeatureComponent().getId(),
+                        link -> link
+                ));
+
+        // Collect the set of incoming FeatureComponent IDs
+        Set<Long> incomingFeatureIds = syncDtos.stream()
+                .map(ProductFeatureDto::getFeatureComponentId)
+                .collect(Collectors.toSet());
+
+        // 3. IDENTIFY and DELETE links that are no longer present (Cleanup)
+        List<ProductFeatureLink> linksToDelete = currentLinks.stream()
+                .filter(link -> !incomingFeatureIds.contains(link.getFeatureComponent().getId()))
+                .collect(Collectors.toList());
+
+        linkRepository.deleteAll(linksToDelete);
+        linkRepository.flush(); // Flush 1: Ensures deletions hit the DB immediately
+
+        // 4. IDENTIFY and CREATE/UPDATE links that are incoming
+        for (ProductFeatureDto dto : syncDtos) {
+            Long featureId = dto.getFeatureComponentId();
+
+            // Validate FeatureComponent existence once here
+            FeatureComponent component = featureComponentService.getFeatureComponentById(featureId);
+
+            // Validate the value against the required data type
+            validateFeatureValue(dto.getFeatureValue(), component.getDataType());
+
+            if (currentLinksMap.containsKey(featureId)) {
+                // UPDATE: Link exists, check if featureValue changed
+                ProductFeatureLink existingLink = currentLinksMap.get(featureId);
+
+                if (!existingLink.getFeatureValue().equals(dto.getFeatureValue())) {
+                    existingLink.setFeatureValue(dto.getFeatureValue());
+                    linkRepository.save(existingLink); // Explicit save for update
+                }
+                // If value is the same, do nothing.
+            } else {
+                // CREATE: Link is new
+                ProductFeatureLink newLink = new ProductFeatureLink();
+                newLink.setProduct(product);
+                newLink.setFeatureComponent(component);
+                newLink.setFeatureValue(dto.getFeatureValue());
+                linkRepository.save(newLink);
+            }
+        }
+        linkRepository.flush(); // Flush 2: Ensures creations/updates hit the DB immediately
+
+        // 5. Clear the Persistence Context and Reload
+        entityManager.clear();
+
+        Product updatedProduct = getProductById(productId);
+        return convertToResponseDto(updatedProduct);
     }
 
     /**

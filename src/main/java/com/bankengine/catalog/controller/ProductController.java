@@ -2,6 +2,7 @@ package com.bankengine.catalog.controller;
 
 import com.bankengine.catalog.dto.CreateProductRequestDto;
 import com.bankengine.catalog.dto.ProductFeatureDto;
+import com.bankengine.catalog.dto.ProductFeatureSyncDto;
 import com.bankengine.catalog.dto.ProductResponseDto;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.service.ProductService;
@@ -109,6 +110,27 @@ public class ProductController {
             @PathVariable Long id) {
 
         ProductResponseDto responseDto = productService.archiveProduct(id);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+    }
+
+    /**
+     * PUT /api/v1/products/{id}/features
+     * Synchronizes the list of features linked to a product.
+     * This handles creation, update, and deletion of links in one transaction.
+     */
+    @Operation(summary = "Synchronize product features",
+            description = "Sets the complete list of features for a product. Deletes removed features, updates existing, and creates new ones.")
+    @ApiResponse(responseCode = "200", description = "Product features successfully synchronized.",
+            content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
+    @ApiResponse(responseCode = "400", description = "Validation or value type error.")
+    @ApiResponse(responseCode = "404", description = "Product or Feature Component not found.")
+    @PutMapping("/{id}/features")
+    public ResponseEntity<ProductResponseDto> syncProductFeatures(
+            @Parameter(description = "The unique ID of the product to update", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody ProductFeatureSyncDto syncDto) {
+
+        ProductResponseDto responseDto = productService.syncProductFeatures(id, syncDto.getFeatures());
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 }
