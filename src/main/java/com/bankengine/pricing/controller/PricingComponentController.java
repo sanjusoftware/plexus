@@ -1,12 +1,10 @@
 package com.bankengine.pricing.controller;
 
-import com.bankengine.pricing.dto.CreatePricingComponentRequestDto;
-import com.bankengine.pricing.dto.PriceValueResponseDto;
-import com.bankengine.pricing.dto.PricingComponentResponseDto;
-import com.bankengine.pricing.dto.TierValueDto;
+import com.bankengine.pricing.dto.*;
 import com.bankengine.pricing.service.PricingComponentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Tag(name = "Pricing Component Management", description = "Manages definitions of reusable pricing items (e.g., Annual Fee, Interest Rate, Service Charge).")
 @RestController
 @RequestMapping("/api/v1/pricing-components")
@@ -26,6 +26,28 @@ public class PricingComponentController {
 
     public PricingComponentController(PricingComponentService pricingComponentService) {
         this.pricingComponentService = pricingComponentService;
+    }
+
+    @Operation(summary = "Retrieve all pricing components",
+            description = "Returns a list of all reusable pricing component definitions.")
+    @ApiResponse(responseCode = "200", description = "List of components successfully retrieved.",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = PricingComponentResponseDto.class))))
+    @GetMapping
+    public ResponseEntity<List<PricingComponentResponseDto>> getAllComponents() {
+        List<PricingComponentResponseDto> components = pricingComponentService.findAllComponents();
+        return new ResponseEntity<>(components, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Retrieve a pricing component by ID",
+            description = "Fetches the details of a specific pricing component.")
+    @ApiResponse(responseCode = "200", description = "Component successfully retrieved.")
+    @ApiResponse(responseCode = "404", description = "Component not found.")
+    @GetMapping("/{id}")
+    public ResponseEntity<PricingComponentResponseDto> getComponentById(
+            @Parameter(description = "ID of the pricing component", required = true)
+            @PathVariable Long id) {
+        PricingComponentResponseDto responseDto = pricingComponentService.getComponentResponseById(id);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 
     /**
@@ -41,6 +63,35 @@ public class PricingComponentController {
     public ResponseEntity<PricingComponentResponseDto> createComponent(@Valid @RequestBody CreatePricingComponentRequestDto requestDto) {
         PricingComponentResponseDto createdComponent = pricingComponentService.createComponent(requestDto);
         return new ResponseEntity<>(createdComponent, HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "Update an existing pricing component",
+            description = "Updates the name and/or type of an existing pricing component.")
+    @ApiResponse(responseCode = "200", description = "Pricing component successfully updated.",
+            content = @Content(schema = @Schema(implementation = PricingComponentResponseDto.class)))
+    @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., invalid type).")
+    @ApiResponse(responseCode = "404", description = "Component not found.")
+    @PutMapping("/{id}")
+    public ResponseEntity<PricingComponentResponseDto> updateComponent(
+            @Parameter(description = "ID of the pricing component to update", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody UpdatePricingComponentRequestDto requestDto) {
+
+        PricingComponentResponseDto updatedComponent = pricingComponentService.updateComponent(id, requestDto);
+        return new ResponseEntity<>(updatedComponent, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Delete a pricing component (Dependency Checked)",
+            description = "Deletes a pricing component by its ID. Fails with 409 Conflict if associated pricing tiers exist.")
+    @ApiResponse(responseCode = "204", description = "Component successfully deleted (No Content).")
+    @ApiResponse(responseCode = "409", description = "Conflict: Component is linked to existing pricing tiers.")
+    @ApiResponse(responseCode = "404", description = "Component not found.")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteComponent(
+            @Parameter(description = "ID of the pricing component to delete", required = true)
+            @PathVariable Long id) {
+        pricingComponentService.deleteComponent(id);
     }
 
     /**

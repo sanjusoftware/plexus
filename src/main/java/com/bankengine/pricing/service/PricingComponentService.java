@@ -8,9 +8,13 @@ import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
+import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PricingComponentService {
@@ -64,7 +68,80 @@ public class PricingComponentService {
         dto.setId(component.getId());
         dto.setName(component.getName());
         dto.setType(component.getType().name());
+        dto.setCreatedAt(component.getCreatedAt());
+        dto.setUpdatedAt(component.getUpdatedAt());
         return dto;
+    }
+
+    /**
+     * Retrieves all Pricing Components.
+     */
+    @Transactional(readOnly = true)
+    public List<PricingComponentResponseDto> findAllComponents() {
+        return componentRepository.findAll().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieves a single Pricing Component and converts it to a DTO.
+     */
+    @Transactional(readOnly = true)
+    public PricingComponentResponseDto getComponentResponseById(Long id) {
+        PricingComponent component = getPricingComponentById(id);
+        return convertToDto(component);
+    }
+
+    // ... existing createComponent method remains the same ...
+
+    /**
+     * Updates an existing Pricing Component.
+     */
+    @Transactional
+    public PricingComponentResponseDto updateComponent(Long id, UpdatePricingComponentRequestDto requestDto) {
+        // 1. Validate component exists (handles 404)
+        PricingComponent component = getPricingComponentById(id);
+
+        // 2. Apply updates
+        component.setName(requestDto.getName());
+
+        try {
+            component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid component type provided: " + requestDto.getType());
+        }
+
+        // 3. Save and convert
+        PricingComponent updatedComponent = componentRepository.save(component);
+        // Note: JPA Auditing will automatically set the updatedAt timestamp.
+        return convertToDto(updatedComponent);
+    }
+
+    /**
+     * Deletes a Pricing Component by ID after checking for dependencies (PricingTier).
+     */
+    @Transactional
+    public void deleteComponent(Long id) {
+        // 1. Validate component exists (handles 404)
+        PricingComponent component = getPricingComponentById(id);
+
+        // 2. Dependency Check against PricingTier
+        // A component cannot be deleted if it has tiers linked to it.
+        // Assuming PricingTierRepository has a method: existsByPricingComponent_Id(Long componentId)
+        boolean hasTiers = tierRepository.existsByPricingComponentId(id);
+
+        if (hasTiers) {
+            long tierCount = tierRepository.countByPricingComponentId(id);
+            String message = String.format(
+                    "Cannot delete Pricing Component ID %d: It has %d associated pricing tiers. Remove all tiers first.",
+                    id, tierCount
+            );
+            // Throws exception, mapped to 409 Conflict by GlobalExceptionHandler
+            throw new DependencyViolationException(message);
+        }
+
+        // 3. Perform deletion if no dependencies are found
+        componentRepository.delete(component);
     }
 
     /**
