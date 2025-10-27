@@ -40,8 +40,7 @@ public class ProductTypeService {
     public ProductType createProductType(CreateProductTypeRequestDto requestDto) {
         // NOTE: Add logic here to check for duplicate names if needed
 
-        ProductType productType = new ProductType();
-        productType.setName(requestDto.getName());
+        ProductType productType = productTypeMapper.toEntity(requestDto);
 
         return productTypeRepository.save(productType);
     }
