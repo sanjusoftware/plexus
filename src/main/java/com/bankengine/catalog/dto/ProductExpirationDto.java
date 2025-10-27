@@ -1,12 +1,11 @@
 package com.bankengine.catalog.dto;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.Value;
-
+import lombok.Data;
 import java.time.LocalDate;
 
-@Value
+@Data
 public class ProductExpirationDto {
-    @NotNull(message = "New expiration date is required.")
-    private LocalDate newExpirationDate;
+    @NotNull(message = "Expiration date cannot be null.")
+    private LocalDate expirationDate;
 }

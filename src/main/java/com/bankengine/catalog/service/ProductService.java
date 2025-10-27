@@ -203,13 +203,7 @@ public class ProductService {
         ProductType productType = getProductTypeById(requestDto.getProductTypeId());
 
         // 2. Convert DTO to Entity
-        Product product = new Product();
-        product.setName(requestDto.getName());
-        product.setBankId(requestDto.getBankId());
-        product.setEffectiveDate(requestDto.getEffectiveDate());
-        product.setExpirationDate(requestDto.getExpirationDate());
-        product.setStatus(requestDto.getStatus());
-        product.setProductType(productType);
+        Product product = productMapper.toEntity(requestDto, productType);
 
         // 3. Save and convert back to DTO for response
         Product savedProduct = productRepository.save(product);
@@ -296,8 +290,7 @@ public class ProductService {
 
         // Status, Effective Date, and Expiration Date handled by direct methods.
         // Only update administrative metadata:
-        product.setName(dto.getName());
-        product.setBankId(dto.getBankId());
+        productMapper.updateFromDto(dto, product);
 
         Product updatedProduct = productRepository.save(product);
         return productMapper.toResponseDto(updatedProduct);

@@ -12,7 +12,7 @@ import java.util.List;
 public interface PricingLinkMapper {
 
     @Mapping(target = "pricingComponentName", source = "link.pricingComponent.name")
-    @Mapping(target = "value", source = "link.value")
+    @Mapping(target = "context", source = "link.context")
     ProductPricingLinkDto toPricingLinkDto(ProductPricingLink link);
 
     List<ProductPricingLinkDto> toPricingLinkDtoList(List<ProductPricingLink> links);
