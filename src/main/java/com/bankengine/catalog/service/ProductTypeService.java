@@ -1,5 +1,6 @@
 package com.bankengine.catalog.service;
 
+import com.bankengine.catalog.converter.ProductTypeMapper;
 import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductTypeRepository;
@@ -12,9 +13,11 @@ import java.util.List;
 public class ProductTypeService {
 
     private final ProductTypeRepository productTypeRepository;
+    private final ProductTypeMapper productTypeMapper;
 
-    public ProductTypeService(ProductTypeRepository productTypeRepository) {
+    public ProductTypeService(ProductTypeRepository productTypeRepository, ProductTypeMapper productTypeMapper) {
         this.productTypeRepository = productTypeRepository;
+        this.productTypeMapper = productTypeMapper;
     }
 
     /**

@@ -82,14 +82,14 @@ public class ProductController {
      */
     @Operation(summary = "Link a FeatureComponent to a Product",
                description = "Establishes a connection between a Product and an existing FeatureComponent.")
-    @ApiResponse(responseCode = "201", description = "Feature successfully linked to the product",
-                 content = @Content(schema = @Schema(implementation = ProductFeatureLink.class)))
+    @ApiResponse(responseCode = "200", description = "Feature successfully linked to the product",
+                 content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
     @ApiResponse(responseCode = "400", description = "Error linking feature.",
                  content = @Content(schema = @Schema(implementation = String.class)))
     @PostMapping("/link-feature")
-    public ResponseEntity<ProductFeatureLink> linkFeatureToProduct(@RequestBody ProductFeatureDto dto) {
-        ProductFeatureLink link = productService.linkFeatureToProduct(dto);
-        return new ResponseEntity<>(link, HttpStatus.CREATED);
+    public ResponseEntity<ProductResponseDto> linkFeatureToProduct(@RequestBody ProductFeatureDto dto) {
+        ProductResponseDto responseDto = productService.linkFeatureToProduct(dto);
+        return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 
     // /api/v1/products/{id} (RESTRICTED METADATA UPDATE)
@@ -145,9 +145,10 @@ public class ProductController {
     public ResponseEntity<ProductResponseDto> extendProductExpiration(
             @Parameter(description = "ID of the product to extend", required = true)
             @PathVariable Long id,
-            @RequestBody LocalDate newExpirationDate) {
+            // Use the new DTO for consistency and validation
+            @Valid @RequestBody ProductExpirationDto dto) {
 
-        ProductResponseDto responseDto = productService.extendProductExpiration(id, newExpirationDate);
+        ProductResponseDto responseDto = productService.extendProductExpiration(id, dto.getNewExpirationDate());
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 

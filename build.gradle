@@ -23,6 +23,12 @@ repositories {
 }
 
 dependencies {
+    // MapStruct Dependency
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+
+    // MapStruct Annotation Processor
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+
     // --- Spring Boot Core ---
     // Includes web server, auto-configuration, and logging
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -65,6 +71,9 @@ dependencies {
     // --- Utilities (Lombok is highly recommended for cleaner code) ---
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // Lombok MapStruct Integration Processor (Required when using both Lombok and MapStruct)
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0' // Use the latest stable version
 
     // --- Testing ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

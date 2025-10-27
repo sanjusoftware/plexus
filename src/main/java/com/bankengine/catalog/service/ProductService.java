@@ -1,6 +1,6 @@
 package com.bankengine.catalog.service;
 
-import com.bankengine.catalog.converter.ProductConverter;
+import com.bankengine.catalog.converter.ProductMapper;
 import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Map;
@@ -41,10 +40,10 @@ public class ProductService {
     private final EntityManager entityManager;
     private final ProductPricingLinkRepository pricingLinkRepository;
     private final PricingComponentService pricingComponentService;
-    private final ProductConverter productConverter;
+    private final ProductMapper productMapper;
 
     public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository,
-                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService, ProductConverter productConverter) {
+                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService, ProductMapper productMapper) {
         this.productRepository = productRepository;
         this.linkRepository = linkRepository;
         this.featureComponentService = featureComponentService;
@@ -52,7 +51,7 @@ public class ProductService {
         this.entityManager = entityManager;
         this.pricingLinkRepository = pricingLinkRepository;
         this.pricingComponentService = pricingComponentService;
-        this.productConverter = productConverter;
+        this.productMapper = productMapper;
     }
 
     /**
@@ -72,7 +71,7 @@ public class ProductService {
         Page<Product> productPage = productRepository.findAll(specification, pageable);
 
         // 4. Map the results to a DTO Page
-        return productPage.map(productConverter::convertToResponseDto);
+        return productPage.map(productMapper::toResponseDto);
     }
 
     /**
@@ -82,7 +81,7 @@ public class ProductService {
     @Transactional
     public ProductResponseDto syncProductFeatures(Long productId, List<ProductFeatureDto> syncDtos) {
         // 1. Validate Product existence and fetch the entity
-        Product product = getProductById(productId);
+        Product product = getProductEntityById(productId);
 
         // 2. Fetch current links and map them by FeatureComponent ID for fast lookup
         List<ProductFeatureLink> currentLinks = linkRepository.findByProductId(productId);
@@ -138,8 +137,8 @@ public class ProductService {
         linkRepository.flush(); // Flush 2: Ensures creations/updates hit the DB immediately
         entityManager.clear();
 
-        Product updatedProduct = getProductById(productId);
-        return productConverter.convertToResponseDto(updatedProduct);
+        Product updatedProduct = getProductEntityById(productId);
+        return productMapper.toResponseDto(updatedProduct);
     }
 
     /**
@@ -148,7 +147,7 @@ public class ProductService {
      */
     @Transactional
     public ProductResponseDto syncProductPricing(Long productId, List<ProductPricingDto> syncDtos) {
-        Product product = getProductById(productId);
+        Product product = getProductEntityById(productId);
 
         // Define a composite key: ComponentID + Context is unique per product
         // Map: { ComponentID_Context -> ProductPricingLink }
@@ -214,7 +213,7 @@ public class ProductService {
 
         // 3. Save and convert back to DTO for response
         Product savedProduct = productRepository.save(product);
-        return productConverter.convertToResponseDto(savedProduct);
+        return productMapper.toResponseDto(savedProduct);
     }
 
     /**
@@ -222,19 +221,17 @@ public class ProductService {
      */
     @Transactional
     public ProductResponseDto getProductResponseById(Long id) {
-        // Use the centralized lookup for consistency
-        Product product = getProductById(id);
-
-        return productConverter.convertToResponseDto(product);
+        Product product = getProductEntityById(id);
+        return productMapper.toResponseDto(product);
     }
 
     /**
      * Links a FeatureComponent to a Product with a specific value.
      */
     @Transactional
-    public ProductFeatureLink linkFeatureToProduct(ProductFeatureDto dto) {
+    public ProductResponseDto linkFeatureToProduct(ProductFeatureDto dto) {
         // 1. Validate Product exists
-        Product product = getProductById(dto.getProductId());
+        Product product = getProductEntityById(dto.getProductId());
 
         // 2. Validate FeatureComponent exists
         FeatureComponent component = featureComponentService.getFeatureComponentById(dto.getFeatureComponentId());
@@ -248,13 +245,15 @@ public class ProductService {
         link.setFeatureComponent(component);
         link.setFeatureValue(dto.getFeatureValue());
 
-        return linkRepository.save(link);
+        linkRepository.save(link);
+        entityManager.clear();
+        return getProductResponseById(product.getId());
     }
 
     /**
      * Helper method to retrieve a Product entity by ID, throwing NotFoundException on failure (404).
      */
-    public Product getProductById(Long id) {
+    public Product getProductEntityById(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Product not found with ID: " + id));
     }
@@ -273,7 +272,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<ProductResponseDto> findAllProducts() {
         return productRepository.findAll().stream()
-                .map(productConverter::convertToResponseDto)
+                .map(productMapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -283,7 +282,7 @@ public class ProductService {
      */
     @Transactional
     public ProductResponseDto updateProduct(Long id, UpdateProductRequestDto dto) {
-        Product product = getProductById(id);
+        Product product = getProductEntityById(id);
 
         // Don't allow update to INACTIVE/ARCHIVED product
         if ("INACTIVE".equals(product.getStatus()) || "ARCHIVED".equals(product.getStatus())) {
@@ -301,7 +300,7 @@ public class ProductService {
         product.setBankId(dto.getBankId());
 
         Product updatedProduct = productRepository.save(product);
-        return productConverter.convertToResponseDto(updatedProduct);
+        return productMapper.toResponseDto(updatedProduct);
     }
 
     /**
@@ -309,7 +308,7 @@ public class ProductService {
      */
     @Transactional
     public ProductResponseDto activateProduct(Long id, LocalDate effectiveDate) {
-        Product product = getProductById(id);
+        Product product = getProductEntityById(id);
 
         if (!"DRAFT".equals(product.getStatus())) {
             throw new IllegalStateException("Only DRAFT products can be directly ACTIVATED.");
@@ -322,7 +321,7 @@ public class ProductService {
         }
 
         Product savedProduct = productRepository.save(product);
-        return productConverter.convertToResponseDto(savedProduct);
+        return productMapper.toResponseDto(savedProduct);
     }
 
     /**
@@ -330,7 +329,7 @@ public class ProductService {
      */
     @Transactional
     public ProductResponseDto deactivateProduct(Long id) {
-        Product product = getProductById(id);
+        Product product = getProductEntityById(id);
 
         if ("INACTIVE".equals(product.getStatus()) || "ARCHIVED".equals(product.getStatus())) {
             throw new IllegalStateException("Product is already inactive or archived.");
@@ -341,7 +340,7 @@ public class ProductService {
         product.setExpirationDate(LocalDate.now());
 
         Product savedProduct = productRepository.save(product);
-        return productConverter.convertToResponseDto(savedProduct);
+        return productMapper.toResponseDto(savedProduct);
     }
 
     /**
@@ -349,7 +348,7 @@ public class ProductService {
      */
     @Transactional
     public ProductResponseDto extendProductExpiration(Long id, LocalDate newExpirationDate) {
-        Product product = getProductById(id);
+        Product product = getProductEntityById(id);
 
         if (newExpirationDate == null) {
             throw new IllegalArgumentException("New expiration date cannot be null.");
@@ -368,7 +367,7 @@ public class ProductService {
         product.setExpirationDate(newExpirationDate);
 
         Product savedProduct = productRepository.save(product);
-        return productConverter.convertToResponseDto(savedProduct);
+        return productMapper.toResponseDto(savedProduct);
     }
 
     /**
@@ -382,7 +381,7 @@ public class ProductService {
     public ProductResponseDto createNewVersion(Long oldProductId, CreateNewVersionRequestDto requestDto) {
 
         // 1. Validate and Retrieve the Old Product
-        Product oldProduct = getProductById(oldProductId);
+        Product oldProduct = getProductEntityById(oldProductId);
 
         // Enforce business rule: Only ACTIVE products can be versioned (copied).
         if (!"ACTIVE".equals(oldProduct.getStatus())) {
@@ -442,9 +441,9 @@ public class ProductService {
 
         // 5. Ensure new collections are loaded for DTO conversion
         entityManager.clear();
-        Product finalNewProduct = getProductById(savedNewProduct.getId());
+        Product finalNewProduct = getProductEntityById(savedNewProduct.getId());
 
-        return productConverter.convertToResponseDto(finalNewProduct);
+        return productMapper.toResponseDto(finalNewProduct);
     }
 
     /**

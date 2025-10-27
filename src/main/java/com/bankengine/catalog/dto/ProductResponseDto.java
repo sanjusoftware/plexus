@@ -9,13 +9,13 @@ import java.util.List;
 public class ProductResponseDto {
     private Long id;
     private String name;
-    private String productTypeName; // Return name instead of the entire ProductType object
     private String bankId;
     private LocalDate effectiveDate;
     private String status;
-    private Long productTypeId;
+    private ProductTypeResponseDto productType;
     private LocalDate expirationDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<ProductFeatureLinkDto> features; // List of linked features (requires a nested DTO)
+    private List<ProductFeatureLinkDto> features;
+    private List<ProductPricingLinkDto> pricing;
 }
