@@ -2,6 +2,7 @@ package com.bankengine.catalog;
 
 import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
 import com.bankengine.catalog.dto.CreateProductRequestDto;
+import com.bankengine.catalog.dto.ProductExpirationDto;
 import com.bankengine.catalog.dto.ProductResponseDto;
 import com.bankengine.catalog.dto.UpdateProductRequestDto;
 import com.bankengine.catalog.repository.ProductRepository;
@@ -331,11 +332,13 @@ public class ProductIntegrationTest {
         // ARRANGE: Create an ACTIVE product
         Long productId = createProduct("ACTIVE");
         LocalDate newExpirationDate = LocalDate.now().plusYears(5);
+        ProductExpirationDto expirationDto = new ProductExpirationDto();
+        expirationDto.setExpirationDate(newExpirationDate);
 
         // ACT: Call PUT /expiration
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/expiration", productId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newExpirationDate)))
+                        .content(objectMapper.writeValueAsString(expirationDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.expirationDate").value(newExpirationDate.toString()));
     }

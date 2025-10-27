@@ -148,7 +148,7 @@ public class ProductController {
             // Use the new DTO for consistency and validation
             @Valid @RequestBody ProductExpirationDto dto) {
 
-        ProductResponseDto responseDto = productService.extendProductExpiration(id, dto.getNewExpirationDate());
+        ProductResponseDto responseDto = productService.extendProductExpiration(id, dto.getExpirationDate());
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 
