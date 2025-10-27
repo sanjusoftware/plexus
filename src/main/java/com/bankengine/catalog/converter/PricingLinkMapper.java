@@ -1,5 +1,6 @@
 package com.bankengine.catalog.converter;
 
+import com.bankengine.catalog.dto.ProductPricingDto;
 import com.bankengine.catalog.dto.ProductPricingLinkDto;
 import com.bankengine.pricing.model.ProductPricingLink;
 import org.mapstruct.Mapper;
@@ -16,4 +17,17 @@ public interface PricingLinkMapper {
     ProductPricingLinkDto toPricingLinkDto(ProductPricingLink link);
 
     List<ProductPricingLinkDto> toPricingLinkDtoList(List<ProductPricingLink> links);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "product", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    ProductPricingLink clone(ProductPricingLink oldLink);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "product", ignore = true)
+    @Mapping(target = "pricingComponent", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    ProductPricingLink toEntity(ProductPricingDto dto);
 }

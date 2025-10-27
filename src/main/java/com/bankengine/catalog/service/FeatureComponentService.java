@@ -1,5 +1,6 @@
 package com.bankengine.catalog.service;
 
+import com.bankengine.catalog.converter.FeatureComponentMapper;
 import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
@@ -20,10 +21,12 @@ public class FeatureComponentService {
 
     private final FeatureComponentRepository componentRepository;
     private final ProductFeatureLinkRepository linkRepository;
+    private final FeatureComponentMapper featureComponentMapper;
 
-    public FeatureComponentService(FeatureComponentRepository componentRepository, ProductFeatureLinkRepository linkRepository) {
+    public FeatureComponentService(FeatureComponentRepository componentRepository, ProductFeatureLinkRepository linkRepository, FeatureComponentMapper featureComponentMapper) {
         this.componentRepository = componentRepository;
         this.linkRepository = linkRepository;
+        this.featureComponentMapper = featureComponentMapper;
     }
 
     /**
@@ -36,8 +39,7 @@ public class FeatureComponentService {
         }
 
         // 2. Convert DTO to Entity and parse DataType
-        FeatureComponent component = new FeatureComponent();
-        component.setName(requestDto.getName());
+        FeatureComponent component = featureComponentMapper.toEntity(requestDto);
 
         try {
             component.setDataType(DataType.valueOf(requestDto.getDataType().toUpperCase()));
@@ -48,7 +50,7 @@ public class FeatureComponentService {
 
         // 3. Save and convert back to DTO
         FeatureComponent savedComponent = componentRepository.save(component);
-        return convertToDto(savedComponent);
+        return featureComponentMapper.toResponseDto(savedComponent);
     }
 
     /**
@@ -67,7 +69,7 @@ public class FeatureComponentService {
         List<FeatureComponent> components = componentRepository.findAll();
 
         return components.stream()
-                .map(this::convertToDto)
+                .map(featureComponentMapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -77,7 +79,7 @@ public class FeatureComponentService {
     @Transactional(readOnly = true)
     public FeatureComponentResponseDto getFeatureResponseById(Long id) {
         FeatureComponent component = getFeatureComponentById(id);
-        return convertToDto(component);
+        return featureComponentMapper.toResponseDto(component);
     }
 
     /**
@@ -94,7 +96,7 @@ public class FeatureComponentService {
         }
 
         // 3. Apply updates
-        component.setName(requestDto.getName());
+        featureComponentMapper.updateFromDto(requestDto, component);
 
         try {
             component.setDataType(DataType.valueOf(requestDto.getDataType().toUpperCase()));
@@ -104,7 +106,7 @@ public class FeatureComponentService {
 
         // 4. Save and convert
         FeatureComponent updatedComponent = componentRepository.save(component);
-        return convertToDto(updatedComponent);
+        return featureComponentMapper.toResponseDto(updatedComponent);
     }
 
     /**
@@ -133,16 +135,4 @@ public class FeatureComponentService {
         componentRepository.delete(component);
     }
 
-    /**
-     * Helper Method: Converts a FeatureComponent Entity to its Response DTO.
-     */
-    private FeatureComponentResponseDto convertToDto(FeatureComponent component) {
-        FeatureComponentResponseDto dto = new FeatureComponentResponseDto();
-        dto.setId(component.getId());
-        dto.setName(component.getName());
-        dto.setDataType(component.getDataType().name());
-        dto.setCreatedAt(component.getCreatedAt());
-        dto.setUpdatedAt(component.getUpdatedAt());
-        return dto;
-    }
 }

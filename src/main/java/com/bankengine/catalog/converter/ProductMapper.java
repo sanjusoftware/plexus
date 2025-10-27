@@ -1,5 +1,6 @@
 package com.bankengine.catalog.converter;
 
+import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
 import com.bankengine.catalog.dto.CreateProductRequestDto;
 import com.bankengine.catalog.dto.ProductResponseDto;
 import com.bankengine.catalog.dto.UpdateProductRequestDto;
@@ -46,4 +47,17 @@ public interface ProductMapper {
     @Mapping(target = "expirationDate", ignore = true)
     @Mapping(target = "status", ignore = true)
     void updateFromDto(UpdateProductRequestDto dto, @MappingTarget Product product);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "productType", source = "oldProduct.productType")
+    @Mapping(target = "bankId", source = "oldProduct.bankId")
+    @Mapping(target = "name", source = "requestDto.newName")
+    @Mapping(target = "effectiveDate", source = "requestDto.newEffectiveDate")
+    @Mapping(target = "status", constant = "DRAFT")
+    @Mapping(target = "productFeatureLinks", ignore = true)
+    @Mapping(target = "productPricingLinks", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "expirationDate", ignore = true)
+    Product createNewVersionFrom(Product oldProduct, CreateNewVersionRequestDto requestDto);
 }
