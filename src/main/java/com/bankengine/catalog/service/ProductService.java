@@ -1,5 +1,6 @@
 package com.bankengine.catalog.service;
 
+import com.bankengine.catalog.converter.ProductConverter;
 import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
@@ -40,9 +41,10 @@ public class ProductService {
     private final EntityManager entityManager;
     private final ProductPricingLinkRepository pricingLinkRepository;
     private final PricingComponentService pricingComponentService;
+    private final ProductConverter productConverter;
 
     public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository,
-                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService) {
+                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService, ProductConverter productConverter) {
         this.productRepository = productRepository;
         this.linkRepository = linkRepository;
         this.featureComponentService = featureComponentService;
@@ -50,6 +52,7 @@ public class ProductService {
         this.entityManager = entityManager;
         this.pricingLinkRepository = pricingLinkRepository;
         this.pricingComponentService = pricingComponentService;
+        this.productConverter = productConverter;
     }
 
     /**
@@ -69,7 +72,7 @@ public class ProductService {
         Page<Product> productPage = productRepository.findAll(specification, pageable);
 
         // 4. Map the results to a DTO Page
-        return productPage.map(this::convertToResponseDto);
+        return productPage.map(productConverter::convertToResponseDto);
     }
 
     /**
@@ -136,7 +139,7 @@ public class ProductService {
         entityManager.clear();
 
         Product updatedProduct = getProductById(productId);
-        return convertToResponseDto(updatedProduct);
+        return productConverter.convertToResponseDto(updatedProduct);
     }
 
     /**
@@ -211,7 +214,7 @@ public class ProductService {
 
         // 3. Save and convert back to DTO for response
         Product savedProduct = productRepository.save(product);
-        return convertToResponseDto(savedProduct);
+        return productConverter.convertToResponseDto(savedProduct);
     }
 
     /**
@@ -222,7 +225,7 @@ public class ProductService {
         // Use the centralized lookup for consistency
         Product product = getProductById(id);
 
-        return convertToResponseDto(product);
+        return productConverter.convertToResponseDto(product);
     }
 
     /**
@@ -270,7 +273,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<ProductResponseDto> findAllProducts() {
         return productRepository.findAll().stream()
-                .map(this::convertToResponseDto)
+                .map(productConverter::convertToResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -298,7 +301,7 @@ public class ProductService {
         product.setBankId(dto.getBankId());
 
         Product updatedProduct = productRepository.save(product);
-        return convertToResponseDto(updatedProduct);
+        return productConverter.convertToResponseDto(updatedProduct);
     }
 
     /**
@@ -319,7 +322,7 @@ public class ProductService {
         }
 
         Product savedProduct = productRepository.save(product);
-        return convertToResponseDto(savedProduct);
+        return productConverter.convertToResponseDto(savedProduct);
     }
 
     /**
@@ -338,7 +341,7 @@ public class ProductService {
         product.setExpirationDate(LocalDate.now());
 
         Product savedProduct = productRepository.save(product);
-        return convertToResponseDto(savedProduct);
+        return productConverter.convertToResponseDto(savedProduct);
     }
 
     /**
@@ -365,7 +368,7 @@ public class ProductService {
         product.setExpirationDate(newExpirationDate);
 
         Product savedProduct = productRepository.save(product);
-        return convertToResponseDto(savedProduct);
+        return productConverter.convertToResponseDto(savedProduct);
     }
 
     /**
@@ -441,7 +444,7 @@ public class ProductService {
         entityManager.clear();
         Product finalNewProduct = getProductById(savedNewProduct.getId());
 
-        return convertToResponseDto(finalNewProduct);
+        return productConverter.convertToResponseDto(finalNewProduct);
     }
 
     /**
@@ -485,42 +488,4 @@ public class ProductService {
         }
     }
 
-    // --- Helper Method for DTO Conversion ---
-    private ProductResponseDto convertToResponseDto(Product product) {
-        ProductResponseDto dto = new ProductResponseDto();
-        dto.setId(product.getId());
-        dto.setName(product.getName());
-        dto.setProductTypeName(product.getProductType() != null ? product.getProductType().getName() : null);
-        dto.setBankId(product.getBankId());
-        dto.setEffectiveDate(product.getEffectiveDate());
-        dto.setStatus(product.getStatus());
-        dto.setExpirationDate(product.getExpirationDate());
-        dto.setCreatedAt(product.getCreatedAt());
-        dto.setUpdatedAt(product.getUpdatedAt());
-
-        if (product.getProductFeatureLinks() != null) {
-            dto.setFeatures(
-                    product.getProductFeatureLinks().stream()
-                            .map(this::convertLinkToDto) // Use the new helper method
-                            .collect(Collectors.toList())
-            );
-        } else {
-            dto.setFeatures(Collections.emptyList()); // Return an empty list instead of null
-        }
-
-        return dto;
-    }
-
-    /**
-     * Helper Method: Converts a ProductFeatureLink Entity to its DTO.
-     */
-    private ProductFeatureLinkDto convertLinkToDto(ProductFeatureLink link) {
-        ProductFeatureLinkDto dto = new ProductFeatureLinkDto();
-
-        // Ensure you fetch the component name, not the entire component object
-        dto.setFeatureName(link.getFeatureComponent().getName());
-        dto.setFeatureValue(link.getFeatureValue());
-
-        return dto;
-    }
 }
