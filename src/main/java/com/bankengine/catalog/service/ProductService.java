@@ -1,15 +1,7 @@
 package com.bankengine.catalog.service;
 
-import com.bankengine.catalog.converter.FeatureLinkMapper;
-import com.bankengine.catalog.converter.PricingLinkMapper;
 import com.bankengine.catalog.converter.ProductMapper;
-import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
-import com.bankengine.catalog.dto.CreateProductRequestDto;
-import com.bankengine.catalog.dto.ProductFeatureDto;
-import com.bankengine.catalog.dto.ProductPricingDto;
-import com.bankengine.catalog.dto.ProductResponseDto;
-import com.bankengine.catalog.dto.ProductSearchRequestDto;
-import com.bankengine.catalog.dto.UpdateProductRequestDto;
+import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -50,11 +42,8 @@ public class ProductService {
     private final PricingComponentService pricingComponentService;
     private final ProductMapper productMapper;
 
-    private final FeatureLinkMapper featureLinkMapper;
-    private final PricingLinkMapper pricingLinkMapper;
-
     public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository,
-                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService, ProductMapper productMapper, FeatureLinkMapper featureLinkMapper, PricingLinkMapper pricingLinkMapper) {
+                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService, ProductMapper productMapper) {
         this.productRepository = productRepository;
         this.linkRepository = linkRepository;
         this.featureComponentService = featureComponentService;
@@ -63,8 +52,6 @@ public class ProductService {
         this.pricingLinkRepository = pricingLinkRepository;
         this.pricingComponentService = pricingComponentService;
         this.productMapper = productMapper;
-        this.featureLinkMapper = featureLinkMapper;
-        this.pricingLinkMapper = pricingLinkMapper;
     }
 
     /**
@@ -134,15 +121,16 @@ public class ProductService {
                 ProductFeatureLink existingLink = currentLinksMap.get(featureId);
 
                 if (!existingLink.getFeatureValue().equals(dto.getFeatureValue())) {
-                    featureLinkMapper.updateFromDto(dto, existingLink);
+                    existingLink.setFeatureValue(dto.getFeatureValue());
                     linkRepository.save(existingLink); // Explicit save for update
                 }
                 // If value is the same, do nothing.
             } else {
                 // CREATE: Link is new
-                ProductFeatureLink newLink = featureLinkMapper.toEntity(dto);
+                ProductFeatureLink newLink = new ProductFeatureLink();
                 newLink.setProduct(product);
                 newLink.setFeatureComponent(component);
+                newLink.setFeatureValue(dto.getFeatureValue());
                 linkRepository.save(newLink);
             }
         }
@@ -190,9 +178,10 @@ public class ProductService {
                 // CREATE: Link is new
                 PricingComponent component = pricingComponentService.getPricingComponentById(dto.getPricingComponentId());
 
-                ProductPricingLink newLink = pricingLinkMapper.toEntity(dto);
+                ProductPricingLink newLink = new ProductPricingLink();
                 newLink.setProduct(product);
                 newLink.setPricingComponent(component);
+                newLink.setContext(dto.getContext());
 
                 pricingLinkRepository.save(newLink);
             }
@@ -214,7 +203,13 @@ public class ProductService {
         ProductType productType = getProductTypeById(requestDto.getProductTypeId());
 
         // 2. Convert DTO to Entity
-        Product product = productMapper.toEntity(requestDto, productType);
+        Product product = new Product();
+        product.setName(requestDto.getName());
+        product.setBankId(requestDto.getBankId());
+        product.setEffectiveDate(requestDto.getEffectiveDate());
+        product.setExpirationDate(requestDto.getExpirationDate());
+        product.setStatus(requestDto.getStatus());
+        product.setProductType(productType);
 
         // 3. Save and convert back to DTO for response
         Product savedProduct = productRepository.save(product);
@@ -301,7 +296,8 @@ public class ProductService {
 
         // Status, Effective Date, and Expiration Date handled by direct methods.
         // Only update administrative metadata:
-        productMapper.updateFromDto(dto, product);
+        product.setName(dto.getName());
+        product.setBankId(dto.getBankId());
 
         Product updatedProduct = productRepository.save(product);
         return productMapper.toResponseDto(updatedProduct);
@@ -399,7 +395,16 @@ public class ProductService {
         productRepository.save(oldProduct);
 
         // 3. Create the New Product Entity (Inherits most data)
-        Product newProduct = productMapper.createNewVersionFrom(oldProduct, requestDto);
+        Product newProduct = new Product();
+
+        // Inherited configuration fields
+        newProduct.setProductType(oldProduct.getProductType());
+        newProduct.setBankId(oldProduct.getBankId());
+
+        // New version metadata
+        newProduct.setName(requestDto.getNewName());
+        newProduct.setEffectiveDate(requestDto.getNewEffectiveDate());
+        newProduct.setStatus("DRAFT"); // New versions start as DRAFT for review/modification
 
         // Save the new product to generate the ID
         Product savedNewProduct = productRepository.save(newProduct);
@@ -409,8 +414,10 @@ public class ProductService {
         // 4a. Copy ProductFeatureLink
         List<ProductFeatureLink> newFeatureLinks = oldProduct.getProductFeatureLinks().stream()
                 .map(oldLink -> {
-                    ProductFeatureLink newLink = featureLinkMapper.clone(oldLink);
+                    ProductFeatureLink newLink = new ProductFeatureLink();
                     newLink.setProduct(savedNewProduct);
+                    newLink.setFeatureComponent(oldLink.getFeatureComponent());
+                    newLink.setFeatureValue(oldLink.getFeatureValue());
                     return newLink;
                 })
                 .collect(Collectors.toList());
@@ -422,8 +429,10 @@ public class ProductService {
 
         List<ProductPricingLink> newPricingLinks = oldPricingLinks.stream()
                 .map(oldLink -> {
-                    ProductPricingLink newLink = pricingLinkMapper.clone(oldLink);
+                    ProductPricingLink newLink = new ProductPricingLink();
                     newLink.setProduct(savedNewProduct);
+                    newLink.setPricingComponent(oldLink.getPricingComponent());
+                    newLink.setContext(oldLink.getContext());
                     return newLink;
                 })
                 .collect(Collectors.toList());
