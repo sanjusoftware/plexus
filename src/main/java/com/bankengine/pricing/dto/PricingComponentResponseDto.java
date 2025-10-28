@@ -1,16 +1,19 @@
-// src/main/java/com/bankengine/pricing/dto/PricingComponentResponseDto.java
 package com.bankengine.pricing.dto;
 
-import lombok.Data;
+import com.bankengine.pricing.model.PricingComponent.ComponentType;
+import lombok.Builder;
+import lombok.Value;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-@Data
+@Value
+@Builder
 public class PricingComponentResponseDto {
     private Long id;
     private String name;
-    private String type;
-
+    private ComponentType type;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<PricingTierResponseDto> pricingTiers;
 }

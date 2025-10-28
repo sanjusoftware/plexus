@@ -1,9 +1,12 @@
 package com.bankengine.pricing.model;
 
 import com.bankengine.common.model.AuditableEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 @Entity
 @Table(name = "pricing_component")
@@ -20,6 +23,10 @@ public class PricingComponent extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     private ComponentType type; // e.g., FEE, RATE, WAIVER, BENEFIT
+
+    @OneToMany(mappedBy = "pricingComponent", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonIgnore // Prevents infinite recursion in case this component is serialized elsewhere
+    private List<PricingTier> pricingTiers;
 
     public enum ComponentType {
         FEE, RATE, WAIVER, BENEFIT, DISCOUNT

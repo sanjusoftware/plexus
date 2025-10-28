@@ -22,7 +22,8 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -231,8 +232,7 @@ public class PricingComponentIntegrationTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.priceAmount", is(5.00)))
-                .andExpect(jsonPath("$.currency", is("USD")))
-                .andExpect(jsonPath("$.pricingTierId").isNumber());
+                .andExpect(jsonPath("$.currency", is("USD")));
     }
 
     @Test
@@ -298,10 +298,7 @@ public class PricingComponentIntegrationTest {
                 .andExpect(status().isOk())
                 // ASSERT: Check the updated PriceValue fields
                 .andExpect(jsonPath("$.priceAmount", is(15.50)))
-                .andExpect(jsonPath("$.currency", is("EUR")))
-                // ASSERT: Check that the tier entity was updated (requires retrieval or checking DB)
-                // For simplicity, we check the PriceValue DTO, which confirms the service ran.
-                .andExpect(jsonPath("$.pricingTierId", is(tierIdForTests.intValue())));
+                .andExpect(jsonPath("$.currency", is("EUR")));
 
         // VERIFY: Manually check the Tier entity in the DB
         PricingTier updatedTier = tierRepository.findById(tierIdForTests).get();

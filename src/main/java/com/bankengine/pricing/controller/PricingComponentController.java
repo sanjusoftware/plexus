@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,26 +27,27 @@ public class PricingComponentController {
         this.pricingComponentService = pricingComponentService;
     }
 
-    @Operation(summary = "Retrieve all pricing components",
-            description = "Returns a list of all reusable pricing component definitions.")
+    @Operation(summary = "Retrieve all pricing components (with Tiers and Price Values)",
+            description = "Returns a list of all reusable pricing component definitions, including their associated Tiers and Prices.")
     @ApiResponse(responseCode = "200", description = "List of components successfully retrieved.",
-            content = @Content(array = @ArraySchema(schema = @Schema(implementation = PricingComponentResponseDto.class))))
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = PricingComponentResponseDto.class)))) // Use new DTO
     @GetMapping
-    public ResponseEntity<List<PricingComponentResponseDto>> getAllComponents() {
-        List<PricingComponentResponseDto> components = pricingComponentService.findAllComponents();
-        return new ResponseEntity<>(components, HttpStatus.OK);
+    public ResponseEntity<List<PricingComponentResponseDto>> getAllPricingComponents() {
+        List<PricingComponentResponseDto> componentResponseDtoList = pricingComponentService.findAllComponents();
+        return ResponseEntity.ok(componentResponseDtoList);
     }
 
-    @Operation(summary = "Retrieve a pricing component by ID",
-            description = "Fetches the details of a specific pricing component.")
-    @ApiResponse(responseCode = "200", description = "Component successfully retrieved.")
-    @ApiResponse(responseCode = "404", description = "Component not found.")
+    @Operation(summary = "Retrieve a pricing component by ID (with Tiers and Price Values)",
+            description = "Returns a single pricing component definition by ID, including its associated Tiers and Prices.")
+    @ApiResponse(responseCode = "200", description = "Component successfully retrieved.",
+            content = @Content(schema = @Schema(implementation = PricingComponentResponseDto.class))) // Use new DTO
+    @ApiResponse(responseCode = "404", description = "Pricing component not found.")
     @GetMapping("/{id}")
-    public ResponseEntity<PricingComponentResponseDto> getComponentById(
-            @Parameter(description = "ID of the pricing component", required = true)
+    public ResponseEntity<PricingComponentResponseDto> getPricingComponentById(
+            @Parameter(description = "ID of the pricing component to retrieve", required = true)
             @PathVariable Long id) {
-        PricingComponentResponseDto responseDto = pricingComponentService.getComponentResponseById(id);
-        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+        PricingComponentResponseDto responseDto = pricingComponentService.getComponentById(id);
+        return ResponseEntity.ok(responseDto);
     }
 
     /**

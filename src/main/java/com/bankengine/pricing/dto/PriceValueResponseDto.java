@@ -1,13 +1,19 @@
 package com.bankengine.pricing.dto;
 
-import java.math.BigDecimal;
-import lombok.Data;
+import com.bankengine.pricing.model.PriceValue.ValueType;
+import lombok.Builder;
+import lombok.Value;
 
-@Data
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Value
+@Builder
 public class PriceValueResponseDto {
     private Long id;
-    private Long pricingTierId;
     private BigDecimal priceAmount;
-    private String valueType;
+    private ValueType valueType;
     private String currency;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
