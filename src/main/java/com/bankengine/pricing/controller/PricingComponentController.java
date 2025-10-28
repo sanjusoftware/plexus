@@ -1,6 +1,8 @@
 package com.bankengine.pricing.controller;
 
-import com.bankengine.pricing.dto.*;
+import com.bankengine.pricing.dto.CreatePricingComponentRequestDto;
+import com.bankengine.pricing.dto.PricingComponentResponseDto;
+import com.bankengine.pricing.dto.UpdatePricingComponentRequestDto;
 import com.bankengine.pricing.service.PricingComponentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Pricing Component Management", description = "Manages definitions of reusable pricing items (e.g., Annual Fee, Interest Rate, Service Charge).")
+@Tag(name = "Pricing Component Management (Base)", description = "Manages the definition of reusable pricing items (e.g., Annual Fee, Interest Rate). Tiers are managed under the /tiers sub-resource.")
 @RestController
 @RequestMapping("/api/v1/pricing-components")
 public class PricingComponentController {
@@ -65,6 +67,7 @@ public class PricingComponentController {
         return new ResponseEntity<>(createdComponent, HttpStatus.CREATED);
     }
 
+
     @Operation(summary = "Update an existing pricing component",
             description = "Updates the name and/or type of an existing pricing component.")
     @ApiResponse(responseCode = "200", description = "Pricing component successfully updated.",
@@ -72,7 +75,7 @@ public class PricingComponentController {
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., invalid type).")
     @ApiResponse(responseCode = "404", description = "Component not found.")
     @PutMapping("/{id}")
-    public ResponseEntity<PricingComponentResponseDto> updateComponent(
+    public ResponseEntity<PricingComponentResponseDto> updatePricingComponent(
             @Parameter(description = "ID of the pricing component to update", required = true)
             @PathVariable Long id,
             @Valid @RequestBody UpdatePricingComponentRequestDto requestDto) {
@@ -82,75 +85,15 @@ public class PricingComponentController {
     }
 
     @Operation(summary = "Delete a pricing component (Dependency Checked)",
-            description = "Deletes a pricing component by its ID. Fails with 409 Conflict if associated pricing tiers exist.")
+            description = "Deletes a pricing component by its ID. Fails with 409 Conflict if associated tiers or product links exist.")
     @ApiResponse(responseCode = "204", description = "Component successfully deleted (No Content).")
-    @ApiResponse(responseCode = "409", description = "Conflict: Component is linked to existing pricing tiers.")
+    @ApiResponse(responseCode = "409", description = "Conflict: Component is linked to existing pricing tiers or product links.") // <--- SLIGHTLY IMPROVED DESCRIPTION
     @ApiResponse(responseCode = "404", description = "Component not found.")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteComponent(
+    public void deletePricingComponent(
             @Parameter(description = "ID of the pricing component to delete", required = true)
             @PathVariable Long id) {
-        pricingComponentService.deleteComponent(id);
-    }
-
-    /**
-     * POST /api/v1/pricing-components/{componentId}/tiers
-     * Adds a Tier and its Value to an existing Pricing Component using nested DTOs.
-     */
-    @Operation(summary = "Add a new pricing tier and value to a component",
-               description = "Defines a PricingTier and its associated PriceValue (e.g., condition, threshold, and amount) under a specified component.")
-    @ApiResponse(responseCode = "201", description = "Pricing Tier and Value successfully created and linked.",
-                 content = @Content(schema = @Schema(implementation = PriceValueResponseDto.class)))
-    @ApiResponse(responseCode = "400", description = "Invalid data (e.g., componentId not found, invalid threshold values).")
-    @PostMapping("/{componentId}/tiers")
-    public ResponseEntity<PriceValueResponseDto> addTieredPricing(
-            @Parameter(description = "The ID of the existing Pricing Component.", required = true)
-            @PathVariable Long componentId,
-            @Valid @RequestBody TierValueDto dto) {
-        PriceValueResponseDto responseDto = pricingComponentService.addTierAndValue(
-                componentId,
-                dto.getTier(),
-                dto.getValue());
-        return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
-    }
-
-    // --- PUT /tiers/{tierId} ---
-
-    @Operation(summary = "Update an existing pricing tier and its value",
-            description = "Modifies the condition, thresholds (tier) and/or the amount/type (value) of an existing tier.")
-    @ApiResponse(responseCode = "200", description = "Pricing Tier and Value successfully updated.",
-            content = @Content(schema = @Schema(implementation = PriceValueResponseDto.class)))
-    @ApiResponse(responseCode = "404", description = "Pricing Component or Tier not found.")
-    @PutMapping("/{componentId}/tiers/{tierId}")
-    public ResponseEntity<PriceValueResponseDto> updateTieredPricing(
-            @Parameter(description = "ID of the existing Pricing Component.", required = true)
-            @PathVariable Long componentId,
-            @Parameter(description = "ID of the existing Pricing Tier.", required = true)
-            @PathVariable Long tierId,
-            @Valid @RequestBody UpdateTierValueDto dto) {
-
-        PriceValueResponseDto responseDto = pricingComponentService.updateTierAndValue(
-                componentId,
-                tierId,
-                dto);
-        return new ResponseEntity<>(responseDto, HttpStatus.OK);
-    }
-
-    // --- DELETE /tiers/{tierId} ---
-
-    @Operation(summary = "Delete a specific pricing tier and its value",
-            description = "Removes a specific Pricing Tier and its associated Price Value.")
-    @ApiResponse(responseCode = "204", description = "Pricing Tier and Value successfully deleted (No Content).")
-    @ApiResponse(responseCode = "404", description = "Pricing Component or Tier not found.")
-    @DeleteMapping("/{componentId}/tiers/{tierId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteTieredPricing(
-            @Parameter(description = "ID of the existing Pricing Component.", required = true)
-            @PathVariable Long componentId,
-            @Parameter(description = "ID of the Pricing Tier to delete.", required = true)
-            @PathVariable Long tierId) {
-
-        pricingComponentService.deleteTierAndValue(componentId, tierId);
+        pricingComponentService.deletePricingComponent(id);
     }
 }

@@ -11,6 +11,7 @@ import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
+import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
 import org.springframework.stereotype.Service;
@@ -27,20 +28,22 @@ public class PricingComponentService {
     private final PricingComponentMapper pricingComponentMapper;
     private final PricingTierMapper pricingTierMapper;
     private final PriceValueMapper priceValueMapper;
+    private final ProductPricingLinkRepository productPricingLinkRepository;
 
     public PricingComponentService(
             PricingComponentRepository componentRepository,
             PricingTierRepository tierRepository,
             PriceValueRepository valueRepository,
             PricingComponentMapper pricingComponentMapper,
-            PricingTierMapper pricingTierMapper,        // UPDATED CONSTRUCTOR
-            PriceValueMapper priceValueMapper) {        // UPDATED CONSTRUCTOR
+            PricingTierMapper pricingTierMapper,
+            PriceValueMapper priceValueMapper, ProductPricingLinkRepository productPricingLinkRepository) {
         this.componentRepository = componentRepository;
         this.tierRepository = tierRepository;
         this.valueRepository = valueRepository;
         this.pricingComponentMapper = pricingComponentMapper;
         this.pricingTierMapper = pricingTierMapper;
         this.priceValueMapper = priceValueMapper;
+        this.productPricingLinkRepository = productPricingLinkRepository;
     }
 
     /**
@@ -71,15 +74,12 @@ public class PricingComponentService {
                 .orElseThrow(() -> new NotFoundException("Price Value not found for Tier ID: " + tierId));
 
         // 4. Apply Tier Updates
-        // Replaced manual updateTierEntity with mapper call
         pricingTierMapper.updateFromDto(dto.getTier(), tier);
         PricingTier savedTier = tierRepository.save(tier);
 
         // 5. Apply Value Updates
-        // Replaced manual updateValueEntity with mapper call
         priceValueMapper.updateFromDto(dto.getValue(), value);
 
-        // Manual enum parsing/validation remains in the service for explicit 400 error handling
         try {
             value.setValueType(PriceValue.ValueType.valueOf(dto.getValue().getValueType().toUpperCase()));
         } catch (IllegalArgumentException e) {
@@ -88,19 +88,14 @@ public class PricingComponentService {
         PriceValue savedValue = valueRepository.save(value);
 
         // 6. Convert saved PriceValue Entity to Response DTO
-        // Replaced manual convertValueEntityToResponseDto with mapper call
         return priceValueMapper.toResponseDto(savedValue);
     }
-
-    // REMOVED private void updateTierEntity(PricingTier tier, UpdatePricingTierRequestDto dto)
-    // REMOVED private void updateValueEntity(PriceValue value, UpdatePriceValueRequestDto dto)
 
     /**
      * Deletes a Pricing Tier and its associated Price Value.
      */
     @Transactional
     public void deleteTierAndValue(Long componentId, Long tierId) {
-        // ... (No change)
         getPricingComponentById(componentId);
         PricingTier tier = getPricingTierById(tierId);
         valueRepository.deleteByPricingTierId(tierId);
@@ -121,23 +116,18 @@ public class PricingComponentService {
     @Transactional
     public PricingComponentResponseDto createComponent(CreatePricingComponentRequestDto requestDto) {
         // 1. Convert DTO to Entity
-        // Replaced manual object creation/field mapping with mapper call
         PricingComponent component = pricingComponentMapper.toEntity(requestDto);
 
-        // Safely parse the String Type to the Enum (Kept here for explicit validation/error handling)
         try {
             component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
         } catch (IllegalArgumentException e) {
-            // This is a 400 Bad Request
             throw new IllegalArgumentException("Invalid component type provided: " + requestDto.getType());
         }
 
         // 2. Save and convert back to DTO
         PricingComponent savedComponent = componentRepository.save(component);
-        return pricingComponentMapper.toResponseDto(savedComponent); // Already correct
+        return pricingComponentMapper.toResponseDto(savedComponent);
     }
-
-    // REMOVED private PricingComponentResponseDto convertToDto(PricingComponent component)
 
     /**
      * Retrieves all Pricing Components.
@@ -155,7 +145,6 @@ public class PricingComponentService {
     public PricingComponentResponseDto getComponentById(Long id) {
         PricingComponent component = componentRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Pricing Component not found with ID: " + id));
-        // Uses mapper conversion - already correct
         return pricingComponentMapper.toResponseDto(component);
     }
 
@@ -168,7 +157,6 @@ public class PricingComponentService {
         PricingComponent component = getPricingComponentById(id);
 
         // 2. Apply updates
-        // Replaced manual field updates with mapper call
         pricingComponentMapper.updateFromDto(requestDto, component);
 
         // Enum conversion remains in service for explicit validation/error handling
@@ -180,27 +168,41 @@ public class PricingComponentService {
 
         // 3. Save and convert
         PricingComponent updatedComponent = componentRepository.save(component);
-        // Replaced call to redundant helper method 'convertToDto' with mapper call
         return pricingComponentMapper.toResponseDto(updatedComponent);
     }
 
     /**
-     * Deletes a Pricing Component by ID after checking for dependencies (PricingTier).
+     * Deletes a Pricing Component by ID after checking for dependencies (PricingTier AND ProductPricingLink).
      */
     @Transactional
-    public void deleteComponent(Long id) {
-        // ... (No change)
+    public void deletePricingComponent(Long id) {
+        // Validate component exists (handles 404)
         PricingComponent component = getPricingComponentById(id);
-        boolean hasTiers = tierRepository.existsByPricingComponentId(id);
 
-        if (hasTiers) {
-            long tierCount = tierRepository.countByPricingComponentId(id);
+        // 1. Dependency Check on Pricing Tiers (Simplified)
+        long tierCount = tierRepository.countByPricingComponentId(id);
+
+        if (tierCount > 0) {
             String message = String.format(
-                    "Cannot delete Pricing Component ID %d: It has %d associated pricing tiers. Remove all tiers first.",
-                    id, tierCount
+                    "Cannot delete Pricing Component ID %d ('%s'): It has %d associated pricing tiers. Remove all tiers first.",
+                    id, component.getName(), tierCount
             );
             throw new DependencyViolationException(message);
         }
+
+        // 2. Dependency Check on Product Links (Simplified)
+        long linkCount = productPricingLinkRepository.countByPricingComponentId(id);
+
+        if (linkCount > 0) {
+            String message = String.format(
+                    "Cannot delete Pricing Component ID %d ('%s'): It is currently linked to %d active product(s). Unlink all product dependencies first.",
+                    id, component.getName(), linkCount
+            );
+            // Throws exception, which the GlobalExceptionHandler maps to 409 Conflict
+            throw new DependencyViolationException(message);
+        }
+
+        // 3. Perform deletion
         componentRepository.delete(component);
     }
 
@@ -217,20 +219,16 @@ public class PricingComponentService {
         PricingComponent component = getPricingComponentById(componentId);
 
         // 2. Convert Tier DTO to Entity
-        // Replaced manual convertTierDtoToEntity with mapper call
         PricingTier tier = pricingTierMapper.toEntity(tierDto);
         tier.setPricingComponent(component);
         PricingTier savedTier = tierRepository.save(tier);
 
         // 3. Convert Value DTO to Entity
-        // Replaced manual convertValueDtoToEntity with mapper call
         PriceValue value = priceValueMapper.toEntity(valueDto);
 
-        // Manual enum parsing/validation remains in the service
         try {
             value.setValueType(PriceValue.ValueType.valueOf(valueDto.getValueType().toUpperCase()));
         } catch (IllegalArgumentException e) {
-            // This is a 400 Bad Request
             throw new IllegalArgumentException("Invalid value type provided: " + valueDto.getValueType());
         }
 
@@ -238,11 +236,6 @@ public class PricingComponentService {
         PriceValue savedValue = valueRepository.save(value);
 
         // 4. Convert saved PriceValue Entity to Response DTO
-        // Replaced manual convertValueEntityToResponseDto with mapper call
         return priceValueMapper.toResponseDto(savedValue);
     }
-
-    // REMOVED private PricingTier convertTierDtoToEntity(CreatePricingTierRequestDto dto)
-    // REMOVED private PriceValue convertValueDtoToEntity(CreatePriceValueRequestDto dto)
-    // REMOVED private PriceValueResponseDto convertValueEntityToResponseDto(PriceValue entity)
 }

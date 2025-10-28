@@ -12,4 +12,7 @@ public interface ProductPricingLinkRepository extends JpaRepository<ProductPrici
 
     // Required for dependency check
     boolean existsByPricingComponentId(Long pricingComponentId);
+
+    // Required to provide a dependency count for helpful error messages
+    long countByPricingComponentId(Long pricingComponentId);
 }
