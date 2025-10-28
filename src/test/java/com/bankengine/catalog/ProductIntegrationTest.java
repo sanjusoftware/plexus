@@ -5,9 +5,19 @@ import com.bankengine.catalog.dto.CreateProductRequestDto;
 import com.bankengine.catalog.dto.ProductExpirationDto;
 import com.bankengine.catalog.dto.ProductResponseDto;
 import com.bankengine.catalog.dto.UpdateProductRequestDto;
+import com.bankengine.catalog.model.FeatureComponent;
+import com.bankengine.catalog.model.Product;
+import com.bankengine.catalog.model.ProductFeatureLink;
+import com.bankengine.catalog.repository.FeatureComponentRepository;
+import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.ProductPricingLink;
+import com.bankengine.pricing.repository.PricingComponentRepository;
+import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -42,6 +52,21 @@ public class ProductIntegrationTest {
 
     @Autowired
     private ProductTypeRepository productTypeRepository;
+
+    @Autowired
+    private FeatureComponentRepository featureComponentRepository;
+
+    @Autowired
+    private PricingComponentRepository pricingComponentRepository;
+
+    @Autowired
+    private ProductFeatureLinkRepository featureLinkRepository;
+
+    @Autowired
+    private ProductPricingLinkRepository pricingLinkRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     // Use Long wrapper for easier null handling if needed, though here it's always set.
     private Long EXISTING_PRODUCT_TYPE_ID;
@@ -351,8 +376,37 @@ public class ProductIntegrationTest {
     @WithMockUser
     void shouldCreateNewVersionWhenActiveProductIsVersioned() throws Exception {
         // ARRANGE: Create a base ACTIVE product (V1)
-        Long oldProductId = createProduct("ACTIVE");
+        Product oldProduct = productRepository.findById(createProduct("ACTIVE")).get();
         LocalDate newEffectiveDate = LocalDate.now().plusMonths(3);
+
+        // ARRANGE: Link some features and pricing to the old product
+        FeatureComponent feature = new FeatureComponent();
+        feature.setName("Test Feature");
+        feature.setDataType(FeatureComponent.DataType.STRING);
+        featureComponentRepository.save(feature);
+
+        ProductFeatureLink featureLink = new ProductFeatureLink();
+        featureLink.setProduct(oldProduct);
+        featureLink.setFeatureComponent(feature);
+        featureLink.setFeatureValue("Test Value");
+        featureLinkRepository.save(featureLink);
+
+        PricingComponent pricing = new PricingComponent();
+        pricing.setName("Test Pricing");
+        pricing.setType(PricingComponent.ComponentType.FEE);
+        pricingComponentRepository.save(pricing);
+
+        ProductPricingLink pricingLink = new ProductPricingLink();
+        pricingLink.setProduct(oldProduct);
+        pricingLink.setPricingComponent(pricing);
+        pricingLink.setContext("Test Context");
+        pricingLinkRepository.save(pricingLink);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        oldProduct = productRepository.findById(oldProduct.getId()).get();
+
 
         // ARRANGE: Setup CreateNewVersionRequestDto
         CreateNewVersionRequestDto versionDto = new CreateNewVersionRequestDto();
@@ -360,7 +414,7 @@ public class ProductIntegrationTest {
         versionDto.setNewEffectiveDate(newEffectiveDate);
 
         // ACT: Call POST /new-version
-        String responseJson = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProductId)
+        String responseJson = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProduct.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(versionDto)))
                 .andExpect(status().isCreated())
@@ -370,10 +424,20 @@ public class ProductIntegrationTest {
         Long newProductId = objectMapper.readValue(responseJson, ProductResponseDto.class).getId();
 
         // ASSERT 1: Verify the old product (V1) was archived
-        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProductId))
+        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProduct.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ARCHIVED"))
                 .andExpect(jsonPath("$.expirationDate").value(newEffectiveDate.minusDays(1).toString()));
+
+        // ASSERT 2: Verify the new product (V2) has the cloned links
+        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", newProductId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.features.length()").value(1))
+                .andExpect(jsonPath("$.features[0].featureName").value("Test Feature"))
+                .andExpect(jsonPath("$.features[0].featureValue").value("Test Value"))
+                .andExpect(jsonPath("$.pricing.length()").value(1))
+                .andExpect(jsonPath("$.pricing[0].pricingComponentName").value("Test Pricing"))
+                .andExpect(jsonPath("$.pricing[0].context").value("Test Context"));
     }
 
     @Test
