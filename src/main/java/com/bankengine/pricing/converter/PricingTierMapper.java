@@ -13,8 +13,8 @@ public interface PricingTierMapper {
 
     // For addTierAndValue
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "pricingComponent", ignore = true) // Set manually in service
-    @Mapping(target = "priceValues", ignore = true)     // Set by cascade/bidirectional link
+    @Mapping(target = "pricingComponent", ignore = true)
+    @Mapping(target = "priceValues", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     PricingTier toEntity(CreatePricingTierRequestDto dto);

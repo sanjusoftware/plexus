@@ -1,10 +1,9 @@
 package com.bankengine.pricing.service;
 
+import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
-import com.bankengine.pricing.model.PriceValue;
-import com.bankengine.rules.dto.PricingRuleInput;
-// Drools Imports
+import com.bankengine.rules.model.PricingInput;
 import com.bankengine.web.exception.NotFoundException;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
@@ -44,7 +43,6 @@ public class PricingCalculationService {
         }
 
         // 4. Fallback for no match: RULE FAILURE (404 NOT FOUND via GlobalExceptionHandler)
-        // This means, for the given input criteria, no price exists.
         throw new NotFoundException("No matching pricing tier found for segment: " + customerSegment +
                                         " and amount: " + transactionAmount);
     }
@@ -61,13 +59,17 @@ public class PricingCalculationService {
             kieSession.setGlobal("logger", logger);
 
             // 1. Create the Input Fact
-            PricingRuleInput input = new PricingRuleInput();
+            PricingInput input = new PricingInput();
             input.setCustomerSegment(customerSegment);
             input.setTransactionAmount(transactionAmount);
-            input.setAvailableTiers(availableTiers);
 
-            // 2. Insert the fact into the rules engine's working memory
+            // 2. Insert the facts into the rules engine's working memory
             kieSession.insert(input);
+
+            // Insert all available tiers as individual facts so rules can operate on them.
+            for (PricingTier tier : availableTiers) {
+                kieSession.insert(tier);
+            }
 
             // 3. Fire all matching rules
             kieSession.fireAllRules();
@@ -80,10 +82,9 @@ public class PricingCalculationService {
                         .findFirst();
             }
 
-            return Optional.empty(); // No rule fired
+            return Optional.empty();
 
         } finally {
-            // CRITICAL: Always dispose of the session to clean up resources!
             kieSession.dispose();
         }
     }

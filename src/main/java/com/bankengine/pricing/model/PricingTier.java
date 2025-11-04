@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -20,14 +22,19 @@ public class PricingTier extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "component_id", nullable = false)
-    private PricingComponent pricingComponent; // Links to the component it modifies
+    private PricingComponent pricingComponent;
 
     // Bidirectional link to all price values in this tier
     @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonIgnore
     private List<PriceValue> priceValues;
 
-    private String tierName; // e.g., "Tier 1: High Net Worth", "Loan Size: 500k-1M"
+    // Bidirectional link to all TierConditions for this tier
+    // The DroolsRuleBuilderService will iterate over this list.
+    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<TierCondition> conditions = new ArrayList<>();
+
+    private String tierName;
 
     // Numeric Tiers (e.g., Loan Amount Min/Max)
     private BigDecimal minThreshold;

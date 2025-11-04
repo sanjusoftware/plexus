@@ -1,20 +1,14 @@
 plugins {
-    // Apply the Java plugin to add support for Java.
     id 'java'
-
-    // Apply the Spring Boot plugin
-    id 'org.springframework.boot' version '3.3.1' // Use a stable, recent version
-
-    // Apply the Spring Dependency Management plugin
+    id 'org.springframework.boot' version '3.3.1'
     id 'io.spring.dependency-management' version '1.1.5'
 }
 
 group = 'com.bankengine.catalog'
 version = '0.0.1-SNAPSHOT'
 
-// Set the Java version
 java {
-    sourceCompatibility = '17' // Match your desired Java version
+    sourceCompatibility = '17'
 }
 
 repositories {
@@ -23,34 +17,19 @@ repositories {
 }
 
 dependencies {
-    // MapStruct Dependency
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
-
-    // MapStruct Annotation Processor
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
-
-    // --- Spring Boot Core ---
-    // Includes web server, auto-configuration, and logging
     implementation 'org.springframework.boot:spring-boot-starter-web'
-
-    // Dependency for Bean Validation (JSR-303/380) and Hibernate Validator
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-
-    // Spring Security Core
     implementation 'org.springframework.boot:spring-boot-starter-security'
-
-    // Spring Security OAuth2 Resource Server (for JWT processing)
     implementation 'org.springframework.security:spring-security-oauth2-resource-server'
-
-    // Spring Security OAuth2 JOSE (Java Object Signing and Encryption, handles HMAC)
     implementation 'org.springframework.security:spring-security-oauth2-jose'
 
     // Drools Dependencies
-    // Drools 8.x Dependencies (Replaces 7.x.x)
-    def droolsVersion = '8.44.2.Final' // Use a stable 8.x version
-
+    def droolsVersion = '8.44.2.Final'
     implementation "org.drools:drools-core:${droolsVersion}"
     implementation "org.drools:drools-compiler:${droolsVersion}"
+    implementation "org.drools:drools-xml-support:${droolsVersion}"
     implementation "org.kie:kie-api:${droolsVersion}"
     implementation "org.kie:kie-ci:${droolsVersion}"
 
