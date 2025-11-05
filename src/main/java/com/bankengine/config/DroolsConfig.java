@@ -45,7 +45,7 @@ public class DroolsConfig {
         kieFileSystem.writeKModuleXML(kModuleModel.toXML());
 
         // Add the rule content to the file system
-        String ruleContent = ruleBuilderService.buildPlaceholderRules();
+        String ruleContent = ruleBuilderService.buildAllRulesForCompilation();
         kieFileSystem.write("src/main/resources/rules/initial_rules.drl", ruleContent);
 
         // Define the release ID and write the POM

@@ -3,7 +3,10 @@ package com.bankengine.pricing.service;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
+import com.bankengine.pricing.model.TierCondition;
+import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.rules.model.PricingInput;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
@@ -20,79 +23,124 @@ import java.util.stream.Collectors;
 @Service
 public class DroolsRuleBuilderService {
 
+    @Autowired
+    private PricingComponentRepository componentRepository;
+
     // Cache for attribute types to avoid repeated reflection lookups.
     private static final Map<String, String> ATTRIBUTE_TYPE_CACHE = new ConcurrentHashMap<>();
 
-    /**
-     * Builds the full DRL content for a given Pricing Component.
-     *
-     * @param component The PricingComponent entity.
-     * @return The complete DRL string.
-     */
+    // --- For Single Component (Used for Testing/Single Reload) ---
     public String buildRules(PricingComponent component) {
         StringBuilder drl = new StringBuilder();
-
-        drl.append("package bankengine.pricing.rules;\n\n");
-        drl.append("import com.bankengine.rules.model.PricingInput;\n");
-        drl.append("import com.bankengine.pricing.model.PriceValue;\n"); // For the action side
-        drl.append("import java.math.BigDecimal;\n\n");
-
-        for (PricingTier tier : component.getPricingTiers()) {
-            drl.append(buildSingleTierRule(component, tier));
-        }
-
+        drl.append(getDrlHeader());
+        drl.append(generateComponentRulesBody(component));
         return drl.toString();
     }
 
+    private String getDrlHeader() {
+        return """
+            package bankengine.pricing.rules;
+            
+            import com.bankengine.rules.model.PricingInput;
+            import com.bankengine.pricing.model.PriceValue;
+            import java.math.BigDecimal;
+            
+            """; // Trailing newline is included for proper spacing
+    }
+
+    // --- For Aggregation (Used for Startup) ---
+    public String buildAllRulesForCompilation() {
+        StringBuilder finalDrl = new StringBuilder();
+
+        // 1. Add package and common imports ONLY ONCE at the top
+        finalDrl.append(getDrlHeader());
+
+        List<PricingComponent> components = componentRepository.findAll();
+
+        for (PricingComponent component : components) {
+            // 2. Append ONLY the rule bodies for each component
+            finalDrl.append(generateComponentRulesBody(component));
+            finalDrl.append("\n\n// --- End Component: ").append(component.getName()).append(" ---\n\n");
+        }
+
+        if (finalDrl.length() < 100) {
+             // Safety check: if no components exist, return a valid empty DRL
+             return buildPlaceholderRules();
+        }
+
+        return finalDrl.toString();
+    }
+
+    // --- Private Helper Method: Generates ONLY the rules, no header/package ---
+    private String generateComponentRulesBody(PricingComponent component) {
+        return component.getPricingTiers().stream()
+                .map(tier -> buildSingleTierRule(component, tier))
+                .collect(Collectors.joining("\n\n")); // Use double newline for separation
+    }
+
     /**
-     * Builds a single Drools rule for a specific Pricing Tier.
+     * Builds a single Drools rule for a specific Pricing Tier. (Existing Logic)
      */
     private String buildSingleTierRule(PricingComponent component, PricingTier tier) {
-        // Rule Metadata
         StringBuilder rule = new StringBuilder();
+
+        // 1. Rule Metadata
         String ruleName = String.format("Rule_%s_Tier_%d",
                 component.getName().replaceAll("\\s", "_"),
                 tier.getId());
 
         rule.append("rule \"").append(ruleName).append("\"\n");
+
+        // 2. Left-Hand Side (WHEN)
         rule.append("    when\n");
+        rule.append(buildLHSCondition(tier));
 
-        // ------------------
-        // L H S (Condition)
-        // ------------------
-        List<String> conditionFragments = tier.getConditions().stream()
-                .map(condition -> {
-                    String dataType = getFactAttributeDataType(condition.getAttributeName());
-                    String expression = condition.toDroolsExpression(dataType);
-                    String connector = condition.getConnector() != null ? condition.getConnector().name() : "";
+        // 3. Right-Hand Side (THEN)
+        rule.append("    then\n");
+        rule.append(buildRHSAction(tier));
 
-                    // Format the condition with the logical connector (AND/OR)
-                    return String.format("        %s %s", expression, connector);
-                })
-                .toList();
+        rule.append("end\n");
+        return rule.toString();
+    }
 
-        // Join fragments into the WHEN clause
-        if (!conditionFragments.isEmpty()) {
-            // Note: The last connector should be removed, but for simple DRL it can be left.
-            // A safer implementation would use a loop/index to handle the last connector.
-            String fullCondition = conditionFragments.stream()
-                    .collect(Collectors.joining("\n"))
-                    .trim();
+    private String buildLHSCondition(PricingTier tier) {
+        StringBuilder lhs = new StringBuilder();
+        List<TierCondition> conditions = tier.getConditions();
 
-            rule.append("        $input : PricingInput ( ").append(fullCondition).append(" )\n");
+        if (!conditions.isEmpty()) {
+            StringBuilder conditionBuilder = new StringBuilder();
+
+            // Loop through all conditions to build the final expression
+            for (int i = 0; i < conditions.size(); i++) {
+                TierCondition condition = conditions.get(i);
+                String dataType = getFactAttributeDataType(condition.getAttributeName());
+                String expression = condition.toDroolsExpression(dataType);
+
+                // Append the current condition expression
+                conditionBuilder.append(expression);
+
+                // Check if this is NOT the last condition in the list
+                if (i < conditions.size() - 1) {
+                    // Append the connector from the CURRENT condition, defaulting to AND
+                    String connector = condition.getConnector() != null ? condition.getConnector().name() : "AND";
+                    conditionBuilder.append(" ").append(connector).append(" ");
+                }
+            }
+
+            // Append the fact declaration and conditions
+            String fullCondition = conditionBuilder.toString().trim();
+            lhs.append("        $input : PricingInput ( ").append(fullCondition).append(" )\n");
         } else {
-            // Rule fires unconditionally if no conditions are defined (e.g., default tier)
-            rule.append("        $input : PricingInput ( true )\n");
+            // Rule fires unconditionally if no conditions are defined
+            lhs.append("        $input : PricingInput ( true )\n");
         }
 
-        rule.append("    then\n");
+        return lhs.toString();
+    }
 
-        // ------------------
-        // R H S (Action)
-        // ------------------
+    private String buildRHSAction(PricingTier tier) {
+        StringBuilder rhs = new StringBuilder();
 
-        // Assuming PriceValue is fetched/calculated in the action part based on the matched tier
-        // This is a simplified action, assuming a PriceValue entity is found for this tier.
         if (tier.getPriceValues() != null && !tier.getPriceValues().isEmpty()) {
             // Get the first price value (simplification)
             PriceValue priceValue = tier.getPriceValues().get(0);
@@ -101,16 +149,18 @@ public class DroolsRuleBuilderService {
             String currency = priceValue.getCurrency();
 
             // Action: Update the PricingInput fact with the result
-            rule.append(String.format("        $input.setMatchedTierId(%dL);\n", tier.getId()));
-            rule.append(String.format("        $input.setPriceAmount(new BigDecimal(\"%s\"));\n", priceAmount));
-            rule.append(String.format("        $input.setValueType(\"%s\");\n", valueType));
-            rule.append(String.format("        $input.setCurrency(\"%s\");\n", currency));
-            rule.append("        $input.setRuleFired(true);\n");
-            rule.append("        update($input);\n");
+            rhs.append(String.format("        $input.setMatchedTierId(%dL);\n", tier.getId()));
+            rhs.append(String.format("        $input.setPriceAmount(new BigDecimal(\"%s\"));\n", priceAmount));
+            rhs.append(String.format("        $input.setValueType(\"%s\");\n", valueType));
+            rhs.append(String.format("        $input.setCurrency(\"%s\");\n", currency));
+            rhs.append("        $input.setRuleFired(true);\n");
+            rhs.append("        update($input);\n");
+        } else {
+            // Optional: Handle case where a tier has no price value (e.g., a simple waiver or logging rule)
+            rhs.append("// No price actions defined for this tier.\n");
         }
 
-        rule.append("end\n\n");
-        return rule.toString();
+        return rhs.toString();
     }
 
     /**
@@ -156,8 +206,7 @@ public class DroolsRuleBuilderService {
     }
 
     /**
-     * TEMPORARY: Builds a minimal, valid DRL string to ensure the KieContainer compiles
-     * successfully during initial application startup (before DB is implemented).
+     * TEMPORARY: Builds a minimal, valid DRL string to ensure the KieContainer compiles.
      */
     public String buildPlaceholderRules() {
         return """
@@ -169,7 +218,6 @@ public class DroolsRuleBuilderService {
 
             rule "PlaceholderRule_DoNothing"
                 when
-                    // Rule fires unconditionally on the presence of a PricingInput
                     $input : PricingInput ( )
                 then
                     // Do nothing, just ensure compilation succeeds
