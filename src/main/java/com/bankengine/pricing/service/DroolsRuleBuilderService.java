@@ -154,4 +154,26 @@ public class DroolsRuleBuilderService {
                     e);
         }
     }
+
+    /**
+     * TEMPORARY: Builds a minimal, valid DRL string to ensure the KieContainer compiles
+     * successfully during initial application startup (before DB is implemented).
+     */
+    public String buildPlaceholderRules() {
+        return """
+            package bankengine.pricing.rules;
+
+            import com.bankengine.rules.model.PricingInput;
+            import com.bankengine.pricing.model.PriceValue;
+            import java.math.BigDecimal;
+
+            rule "PlaceholderRule_DoNothing"
+                when
+                    // Rule fires unconditionally on the presence of a PricingInput
+                    $input : PricingInput ( )
+                then
+                    // Do nothing, just ensure compilation succeeds
+            end
+            """;
+    }
 }

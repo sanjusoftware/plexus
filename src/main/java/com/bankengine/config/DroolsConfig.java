@@ -1,5 +1,6 @@
 package com.bankengine.config;
 
+import com.bankengine.pricing.service.DroolsRuleBuilderService;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
@@ -11,11 +12,15 @@ import org.kie.api.builder.model.KieSessionModel;
 import org.kie.api.conf.EqualityBehaviorOption;
 import org.kie.api.conf.EventProcessingOption;
 import org.kie.api.runtime.KieContainer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class DroolsConfig {
+
+    @Autowired
+    private DroolsRuleBuilderService ruleBuilderService;
 
     // Define consistent IDs for your dynamic module
     private static final String GROUP_ID = "com.bankengine";
@@ -39,6 +44,10 @@ public class DroolsConfig {
         // Write the generated kmodule.xml to the virtual file system
         kieFileSystem.writeKModuleXML(kModuleModel.toXML());
 
+        // Add the rule content to the file system
+        String ruleContent = ruleBuilderService.buildPlaceholderRules();
+        kieFileSystem.write("src/main/resources/rules/initial_rules.drl", ruleContent);
+
         // Define the release ID and write the POM
         ReleaseId releaseId = kieServices.newReleaseId(GROUP_ID, ARTIFACT_ID, VERSION);
         kieFileSystem.generateAndWritePomXML(releaseId);
@@ -49,7 +58,7 @@ public class DroolsConfig {
 
         // 4. Check for errors
         if (kieBuilder.getResults().hasMessages(org.kie.api.builder.Message.Level.ERROR)) {
-            throw new RuntimeException("KIE Build Errors during KieContainer initialization:\n"
+            throw new RuntimeException("Drools build errors:\n"
                     + kieBuilder.getResults().toString());
         }
 

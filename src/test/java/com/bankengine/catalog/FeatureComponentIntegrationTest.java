@@ -51,12 +51,11 @@ public class FeatureComponentIntegrationTest {
 
     // Shared data entities
     private Product sharedProduct;
-    private ProductType sharedProductType;
 
     @BeforeEach
     void setupDependencyProduct() {
         // Create a minimal ProductType dependency first
-        sharedProductType = new ProductType();
+        ProductType sharedProductType = new ProductType();
         sharedProductType.setName("Test Type for Link");
         sharedProductType = productTypeRepository.save(sharedProductType);
 

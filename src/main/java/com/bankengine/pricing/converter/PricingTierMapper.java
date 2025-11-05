@@ -17,6 +17,7 @@ public interface PricingTierMapper {
     @Mapping(target = "priceValues", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "conditions", ignore = true)
     PricingTier toEntity(CreatePricingTierRequestDto dto);
 
     // For updateTierAndValue
@@ -25,5 +26,6 @@ public interface PricingTierMapper {
     @Mapping(target = "priceValues", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "conditions", ignore = true)
     void updateFromDto(UpdatePricingTierRequestDto dto, @MappingTarget PricingTier entity);
 }

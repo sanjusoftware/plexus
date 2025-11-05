@@ -28,11 +28,13 @@ public interface PricingComponentMapper {
     @Mapping(target = "type", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "pricingTiers", ignore = true)
     PricingComponent toEntity(CreatePricingComponentRequestDto dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "type", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "pricingTiers", ignore = true)
     void updateFromDto(UpdatePricingComponentRequestDto dto, @MappingTarget PricingComponent entity);
 }
