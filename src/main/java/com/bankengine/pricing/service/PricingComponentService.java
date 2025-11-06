@@ -3,6 +3,7 @@ package com.bankengine.pricing.service;
 import com.bankengine.pricing.converter.PriceValueMapper;
 import com.bankengine.pricing.converter.PricingComponentMapper;
 import com.bankengine.pricing.converter.PricingTierMapper;
+import com.bankengine.pricing.converter.TierConditionMapper;
 import com.bankengine.pricing.dto.*;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
@@ -13,7 +14,6 @@ import com.bankengine.pricing.repository.*;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
-import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,27 +32,31 @@ public class PricingComponentService {
     private final PricingComponentMapper pricingComponentMapper;
     private final PricingTierMapper pricingTierMapper;
     private final PriceValueMapper priceValueMapper;
+    private final TierConditionMapper tierConditionMapper;
     private final ProductPricingLinkRepository productPricingLinkRepository;
     private final KieContainerReloadService reloadService;
-    private final EntityManager entityManager;
 
     public PricingComponentService(
             PricingComponentRepository componentRepository,
             PricingTierRepository tierRepository,
-            PriceValueRepository valueRepository, TierConditionRepository conditionRepository,
+            PriceValueRepository valueRepository,
+            TierConditionRepository tierConditionRepository,
             PricingComponentMapper pricingComponentMapper,
             PricingTierMapper pricingTierMapper,
-            PriceValueMapper priceValueMapper, ProductPricingLinkRepository productPricingLinkRepository, KieContainerReloadService reloadService, EntityManager entityManager) {
+            PriceValueMapper priceValueMapper,
+            TierConditionMapper tierConditionMapper,
+            ProductPricingLinkRepository productPricingLinkRepository,
+            KieContainerReloadService reloadService) {
         this.componentRepository = componentRepository;
         this.tierRepository = tierRepository;
         this.valueRepository = valueRepository;
-        this.tierConditionRepository = conditionRepository;
+        this.tierConditionRepository = tierConditionRepository;
         this.pricingComponentMapper = pricingComponentMapper;
         this.pricingTierMapper = pricingTierMapper;
         this.priceValueMapper = priceValueMapper;
+        this.tierConditionMapper = tierConditionMapper;
         this.productPricingLinkRepository = productPricingLinkRepository;
         this.reloadService = reloadService;
-        this.entityManager = entityManager;
     }
 
     /**
@@ -64,7 +68,7 @@ public class PricingComponentService {
     }
 
     /**
-     * Updates an existing Pricing Tier and its associated Price Value.
+     * Updates an existing Pricing Tier and its associated Price Value, including conditions.
      */
     @Transactional
     public PriceValueResponseDto updateTierAndValue(
@@ -82,11 +86,13 @@ public class PricingComponentService {
         PriceValue value = valueRepository.findByPricingTierId(tierId)
                 .orElseThrow(() -> new NotFoundException("Price Value not found for Tier ID: " + tierId));
 
-        // 4. Apply Tier Updates
+        // 4. Apply Tier Updates (including minThreshold/maxThreshold)
         pricingTierMapper.updateFromDto(dto.getTier(), tier);
-        PricingTier savedTier = tierRepository.save(tier);
 
-        // 5. Apply Value Updates
+        // 5. CRITICAL FIX: Update Tier Conditions (Full Replacement Logic)
+        updateTierConditions(tier, dto.getTier().getConditions());
+
+        // 6. Apply Value Updates
         priceValueMapper.updateFromDto(dto.getValue(), value);
 
         try {
@@ -94,12 +100,35 @@ public class PricingComponentService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid value type provided: " + dto.getValue().getValueType());
         }
-        PriceValue savedValue = valueRepository.save(value);
+
+        // 7. Save and Reload
+        tierRepository.save(tier); // Saves tier and cascades saves/deletes for conditions/values due to CascadeType.ALL
+        PriceValue savedValue = valueRepository.save(value); // Explicitly save value since it's used for the return DTO
 
         reloadService.reloadKieContainer();
 
-        // 6. Convert saved PriceValue Entity to Response DTO
+        // 8. Convert saved PriceValue Entity to Response DTO
         return priceValueMapper.toResponseDto(savedValue);
+    }
+
+    // 💡 NEW HELPER METHOD FOR CLEANUP
+    private void updateTierConditions(PricingTier tier, List<TierConditionDto> conditionDtos) {
+        // Clear the old collection first (Hibernate will delete old entities due to CascadeType.ALL)
+        tier.getConditions().clear();
+
+        if (conditionDtos != null && !conditionDtos.isEmpty()) {
+            Set<TierCondition> newConditions = conditionDtos.stream()
+                .map(dto -> {
+                    TierCondition condition = tierConditionMapper.toEntity(dto); // 💡 Use the new mapper
+                    // CRITICAL: Set the mandatory bidirectional link
+                    condition.setPricingTier(tier);
+                    return condition;
+                })
+                .collect(Collectors.toSet());
+
+            // Add the new collection (Hibernate will insert new entities)
+            tier.getConditions().addAll(newConditions);
+        }
     }
 
     /**
@@ -254,16 +283,11 @@ public class PricingComponentService {
         value.setPricingTier(tier);
         tier.setPriceValues(Set.of(value));
 
-        // 4. CRITICAL: Handle Conditions (Map DTOs to Entities and save)
+        // 4. CRITICAL: Handle Conditions (Map DTOs to Entities and link)
         if (tierDto.getConditions() != null && !tierDto.getConditions().isEmpty()) {
             Set<TierCondition> conditions = tierDto.getConditions().stream()
                     .map(dto -> {
-                        TierCondition condition = new TierCondition();
-                        // Manual mapping since no TierConditionMapper was provided
-                        condition.setAttributeName(dto.getAttributeName());
-                        condition.setOperator(dto.getOperator());
-                        condition.setAttributeValue(dto.getAttributeValue());
-                        condition.setConnector(dto.getConnector());
+                        TierCondition condition = tierConditionMapper.toEntity(dto); // 💡 Use the new mapper
 
                         // Set relationship back to the parent tier
                         condition.setPricingTier(tier);
@@ -274,17 +298,17 @@ public class PricingComponentService {
             tier.setConditions(conditions);
         }
 
-        // 5. Save the Tier (This should cascade save the PriceValue)
+        // 5. Save the Tier (This should cascade save the PriceValue and Conditions)
         PricingTier savedTier = tierRepository.save(tier);
 
-        // Retrieve the saved PriceValue for the response (assuming it was saved via cascade)
+        // 6. Retrieve the saved PriceValue for the response (assuming it was saved via cascade)
         PriceValue savedValue = valueRepository.findByPricingTierId(savedTier.getId())
                 .orElseThrow(() -> new RuntimeException("PriceValue not found after save."));
 
-        // 6. Reload KieContainer
+        // 7. Reload KieContainer
         reloadService.reloadKieContainer();
 
-        // 7. Convert saved PriceValue Entity to Response DTO
+        // 8. Convert saved PriceValue Entity to Response DTO
         return priceValueMapper.toResponseDto(savedValue);
     }
 }

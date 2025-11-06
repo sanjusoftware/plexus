@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -67,6 +68,34 @@ public class PricingComponentIntegrationTest {
         CreatePricingComponentRequestDto dto = new CreatePricingComponentRequestDto();
         dto.setName(name);
         dto.setType("FEE");
+        return dto;
+    }
+
+    // --- Helper Method to create a valid TierValueDto ---
+    private TierValueDto getValidTierValueDto() {
+        CreatePricingTierRequestDto tierDto = new CreatePricingTierRequestDto();
+        tierDto.setTierName("Default Tier");
+        tierDto.setConditions(Set.of(getDummyConditionDto()));
+
+        // Ensure all mandatory fields are set to pass validation
+        tierDto.setMinThreshold(new BigDecimal("0.00"));
+
+        CreatePriceValueRequestDto valueDto = new CreatePriceValueRequestDto();
+        valueDto.setPriceAmount(new BigDecimal("5.00"));
+        valueDto.setCurrency("USD");
+        valueDto.setValueType("ABSOLUTE"); // Must be a valid PriceValue.ValueType
+
+        TierValueDto requestDto = new TierValueDto();
+        requestDto.setTier(tierDto);
+        requestDto.setValue(valueDto);
+        return requestDto;
+    }
+
+    private TierConditionDto getDummyConditionDto() {
+        TierConditionDto dto = new TierConditionDto();
+        dto.setAttributeName("customerSegment");
+        dto.setOperator(com.bankengine.pricing.model.TierCondition.Operator.EQ);
+        dto.setAttributeValue("DEFAULT_SEGMENT");
         return dto;
     }
 
@@ -220,24 +249,6 @@ public class PricingComponentIntegrationTest {
                 .andExpect(jsonPath("$.status", is(404)));
     }
 
-    // --- Helper Method to create a valid TierValueDto ---
-    private TierValueDto getValidTierValueDto() {
-        CreatePricingTierRequestDto tierDto = new CreatePricingTierRequestDto();
-        tierDto.setTierName("Default Tier");
-        // Ensure all mandatory fields are set to pass validation
-        tierDto.setMinThreshold(new BigDecimal("0.00"));
-
-        CreatePriceValueRequestDto valueDto = new CreatePriceValueRequestDto();
-        valueDto.setPriceAmount(new BigDecimal("5.00"));
-        valueDto.setCurrency("USD");
-        valueDto.setValueType("ABSOLUTE"); // Must be a valid PriceValue.ValueType
-
-        TierValueDto requestDto = new TierValueDto();
-        requestDto.setTier(tierDto);
-        requestDto.setValue(valueDto);
-        return requestDto;
-    }
-
     // =================================================================
     // 6. TIER/VALUE UPDATE (PUT) TESTS
     // =================================================================
@@ -257,6 +268,7 @@ public class PricingComponentIntegrationTest {
         tierDto.setTierName("UpdatedTierName");
         tierDto.setMinThreshold(new BigDecimal("100.00"));
         tierDto.setMaxThreshold(new BigDecimal("999.99"));
+        tierDto.setConditions(java.util.List.of(getDummyConditionDto()));
 
         UpdatePriceValueRequestDto valueDto = new UpdatePriceValueRequestDto();
         valueDto.setPriceAmount(new BigDecimal("15.50"));
@@ -334,6 +346,7 @@ public class PricingComponentIntegrationTest {
         updateDto.getValue().setPriceAmount(new BigDecimal("1"));
         updateDto.getValue().setCurrency("USD");
         updateDto.getValue().setValueType("ABSOLUTE");
+        updateDto.getTier().setConditions(java.util.List.of(getDummyConditionDto()));
 
         // Test 1: PUT with non-existent Component ID
         mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",

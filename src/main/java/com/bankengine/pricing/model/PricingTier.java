@@ -40,7 +40,4 @@ public class PricingTier extends AuditableEntity {
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
 
-    // Textual Conditions (Optional - for simple segmentation like region or client type)
-    private String conditionKey;
-    private String conditionValue;
 }

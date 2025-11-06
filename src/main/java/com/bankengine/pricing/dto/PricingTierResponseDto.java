@@ -13,7 +13,6 @@ public class PricingTierResponseDto {
     private String tierName;
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
-    private String conditionKey;
-    private String conditionValue;
+    private List<TierConditionDto> conditions;
     private List<PriceValueResponseDto> priceValues;
 }

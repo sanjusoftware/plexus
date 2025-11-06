@@ -9,15 +9,10 @@ import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
-import com.bankengine.pricing.model.PriceValue;
-import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PricingComponent.ComponentType;
-import com.bankengine.pricing.model.PricingTier;
-import com.bankengine.pricing.model.ProductPricingLink;
-import com.bankengine.pricing.repository.PriceValueRepository;
-import com.bankengine.pricing.repository.PricingComponentRepository;
-import com.bankengine.pricing.repository.PricingTierRepository;
-import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.pricing.model.TierCondition.Operator;
+import com.bankengine.pricing.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -28,7 +23,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Component
-@Profile("dev") // <-- Ensures this code only runs when the 'dev' profile is active
+@Profile("dev")
 public class TestDataSeeder implements CommandLineRunner {
 
     // Inject all necessary Repositories
@@ -40,6 +35,7 @@ public class TestDataSeeder implements CommandLineRunner {
     private final PricingTierRepository pricingTierRepository;
     private final PriceValueRepository priceValueRepository;
     private final ProductPricingLinkRepository productPricingLinkRepository;
+    private final TierConditionRepository tierConditionRepository;
 
     public TestDataSeeder(
             ProductTypeRepository productTypeRepository,
@@ -49,7 +45,7 @@ public class TestDataSeeder implements CommandLineRunner {
             PricingComponentRepository pricingComponentRepository,
             PricingTierRepository pricingTierRepository,
             PriceValueRepository priceValueRepository,
-            ProductPricingLinkRepository productPricingLinkRepository) {
+            ProductPricingLinkRepository productPricingLinkRepository, TierConditionRepository tierConditionRepository) {
         this.productTypeRepository = productTypeRepository;
         this.featureComponentRepository = featureComponentRepository;
         this.productRepository = productRepository;
@@ -58,6 +54,7 @@ public class TestDataSeeder implements CommandLineRunner {
         this.pricingTierRepository = pricingTierRepository;
         this.priceValueRepository = priceValueRepository;
         this.productPricingLinkRepository = productPricingLinkRepository;
+        this.tierConditionRepository = tierConditionRepository;
     }
 
     @Override
@@ -127,6 +124,15 @@ public class TestDataSeeder implements CommandLineRunner {
         return link;
     }
 
+    private TierCondition createCondition(PricingTier tier, String attribute, Operator operator, String value) {
+        TierCondition condition = new TierCondition();
+        condition.setPricingTier(tier);
+        condition.setAttributeName(attribute);
+        condition.setOperator(operator);
+        condition.setAttributeValue(value);
+        return condition;
+    }
+
     private void seedPricingComponents() {
 
         // --- 1. Seed Component: Annual Card Fee ---
@@ -138,17 +144,23 @@ public class TestDataSeeder implements CommandLineRunner {
         // --- 2. Create Tier 1: High Net Worth (Waived Fee) ---
         PricingTier tierPremium = new PricingTier();
         tierPremium.setTierName("Premium Tier");
-        tierPremium.setConditionKey("Customer_Segment"); // Placeholder key
-        tierPremium.setConditionValue("PREMIUM"); // Placeholder value
         tierPremium.setPricingComponent(savedFeeComponent);
-        PricingTier savedTierHnw = pricingTierRepository.save(tierPremium);
+        PricingTier savedTierPremium = pricingTierRepository.save(tierPremium);
 
-        PriceValue valueHnw = new PriceValue();
-        valueHnw.setPriceAmount(BigDecimal.ZERO);
-        valueHnw.setValueType(PriceValue.ValueType.WAIVED); // Fee is waived
-        valueHnw.setCurrency("USD");
-        valueHnw.setPricingTier(savedTierHnw);
-        priceValueRepository.save(valueHnw); // <-- Saves the linked PriceValue
+        TierCondition condPremium = createCondition(
+                savedTierPremium,
+                "customerSegment",
+                Operator.EQ,
+                "PREMIUM"
+        );
+        tierConditionRepository.save(condPremium);
+
+        PriceValue valuePremium = new PriceValue();
+        valuePremium.setPriceAmount(BigDecimal.ZERO);
+        valuePremium.setValueType(PriceValue.ValueType.WAIVED); // Fee is waived
+        valuePremium.setCurrency("USD");
+        valuePremium.setPricingTier(savedTierPremium);
+        priceValueRepository.save(valuePremium); // <-- Saves the linked PriceValue
 
         // --- 3. Create Tier 2: Standard Client ($50 Fee) ---
         // Find the component to link the tier to
@@ -156,13 +168,20 @@ public class TestDataSeeder implements CommandLineRunner {
                 .orElseThrow(() -> new RuntimeException("Fee component not found."));
         PricingTier tierStandard = new PricingTier();
         tierStandard.setTierName("Standard Tier");
-        tierStandard.setConditionKey("Annual_Spend"); // Setting the context for the threshold
-        tierStandard.setConditionValue("STANDARD");
         tierStandard.setMinThreshold(new BigDecimal("0.00"));
         tierStandard.setMaxThreshold(new BigDecimal("10000.00")); // Max annual spend of $10,000
 
         tierStandard.setPricingComponent(standardFeeComponent);
         PricingTier savedTierStandard = pricingTierRepository.save(tierStandard);
+
+        TierCondition condStandard = createCondition(
+                savedTierStandard,
+                "transactionAmount",
+                Operator.LE,
+                "10000.00"
+        );
+        tierConditionRepository.save(condStandard);
+        savedTierStandard.setConditions(java.util.Set.of(condStandard)); // Update in-memory set
 
         PriceValue valueStandard = new PriceValue();
         valueStandard.setPriceAmount(new BigDecimal("50.00"));
