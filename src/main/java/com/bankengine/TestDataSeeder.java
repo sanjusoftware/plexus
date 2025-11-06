@@ -1,14 +1,14 @@
 package com.bankengine;
 
-import com.bankengine.catalog.model.ProductType;
-import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
+import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
-import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
-import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
+import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingComponent.ComponentType;
@@ -16,9 +16,9 @@ import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
-
 import com.bankengine.pricing.repository.PricingTierRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -61,6 +61,7 @@ public class TestDataSeeder implements CommandLineRunner {
     }
 
     @Override
+    @Transactional
     public void run(String... args) {
         System.out.println("--- Seeding Development Data ---");
         seedProductTypes();

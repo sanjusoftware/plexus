@@ -8,11 +8,14 @@ import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.rules.model.PricingInput;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -49,13 +52,19 @@ public class DroolsRuleBuilderService {
     }
 
     // --- For Aggregation (Used for Startup) ---
+    /**
+     * Mark this method as transactional to keep the session open
+     * while the rule builder iterates over the eagerly-fetched collections.
+     */
+    @Transactional(readOnly = true)
     public String buildAllRulesForCompilation() {
         StringBuilder finalDrl = new StringBuilder();
 
         // 1. Add package and common imports ONLY ONCE at the top
         finalDrl.append(getDrlHeader());
 
-        List<PricingComponent> components = componentRepository.findAll();
+        // Use the eager-fetching query to initialize all collections
+        List<PricingComponent> components = componentRepository.findAllEagerlyForRules();
 
         for (PricingComponent component : components) {
             // 2. Append ONLY the rule bodies for each component
@@ -63,7 +72,7 @@ public class DroolsRuleBuilderService {
             finalDrl.append("\n\n// --- End Component: ").append(component.getName()).append(" ---\n\n");
         }
 
-        if (finalDrl.length() < 100) {
+        if (components.isEmpty()) {
              // Safety check: if no components exist, return a valid empty DRL
              return buildPlaceholderRules();
         }
@@ -105,22 +114,25 @@ public class DroolsRuleBuilderService {
 
     private String buildLHSCondition(PricingTier tier) {
         StringBuilder lhs = new StringBuilder();
-        List<TierCondition> conditions = tier.getConditions();
+        Set<TierCondition> conditions = tier.getConditions();
 
         if (!conditions.isEmpty()) {
             StringBuilder conditionBuilder = new StringBuilder();
 
-            // Loop through all conditions to build the final expression
-            for (int i = 0; i < conditions.size(); i++) {
-                TierCondition condition = conditions.get(i);
+            Iterator<TierCondition> iterator = conditions.iterator();
+
+            while (iterator.hasNext()) {
+                TierCondition condition = iterator.next();
+
+                // 1. Get the expression part
                 String dataType = getFactAttributeDataType(condition.getAttributeName());
                 String expression = condition.toDroolsExpression(dataType);
 
                 // Append the current condition expression
                 conditionBuilder.append(expression);
 
-                // Check if this is NOT the last condition in the list
-                if (i < conditions.size() - 1) {
+                // 2. Check if there are MORE elements to follow
+                if (iterator.hasNext()) {
                     // Append the connector from the CURRENT condition, defaulting to AND
                     String connector = condition.getConnector() != null ? condition.getConnector().name() : "AND";
                     conditionBuilder.append(" ").append(connector).append(" ");
@@ -142,8 +154,8 @@ public class DroolsRuleBuilderService {
         StringBuilder rhs = new StringBuilder();
 
         if (tier.getPriceValues() != null && !tier.getPriceValues().isEmpty()) {
-            // Get the first price value (simplification)
-            PriceValue priceValue = tier.getPriceValues().get(0);
+            // Get the first price value
+            PriceValue priceValue = tier.getPriceValues().iterator().next();
             String priceAmount = priceValue.getPriceAmount().toPlainString();
             String valueType = priceValue.getValueType().name();
             String currency = priceValue.getCurrency();

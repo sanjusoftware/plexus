@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/pricing-components/{componentId}/tiers")
 public class PricingTierController {
 
-    private final PricingComponentService pricingComponentService; // Can be replaced by PricingTierService
+    private final PricingComponentService pricingComponentService;
 
     public PricingTierController(PricingComponentService pricingComponentService) {
         this.pricingComponentService = pricingComponentService;

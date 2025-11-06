@@ -1,106 +1,74 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.pricing.model.PriceValue;
-import com.bankengine.pricing.model.PricingComponent;
-import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.rules.model.PricingInput;
+import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.NotFoundException;
-import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
 
 @Service
 public class PricingCalculationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(PricingCalculationService.class);
-    private final PricingTierService pricingTierService;
-    private final KieContainer kieContainer;
+    private final KieContainerReloadService kieContainerReloadService;
 
-    public PricingCalculationService(PricingTierService pricingTierService, KieContainer kieContainer) {
-        this.pricingTierService = pricingTierService;
-        this.kieContainer = kieContainer;
+    public PricingCalculationService(KieContainerReloadService kieContainerReloadService) {
+        this.kieContainerReloadService = kieContainerReloadService;
     }
 
     @Transactional(readOnly = true)
-    public PriceValue getCalculatedPrice(String customerSegment, BigDecimal transactionAmount, PricingComponent component) {
+    public PriceValue getCalculatedPrice(String customerSegment, BigDecimal transactionAmount) {
+        // NOTE: The component parameter is primarily for ensuring the component exists
+        // in the DB, as done in the controller. The rules run against ALL loaded components.
 
-        // 1. Fetch all relevant Pricing Tiers for the component
-        List<PricingTier> availableTiers = pricingTierService.findAllByPricingComponent(component);
+        // 1. Determine the price using the Rules Engine directly
+        PricingInput finalInputFact = determinePriceWithDrools(customerSegment, transactionAmount);
 
-        // 2. Determine the correct Tier using the Rules Engine
-        Optional<PricingTier> matchedTier = determineTierWithDrools(customerSegment, transactionAmount, availableTiers);
+        // 2. Extract the result
+        if (finalInputFact.isRuleFired() && finalInputFact.getMatchedTierId() != null) {
+            PriceValue resultValue = new PriceValue();
+            resultValue.setPriceAmount(finalInputFact.getPriceAmount());
+            resultValue.setCurrency(finalInputFact.getCurrency());
+             resultValue.setValueType(PriceValue.ValueType.valueOf(finalInputFact.getValueType()));
 
-        // 3. Find the corresponding PriceValue within the matched Tier (unchanged logic)
-        if (matchedTier.isPresent()) {
-            return findMatchingPriceValue(matchedTier.get());
+            return resultValue;
         }
 
-        // 4. Fallback for no match: RULE FAILURE (404 NOT FOUND via GlobalExceptionHandler)
-        throw new NotFoundException("No matching pricing tier found for segment: " + customerSegment +
+        // 3. Fallback for no match
+        throw new NotFoundException("No matching pricing rule found for segment: " + customerSegment +
                                         " and amount: " + transactionAmount);
     }
 
     /**
-     * Executes the Drools Rules Engine to find the correct Pricing Tier ID.
+     * Executes the Drools Rules Engine to find the final price.
+     * The rules use the PricingInput fact and update its fields (priceAmount, valueType, currency).
      */
-    private Optional<PricingTier> determineTierWithDrools(String customerSegment, BigDecimal transactionAmount, List<PricingTier> availableTiers) {
-        // Create a new session for each execution to ensure thread safety and clean working memory
-        KieSession kieSession = kieContainer.newKieSession();
+    private PricingInput determinePriceWithDrools(String customerSegment, BigDecimal transactionAmount) {
+
+        // Get the active KieSession from the reloaded container
+        KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
+
+        // 1. Create the Input Fact
+        PricingInput input = new PricingInput();
+        input.setCustomerSegment(customerSegment);
+        input.setTransactionAmount(transactionAmount);
 
         try {
-            // Set the logger global for DRL logging
-            kieSession.setGlobal("logger", logger);
-
-            // 1. Create the Input Fact
-            PricingInput input = new PricingInput();
-            input.setCustomerSegment(customerSegment);
-            input.setTransactionAmount(transactionAmount);
-
-            // 2. Insert the facts into the rules engine's working memory
+            // 2. Insert the input fact into the working memory
             kieSession.insert(input);
-
-            // Insert all available tiers as individual facts so rules can operate on them.
-            for (PricingTier tier : availableTiers) {
-                kieSession.insert(tier);
-            }
 
             // 3. Fire all matching rules
             kieSession.fireAllRules();
 
-            // 4. Extract the result
-            if (input.isRuleFired() && input.getMatchedTierId() != null) {
-                Long matchedTierId = input.getMatchedTierId();
-                return availableTiers.stream()
-                        .filter(t -> t.getId().equals(matchedTierId))
-                        .findFirst();
-            }
-
-            return Optional.empty();
+            // The input object is updated by the 'update($input)' action in the DRL.
+            return input;
 
         } finally {
+            // Always dispose of the stateful KieSession after use
             kieSession.dispose();
         }
-    }
-
-    /**
-     * Internal method to find the specific PriceValue within the Tier.
-     */
-    private PriceValue findMatchingPriceValue(PricingTier pricingTier) {
-        // For now, let's assume each Tier only has one PriceValue linked to it
-        // This is where more complex logic (like looking for a specific PriceValue by date/region)
-        // would go, but we keep it simple for now.
-        if (pricingTier.getPriceValues() != null && !pricingTier.getPriceValues().isEmpty()) {
-            return pricingTier.getPriceValues().iterator().next();
-        }
-
-        throw new IllegalArgumentException("Pricing Tier ID " + pricingTier.getId() +
-                " is matched by rules but contains no PriceValues. Check configuration.");
     }
 }

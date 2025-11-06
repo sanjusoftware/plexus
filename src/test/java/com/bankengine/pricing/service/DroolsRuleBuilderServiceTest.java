@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,8 +64,8 @@ public class DroolsRuleBuilderServiceTest {
         PricingTier tier = new PricingTier();
         tier.setId(50L);
         tier.setTierName("Corporate Discount Tier");
-        tier.setConditions(List.of(condition1, condition2)); // Add multiple conditions
-        tier.setPriceValues(List.of(priceValue));
+        tier.setConditions(Set.of(condition1, condition2)); // Add multiple conditions
+        tier.setPriceValues(Set.of(priceValue));
 
         // 5. Setup Pricing Component
         PricingComponent component = new PricingComponent();
@@ -82,9 +83,6 @@ public class DroolsRuleBuilderServiceTest {
         assertTrue(drlContent.contains("rule \"" + expectedRuleName + "\""), "DRL should contain the generated rule name.");
 
         // --- 2. WHEN Clause (Conditions) ---
-        // transactionAmount (DECIMAL) does NOT need quotes.
-        // customerSegment (STRING) DOES need quotes.
-
         String expectedCondition1 = "transactionAmount > 50000.00 AND"; // Numeric comparison
         String expectedCondition2 = "customerSegment in ( \"PREMIUM\", \"BUSINESS\" )"; // String IN list
 

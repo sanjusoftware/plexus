@@ -1,16 +1,14 @@
 package com.bankengine.catalog;
 
-import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
-import com.bankengine.catalog.dto.CreateProductRequestDto;
-import com.bankengine.catalog.dto.ProductExpirationDto;
-import com.bankengine.catalog.dto.ProductResponseDto;
-import com.bankengine.catalog.dto.UpdateProductRequestDto;
+import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
+import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PricingComponentRepository;
@@ -18,6 +16,7 @@ import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -26,9 +25,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import com.bankengine.catalog.model.ProductType;
-import com.bankengine.catalog.repository.ProductTypeRepository;
-import org.junit.jupiter.api.BeforeEach;
 
 import java.time.LocalDate;
 
@@ -406,7 +402,6 @@ public class ProductIntegrationTest {
         entityManager.clear();
 
         oldProduct = productRepository.findById(oldProduct.getId()).get();
-
 
         // ARRANGE: Setup CreateNewVersionRequestDto
         CreateNewVersionRequestDto versionDto = new CreateNewVersionRequestDto();

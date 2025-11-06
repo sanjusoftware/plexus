@@ -59,8 +59,7 @@ public class PricingController {
         // 2. Return the final PriceValue object directly
         return calculationService.getCalculatedPrice(
                 segment,
-                amount,
-                component
+                amount
         );
     }
 }

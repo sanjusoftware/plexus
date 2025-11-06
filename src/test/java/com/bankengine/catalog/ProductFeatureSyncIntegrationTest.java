@@ -1,6 +1,5 @@
 package com.bankengine.catalog;
 
-import com.bankengine.catalog.dto.CreateProductRequestDto;
 import com.bankengine.catalog.dto.ProductFeatureDto;
 import com.bankengine.catalog.dto.ProductFeatureSyncDto;
 import com.bankengine.catalog.model.FeatureComponent;

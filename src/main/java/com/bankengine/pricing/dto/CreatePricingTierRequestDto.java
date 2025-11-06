@@ -1,9 +1,10 @@
 package com.bankengine.pricing.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import java.math.BigDecimal;
 import lombok.Data;
+
+import java.math.BigDecimal;
+import java.util.Set;
 
 @Data
 public class CreatePricingTierRequestDto {
@@ -11,11 +12,12 @@ public class CreatePricingTierRequestDto {
     @NotBlank(message = "Tier name is required.")
     private String tierName;
 
-    // These can be null for unconditional tiers, but we'll validate if they exist.
-    private String conditionKey;
-    private String conditionValue;
-
-    // Thresholds
+    // Threshold Fields (Dedicated for numeric range/tiering)
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
+
+    /**
+     * Optional list of complex conditions (Dedicated for contextual/segmentation rules) to be applied to this tier.
+     */
+    private Set<TierConditionDto> conditions;
 }

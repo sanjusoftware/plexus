@@ -6,8 +6,9 @@ import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.model.ProductType;
-import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
+import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.catalog.repository.specification.ProductSpecification;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -22,13 +23,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.bankengine.catalog.repository.ProductTypeRepository;
 
 import java.time.LocalDate;
-import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -188,7 +188,6 @@ public class ProductService {
         }
 
         pricingLinkRepository.flush();
-        entityManager.clear();
 
         // Product entity needs to have the @OneToMany mapping defined for pricing links.
         return getProductResponseById(productId);
@@ -246,7 +245,6 @@ public class ProductService {
         link.setFeatureValue(dto.getFeatureValue());
 
         linkRepository.save(link);
-        entityManager.clear();
         return getProductResponseById(product.getId());
     }
 

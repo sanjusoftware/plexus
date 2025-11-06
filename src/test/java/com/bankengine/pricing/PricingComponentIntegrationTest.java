@@ -1,13 +1,13 @@
 package com.bankengine.pricing;
 
 import com.bankengine.pricing.dto.*;
-import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -45,51 +46,28 @@ public class PricingComponentIntegrationTest {
     @Autowired
     private PriceValueRepository valueRepository;
 
-    private Long componentIdForTierTests;
-    private Long tierIdForTests;
-    private Long valueIdForTests;
+    @Autowired
+    private EntityManager entityManager;
 
-    // Setup a full Component -> Tier -> Value chain
-    private void createLinkedTierAndValue(String componentName, String tierName) {
-        // 1. Create Component
-        PricingComponent component = new PricingComponent();
-        component.setName(componentName);
-        component.setType(PricingComponent.ComponentType.RATE);
-        PricingComponent savedComponent = componentRepository.save(component);
-        componentIdForTierTests = savedComponent.getId();
+    @Autowired
+    private TestTransactionHelper txHelper;
 
-        // 2. Create Tier
-        PricingTier tier = new PricingTier();
-        tier.setPricingComponent(savedComponent);
-        tier.setTierName(tierName);
-        tier.setMinThreshold(new BigDecimal("0.00"));
-        PricingTier savedTier = tierRepository.save(tier);
-        tierIdForTests = savedTier.getId();
-
-        // 3. Create Value
-        PriceValue value = new PriceValue();
-        value.setPricingTier(savedTier);
-        value.setPriceAmount(new BigDecimal("10.00"));
-        value.setCurrency("USD");
-        value.setValueType(PriceValue.ValueType.ABSOLUTE);
-        PriceValue savedValue = valueRepository.save(value);
-        valueIdForTests = savedValue.getId();
+    // --- ADDED: Helper method to retrieve Tier/Value IDs after component is created and committed ---
+    private PricingTier getTierFromComponentId(Long componentId) {
+        // Find the committed component and load its tiers. Assumes a single tier exists.
+        Optional<PricingComponent> componentOpt = componentRepository.findById(componentId);
+        if (componentOpt.isEmpty() || componentOpt.get().getPricingTiers().isEmpty()) {
+            throw new IllegalStateException("Setup failed: Component or Tier not found in DB after creation.");
+        }
+        return componentOpt.get().getPricingTiers().stream().findFirst().get();
     }
+    // ------------------------------------------------------------------------------------------------
 
-    // Helper method to create a valid DTO for POST/PUT requests
     private CreatePricingComponentRequestDto getCreateDto(String name) {
         CreatePricingComponentRequestDto dto = new CreatePricingComponentRequestDto();
         dto.setName(name);
-        dto.setType("FEE"); // Assuming FEE is a valid ComponentType enum value
+        dto.setType("FEE");
         return dto;
-    }
-
-    // Helper method to create an entity directly in the DB
-    private PricingComponent createPricingComponentInDb(String name) {
-        PricingComponent component = new PricingComponent();
-        component.setName(name);
-        component.setType(PricingComponent.ComponentType.RATE); // Use a different type for variety
-        return componentRepository.save(component);
     }
 
     // =================================================================
@@ -129,8 +107,8 @@ public class PricingComponentIntegrationTest {
     @WithMockUser
     void shouldReturn200AndListComponent() throws Exception {
         long initialCount = componentRepository.count();
-        createPricingComponentInDb("ComponentA");
-        createPricingComponentInDb("ComponentB");
+        txHelper.createPricingComponentInDb("ComponentA");
+        txHelper.createPricingComponentInDb("ComponentB");
         long expectedCount = initialCount + 2;
 
         mockMvc.perform(get("/api/v1/pricing-components"))
@@ -142,7 +120,7 @@ public class PricingComponentIntegrationTest {
     @Test
     @WithMockUser
     void shouldReturn200AndComponentById() throws Exception {
-        PricingComponent savedComponent = createPricingComponentInDb("MortgageRate");
+        PricingComponent savedComponent = txHelper.createPricingComponentInDb("MortgageRate");
 
         mockMvc.perform(get("/api/v1/pricing-components/{id}", savedComponent.getId()))
                 .andExpect(status().isOk())
@@ -165,7 +143,7 @@ public class PricingComponentIntegrationTest {
     @Test
     @WithMockUser
     void shouldUpdateComponentAndReturn200() throws Exception {
-        PricingComponent savedComponent = createPricingComponentInDb("OldRate");
+        PricingComponent savedComponent = txHelper.createPricingComponentInDb("OldRate");
         UpdatePricingComponentRequestDto updateDto = new UpdatePricingComponentRequestDto();
         updateDto.setName("NewRate");
         updateDto.setType("FEE"); // Change type
@@ -186,7 +164,7 @@ public class PricingComponentIntegrationTest {
     @Test
     @WithMockUser
     void shouldDeleteComponentAndReturn204() throws Exception {
-        PricingComponent component = createPricingComponentInDb("DeletableComponent");
+        PricingComponent component = txHelper.createPricingComponentInDb("DeletableComponent");
         Long idToDelete = component.getId();
 
         mockMvc.perform(delete("/api/v1/pricing-components/{id}", idToDelete))
@@ -200,16 +178,11 @@ public class PricingComponentIntegrationTest {
     @Test
     @WithMockUser
     void shouldReturn409WhenDeletingComponentWithTiers() throws Exception {
-        // ARRANGE: Create component
-        PricingComponent component = createPricingComponentInDb("ComponentWithTiers");
+        // ARRANGE: 1. Create and COMMIT the component and COMMIT the dependency
+        PricingComponent component = txHelper.createPricingComponentInDb("ComponentWithTiers");
+        txHelper.createCommittedTierDependency(component.getId(), "Tier 1");
 
-        // ARRANGE: Manually create a linked PricingTier (simulating dependency)
-        PricingTier tier = new PricingTier();
-        tier.setPricingComponent(component);
-        tier.setTierName("Tier 1");
-        tierRepository.save(tier);
-
-        // ACT: Attempt to delete the component
+        // ACT: Attempt to delete the component.
         mockMvc.perform(delete("/api/v1/pricing-components/{id}", component.getId()))
                 .andExpect(status().isConflict()) // 🚨 Expect 409 Conflict
                 .andExpect(jsonPath("$.status", is(409)))
@@ -223,7 +196,7 @@ public class PricingComponentIntegrationTest {
     @Test
     @WithMockUser
     void shouldAddTierAndValueToComponentAndReturn201() throws Exception {
-        PricingComponent component = createPricingComponentInDb("TieredComponent");
+        PricingComponent component = txHelper.createPricingComponentInDb("TieredComponent");
 
         TierValueDto requestDto = getValidTierValueDto();
 
@@ -273,7 +246,11 @@ public class PricingComponentIntegrationTest {
     @WithMockUser
     void shouldUpdateTierAndValueAndReturn200() throws Exception {
         // ARRANGE: Setup the records to be updated
-        createLinkedTierAndValue("ComponentToUpdate", "InitialTier");
+        Long componentId = txHelper.createLinkedTierAndValue("ComponentToUpdate", "InitialTier");
+
+        // Fetch the created Tier ID from the committed Component
+        PricingTier initialTier = getTierFromComponentId(componentId);
+        Long tierId = initialTier.getId();
 
         // ARRANGE: Create the update DTOs
         UpdatePricingTierRequestDto tierDto = new UpdatePricingTierRequestDto();
@@ -292,7 +269,7 @@ public class PricingComponentIntegrationTest {
 
         // ACT: Call PUT /{componentId}/tiers/{tierId}
         mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
-                        componentIdForTierTests, tierIdForTests)
+                        componentId, tierId) // <--- USED LOCAL VARIABLES
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
@@ -301,7 +278,7 @@ public class PricingComponentIntegrationTest {
                 .andExpect(jsonPath("$.currency", is("EUR")));
 
         // VERIFY: Manually check the Tier entity in the DB
-        PricingTier updatedTier = tierRepository.findById(tierIdForTests).get();
+        PricingTier updatedTier = tierRepository.findById(tierId).get();
         assertThat(updatedTier.getTierName()).isEqualTo("UpdatedTierName");
         assertThat(updatedTier.getMaxThreshold()).isEqualTo(new BigDecimal("999.99"));
     }
@@ -314,15 +291,20 @@ public class PricingComponentIntegrationTest {
     @WithMockUser
     void shouldDeleteTierAndValueAndReturn204() throws Exception {
         // ARRANGE: Setup the records to be deleted
-        createLinkedTierAndValue("ComponentToDeleteFrom", "TierToDelete");
-        Long finalTierId = tierIdForTests;
-        Long finalValueId = valueIdForTests;
+        Long componentId = txHelper.createLinkedTierAndValue("ComponentToDeleteFrom", "TierToDelete");
+
+        // Fetch the IDs from the committed component
+        PricingTier initialTier = getTierFromComponentId(componentId);
+        Long finalTierId = initialTier.getId();
+        // Assumes PriceValue has a 1-to-1 relationship with PricingTier and is cascaded or easily found
+        Long finalValueId = initialTier.getPriceValues().stream().findFirst().get().getId();
 
         // ACT: Call DELETE /{componentId}/tiers/{tierId}
         mockMvc.perform(delete("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
-                        componentIdForTierTests, finalTierId))
-                .andExpect(status().isNoContent()); // Expect 204 No Content
+                        componentId, finalTierId))
+                .andExpect(status().isNoContent());
 
+        entityManager.clear();
         // VERIFY 1: Tier entity is gone
         assertThat(tierRepository.findById(finalTierId)).isEmpty();
 
@@ -338,8 +320,10 @@ public class PricingComponentIntegrationTest {
     @WithMockUser
     void shouldReturn404ForNonExistentTierOrComponent() throws Exception {
         // ARRANGE: Setup a valid component ID
-        createLinkedTierAndValue("ComponentFor404Test", "ValidTier");
-        Long existingComponentId = componentIdForTierTests;
+        Long componentId = txHelper.createLinkedTierAndValue("ComponentFor404Test", "ValidTier");
+        PricingTier existingTier = getTierFromComponentId(componentId);
+        Long existingComponentId = componentId;
+        Long existingTierId = existingTier.getId();
         Long nonExistentId = 99999L;
 
         UpdateTierValueDto updateDto = new UpdateTierValueDto();
@@ -353,7 +337,7 @@ public class PricingComponentIntegrationTest {
 
         // Test 1: PUT with non-existent Component ID
         mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
-                        nonExistentId, tierIdForTests)
+                        nonExistentId, existingTierId) // <--- USED LOCAL VARIABLE
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isNotFound())

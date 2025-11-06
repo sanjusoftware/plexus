@@ -7,8 +7,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "pricing_tier")
@@ -27,12 +27,12 @@ public class PricingTier extends AuditableEntity {
     // Bidirectional link to all price values in this tier
     @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonIgnore
-    private List<PriceValue> priceValues;
+    private Set<PriceValue> priceValues = new HashSet<>();
 
     // Bidirectional link to all TierConditions for this tier
     // The DroolsRuleBuilderService will iterate over this list.
     @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private List<TierCondition> conditions = new ArrayList<>();
+    private Set<TierCondition> conditions = new HashSet<>();
 
     private String tierName;
 

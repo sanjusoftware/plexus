@@ -1,7 +1,6 @@
 package com.bankengine.catalog.controller;
 
 import com.bankengine.catalog.dto.*;
-import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
