@@ -10,14 +10,16 @@ import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.utils.JwtTestUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +42,14 @@ public class ProductPricingSyncIntegrationTest {
     @Autowired private ProductTypeRepository productTypeRepository;
     @Autowired private PricingComponentRepository pricingComponentRepository; // Assumed available
     @Autowired private ProductPricingLinkRepository pricingLinkRepository; // Assumed available
+
+    @Value("${security.jwt.secret-key}")
+    private String jwtSecretKey;
+
+    @Value("${security.jwt.issuer-uri}")
+    private String jwtIssuerUri;
+
+    private JwtTestUtil jwtTestUtil;
 
     private Product product;
     private PricingComponent compRate; // CORE_RATE context
@@ -65,6 +75,7 @@ public class ProductPricingSyncIntegrationTest {
 
     @BeforeEach
     void setup() {
+        jwtTestUtil = new JwtTestUtil(jwtSecretKey, jwtIssuerUri);
         // 1. Setup ProductType
         ProductType type = new ProductType();
         type.setName("Savings Account");
@@ -98,8 +109,8 @@ public class ProductPricingSyncIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
     void shouldCreateNewPricingLinksWhenNoneExist() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         // ARRANGE: Target state includes compRate and compFee
         ProductPricingSyncDto syncDto = new ProductPricingSyncDto();
         syncDto.setPricingComponents(List.of(
@@ -109,6 +120,7 @@ public class ProductPricingSyncIntegrationTest {
 
         // ACT: Synchronize
         mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncDto)))
                 .andExpect(status().isOk());
@@ -122,8 +134,8 @@ public class ProductPricingSyncIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
     void shouldPerformFullSync_CreateAndDelete() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         // ARRANGE: Setup initial state (Only compRate and compDiscount linked)
         pricingLinkRepository.save(createInitialLink(product, compRate, "CORE_RATE")); // Initial Rate
         pricingLinkRepository.save(createInitialLink(product, compDiscount, "LOYALTY_DISCOUNT")); // Initial Discount
@@ -138,6 +150,7 @@ public class ProductPricingSyncIntegrationTest {
 
         // ACT: Synchronize
         mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncDto)))
                 .andExpect(status().isOk());
@@ -162,14 +175,15 @@ public class ProductPricingSyncIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
     void shouldReturn404OnSyncWithNonExistentProductOrComponent() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         ProductPricingSyncDto syncDto = new ProductPricingSyncDto();
         // A DTO linking to a valid component
         syncDto.setPricingComponents(List.of(createPricingDto(compRate, "RATE")));
 
         // Test 1: Non-existent Product ID
         mockMvc.perform(put("/api/v1/products/99999/pricing")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncDto)))
                 .andExpect(status().isNotFound())
@@ -185,6 +199,7 @@ public class ProductPricingSyncIntegrationTest {
         ));
 
         mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(badSyncDto)))
                 .andExpect(status().isNotFound())

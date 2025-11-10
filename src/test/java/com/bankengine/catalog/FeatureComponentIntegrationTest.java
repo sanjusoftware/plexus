@@ -10,16 +10,20 @@ import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.utils.JwtTestUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -49,10 +53,23 @@ public class FeatureComponentIntegrationTest {
     @Autowired
     private ProductFeatureLinkRepository linkRepository;
 
+    @Value("${security.jwt.secret-key}")
+    private String jwtSecretKey;
+
+    @Value("${security.jwt.issuer-uri}")
+    private String jwtIssuerUri;
+
+    private JwtTestUtil jwtTestUtil;
+
     // Shared data entities
     private Product sharedProduct;
 
     @BeforeEach
+    void setup() {
+        jwtTestUtil = new JwtTestUtil(jwtSecretKey, jwtIssuerUri);
+        setupDependencyProduct();
+    }
+
     void setupDependencyProduct() {
         // Create a minimal ProductType dependency first
         ProductType sharedProductType = new ProductType();
@@ -88,9 +105,20 @@ public class FeatureComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
-    void shouldCreateFeatureAndReturn201() throws Exception {
+    void shouldReturn403WhenCreatingFeatureWithoutPermission() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
         mockMvc.perform(post("/api/v1/features")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(getCreateDto("ForbiddenFeature"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldCreateFeatureAndReturn201() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:feature:create"));
+        mockMvc.perform(post("/api/v1/features")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(getCreateDto("PremiumSupport"))))
                 .andExpect(status().isCreated())
@@ -100,12 +128,13 @@ public class FeatureComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturn400OnCreateWithInvalidDataType() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:feature:create"));
         CreateFeatureComponentRequestDto dto = getCreateDto("BadTypeFeature");
         dto.setDataType("XYZ"); // Invalid data type
 
         mockMvc.perform(post("/api/v1/features")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest()) // Handled by IllegalArgumentException
@@ -117,20 +146,31 @@ public class FeatureComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    void shouldReturn403WhenReadingFeatureWithoutPermission() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
+        FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
+        mockMvc.perform(get("/api/v1/features/{id}", savedComponent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldReturn200AndFeatureById() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:feature:read"));
         FeatureComponent savedComponent = createFeatureComponentInDb("ATMWithdrawals");
 
-        mockMvc.perform(get("/api/v1/features/{id}", savedComponent.getId()))
+        mockMvc.perform(get("/api/v1/features/{id}", savedComponent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name", is("ATMWithdrawals")))
                 .andExpect(jsonPath("$.id", is(savedComponent.getId().intValue())));
     }
 
     @Test
-    @WithMockUser
     void shouldReturn404WhenGettingNonExistentFeature() throws Exception {
-        mockMvc.perform(get("/api/v1/features/99999"))
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:feature:read"));
+        mockMvc.perform(get("/api/v1/features/99999")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isNotFound()) // Handled by NotFoundException
                 .andExpect(jsonPath("$.status", is(404)));
     }
@@ -140,14 +180,30 @@ public class FeatureComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    void shouldReturn403WhenUpdatingFeatureWithoutPermission() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
+        FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
+        UpdateFeatureComponentRequestDto updateDto = new UpdateFeatureComponentRequestDto();
+        updateDto.setName("NewName");
+        updateDto.setDataType("BOOLEAN");
+
+        mockMvc.perform(put("/api/v1/features/{id}", savedComponent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldUpdateFeatureAndReturn200() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:feature:update"));
         FeatureComponent savedComponent = createFeatureComponentInDb("OldName");
         UpdateFeatureComponentRequestDto updateDto = new UpdateFeatureComponentRequestDto();
         updateDto.setName("NewName");
         updateDto.setDataType("BOOLEAN");
 
         mockMvc.perform(put("/api/v1/features/{id}", savedComponent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -157,13 +213,14 @@ public class FeatureComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturn404OnUpdateNonExistentFeature() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:feature:update"));
         UpdateFeatureComponentRequestDto updateDto = new UpdateFeatureComponentRequestDto();
         updateDto.setName("Test");
         updateDto.setDataType("STRING");
 
         mockMvc.perform(put("/api/v1/features/99999")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isNotFound());
@@ -174,22 +231,33 @@ public class FeatureComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    void shouldReturn403WhenDeletingFeatureWithoutPermission() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
+        FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
+        mockMvc.perform(delete("/api/v1/features/{id}", savedComponent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldDeleteFeatureAndReturn204() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:feature:delete", "catalog:feature:read"));
         FeatureComponent savedComponent = createFeatureComponentInDb("DeletableFeature");
         Long idToDelete = savedComponent.getId();
 
-        mockMvc.perform(delete("/api/v1/features/{id}", idToDelete))
+        mockMvc.perform(delete("/api/v1/features/{id}", idToDelete)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isNoContent()); // Expect 204 No Content
 
         // Verify it was actually deleted from the repository
-        mockMvc.perform(get("/api/v1/features/{id}", idToDelete))
+        mockMvc.perform(get("/api/v1/features/{id}", idToDelete)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithMockUser
     void shouldReturn409WhenDeletingLinkedFeature() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:feature:delete"));
         // Create a feature component
         FeatureComponent linkedComponent = createFeatureComponentInDb("LinkedFeature");
 
@@ -202,7 +270,8 @@ public class FeatureComponentIntegrationTest {
         linkRepository.save(link);
 
         // Attempt to delete the linked component
-        mockMvc.perform(delete("/api/v1/features/{id}", linkedComponent.getId()))
+        mockMvc.perform(delete("/api/v1/features/{id}", linkedComponent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status", is(409)))
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Cannot delete Feature Component ID")));

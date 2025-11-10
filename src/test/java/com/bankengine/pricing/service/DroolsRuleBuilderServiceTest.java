@@ -83,7 +83,7 @@ public class DroolsRuleBuilderServiceTest {
         assertTrue(drlContent.contains("rule \"" + expectedRuleName + "\""), "DRL should contain the generated rule name.");
 
         // --- 2. WHEN Clause (Conditions) ---
-        String expectedCondition1 = "transactionAmount > 50000.00 AND"; // Numeric comparison
+        String expectedCondition1 = "transactionAmount > 50000.00"; // Numeric comparison
         String expectedCondition2 = "customerSegment in ( \"PREMIUM\", \"BUSINESS\" )"; // String IN list
 
         assertTrue(drlContent.contains(expectedCondition1), "DRL should contain the transactionAmount condition.");

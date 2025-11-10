@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,6 +37,7 @@ public class ProductTypeController {
             content = @Content(mediaType = "application/json",
                     schema = @Schema(implementation = ProductType.class))) // NOTE: Using the Entity class as the response schema
     @GetMapping
+    @PreAuthorize("hasAuthority('catalog:product-type:read')")
     public ResponseEntity<List<ProductType>> getAllProductTypes() {
         List<ProductType> productTypes = productTypeService.findAllProductTypes();
 
@@ -50,6 +52,7 @@ public class ProductTypeController {
                     schema = @Schema(implementation = ProductType.class)))
     @ApiResponse(responseCode = "400", description = "Validation error (e.g., name constraints violated).")
     @PostMapping
+    @PreAuthorize("hasAuthority('catalog:product-type:create')")
     public ResponseEntity<ProductType> createProductType(@Valid @RequestBody CreateProductTypeRequestDto requestDto) {
         ProductType createdType = productTypeService.createProductType(requestDto);
         // Returns 201 Created

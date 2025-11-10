@@ -104,7 +104,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:component:create"})
     void shouldCreateComponentAndReturn201() throws Exception {
         mockMvc.perform(post("/api/v1/pricing-components")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -116,7 +116,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:component:create"})
     void shouldReturn400OnCreateWithInvalidType() throws Exception {
         CreatePricingComponentRequestDto dto = getCreateDto("BadType");
         dto.setType("INVALID_TYPE");
@@ -133,7 +133,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:component:read"})
     void shouldReturn200AndListComponent() throws Exception {
         long initialCount = componentRepository.count();
         txHelper.createPricingComponentInDb("ComponentA");
@@ -147,7 +147,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = "pricing:component:read")
     void shouldReturn200AndComponentById() throws Exception {
         PricingComponent savedComponent = txHelper.createPricingComponentInDb("MortgageRate");
 
@@ -158,7 +158,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = "pricing:component:read")
     void shouldReturn404WhenGettingNonExistentComponent() throws Exception {
         mockMvc.perform(get("/api/v1/pricing-components/99999"))
                 .andExpect(status().isNotFound())
@@ -170,7 +170,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:component:update"})
     void shouldUpdateComponentAndReturn200() throws Exception {
         PricingComponent savedComponent = txHelper.createPricingComponentInDb("OldRate");
         UpdatePricingComponentRequestDto updateDto = new UpdatePricingComponentRequestDto();
@@ -191,7 +191,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:component:delete", "pricing:component:read"})
     void shouldDeleteComponentAndReturn204() throws Exception {
         PricingComponent component = txHelper.createPricingComponentInDb("DeletableComponent");
         Long idToDelete = component.getId();
@@ -205,7 +205,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:component:delete"})
     void shouldReturn409WhenDeletingComponentWithTiers() throws Exception {
         // ARRANGE: 1. Create and COMMIT the component and COMMIT the dependency
         PricingComponent component = txHelper.createPricingComponentInDb("ComponentWithTiers");
@@ -213,7 +213,7 @@ public class PricingComponentIntegrationTest {
 
         // ACT: Attempt to delete the component.
         mockMvc.perform(delete("/api/v1/pricing-components/{id}", component.getId()))
-                .andExpect(status().isConflict()) // 🚨 Expect 409 Conflict
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status", is(409)))
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Cannot delete Pricing Component ID")));
     }
@@ -223,7 +223,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:tier:create"})
     void shouldAddTierAndValueToComponentAndReturn201() throws Exception {
         PricingComponent component = txHelper.createPricingComponentInDb("TieredComponent");
 
@@ -238,7 +238,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:tier:create"})
     void shouldReturn404WhenAddingTierToNonExistentComponent() throws Exception {
         TierValueDto requestDto = getValidTierValueDto();
 
@@ -254,7 +254,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:tier:update"})
     void shouldUpdateTierAndValueAndReturn200() throws Exception {
         // ARRANGE: Setup the records to be updated
         Long componentId = txHelper.createLinkedTierAndValue("ComponentToUpdate", "InitialTier");
@@ -300,7 +300,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:tier:delete"})
     void shouldDeleteTierAndValueAndReturn204() throws Exception {
         // ARRANGE: Setup the records to be deleted
         Long componentId = txHelper.createLinkedTierAndValue("ComponentToDeleteFrom", "TierToDelete");
@@ -329,7 +329,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(authorities = {"pricing:tier:update", "pricing:tier:delete"})
     void shouldReturn404ForNonExistentTierOrComponent() throws Exception {
         // ARRANGE: Setup a valid component ID
         Long componentId = txHelper.createLinkedTierAndValue("ComponentFor404Test", "ValidTier");

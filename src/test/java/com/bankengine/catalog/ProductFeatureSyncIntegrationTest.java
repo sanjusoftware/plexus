@@ -10,14 +10,16 @@ import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.utils.JwtTestUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +55,14 @@ public class ProductFeatureSyncIntegrationTest {
     @Autowired
     private ProductFeatureLinkRepository linkRepository;
 
+    @Value("${security.jwt.secret-key}")
+    private String jwtSecretKey;
+
+    @Value("${security.jwt.issuer-uri}")
+    private String jwtIssuerUri;
+
+    private JwtTestUtil jwtTestUtil;
+
     // Entities used for setup
     private Product product;
     private FeatureComponent componentA; // Integer type, value "10"
@@ -70,6 +80,7 @@ public class ProductFeatureSyncIntegrationTest {
 
     @BeforeEach
     void setup() {
+        jwtTestUtil = new JwtTestUtil(jwtSecretKey, jwtIssuerUri);
         // 1. Setup ProductType
         ProductType type = new ProductType();
         type.setName("Checking Account");
@@ -103,8 +114,8 @@ public class ProductFeatureSyncIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
     void shouldCreateNewFeaturesWhenNoLinksExist() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         // ARRANGE: Target state includes A and B
         ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
         syncDto.setFeatures(List.of(
@@ -114,6 +125,7 @@ public class ProductFeatureSyncIntegrationTest {
 
         // ACT: Synchronize
         mockMvc.perform(put("/api/v1/products/{id}/features", product.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncDto)))
                 .andExpect(status().isOk())
@@ -128,8 +140,8 @@ public class ProductFeatureSyncIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
     void shouldPerformFullSync_CreateUpdateAndDelete() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         // ARRANGE: Setup initial state (Only A and C linked)
         linkRepository.save(createInitialLink(product, componentA, "10")); // Initial A
         linkRepository.save(createInitialLink(product, componentC, "3.0")); // Initial C
@@ -144,6 +156,7 @@ public class ProductFeatureSyncIntegrationTest {
 
         // ACT: Synchronize
         mockMvc.perform(put("/api/v1/products/{id}/features", product.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncDto)))
                 .andExpect(status().isOk())
@@ -169,8 +182,8 @@ public class ProductFeatureSyncIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
     void shouldReturn400OnSyncWithInvalidFeatureValueType() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         // ARRANGE: Attempt to set a STRING value on a BOOLEAN feature (B)
         ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
         syncDto.setFeatures(List.of(
@@ -179,6 +192,7 @@ public class ProductFeatureSyncIntegrationTest {
 
         // ACT & ASSERT: Expect 400 Bad Request due to validation failure
         mockMvc.perform(put("/api/v1/products/{id}/features", product.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncDto)))
                 .andExpect(status().isBadRequest())
@@ -186,12 +200,13 @@ public class ProductFeatureSyncIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturn404OnSyncWithNonExistentProduct() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
         syncDto.setFeatures(List.of(createFeatureDto(componentA, "1")));
 
         mockMvc.perform(put("/api/v1/products/99999/features")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncDto)))
                 .andExpect(status().isNotFound())

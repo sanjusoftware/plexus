@@ -13,20 +13,23 @@ import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.utils.JwtTestUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -64,6 +67,14 @@ public class ProductIntegrationTest {
     @Autowired
     private EntityManager entityManager;
 
+    @Value("${security.jwt.secret-key}")
+    private String jwtSecretKey;
+
+    @Value("${security.jwt.issuer-uri}")
+    private String jwtIssuerUri;
+
+    private JwtTestUtil jwtTestUtil;
+
     // Use Long wrapper for easier null handling if needed, though here it's always set.
     private Long EXISTING_PRODUCT_TYPE_ID;
     private final String PRODUCT_API_BASE = "/api/v1/products";
@@ -74,6 +85,7 @@ public class ProductIntegrationTest {
      */
     @BeforeEach
     void setUp() {
+        jwtTestUtil = new JwtTestUtil(jwtSecretKey, jwtIssuerUri);
         // 1. Explicitly clear both tables first
         productRepository.deleteAll();
         productTypeRepository.deleteAll(); // Clears the previous ProductType
@@ -116,7 +128,9 @@ public class ProductIntegrationTest {
         dto.setStatus(status);
         dto.setProductTypeId(productTypeId);
 
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:create"));
         String json = mockMvc.perform(post(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
@@ -189,12 +203,13 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturn200WhenAccessingSecureEndpointWithToken() throws Exception {
         // We create one product to ensure content array is populated, for a true 200 check
         createProduct("DRAFT");
 
-        mockMvc.perform(get(PRODUCT_API_BASE))
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:read"));
+        mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isMap())
                 .andExpect(jsonPath("$.content").isArray());
@@ -205,11 +220,23 @@ public class ProductIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    void shouldReturn403WhenCreatingProductWithoutPermission() throws Exception {
+        CreateProductRequestDto requestDto = getStandardCreateDto("DRAFT");
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
+        mockMvc.perform(post(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldCreateProductAndReturn201() throws Exception {
         CreateProductRequestDto requestDto = getStandardCreateDto("DRAFT");
 
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:create"));
         mockMvc.perform(post(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
@@ -219,12 +246,13 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturn404WhenCreatingProductWithNonExistentProductType() throws Exception {
         CreateProductRequestDto requestDto = getStandardCreateDto("DRAFT");
         requestDto.setProductTypeId(99999L);
 
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:create"));
         mockMvc.perform(post(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isNotFound())
@@ -233,9 +261,10 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturn404WhenGettingNonExistentProduct() throws Exception {
-        mockMvc.perform(get(PRODUCT_API_BASE + "/99999"))
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:read"));
+        mockMvc.perform(get(PRODUCT_API_BASE + "/99999")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
     }
@@ -245,13 +274,22 @@ public class ProductIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    void shouldReturn403WhenReadingProductsWithoutPermission() throws Exception {
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
+        mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldReturn200AndPageableResponse() throws Exception {
         // ARRANGE: Create a product explicitly for this test (since @BeforeEach no longer creates one)
         createProduct("DRAFT");
 
         // ACT: Call GET /api/v1/products
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:read"));
         mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
@@ -265,7 +303,23 @@ public class ProductIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    void shouldReturn403WhenUpdatingProductWithoutPermission() throws Exception {
+        Long productId = createProduct("DRAFT");
+        UpdateProductRequestDto updateDto = new UpdateProductRequestDto();
+        updateDto.setName("Updated Draft Name");
+        updateDto.setBankId("BC-002");
+        updateDto.setEffectiveDate(LocalDate.now().plusYears(1));
+        updateDto.setExpirationDate(null);
+        updateDto.setStatus("DRAFT");
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
+        mockMvc.perform(put(PRODUCT_API_BASE + "/{id}", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldUpdateMetadataWhenProductIsDraft() throws Exception {
         // ARRANGE: Create a DRAFT product
         Long productId = createProduct("DRAFT");
@@ -278,7 +332,9 @@ public class ProductIntegrationTest {
         updateDto.setExpirationDate(null);
         updateDto.setStatus("DRAFT");
 
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -288,7 +344,6 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturn403WhenUpdatingMetadataForActiveProduct() throws Exception {
         // ARRANGE: Create an ACTIVE product
         Long productId = createProduct("ACTIVE");
@@ -302,7 +357,9 @@ public class ProductIntegrationTest {
         updateDto.setStatus("ACTIVE");
 
         // ACT & ASSERT: Attempt to update metadata
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isBadRequest()); // Expect 400 Bad Request (Business logic failure)
@@ -313,7 +370,24 @@ public class ProductIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
+    void shouldReturn403WhenActivatingProductWithoutPermission() throws Exception {
+        Long productId = createProduct("DRAFT");
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
+        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/activate", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldReturn403WhenDeactivatingProductWithoutPermission() throws Exception {
+        Long productId = createProduct("ACTIVE");
+        String token = jwtTestUtil.createToken("test-user", List.of("some:other:permission"));
+        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/deactivate", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldActivateDraftProductAndSetStatusToActive() throws Exception {
         // ARRANGE: Create a DRAFT product with a future effective date
         Long productId = createProduct("DRAFT", "To Be Activated", "BC-001", EXISTING_PRODUCT_TYPE_ID, LocalDate.now().plusDays(5), null);
@@ -325,7 +399,9 @@ public class ProductIntegrationTest {
         });
 
         // ACT: Call POST /activate
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:activate"));
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/activate", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(activationDtoJson))
                 .andExpect(status().isOk())
@@ -334,13 +410,14 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldDeactivateActiveProductAndSetStatusToInactive() throws Exception {
         // ARRANGE: Create an ACTIVE product (effective date in the past)
         Long productId = createProduct("ACTIVE");
 
         // ACT: Call POST /deactivate
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:deactivate"));
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/deactivate", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("INACTIVE"))
@@ -348,7 +425,6 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldExtendProductExpirationDate() throws Exception {
         // ARRANGE: Create an ACTIVE product
         Long productId = createProduct("ACTIVE");
@@ -357,7 +433,9 @@ public class ProductIntegrationTest {
         expirationDto.setExpirationDate(newExpirationDate);
 
         // ACT: Call PUT /expiration
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:update"));
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/expiration", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(expirationDto)))
                 .andExpect(status().isOk())
@@ -369,7 +447,6 @@ public class ProductIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
     void shouldCreateNewVersionWhenActiveProductIsVersioned() throws Exception {
         // ARRANGE: Create a base ACTIVE product (V1)
         Product oldProduct = productRepository.findById(createProduct("ACTIVE")).get();
@@ -409,7 +486,9 @@ public class ProductIntegrationTest {
         versionDto.setNewEffectiveDate(newEffectiveDate);
 
         // ACT: Call POST /new-version
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:create", "catalog:product:read"));
         String responseJson = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProduct.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(versionDto)))
                 .andExpect(status().isCreated())
@@ -419,13 +498,15 @@ public class ProductIntegrationTest {
         Long newProductId = objectMapper.readValue(responseJson, ProductResponseDto.class).getId();
 
         // ASSERT 1: Verify the old product (V1) was archived
-        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProduct.getId()))
+        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProduct.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ARCHIVED"))
                 .andExpect(jsonPath("$.expirationDate").value(newEffectiveDate.minusDays(1).toString()));
 
         // ASSERT 2: Verify the new product (V2) has the cloned links
-        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", newProductId))
+        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", newProductId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.features.length()").value(1))
                 .andExpect(jsonPath("$.features[0].featureName").value("Test Feature"))
@@ -436,7 +517,6 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturn403WhenVersioningDraftProduct() throws Exception {
         // ARRANGE: Create a DRAFT product
         Long productId = createProduct("DRAFT");
@@ -447,7 +527,9 @@ public class ProductIntegrationTest {
         versionDto.setNewEffectiveDate(LocalDate.now().plusMonths(3));
 
         // ACT & ASSERT: Attempt versioning on DRAFT
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:create"));
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", productId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(versionDto)))
                 .andExpect(status().isBadRequest());
@@ -458,13 +540,14 @@ public class ProductIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser
     void shouldReturnAllProductsWhenNoFilterCriteriaAreProvided() throws Exception {
         // ARRANGE: Set up 4 unique products across different statuses/banks
         setupMultipleProductsForSearch();
 
         // ACT & ASSERT: Send GET request with NO query parameters
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:read"));
         mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 // FIX: Now correctly expecting 4, as no products are created in @BeforeEach anymore
@@ -473,13 +556,14 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldFilterProductsByStatusAndName() throws Exception {
         // ARRANGE: Set up products
         setupMultipleProductsForSearch();
 
         // ACT & ASSERT: Search for ACTIVE products where name contains 'Checking'
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:read"));
         mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .param("status", "ACTIVE")
                         .param("name", "check")
                         .contentType(MediaType.APPLICATION_JSON))
@@ -492,7 +576,6 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldFilterProductsByBankIdAndProductType() throws Exception {
         // ARRANGE: Set up products with different types and banks
         Long typeCId = createProductType("Type C");
@@ -500,7 +583,9 @@ public class ProductIntegrationTest {
         createProduct("DRAFT", "Other Bank Product", "BANKD", EXISTING_PRODUCT_TYPE_ID);
 
         // ACT & ASSERT: Search for products in BANKC with type ID = typeCId
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:read"));
         mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .param("bankId", "BANKC")
                         .param("productTypeId", String.valueOf(typeCId))
                         .contentType(MediaType.APPLICATION_JSON))
@@ -512,13 +597,14 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldReturnZeroProductsWhenNoCriteriaMatch() throws Exception {
         // ARRANGE: Set up products
         setupMultipleProductsForSearch();
 
         // ACT & ASSERT: Search using a combination that won't match any product
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:read"));
         mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .param("status", "ARCHIVED")
                         .param("bankId", "NONEXISTENT")
                         .contentType(MediaType.APPLICATION_JSON))
@@ -530,7 +616,6 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     void shouldFilterProductsByEffectiveDateRange() throws Exception {
         // ARRANGE: Set up three products with staggered dates.
 
@@ -545,7 +630,9 @@ public class ProductIntegrationTest {
 
         // ACT & ASSERT 1: effectiveDateFrom >= tomorrow (Future products)
         LocalDate tomorrow = LocalDate.now().plusDays(1);
+        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product:read"));
         mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .param("effectiveDateFrom", tomorrow.toString())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -556,6 +643,7 @@ public class ProductIntegrationTest {
         // ACT & ASSERT 2: effectiveDateTo <= today (Current and Old products)
         LocalDate today = LocalDate.now();
         mockMvc.perform(get(PRODUCT_API_BASE)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .param("effectiveDateTo", today.toString())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

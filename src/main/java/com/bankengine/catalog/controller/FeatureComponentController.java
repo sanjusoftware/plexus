@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,6 +39,7 @@ public class FeatureComponentController {
                  content = @Content(schema = @Schema(implementation = FeatureComponentResponseDto.class)))
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., duplicate name).")
     @PostMapping
+    @PreAuthorize("hasAuthority('catalog:feature:create')")
     public ResponseEntity<FeatureComponentResponseDto> createFeature(@Valid @RequestBody CreateFeatureComponentRequestDto requestDto) {
         FeatureComponentResponseDto createdComponent = featureComponentService.createFeature(requestDto);
         return new ResponseEntity<>(createdComponent, HttpStatus.CREATED);
@@ -51,6 +53,7 @@ public class FeatureComponentController {
                description = "Returns a list of all reusable feature definitions in the catalog.")
     @ApiResponse(responseCode = "200", description = "List of all feature components successfully retrieved.")
     @GetMapping
+    @PreAuthorize("hasAuthority('catalog:feature:read')")
     public ResponseEntity<List<FeatureComponentResponseDto>> getAllFeatures() {
         List<FeatureComponentResponseDto> features = featureComponentService.getAllFeatures();
         return new ResponseEntity<>(features, HttpStatus.OK);
@@ -61,6 +64,7 @@ public class FeatureComponentController {
     @ApiResponse(responseCode = "200", description = "Feature component successfully retrieved.")
     @ApiResponse(responseCode = "404", description = "Feature component not found.")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('catalog:feature:read')")
     public ResponseEntity<FeatureComponentResponseDto> getFeatureById(
             @Parameter(description = "ID of the feature component", required = true)
             @PathVariable Long id) {
@@ -77,6 +81,7 @@ public class FeatureComponentController {
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., invalid data type).")
     @ApiResponse(responseCode = "404", description = "Feature component not found.")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('catalog:feature:update')")
     public ResponseEntity<FeatureComponentResponseDto> updateFeature(
             @Parameter(description = "ID of the feature component to update", required = true)
             @PathVariable Long id,
@@ -94,6 +99,7 @@ public class FeatureComponentController {
     @ApiResponse(responseCode = "404", description = "Feature component not found.")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('catalog:feature:delete')")
     public void deleteFeature(
             @Parameter(description = "ID of the feature component to delete", required = true)
             @PathVariable Long id) {

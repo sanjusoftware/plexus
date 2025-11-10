@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class PricingComponentController {
     @ApiResponse(responseCode = "200", description = "List of components successfully retrieved.",
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = PricingComponentResponseDto.class)))) // Use new DTO
     @GetMapping
+    @PreAuthorize("hasAuthority('pricing:component:read')")
     public ResponseEntity<List<PricingComponentResponseDto>> getAllPricingComponents() {
         List<PricingComponentResponseDto> componentResponseDtoList = pricingComponentService.findAllComponents();
         return ResponseEntity.ok(componentResponseDtoList);
@@ -45,6 +47,7 @@ public class PricingComponentController {
             content = @Content(schema = @Schema(implementation = PricingComponentResponseDto.class))) // Use new DTO
     @ApiResponse(responseCode = "404", description = "Pricing component not found.")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('pricing:component:read')")
     public ResponseEntity<PricingComponentResponseDto> getPricingComponentById(
             @Parameter(description = "ID of the pricing component to retrieve", required = true)
             @PathVariable Long id) {
@@ -62,6 +65,7 @@ public class PricingComponentController {
                  content = @Content(schema = @Schema(implementation = PricingComponentResponseDto.class)))
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., name conflict).")
     @PostMapping
+    @PreAuthorize("hasAuthority('pricing:component:create')")
     public ResponseEntity<PricingComponentResponseDto> createComponent(@Valid @RequestBody CreatePricingComponentRequestDto requestDto) {
         PricingComponentResponseDto createdComponent = pricingComponentService.createComponent(requestDto);
         return new ResponseEntity<>(createdComponent, HttpStatus.CREATED);
@@ -75,6 +79,7 @@ public class PricingComponentController {
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., invalid type).")
     @ApiResponse(responseCode = "404", description = "Component not found.")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('pricing:component:update')")
     public ResponseEntity<PricingComponentResponseDto> updatePricingComponent(
             @Parameter(description = "ID of the pricing component to update", required = true)
             @PathVariable Long id,
@@ -91,6 +96,7 @@ public class PricingComponentController {
     @ApiResponse(responseCode = "404", description = "Component not found.")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('pricing:component:delete')")
     public void deletePricingComponent(
             @Parameter(description = "ID of the pricing component to delete", required = true)
             @PathVariable Long id) {

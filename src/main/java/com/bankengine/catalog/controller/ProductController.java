@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -38,6 +39,7 @@ public class ProductController {
     @ApiResponse(responseCode = "400", description = "Validation or business logic error.",
             content = @Content(schema = @Schema(implementation = String.class)))
     @PostMapping
+    @PreAuthorize("hasAuthority('catalog:product:create')")
     public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody CreateProductRequestDto requestDto) {
         ProductResponseDto responseDto = productService.createProduct(requestDto);
         return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
@@ -51,6 +53,7 @@ public class ProductController {
             description = "Retrieves products based on metadata, date ranges, status, with pagination.")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved list of products.")
     @GetMapping
+    @PreAuthorize("hasAuthority('catalog:product:read')")
     public ResponseEntity<Page<ProductResponseDto>> searchProducts(
             @Valid ProductSearchRequestDto criteria) { // Spring automatically maps query params to this DTO
         Page<ProductResponseDto> productPage = productService.searchProducts(criteria);
@@ -67,6 +70,7 @@ public class ProductController {
                  content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
     @ApiResponse(responseCode = "404", description = "Product not found with the given ID.")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('catalog:product:read')")
     public ResponseEntity<ProductResponseDto> getProductById(
             @Parameter(description = "The unique ID of the product to retrieve", required = true)
             @PathVariable Long id) {
@@ -86,6 +90,7 @@ public class ProductController {
     @ApiResponse(responseCode = "400", description = "Error linking feature.",
                  content = @Content(schema = @Schema(implementation = String.class)))
     @PostMapping("/link-feature")
+    @PreAuthorize("hasAuthority('catalog:product:update')")
     public ResponseEntity<ProductResponseDto> linkFeatureToProduct(@RequestBody ProductFeatureDto dto) {
         ProductResponseDto responseDto = productService.linkFeatureToProduct(dto);
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
@@ -98,6 +103,7 @@ public class ProductController {
     @ApiResponse(responseCode = "400", description = "Validation or business logic error.")
     @ApiResponse(responseCode = "403", description = "Update not allowed for current product status (ACTIVE/INACTIVE).")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('catalog:product:update')")
     public ResponseEntity<ProductResponseDto> updateProduct(
             @Parameter(description = "The unique ID of the product to update", required = true)
             @PathVariable Long id,
@@ -113,6 +119,7 @@ public class ProductController {
     @ApiResponse(responseCode = "200", description = "Product successfully activated.")
     @ApiResponse(responseCode = "400", description = "Product is not in DRAFT status.")
     @PostMapping("/{id}/activate")
+    @PreAuthorize("hasAuthority('catalog:product:activate')")
     public ResponseEntity<ProductResponseDto> activateProduct(
             @Parameter(description = "ID of the product to activate", required = true)
             @PathVariable Long id,
@@ -128,6 +135,7 @@ public class ProductController {
             description = "Sets the product status to INACTIVE and sets the expiration date to today.")
     @ApiResponse(responseCode = "200", description = "Product successfully deactivated.")
     @PostMapping("/{id}/deactivate")
+    @PreAuthorize("hasAuthority('catalog:product:deactivate')")
     public ResponseEntity<ProductResponseDto> deactivateProduct(
             @Parameter(description = "ID of the product to deactivate", required = true)
             @PathVariable Long id) {
@@ -141,6 +149,7 @@ public class ProductController {
             description = "Updates the expiration date of an ACTIVE/DRAFT product.")
     @ApiResponse(responseCode = "200", description = "Product expiration date successfully extended.")
     @PutMapping("/{id}/expiration")
+    @PreAuthorize("hasAuthority('catalog:product:update')")
     public ResponseEntity<ProductResponseDto> extendProductExpiration(
             @Parameter(description = "ID of the product to extend", required = true)
             @PathVariable Long id,
@@ -163,6 +172,7 @@ public class ProductController {
     @ApiResponse(responseCode = "400", description = "Validation or value type error.")
     @ApiResponse(responseCode = "404", description = "Product or Feature Component not found.")
     @PutMapping("/{id}/features")
+    @PreAuthorize("hasAuthority('catalog:product:update')")
     public ResponseEntity<ProductResponseDto> syncProductFeatures(
             @Parameter(description = "The unique ID of the product to update", required = true)
             @PathVariable Long id,
@@ -183,6 +193,7 @@ public class ProductController {
             content = @Content(schema = @Schema(implementation = ProductResponseDto.class)))
     @ApiResponse(responseCode = "404", description = "Product or Pricing Component not found.")
     @PutMapping("/{id}/pricing")
+    @PreAuthorize("hasAuthority('catalog:product:update')")
     public ResponseEntity<ProductResponseDto> syncProductPricing(
             @Parameter(description = "The unique ID of the product to update", required = true)
             @PathVariable Long id,
@@ -200,6 +211,7 @@ public class ProductController {
     @ApiResponse(responseCode = "400", description = "Validation error.")
     @ApiResponse(responseCode = "403", description = "Product is not in ACTIVE status.")
     @PostMapping("/{id}/new-version")
+    @PreAuthorize("hasAuthority('catalog:product:create')")
     public ResponseEntity<ProductResponseDto> createNewVersion(
             @Parameter(description = "The ID of the currently ACTIVE product to be versioned/replaced.", required = true)
             @PathVariable Long id,

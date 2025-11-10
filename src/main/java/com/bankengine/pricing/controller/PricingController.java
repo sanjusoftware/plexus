@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -44,6 +45,7 @@ public class PricingController {
             content = @Content(schema = @Schema(implementation = PriceValue.class)))
     @ApiResponse(responseCode = "404", description = "No matching pricing tier was found for the given inputs (Rule did not fire).")
     @GetMapping("/calculate/{componentId}")
+    @PreAuthorize("hasAuthority('pricing:calculate')")
     public PriceValue getCalculatedPrice(
             @PathVariable("componentId") Long componentId,
             @RequestParam String segment,

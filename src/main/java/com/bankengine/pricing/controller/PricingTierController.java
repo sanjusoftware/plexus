@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Pricing Tier Management", description = "Manages conditional tiers and associated price values within a Pricing Component.")
@@ -36,6 +37,7 @@ public class PricingTierController {
             content = @Content(schema = @Schema(implementation = PriceValueResponseDto.class)))
     @ApiResponse(responseCode = "400", description = "Invalid data (e.g., componentId not found, invalid threshold values).")
     @PostMapping
+    @PreAuthorize("hasAuthority('pricing:tier:create')")
     public ResponseEntity<PriceValueResponseDto> addTieredPricing(
             @Parameter(description = "The ID of the existing Pricing Component.", required = true)
             @PathVariable Long componentId,
@@ -57,6 +59,7 @@ public class PricingTierController {
             content = @Content(schema = @Schema(implementation = PriceValueResponseDto.class)))
     @ApiResponse(responseCode = "404", description = "Pricing Component or Tier not found.")
     @PutMapping("/{tierId}")
+    @PreAuthorize("hasAuthority('pricing:tier:update')")
     public ResponseEntity<PriceValueResponseDto> updateTieredPricing(
             @Parameter(description = "ID of the existing Pricing Component (for context).", required = true)
             @PathVariable Long componentId,
@@ -81,6 +84,7 @@ public class PricingTierController {
     @ApiResponse(responseCode = "404", description = "Pricing Component or Tier not found.")
     @DeleteMapping("/{tierId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('pricing:tier:delete')")
     public void deleteTieredPricing(
             @Parameter(description = "ID of the existing Pricing Component (for context).", required = true)
             @PathVariable Long componentId,

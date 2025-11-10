@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -21,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     // Inject the secret key from application.properties
@@ -30,6 +32,12 @@ public class SecurityConfig {
     // Inject the issuer URI for token validation
     @Value("${security.jwt.issuer-uri}")
     private String jwtIssuerUri;
+
+    private final JwtAuthConverter jwtAuthConverter;
+
+    public SecurityConfig(JwtAuthConverter jwtAuthConverter) {
+        this.jwtAuthConverter = jwtAuthConverter;
+    }
 
     // The security filter chain defines authorization rules
     @Bean
@@ -62,7 +70,10 @@ public class SecurityConfig {
                 )
 
                 // 4. RESOURCE SERVER: Configure OAuth2 to process JWT Bearer tokens
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())))
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
+                        .decoder(jwtDecoder())
+                        .jwtAuthenticationConverter(jwtAuthConverter)
+                ))
 
                 // 💡 FIX: Use the modern lambda approach to configure frameOptions
                 // This is required for H2 console to load inside a frame
