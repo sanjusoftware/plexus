@@ -4,15 +4,29 @@ import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.LocalDate;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.UpdateProductRequestDto;
 
+import java.util.Collections;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+@ExtendWith(SpringExtension.class)
+@SpringBootTest
 public class ProductMapperTest {
 
-    private final ProductMapper mapper = Mappers.getMapper(ProductMapper.class);
+    @Autowired
+    private ProductMapper mapper;
 
     @Test
     void shouldCorrectlyMapToNewVersion() {
@@ -40,5 +54,48 @@ public class ProductMapperTest {
         assertThat(newProduct.getEffectiveDate()).isEqualTo(requestDto.getNewEffectiveDate());
         assertThat(newProduct.getStatus()).isEqualTo("DRAFT");
         assertThat(newProduct.getExpirationDate()).isNull();
+    }
+
+    @Test
+    void testToResponseDto() {
+        Product entity = new Product();
+        entity.setId(1L);
+        entity.setName("Test Product");
+        entity.setBankId("BANK-001");
+
+        ProductResponseDto dto = mapper.toResponseDto(entity);
+
+        assertNotNull(dto);
+        assertEquals(entity.getId(), dto.getId());
+        assertEquals(entity.getName(), dto.getName());
+        assertEquals(entity.getBankId(), dto.getBankId());
+    }
+
+    @Test
+    void testToResponseDtoList() {
+        Product entity = new Product();
+        entity.setId(1L);
+        entity.setName("Test Product");
+        entity.setBankId("BANK-001");
+
+        List<ProductResponseDto> dtoList = mapper.toResponseDtoList(Collections.singletonList(entity));
+
+        assertNotNull(dtoList);
+        assertEquals(1, dtoList.size());
+        assertEquals(entity.getId(), dtoList.get(0).getId());
+        assertEquals(entity.getName(), dtoList.get(0).getName());
+    }
+
+    @Test
+    void testUpdateFromDto() {
+        UpdateProductRequestDto dto = new UpdateProductRequestDto();
+        dto.setName("Updated Product");
+
+        Product entity = new Product();
+        entity.setName("Original Product");
+
+        mapper.updateFromDto(dto, entity);
+
+        assertEquals(dto.getName(), entity.getName());
     }
 }
