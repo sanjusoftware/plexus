@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 @Component
 public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
+    private static final String AUTHORITIES_CLAIM_NAME = "scope";
+
     @Override
     public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
         Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
@@ -29,11 +31,16 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
     }
 
     private Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
-        if (jwt.getClaim("permissions") == null) {
+        // 1. Check for the actual claim: "scope"
+        if (jwt.getClaim(AUTHORITIES_CLAIM_NAME) == null) {
             return Collections.emptyList();
         }
 
-        List<String> permissions = jwt.getClaimAsStringList("permissions");
+        // 2. Read the claim using the correct name: "scope"
+        // Note: We are assuming the claim is a List<String>.
+        List<String> permissions = jwt.getClaimAsStringList(AUTHORITIES_CLAIM_NAME);
+
+        // 3. Map the strings to GrantedAuthority objects
         return permissions.stream()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
