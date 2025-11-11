@@ -3,25 +3,19 @@ package com.bankengine.rules.model;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 
-/**
- * The primary fact object inserted into the Drools working memory for pricing calculation.
- * Rules operate against its attributes to determine the final PriceValue result.
- */
 @Data
 public class PricingInput {
 
-    // --- Input fields used in TierCondition comparisons ---
-    private String customerSegment;
-    private BigDecimal transactionAmount;
-    private String clientType;
-    private Boolean isNewCustomer;
-    // Add other relevant input fields here (e.g., productCode, region, tenure)
+    // Example: customAttributes.put("transactionAmount", new BigDecimal("150.00"));
+    private Map<String, Object> customAttributes = new HashMap<>();
 
     // --- Output fields updated by the Drools Rules (RHS) ---
     private Long matchedTierId;
     private BigDecimal priceAmount;
-    private String valueType; // Maps to PriceValue.ValueType enum name
+    private String valueType;
     private String currency;
     private boolean ruleFired = false;
 }

@@ -1,17 +1,12 @@
 package com.bankengine.pricing.service;
 
-import com.bankengine.pricing.model.PriceValue;
-import com.bankengine.pricing.model.PricingComponent;
-import com.bankengine.pricing.model.PricingTier;
-import com.bankengine.pricing.model.TierCondition;
+import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.PricingComponentRepository;
-import com.bankengine.rules.model.PricingInput;
+import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.lang.reflect.Field;
-import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -29,16 +24,15 @@ public class DroolsRuleBuilderService {
     @Autowired
     private PricingComponentRepository componentRepository;
 
-    // Cache for attribute types to avoid repeated reflection lookups.
-    private static final Map<String, String> ATTRIBUTE_TYPE_CACHE = new ConcurrentHashMap<>();
+    // To look up the data type for the flexible attributes
+    @Autowired
+    private PricingInputMetadataRepository metadataRepository;
 
-    // --- For Single Component (Used for Testing/Single Reload) ---
-    public String buildRules(PricingComponent component) {
-        StringBuilder drl = new StringBuilder();
-        drl.append(getDrlHeader());
-        drl.append(generateComponentRulesBody(component));
-        return drl.toString();
-    }
+    // Cache for attribute metadata to avoid repeated DB lookups during DRL generation.
+    // Key: attributeName (from TierCondition), Value: PricingInputMetadata object
+    private final Map<String, PricingInputMetadata> ATTRIBUTE_METADATA_CACHE = new ConcurrentHashMap<>();
+
+    // --- DroolsRuleBuilderService Methods (Header, buildAllRules, etc. remain the same) ---
 
     private String getDrlHeader() {
         return """
@@ -47,6 +41,7 @@ public class DroolsRuleBuilderService {
             import com.bankengine.rules.model.PricingInput;
             import com.bankengine.pricing.model.PriceValue;
             import java.math.BigDecimal;
+            import java.util.Map;
             
             """;
     }
@@ -82,10 +77,32 @@ public class DroolsRuleBuilderService {
 
     // --- Private Helper Method: Generates ONLY the rules, no header/package ---
     private String generateComponentRulesBody(PricingComponent component) {
+        // Clear and pre-populate the cache with required metadata for this component's attributes
+        // This is crucial to avoid N+1 issues and ensure metadata is available before rule building.
+        Set<String> requiredAttributes = component.getPricingTiers().stream()
+                .flatMap(tier -> tier.getConditions().stream())
+                .map(TierCondition::getAttributeName)
+                .collect(Collectors.toSet());
+
+        loadMetadataCache(requiredAttributes);
+
         return component.getPricingTiers().stream()
                 .map(tier -> buildSingleTierRule(component, tier))
                 .collect(Collectors.joining("\n\n")); // Use double newline for separation
     }
+
+    // NEW Helper: Loads required metadata from the DB into the cache
+    private void loadMetadataCache(Set<String> attributeNames) {
+        ATTRIBUTE_METADATA_CACHE.clear(); // Clear cache for component/full reload
+
+        // Fetch all necessary metadata records in one query
+        List<PricingInputMetadata> metadataList = metadataRepository.findByAttributeKeyIn(attributeNames);
+
+        for (PricingInputMetadata metadata : metadataList) {
+            ATTRIBUTE_METADATA_CACHE.put(metadata.getAttributeKey(), metadata);
+        }
+    }
+
 
     /**
      * Builds a single Drools rule for a specific Pricing Tier. (Existing Logic)
@@ -112,6 +129,8 @@ public class DroolsRuleBuilderService {
         return rule.toString();
     }
 
+
+    // --- Fetches metadata and passes it to TierCondition ---
     private String buildLHSCondition(PricingTier tier) {
         StringBuilder lhs = new StringBuilder();
         Set<TierCondition> conditions = tier.getConditions();
@@ -124,16 +143,17 @@ public class DroolsRuleBuilderService {
             while (iterator.hasNext()) {
                 TierCondition condition = iterator.next();
 
-                // 1. Get the expression part
-                String dataType = getFactAttributeDataType(condition.getAttributeName());
-                String expression = condition.toDroolsExpression(dataType);
+                // 1. Resolve Metadata
+                PricingInputMetadata metadata = getFactAttributeMetadata(condition.getAttributeName());
+
+                // 2. Get the expression part using the metadata
+                String expression = condition.toDroolsExpression(metadata);
 
                 // Append the current condition expression
                 conditionBuilder.append(expression);
 
-                // 2. Check if there are MORE elements to follow
+                // 3. Append the connector
                 if (iterator.hasNext()) {
-                    // Append the connector from the CURRENT condition, defaulting to AND
                     String connector = condition.getConnector() != null ? condition.getConnector().name() : "AND";
                     conditionBuilder.append(" ").append(connector).append(" ");
                 }
@@ -150,6 +170,30 @@ public class DroolsRuleBuilderService {
         return lhs.toString();
     }
 
+    // --- NEW Helper Method: Resolves attribute metadata from cache/DB ---
+    private PricingInputMetadata getFactAttributeMetadata(String attributeName) {
+        // 1. Check cache first
+        PricingInputMetadata metadata = ATTRIBUTE_METADATA_CACHE.get(attributeName);
+        if (metadata != null) {
+            return metadata;
+        }
+
+        // 2. Fallback to DB (Should ideally be prevented by loadMetadataCache, but included for robustness)
+        metadata = metadataRepository.findByAttributeKey(attributeName)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        String.format("Invalid rule attribute '%s'. Not found in PricingInputMetadata registry.", attributeName)));
+
+        // Cache the result (though usually unnecessary if loadMetadataCache is called)
+        ATTRIBUTE_METADATA_CACHE.put(attributeName, metadata);
+        return metadata;
+    }
+
+
+    // --- DEPRECATED/REMOVED: The reflection method is no longer needed ---
+    // private String getFactAttributeDataType(String attributeName) { ... }
+    // This method is REMOVED as its logic is now contained in PricingInputMetadata.getFqnType()
+
+    // --- buildRHSAction and buildPlaceholderRules remain identical ---
     private String buildRHSAction(PricingTier tier) {
         StringBuilder rhs = new StringBuilder();
 
@@ -176,48 +220,6 @@ public class DroolsRuleBuilderService {
     }
 
     /**
-     * Fetches the required data type for a fact attribute
-     * by using reflection on the PricingInput class.
-     */
-    private String getFactAttributeDataType(String attributeName) {
-        // 1. Check cache first
-        if (ATTRIBUTE_TYPE_CACHE.containsKey(attributeName)) {
-            return ATTRIBUTE_TYPE_CACHE.get(attributeName);
-        }
-
-        // 2. Reflect on the PricingInput class
-        try {
-            Field field = PricingInput.class.getDeclaredField(attributeName);
-            Class<?> type = field.getType();
-            String dataType;
-
-            // Map Java types to a simpler string representation for TierCondition.toDroolsExpression()
-            if (type.equals(String.class)) {
-                dataType = "STRING";
-            } else if (type.equals(BigDecimal.class)) {
-                dataType = "DECIMAL";
-            } else if (type.equals(Long.class) || type.equals(Integer.class) || type.equals(int.class) || type.equals(long.class)) {
-                dataType = "INTEGER";
-            } else if (type.equals(Boolean.class) || type.equals(boolean.class)) {
-                dataType = "BOOLEAN";
-            } else {
-                // Default for unsupported types, forcing quoting by toDroolsExpression
-                dataType = "STRING";
-            }
-
-            // 3. Cache the result for future calls
-            ATTRIBUTE_TYPE_CACHE.put(attributeName, dataType);
-            return dataType;
-
-        } catch (NoSuchFieldException e) {
-            // Configuration Error: The attribute name in TierCondition does not exist in the PricingInput fact.
-            throw new IllegalArgumentException(
-                    String.format("Invalid rule attribute '%s'. Not found in PricingInput fact. Check TierCondition configuration.", attributeName),
-                    e);
-        }
-    }
-
-    /**
      * TEMPORARY: Builds a minimal, valid DRL string to ensure the KieContainer compiles.
      */
     public String buildPlaceholderRules() {
@@ -227,6 +229,7 @@ public class DroolsRuleBuilderService {
             import com.bankengine.rules.model.PricingInput;
             import com.bankengine.pricing.model.PriceValue;
             import java.math.BigDecimal;
+            import java.util.Map;
 
             rule "PlaceholderRule_DoNothing"
                 when

@@ -1,10 +1,9 @@
 package com.bankengine.pricing;
 
-import com.bankengine.pricing.model.PriceValue;
-import com.bankengine.pricing.model.PricingComponent;
-import com.bankengine.pricing.model.PricingTier;
+import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
+import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +12,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Component
 public class TestTransactionHelper {
@@ -24,9 +27,30 @@ public class TestTransactionHelper {
     @Autowired
     private PriceValueRepository valueRepository;
     @Autowired
+    private PricingInputMetadataRepository metadataRepository;
+    @Autowired
     private EntityManager entityManager;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW) // <-- CRITICAL
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void setupCommittedMetadata() {
+        createAndSaveMetadata("customerSegment", "STRING");
+        createAndSaveMetadata("transactionAmount", "DECIMAL");
+        entityManager.flush();
+        entityManager.clear();
+    }
+
+    private void createAndSaveMetadata(String key, String dataType) {
+        if (metadataRepository.findByAttributeKey(key).isEmpty()) {
+            PricingInputMetadata metadata = new PricingInputMetadata();
+            metadata.setAttributeKey(key);
+            metadata.setDataType(dataType);
+            metadata.setDisplayName(key);
+            metadataRepository.save(metadata);
+        }
+    }
+
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PricingComponent createPricingComponentInDb(String name) {
         PricingComponent component = new PricingComponent();
         component.setName(name);
@@ -48,6 +72,16 @@ public class TestTransactionHelper {
         tier.setPricingComponent(savedComponent);
         tier.setTierName(tierName);
         tier.setMinThreshold(new BigDecimal("0.00"));
+
+        // Add a Condition
+        TierCondition condition = new TierCondition();
+        condition.setPricingTier(tier);
+        condition.setAttributeName("customerSegment");
+        condition.setOperator(TierCondition.Operator.EQ);
+        condition.setAttributeValue("DEFAULT_SEGMENT");
+
+        tier.setConditions(new HashSet<>(Set.of(condition)));
+
         PricingTier savedTier = tierRepository.save(tier);
 
         // 3. Create Value
@@ -57,6 +91,9 @@ public class TestTransactionHelper {
         value.setCurrency("USD");
         value.setValueType(PriceValue.ValueType.ABSOLUTE);
         valueRepository.save(value);
+
+        savedComponent.setPricingTiers(new ArrayList<>(List.of(savedTier)));
+        componentRepository.save(savedComponent);
 
         return savedComponent.getId();
     }
@@ -70,9 +107,17 @@ public class TestTransactionHelper {
         PricingTier tier = new PricingTier();
         tier.setPricingComponent(component);
         tier.setTierName(tierName);
-        tier.setMinThreshold(new BigDecimal("0.00")); // Ensure mandatory fields are set
+        tier.setMinThreshold(new BigDecimal("0.00"));
 
-        // Save and commit the tier in this new transaction
+        // Add a condition
+        TierCondition condition = new TierCondition();
+        condition.setPricingTier(tier);
+        condition.setAttributeName("customerSegment");
+        condition.setOperator(TierCondition.Operator.EQ);
+        condition.setAttributeValue("DEFAULT_SEGMENT");
+
+        tier.setConditions(new HashSet<>(Set.of(condition)));
+
         return tierRepository.save(tier);
     }
 }

@@ -62,64 +62,65 @@ public class TierCondition extends AuditableEntity {
     }
 
     /**
-     * Converts this structured condition into a safe Drools expression fragment.
-     * This method is intended to be called by DroolsRuleBuilderService, which must
-     * provide the data type of the attribute to ensure correct DRL syntax (e.g., quoting strings).
+     * Converts this structured condition into a safe Drools expression fragment
+     * using the customAttributes map access syntax and performing necessary type casting.
      *
-     * @param dataType The known data type of the attributeName field in the PricingInput fact
-     * (e.g., "STRING", "INTEGER", "DECIMAL").
-     * @return A DRL condition fragment (e.g., "segment == \"PREMIUM\"", "amount > 1000")
+     * @param metadata The PricingInputMetadata for this TierCondition's attributeName.
+     * @return A DRL condition fragment (e.g., "((java.math.BigDecimal) customAttributes["amount"]) > 1000")
      */
-    public String toDroolsExpression(String dataType) {
+    public String toDroolsExpression(PricingInputMetadata metadata) {
         if (attributeValue == null || attributeValue.trim().isEmpty()) {
-            // This is a safety mechanism. Ideally, validation should prevent empty attribute values.
             return "true";
         }
 
-        // Numeric (INTEGER, DECIMAL) and Boolean types do not need quotes in DRL.
-        // STRING, DATE, etc., do require quotes. We assume the passed string maps to a well-known type.
-        boolean needsQuotes = "STRING".equalsIgnoreCase(dataType) || "DATE".equalsIgnoreCase(dataType);
+        String dataType = metadata.getDataType().toUpperCase();
 
-        switch (operator) {
-            case EQ:
-            case NE:
-            case GT:
-            case GE:
-            case LT:
-            case LE:
-                String operatorSymbol = switch (operator) {
-                    case EQ -> "==";
-                    case NE -> "!=";
-                    case GT -> ">";
-                    case GE -> ">=";
-                    case LT -> "<";
-                    case LE -> "<=";
-                    default ->
-                        // This case is covered by the outer switch, but kept for robustness
-                            throw new IllegalStateException("Unsupported relational operator: " + operator);
-                };
+        // DRL requires quotes for Strings but not for numeric/Boolean types
+        boolean needsQuotes = "STRING".equals(dataType) || "DATE".equals(dataType);
 
-                String formattedValue = needsQuotes
-                        ? String.format("\"%s\"", attributeValue.trim())
-                        : attributeValue.trim();
+        // 1. Determine the fact property access path
+        String accessPath;
+        // DRL Map Access: customAttributes["attributeName"]
+        String mapAccess = String.format("customAttributes[\"%s\"]", attributeName);
 
-                // Example result: "segment == "PREMIUM"" or "amount > 1000"
-                return String.format("%s %s %s", attributeName, operatorSymbol, formattedValue);
-
-            case IN:
-                // The 'attributeValue' is expected to be a comma-separated list of values.
-                // Each item must be separated and quoted if required.
-                String quotedValues = Arrays.stream(attributeValue.split(","))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .map(s -> needsQuotes ? String.format("\"%s\"", s) : s)
-                        .collect(Collectors.joining(", "));
-
-                // Example result: "segment in ( "PREMIUM", "STANDARD" )"
-                return String.format("%s in ( %s )", attributeName, quotedValues);
-
-            default:
-                throw new IllegalStateException("Unsupported operator: " + operator);
+        // If the type is not String (which is the default return type of Map.get(Object)),
+        // we must cast it for Drools to perform numeric/boolean comparison.
+        if (!"STRING".equals(dataType)) {
+            // Example: ((java.math.BigDecimal) customAttributes["transactionAmount"])
+            accessPath = String.format("((%s) %s)", metadata.getFqnType(), mapAccess);
+        } else {
+            accessPath = mapAccess;
         }
+
+        // 2. Build the operator and formatted value
+        String operatorSymbol;
+        String formattedValue;
+
+        if (operator == Operator.IN) {
+            // Logic for IN operator remains similar, but applies to the map access path
+            String quotedValues = Arrays.stream(attributeValue.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(s -> needsQuotes ? String.format("\"%s\"", s) : s)
+                    .collect(Collectors.joining(", "));
+
+            // Example: customAttributes["segment"] in ( "PREMIUM", "STANDARD" )
+            return String.format("%s in ( %s )", accessPath, quotedValues);
+        }
+
+        // Handle relational operators (EQ, GT, LT, etc.)
+        operatorSymbol = switch (operator) {
+            case EQ -> "=="; case NE -> "!="; case GT -> ">";
+            case GE -> ">="; case LT -> "<"; case LE -> "<=";
+            default -> throw new IllegalStateException("Unsupported operator: " + operator);
+        };
+
+        formattedValue = needsQuotes
+            ? String.format("\"%s\"", attributeValue.trim())
+            : attributeValue.trim();
+
+        // 3. Combine access path, operator, and value
+        // Example result: "((java.math.BigDecimal) customAttributes["amount"]) > 1000"
+        return String.format("%s %s %s", accessPath, operatorSymbol, formattedValue);
     }
 }

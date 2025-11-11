@@ -8,6 +8,7 @@ import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -53,7 +54,14 @@ public class PricingComponentIntegrationTest {
     @Autowired
     private TestTransactionHelper txHelper;
 
-    // --- ADDED: Helper method to retrieve Tier/Value IDs after component is created and committed ---
+    @BeforeEach
+    void setupMetadata() {
+        // Ensure metadata is committed in a separate transaction.
+        // The txHelper now handles creating customerSegment and transactionAmount metadata.
+        txHelper.setupCommittedMetadata();
+    }
+
+    // Helper method to retrieve Tier/Value IDs after component is created and committed ---
     private PricingTier getTierFromComponentId(Long componentId) {
         // Find the committed component and load its tiers. Assumes a single tier exists.
         Optional<PricingComponent> componentOpt = componentRepository.findById(componentId);
@@ -75,6 +83,7 @@ public class PricingComponentIntegrationTest {
     private TierValueDto getValidTierValueDto() {
         CreatePricingTierRequestDto tierDto = new CreatePricingTierRequestDto();
         tierDto.setTierName("Default Tier");
+        // This condition uses "customerSegment", which is now guaranteed to exist via txHelper.
         tierDto.setConditions(Set.of(getDummyConditionDto()));
 
         // Ensure all mandatory fields are set to pass validation
@@ -183,7 +192,7 @@ public class PricingComponentIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name", is("NewRate")))
                 .andExpect(jsonPath("$.type", is("FEE")))
-                .andExpect(jsonPath("$.updatedAt").exists()); // Check Auditing
+                .andExpect(jsonPath("$.updatedAt").exists());
     }
 
     // =================================================================
@@ -193,8 +202,8 @@ public class PricingComponentIntegrationTest {
     @Test
     @WithMockUser(authorities = {"pricing:component:delete", "pricing:component:read"})
     void shouldDeleteComponentAndReturn204() throws Exception {
-        PricingComponent component = txHelper.createPricingComponentInDb("DeletableComponent");
-        Long idToDelete = component.getId();
+        // NOTE: Component must exist and trigger DRL rebuild on delete, hence we use a component with a linked tier/condition.
+        Long idToDelete = txHelper.createPricingComponentInDb("DeletableComponent").getId();
 
         mockMvc.perform(delete("/api/v1/pricing-components/{id}", idToDelete))
                 .andExpect(status().isNoContent());
@@ -209,6 +218,7 @@ public class PricingComponentIntegrationTest {
     void shouldReturn409WhenDeletingComponentWithTiers() throws Exception {
         // ARRANGE: 1. Create and COMMIT the component and COMMIT the dependency
         PricingComponent component = txHelper.createPricingComponentInDb("ComponentWithTiers");
+        // We use createCommittedTierDependency which now includes a TierCondition
         txHelper.createCommittedTierDependency(component.getId(), "Tier 1");
 
         // ACT: Attempt to delete the component.

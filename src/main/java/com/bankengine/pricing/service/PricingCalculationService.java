@@ -9,11 +9,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 
 @Service
 public class PricingCalculationService {
 
     private final KieContainerReloadService kieContainerReloadService;
+
+    // Define constant keys used by the service to populate the map
+    private static final String CUSTOMER_SEGMENT_KEY = "customerSegment";
+    private static final String TRANSACTION_AMOUNT_KEY = "transactionAmount";
 
     public PricingCalculationService(KieContainerReloadService kieContainerReloadService) {
         this.kieContainerReloadService = kieContainerReloadService;
@@ -21,8 +26,7 @@ public class PricingCalculationService {
 
     @Transactional(readOnly = true)
     public PriceValue getCalculatedPrice(String customerSegment, BigDecimal transactionAmount) {
-        // NOTE: The component parameter is primarily for ensuring the component exists
-        // in the DB, as done in the controller. The rules run against ALL loaded components.
+        // NOTE: Error handling message is simplified as not all inputs are used in the message.
 
         // 1. Determine the price using the Rules Engine directly
         PricingInput finalInputFact = determinePriceWithDrools(customerSegment, transactionAmount);
@@ -32,19 +36,19 @@ public class PricingCalculationService {
             PriceValue resultValue = new PriceValue();
             resultValue.setPriceAmount(finalInputFact.getPriceAmount());
             resultValue.setCurrency(finalInputFact.getCurrency());
+             // Ensure PriceValue.ValueType can be created from the String
              resultValue.setValueType(PriceValue.ValueType.valueOf(finalInputFact.getValueType()));
 
             return resultValue;
         }
 
         // 3. Fallback for no match
-        throw new NotFoundException("No matching pricing rule found for segment: " + customerSegment +
-                                        " and amount: " + transactionAmount);
+        throw new NotFoundException("No matching pricing rule found for the given criteria.");
     }
 
     /**
      * Executes the Drools Rules Engine to find the final price.
-     * The rules use the PricingInput fact and update its fields (priceAmount, valueType, currency).
+     * The rules use the PricingInput fact and update its output fields.
      */
     private PricingInput determinePriceWithDrools(String customerSegment, BigDecimal transactionAmount) {
 
@@ -53,8 +57,18 @@ public class PricingCalculationService {
 
         // 1. Create the Input Fact
         PricingInput input = new PricingInput();
-        input.setCustomerSegment(customerSegment);
-        input.setTransactionAmount(transactionAmount);
+
+        // Use the customAttributes map to pass inputs ---
+        input.setCustomAttributes(new HashMap<>());
+
+        // Populate the map using the defined keys
+        if (customerSegment != null) {
+            input.getCustomAttributes().put(CUSTOMER_SEGMENT_KEY, customerSegment);
+        }
+        if (transactionAmount != null) {
+            input.getCustomAttributes().put(TRANSACTION_AMOUNT_KEY, transactionAmount);
+        }
+        // If there were other inputs (e.g., productCode, isNewCustomer), they would be added here too.
 
         try {
             // 2. Insert the input fact into the working memory
