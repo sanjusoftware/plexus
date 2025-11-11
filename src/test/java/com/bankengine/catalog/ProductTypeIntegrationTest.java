@@ -6,20 +6,16 @@ import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
-import com.bankengine.utils.JwtTestUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -53,17 +49,8 @@ class ProductTypeIntegrationTest {
     @Autowired
     private ProductPricingLinkRepository productPricingLinkRepository;
 
-    @Value("${security.jwt.secret-key}")
-    private String jwtSecretKey;
-
-    @Value("${security.jwt.issuer-uri}")
-    private String jwtIssuerUri;
-
-    private JwtTestUtil jwtTestUtil;
-
     @BeforeEach
     void setUp() {
-        jwtTestUtil = new JwtTestUtil(jwtSecretKey, jwtIssuerUri);
         productFeatureLinkRepository.deleteAllInBatch();
         productPricingLinkRepository.deleteAllInBatch();
         productRepository.deleteAllInBatch();
@@ -82,15 +69,14 @@ class ProductTypeIntegrationTest {
 // --------------------------------------------------------------------------------
 
     @Test
+    @WithMockUser(authorities = {"catalog:product-type:read"})
     void shouldReturn200AndAllProductTypes() throws Exception {
         // Arrange
         createAndSaveProductType("CASA");
         createAndSaveProductType("Credit Card");
 
         // Act & Assert
-        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product-type:read"));
         mockMvc.perform(get(API_URL)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -99,13 +85,12 @@ class ProductTypeIntegrationTest {
     }
 
     @Test
+    @WithMockUser(authorities = {"catalog:product-type:read"})
     void shouldReturn200AndEmptyListWhenNoProductTypesExist() throws Exception {
         // Arrange: Database is empty due to @Transactional rollback
 
         // Act & Assert
-        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product-type:read"));
         mockMvc.perform(get(API_URL)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
@@ -116,41 +101,30 @@ class ProductTypeIntegrationTest {
 // --------------------------------------------------------------------------------
 
     @Test
+    @WithMockUser(authorities = {"catalog:product-type:create"})
     void shouldReturn201AndCreateProductTypeSuccessfully() throws Exception {
         // Arrange
         CreateProductTypeRequestDto requestDto = new CreateProductTypeRequestDto();
         requestDto.setName("Fixed Deposit");
 
         // Act & Assert
-        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product-type:create"));
         mockMvc.perform(post(API_URL)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name", is("Fixed Deposit")))
-                // The ID is auto-generated (Long)
                 .andExpect(jsonPath("$.id").isNumber());
-
-        // Verification: Ensure it was saved in the database
-        // Since we are @Transactional, we can rely on the repo count
-        // Note: Using count() is generally safe even in a transaction
-        long count = productTypeRepository.count();
-        // The one we just created
-        // We might need to adjust this depending on how the transaction/test context behaves with count()
-        // but for a successful test, we should verify the API response first.
     }
 
     @Test
+    @WithMockUser(authorities = {"catalog:product-type:create"})
     void shouldReturn400WhenNameIsMissing() throws Exception {
         // Arrange
         CreateProductTypeRequestDto requestDto = new CreateProductTypeRequestDto();
         requestDto.setName(null); // Invalid: @NotBlank
 
         // Act & Assert
-        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product-type:create"));
         mockMvc.perform(post(API_URL)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
@@ -158,15 +132,14 @@ class ProductTypeIntegrationTest {
     }
 
     @Test
+    @WithMockUser(authorities = {"catalog:product-type:create"})
     void shouldReturn400WhenNameIsTooShort() throws Exception {
         // Arrange
         CreateProductTypeRequestDto requestDto = new CreateProductTypeRequestDto();
         requestDto.setName("A"); // Invalid: @Size min=3
 
         // Act & Assert
-        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product-type:create"));
         mockMvc.perform(post(API_URL)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
@@ -174,6 +147,7 @@ class ProductTypeIntegrationTest {
     }
 
     @Test
+    @WithMockUser(authorities = {"catalog:product-type:create"})
     void shouldReturn409ConflictWhenCreatingDuplicateName() throws Exception {
         // Arrange: Create the type once successfully
         createAndSaveProductType("Checking Account");
@@ -183,17 +157,11 @@ class ProductTypeIntegrationTest {
         requestDto.setName("Checking Account");
 
         // Act & Assert: Attempt to create it a second time
-        String token = jwtTestUtil.createToken("test-user", List.of("catalog:product-type:create"));
         mockMvc.perform(post(API_URL)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 // The expected status for a database conflict (Unique Constraint Violation)
                 .andExpect(status().isConflict()) // HttpStatus.CONFLICT (409) is appropriate
                 .andExpect(jsonPath("$.message").exists());
-
-        // NOTE: If your global exception handler maps DataIntegrityViolationException
-        // to 400 Bad Request, change the expected status to .isBadRequest()
-        // However, 409 Conflict is more specific to unique constraint issues.
     }
 }

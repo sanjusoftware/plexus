@@ -78,7 +78,7 @@ public class DroolsIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // 💡 CRITICAL FIX 1: Wrap all setup (cleanup + seeding) in a single transaction.
+        // Wrap all setup (cleanup + seeding) in a single transaction.
         transactionTemplate.executeWithoutResult(status -> {
 
             // CRITICAL FIX 2: Execute safe sequential cleanup FIRST

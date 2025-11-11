@@ -48,7 +48,7 @@ public class DroolsRuleBuilderService {
             import com.bankengine.pricing.model.PriceValue;
             import java.math.BigDecimal;
             
-            """; // Trailing newline is included for proper spacing
+            """;
     }
 
     // --- For Aggregation (Used for Startup) ---
