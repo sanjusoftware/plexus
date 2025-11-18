@@ -1,10 +1,7 @@
 package com.bankengine.pricing;
 
 import com.bankengine.pricing.model.*;
-import com.bankengine.pricing.repository.PriceValueRepository;
-import com.bankengine.pricing.repository.PricingComponentRepository;
-import com.bankengine.pricing.repository.PricingInputMetadataRepository;
-import com.bankengine.pricing.repository.PricingTierRepository;
+import com.bankengine.pricing.repository.*;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -39,14 +36,15 @@ public class TestTransactionHelper {
         entityManager.clear();
     }
 
-    private void createAndSaveMetadata(String key, String dataType) {
-        if (metadataRepository.findByAttributeKey(key).isEmpty()) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PricingInputMetadata createAndSaveMetadata(String key, String dataType) {
+        return metadataRepository.findByAttributeKey(key).orElseGet(() -> {
             PricingInputMetadata metadata = new PricingInputMetadata();
             metadata.setAttributeKey(key);
             metadata.setDataType(dataType);
             metadata.setDisplayName(key);
-            metadataRepository.save(metadata);
-        }
+            return metadataRepository.save(metadata);
+        });
     }
 
 
@@ -119,5 +117,25 @@ public class TestTransactionHelper {
         tier.setConditions(new HashSet<>(Set.of(condition)));
 
         return tierRepository.save(tier);
+    }
+
+    @Autowired
+    private TierConditionRepository tierConditionRepository;
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createTierCondition(String attributeName) {
+        PricingComponent component = createPricingComponentInDb("test-component");
+        PricingTier tier = new PricingTier();
+        tier.setPricingComponent(component);
+        tier.setTierName("test-tier");
+        tier.setMinThreshold(BigDecimal.ZERO);
+        PricingTier savedTier = tierRepository.save(tier);
+
+        TierCondition condition = new TierCondition();
+        condition.setPricingTier(savedTier);
+        condition.setAttributeName(attributeName);
+        condition.setOperator(TierCondition.Operator.EQ);
+        condition.setAttributeValue("someValue");
+        tierConditionRepository.save(condition);
     }
 }
