@@ -12,6 +12,9 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface TierConditionRepository extends JpaRepository<TierCondition, Long> {
+
+    boolean existsByAttributeName(String attributeName);
+
     /**
      * Deletes all TierCondition entities associated with the given Pricing Tier ID.
      * Must be marked @Transactional because it performs a bulk modifying operation.
