@@ -33,31 +33,23 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
 
-        // 1. Collect Field Errors into a clean, mutable HashMap
         Map<String, String> fieldErrors = new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error -> {
             fieldErrors.put(error.getField(), error.getDefaultMessage());
         });
 
-        // 2. Create the final response body structure using a mutable HashMap
         Map<String, Object> body = new HashMap<>();
 
-        // Use standard HTTP status code and message
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Bad Request");
-
-        // Add custom high-level message for consistency
         body.put("message", "Input validation failed: One or more fields contain invalid data.");
-
-        // 3. Include the detailed field errors
-        // This maintains your consistent JSON object structure while providing details.
         body.put("details", fieldErrors);
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
     /**
-     * 2. Handles business logic errors (e.g., name conflict). (400 BAD REQUEST)
+     * 2. Handles generic bad request errors (e.g., from service layer checks). (400 BAD REQUEST)
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
@@ -77,10 +69,11 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 4. Handles business rule violations and internal state errors. (400 BAD REQUEST)
+     * 4. Handles business rule violations that indicate an improper state transition. (400 BAD REQUEST)
      */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalStateException(IllegalStateException ex) {
+        // Keeping this as BAD_REQUEST for general business logic issues not covered by specific exceptions
         HttpStatus status = HttpStatus.BAD_REQUEST;
         Map<String, Object> body = createErrorBody(status, "Illegal State/Business Rule Violation", ex.getMessage());
         return new ResponseEntity<>(body, status);
@@ -88,6 +81,7 @@ public class GlobalExceptionHandler {
 
     /**
      * 5. Handles dependency violation errors (409 CONFLICT)
+     * This is used when attempting to delete a resource that is actively referenced by another resource.
      */
     @ExceptionHandler(DependencyViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDependencyViolationException(DependencyViolationException ex) {
@@ -97,18 +91,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 6. Handles Data Integrity Constraint violations (e.g., unique index violation on POST/PUT). (409 CONFLICT)
+     * 6. Handles database unique constraint violations. (409 CONFLICT)
+     * This catches errors where an entity with a duplicate unique key is saved to the database.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
-        String message = "A resource with the provided unique identifier (e.g., name, code) already exists.";
-
-        // We can inspect the root cause for more detail if needed, but this generic message works for 409
-//         String rootCause = ex.getRootCause() != null ? ex.getRootCause().getMessage() : ex.getMessage();
-
+        String message = "Data integrity conflict: The resource could not be saved because a unique constraint was violated (e.g., duplicate unique name or key).";
         HttpStatus status = HttpStatus.CONFLICT; // 409
-
-        Map<String, Object> body = createErrorBody(status, "Conflict", message);
+        Map<String, Object> body = createErrorBody(status, "Conflict (Data Integrity)", message);
 
         return new ResponseEntity<>(body, status);
     }

@@ -36,6 +36,7 @@ public class TestDataSeeder implements CommandLineRunner {
     private final PriceValueRepository priceValueRepository;
     private final ProductPricingLinkRepository productPricingLinkRepository;
     private final TierConditionRepository tierConditionRepository;
+    private final PricingInputMetadataRepository pricingInputMetadataRepository;
 
     public TestDataSeeder(
             ProductTypeRepository productTypeRepository,
@@ -45,7 +46,7 @@ public class TestDataSeeder implements CommandLineRunner {
             PricingComponentRepository pricingComponentRepository,
             PricingTierRepository pricingTierRepository,
             PriceValueRepository priceValueRepository,
-            ProductPricingLinkRepository productPricingLinkRepository, TierConditionRepository tierConditionRepository) {
+            ProductPricingLinkRepository productPricingLinkRepository, TierConditionRepository tierConditionRepository, PricingInputMetadataRepository pricingInputMetadataRepository) {
         this.productTypeRepository = productTypeRepository;
         this.featureComponentRepository = featureComponentRepository;
         this.productRepository = productRepository;
@@ -55,6 +56,7 @@ public class TestDataSeeder implements CommandLineRunner {
         this.priceValueRepository = priceValueRepository;
         this.productPricingLinkRepository = productPricingLinkRepository;
         this.tierConditionRepository = tierConditionRepository;
+        this.pricingInputMetadataRepository = pricingInputMetadataRepository;
     }
 
     @Override
@@ -63,8 +65,27 @@ public class TestDataSeeder implements CommandLineRunner {
         System.out.println("--- Seeding Development Data ---");
         seedProductTypes();
         seedFeaturesAndProducts();
+        seedPricingInputMetadata();
         seedPricingComponents();
         System.out.println("--- Seeding Complete ---");
+    }
+
+    private PricingInputMetadata createMetadata(String key, String displayName, String dataType) {
+        PricingInputMetadata metadata = new PricingInputMetadata();
+        metadata.setAttributeKey(key);
+        metadata.setDisplayName(displayName);
+        metadata.setDataType(dataType);
+        return metadata;
+    }
+
+    private void seedPricingInputMetadata() {
+        if (pricingInputMetadataRepository.count() == 0) {
+            System.out.println("Seeding Pricing Input Metadata...");
+            pricingInputMetadataRepository.saveAll(List.of(
+                    createMetadata("customerSegment", "Client Segment", "STRING"),
+                    createMetadata("transactionAmount", "Transaction Amount", "DECIMAL")
+            ));
+        }
     }
 
     private void seedProductTypes() {

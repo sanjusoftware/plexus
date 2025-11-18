@@ -1,16 +1,38 @@
 package com.bankengine.pricing.converter;
 
-import com.bankengine.pricing.dto.PricingInputMetadataDto;
+import com.bankengine.pricing.dto.CreateMetadataRequestDto;
+import com.bankengine.pricing.dto.MetadataResponseDto;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import org.mapstruct.Mapper;
-import org.mapstruct.factory.Mappers;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface PricingInputMetadataMapper {
 
-    PricingInputMetadataMapper INSTANCE = Mappers.getMapper(PricingInputMetadataMapper.class);
+    /**
+     * Maps the PricingInputMetadata entity to the response DTO.
+     */
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "attributeKey", source = "attributeKey")
+    @Mapping(target = "displayName", source = "displayName")
+    @Mapping(target = "dataType", source = "dataType")
+    MetadataResponseDto toResponseDto(PricingInputMetadata pricingInputMetadata);
 
-    PricingInputMetadataDto toDto(PricingInputMetadata pricingInputMetadata);
+    /**
+     * Maps the PricingInputMetadata entity to the request DTO.
+     */
+    @Mapping(target = "attributeKey", source = "attributeKey")
+    @Mapping(target = "displayName", source = "displayName")
+    @Mapping(target = "dataType", source = "dataType")
+    CreateMetadataRequestDto toCreateRequestDto(PricingInputMetadata pricingInputMetadata);
 
-    PricingInputMetadata toEntity(PricingInputMetadataDto pricingInputMetadataDto);
+    // --- Mappings from DTO to Entity ---
+
+    /**
+     * Maps the creation request DTO to the entity for saving.
+     */
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    PricingInputMetadata toEntity(CreateMetadataRequestDto pricingInputMetadataDto);
 }

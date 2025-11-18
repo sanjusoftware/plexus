@@ -1,7 +1,9 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.pricing.converter.PricingInputMetadataMapper;
-import com.bankengine.pricing.dto.PricingInputMetadataDto;
+import com.bankengine.pricing.dto.CreateMetadataRequestDto;
+import com.bankengine.pricing.dto.MetadataResponseDto;
+import com.bankengine.pricing.dto.UpdateMetadataRequestDto;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.TierConditionRepository;
@@ -24,51 +26,69 @@ public class PricingInputMetadataService {
     private final PricingInputMetadataMapper mapper;
     private final KieContainerReloadService reloadService;
 
+    private static final String NOT_FOUND_MESSAGE = "Pricing Input Metadata not found with key: ";
+
     @Transactional(readOnly = true)
-    public List<PricingInputMetadataDto> findAll() {
+    public List<MetadataResponseDto> findAllMetadata() {
         return repository.findAll().stream()
-                .map(mapper::toDto)
+                .map(mapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public PricingInputMetadataDto findById(Long id) {
-        return repository.findById(id)
-                .map(mapper::toDto)
-                .orElseThrow(() -> new NotFoundException("PricingInputMetadata not found with id: " + id));
+    public MetadataResponseDto getMetadataByKey(String attributeKey) {
+        return repository.findByAttributeKey(attributeKey)
+                .map(mapper::toResponseDto)
+                .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
     }
 
+    // --- CREATE OPERATION ---
+
     @Transactional
-    public PricingInputMetadataDto create(PricingInputMetadataDto dto) {
+    public MetadataResponseDto createMetadata(CreateMetadataRequestDto dto) {
+        // Business Rule: Key must be unique. Check before attempting save.
+        if (repository.findByAttributeKey(dto.getAttributeKey()).isPresent()) {
+            throw new DependencyViolationException(
+                    "Cannot create Pricing Input Metadata: An attribute with the key '" + dto.getAttributeKey() + "' already exists."
+            );
+        }
+
+        // Map DTO to Entity and save
         PricingInputMetadata entity = mapper.toEntity(dto);
         PricingInputMetadata savedEntity = repository.save(entity);
+
         reloadService.reloadKieContainer();
-        return mapper.toDto(savedEntity);
+
+        return mapper.toResponseDto(savedEntity);
     }
 
-    @Transactional
-    public PricingInputMetadataDto update(Long id, PricingInputMetadataDto dto) {
-        PricingInputMetadata entity = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("PricingInputMetadata not found with id: " + id));
+    // --- UPDATE OPERATION (Using attributeKey for lookup) ---
 
-        // Update fields from DTO
-        entity.setAttributeKey(dto.getAttributeKey());
-        entity.setDataType(dto.getDataType());
+    @Transactional
+    public MetadataResponseDto updateMetadata(String attributeKey, UpdateMetadataRequestDto dto) {
+        PricingInputMetadata entity = repository.findByAttributeKey(attributeKey)
+                .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
+
         entity.setDisplayName(dto.getDisplayName());
+        entity.setDataType(dto.getDataType());
 
         PricingInputMetadata updatedEntity = repository.save(entity);
         reloadService.reloadKieContainer();
-        return mapper.toDto(updatedEntity);
+
+        return mapper.toResponseDto(updatedEntity);
     }
 
+    // --- DELETE OPERATION ---
+
     @Transactional
-    public void delete(Long id) {
-        PricingInputMetadata entity = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("PricingInputMetadata not found with id: " + id));
+    public void deleteMetadata(String attributeKey) {
+        PricingInputMetadata entity = repository.findByAttributeKey(attributeKey)
+                .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 
         if (tierConditionRepository.existsByAttributeName(entity.getAttributeKey())) {
             throw new DependencyViolationException(
-                    "Cannot delete PricingInputMetadata '" + entity.getAttributeKey() + "' as it is used in a TierCondition."
+                    "Cannot delete Pricing Input Metadata '" + entity.getAttributeKey() +
+                    "': It is used in one or more active tier conditions."
             );
         }
 
