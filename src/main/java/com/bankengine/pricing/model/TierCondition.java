@@ -7,9 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Arrays;
-import java.util.stream.Collectors;
-
 @Entity
 @Table(name = "tier_condition")
 @Getter
@@ -61,66 +58,4 @@ public class TierCondition extends AuditableEntity {
         AND, OR
     }
 
-    /**
-     * Converts this structured condition into a safe Drools expression fragment
-     * using the customAttributes map access syntax and performing necessary type casting.
-     *
-     * @param metadata The PricingInputMetadata for this TierCondition's attributeName.
-     * @return A DRL condition fragment (e.g., "((java.math.BigDecimal) customAttributes["amount"]) > 1000")
-     */
-    public String toDroolsExpression(PricingInputMetadata metadata) {
-        if (attributeValue == null || attributeValue.trim().isEmpty()) {
-            return "true";
-        }
-
-        String dataType = metadata.getDataType().toUpperCase();
-
-        // DRL requires quotes for Strings but not for numeric/Boolean types
-        boolean needsQuotes = "STRING".equals(dataType) || "DATE".equals(dataType);
-
-        // 1. Determine the fact property access path
-        String accessPath;
-        // DRL Map Access: customAttributes["attributeName"]
-        String mapAccess = String.format("customAttributes[\"%s\"]", attributeName);
-
-        // If the type is not String (which is the default return type of Map.get(Object)),
-        // we must cast it for Drools to perform numeric/boolean comparison.
-        if (!"STRING".equals(dataType)) {
-            // Example: ((java.math.BigDecimal) customAttributes["transactionAmount"])
-            accessPath = String.format("((%s) %s)", metadata.getFqnType(), mapAccess);
-        } else {
-            accessPath = mapAccess;
-        }
-
-        // 2. Build the operator and formatted value
-        String operatorSymbol;
-        String formattedValue;
-
-        if (operator == Operator.IN) {
-            // Logic for IN operator remains similar, but applies to the map access path
-            String quotedValues = Arrays.stream(attributeValue.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(s -> needsQuotes ? String.format("\"%s\"", s) : s)
-                    .collect(Collectors.joining(", "));
-
-            // Example: customAttributes["segment"] in ( "PREMIUM", "STANDARD" )
-            return String.format("%s in ( %s )", accessPath, quotedValues);
-        }
-
-        // Handle relational operators (EQ, GT, LT, etc.)
-        operatorSymbol = switch (operator) {
-            case EQ -> "=="; case NE -> "!="; case GT -> ">";
-            case GE -> ">="; case LT -> "<"; case LE -> "<=";
-            default -> throw new IllegalStateException("Unsupported operator: " + operator);
-        };
-
-        formattedValue = needsQuotes
-            ? String.format("\"%s\"", attributeValue.trim())
-            : attributeValue.trim();
-
-        // 3. Combine access path, operator, and value
-        // Example result: "((java.math.BigDecimal) customAttributes["amount"]) > 1000"
-        return String.format("%s %s %s", accessPath, operatorSymbol, formattedValue);
-    }
 }

@@ -10,15 +10,17 @@ import com.bankengine.pricing.repository.TierConditionRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class PricingInputMetadataService {
 
     private final PricingInputMetadataRepository repository;
@@ -27,6 +29,42 @@ public class PricingInputMetadataService {
     private final KieContainerReloadService reloadService;
 
     private static final String NOT_FOUND_MESSAGE = "Pricing Input Metadata not found with key: ";
+
+    /**
+     * Manual Constructor to properly apply @Lazy to the parameter that closes the cycle.
+     */
+    @Autowired
+    public PricingInputMetadataService(
+            PricingInputMetadataRepository repository,
+            TierConditionRepository tierConditionRepository,
+            PricingInputMetadataMapper mapper,
+            @Lazy KieContainerReloadService reloadService
+    ) {
+        this.repository = repository;
+        this.tierConditionRepository = tierConditionRepository;
+        this.mapper = mapper;
+        this.reloadService = reloadService;
+    }
+
+    /**
+     * Retrieves metadata for a single attribute, using the cache if available.
+     */
+    @Transactional(readOnly = true)
+    @Cacheable(value = "pricingMetadata", key = "#attributeKey")
+    public PricingInputMetadata getMetadataEntityByKey(String attributeKey) {
+        return repository.findByAttributeKey(attributeKey)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        String.format("Invalid rule attribute '%s'. Not found in PricingInputMetadata registry.", attributeKey)));
+    }
+
+    /**
+     * Retrieves a list of metadata entities for a set of attribute keys, using the cache
+     * for bulk loading.
+     */
+    @Transactional(readOnly = true)
+    public List<PricingInputMetadata> getMetadataEntitiesByKeys(Set<String> attributeKeys) {
+        return repository.findByAttributeKeyIn(attributeKeys);
+    }
 
     @Transactional(readOnly = true)
     public List<MetadataResponseDto> findAllMetadata() {
@@ -41,8 +79,6 @@ public class PricingInputMetadataService {
                 .map(mapper::toResponseDto)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
     }
-
-    // --- CREATE OPERATION ---
 
     @Transactional
     public MetadataResponseDto createMetadata(CreateMetadataRequestDto dto) {
@@ -62,8 +98,6 @@ public class PricingInputMetadataService {
         return mapper.toResponseDto(savedEntity);
     }
 
-    // --- UPDATE OPERATION (Using attributeKey for lookup) ---
-
     @Transactional
     public MetadataResponseDto updateMetadata(String attributeKey, UpdateMetadataRequestDto dto) {
         PricingInputMetadata entity = repository.findByAttributeKey(attributeKey)
@@ -77,8 +111,6 @@ public class PricingInputMetadataService {
 
         return mapper.toResponseDto(updatedEntity);
     }
-
-    // --- DELETE OPERATION ---
 
     @Transactional
     public void deleteMetadata(String attributeKey) {

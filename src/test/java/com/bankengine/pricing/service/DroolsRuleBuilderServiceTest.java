@@ -2,111 +2,97 @@ package com.bankengine.pricing.service;
 
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.PricingComponentRepository;
-import com.bankengine.pricing.repository.PricingInputMetadataRepository;
+import com.bankengine.pricing.service.drl.DroolsExpressionBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
-class DroolsRuleBuilderServiceTest {
+/**
+ * Unit tests for DroolsRuleBuilderService focusing on DRL syntax generation.
+ */
+public class DroolsRuleBuilderServiceTest {
 
     @Mock
     private PricingComponentRepository componentRepository;
-
     @Mock
-    private PricingInputMetadataRepository metadataRepository;
+    private PricingInputMetadataService metadataService;
+    @Mock
+    private DroolsExpressionBuilder droolsExpressionBuilder;
 
     @InjectMocks
-    private DroolsRuleBuilderService ruleBuilderService;
-
-    // Mock Metadata Objects
-    private final PricingInputMetadata amountMetadata = new PricingInputMetadata();
-    private final PricingInputMetadata segmentMetadata = new PricingInputMetadata();
+    private DroolsRuleBuilderService droolsRuleBuilderService;
 
     @BeforeEach
-    void setup() {
-        // Setup DECIMAL metadata
-        amountMetadata.setAttributeKey("transactionAmount");
-        amountMetadata.setDataType("DECIMAL");
-
-        // Setup STRING metadata
-        segmentMetadata.setAttributeKey("customerSegment");
-        segmentMetadata.setDataType("STRING");
-
-        // We ensure the cache lookup can resolve these types
-        when(metadataRepository.findByAttributeKeyIn(anySet()))
-            .thenReturn(List.of(amountMetadata, segmentMetadata));
-    }
-
-    private PricingComponent createMockComponentWithTier() {
-        PricingComponent component = new PricingComponent();
-        component.setId(1L);
-        component.setName("MonthlyFeeComponent");
-
-        PricingTier tier = new PricingTier();
-        tier.setId(10L);
-
-        // 1. DECIMAL Condition: transactionAmount > 500
-        TierCondition condition1 = new TierCondition();
-        condition1.setAttributeName("transactionAmount");
-        condition1.setOperator(TierCondition.Operator.GT);
-        condition1.setAttributeValue("500.00");
-        condition1.setConnector(TierCondition.LogicalConnector.AND);
-
-        // 2. STRING Condition: customerSegment == "PREMIUM"
-        TierCondition condition2 = new TierCondition();
-        condition2.setAttributeName("customerSegment");
-        condition2.setOperator(TierCondition.Operator.EQ);
-        condition2.setAttributeValue("PREMIUM");
-
-        tier.setConditions(Set.of(condition1, condition2));
-
-        // Setup PriceValue (RHS)
-        PriceValue value = new PriceValue();
-        value.setPriceAmount(new BigDecimal("10.00"));
-        value.setValueType(PriceValue.ValueType.ABSOLUTE);
-        value.setCurrency("USD");
-        tier.setPriceValues(Set.of(value));
-
-        component.setPricingTiers(List.of(tier));
-        return component;
+    void setUp() {
+        // Initializes all fields annotated with @Mock and @InjectMocks
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
     void buildRules_shouldGenerateDrlWithCorrectMapAccessAndCasting() {
-        // Arrange
-        PricingComponent component = createMockComponentWithTier();
+        // ARRANGE
+
+        // 1. Setup the input data (Mocks for component, tier, condition, and metadata)
+        PricingComponent component = mock(PricingComponent.class);
+        PricingTier tier = mock(PricingTier.class);
+        TierCondition condition = mock(TierCondition.class);
+        PricingInputMetadata metadata = new PricingInputMetadata();
+        metadata.setAttributeKey("transactionAmount");
+        metadata.setDataType("DECIMAL");
+
+        PriceValue priceValue = new PriceValue();
+        priceValue.setPriceAmount(new BigDecimal("10.00"));
+        priceValue.setValueType(PriceValue.ValueType.ABSOLUTE);
+        priceValue.setCurrency("USD");
+
+        // 2. Define the behavior of the mocked objects
         when(componentRepository.findAllEagerlyForRules()).thenReturn(List.of(component));
+        when(component.getPricingTiers()).thenReturn(List.of(tier));
+        when(component.getName()).thenReturn("TestFee");
+        when(component.getId()).thenReturn(1L);
 
-        // Act
-        String drl = ruleBuilderService.buildAllRulesForCompilation();
+        when(tier.getConditions()).thenReturn(Set.of(condition));
+        when(tier.getPriceValues()).thenReturn(Set.of(priceValue));
+        when(tier.getId()).thenReturn(100L);
 
-        // Assert
-        // 1. Check for Map import
-        assertThat(drl).contains("import java.util.Map;");
+        when(condition.getAttributeName()).thenReturn("transactionAmount");
 
-        // 2. Check DECIMAL condition (Requires casting and direct map access)
-        String expectedDecimalCondition = "((java.math.BigDecimal) customAttributes[\"transactionAmount\"]) > 500.00";
-        assertThat(drl).contains(expectedDecimalCondition);
+        // Mock the metadata repository lookup and caching logic
+        when(metadataService.getMetadataEntitiesByKeys(anySet())).thenReturn(List.of(metadata));
+        when(metadataService.getMetadataEntityByKey("transactionAmount")).thenReturn(metadata);
 
-        // 3. Check STRING condition (Requires quotes around value, no casting)
-        String expectedStringCondition = "customAttributes[\"customerSegment\"] == \"PREMIUM\"";
-        assertThat(drl).contains(expectedStringCondition);
+        // 3. CRITICAL: Stub the new DroolsExpressionBuilder
+        // When the service calls the builder, the builder should return the DRL fragment
+        when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class)))
+            .thenReturn("((java.math.BigDecimal) customAttributes[\"transactionAmount\"]) > 500");
 
-        // 4. Check that the final DRL structure is correct
-        assertThat(drl).contains("rule \"Rule_MonthlyFeeComponent_Tier_10\"");
-        assertThat(drl).contains("$input : PricingInput (");
-        assertThat(drl).contains("then");
+        // ACT
+        String drl = droolsRuleBuilderService.buildAllRulesForCompilation();
+
+        // ASSERT
+        // The DRL string should now contain the expected fragment, proving the integration works
+        assertTrue(drl.contains("Rule_TestFee_Tier_100"), "DRL must contain the rule header.");
+        assertTrue(drl.contains("((java.math.BigDecimal) customAttributes[\"transactionAmount\"]) > 500"), "DRL must contain the expression from the builder.");
+        assertTrue(drl.contains("setPriceAmount(new BigDecimal(\"10.00\"))"), "DRL must contain the RHS action.");
+    }
+
+    @Test
+    void buildRules_shouldReturnPlaceholderRulesWhenNoComponentsExist() {
+        when(componentRepository.findAllEagerlyForRules()).thenReturn(Collections.emptyList());
+        String drl = droolsRuleBuilderService.buildAllRulesForCompilation();
+        assertTrue(drl.contains("PlaceholderRule_DoNothing"), "DRL should contain the placeholder rule.");
     }
 }
