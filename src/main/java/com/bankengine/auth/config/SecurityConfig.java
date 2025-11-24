@@ -1,5 +1,6 @@
-package com.bankengine.config;
+package com.bankengine.auth.config;
 
+import com.bankengine.auth.security.JwtAuthConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -75,7 +76,6 @@ public class SecurityConfig {
                         .jwtAuthenticationConverter(jwtAuthConverter)
                 ))
 
-                // 💡 FIX: Use the modern lambda approach to configure frameOptions
                 // This is required for H2 console to load inside a frame
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)

@@ -1,5 +1,6 @@
 package com.bankengine.catalog;
 
+import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.catalog.dto.ProductFeatureDto;
 import com.bankengine.catalog.dto.ProductFeatureSyncDto;
 import com.bankengine.catalog.model.FeatureComponent;
@@ -10,18 +11,19 @@ import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.pricing.TestTransactionHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,9 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
-// Define a default user with the most common permission for this class to reduce redundancy
-@WithMockUser(authorities = {"catalog:product:update"})
+@WithMockRole(roles = {ProductFeatureSyncIntegrationTest.ADMIN_ROLE})
 public class ProductFeatureSyncIntegrationTest {
 
     @Autowired
@@ -56,13 +56,34 @@ public class ProductFeatureSyncIntegrationTest {
     @Autowired
     private ProductFeatureLinkRepository linkRepository;
 
-    // Removed JWT fields: jwtSecretKey, jwtIssuerUri, jwtTestUtil
+    @Autowired
+    private TestTransactionHelper txHelper;
+
+    // --- Role Constants ---
+    public static final String ADMIN_ROLE = "CATALOG_ADMIN";
+    public static final String READER_ROLE = "CATALOG_READER";
 
     // Entities used for setup
     private Product product;
     private FeatureComponent componentA; // Integer type, value "10"
     private FeatureComponent componentB; // Boolean type, value "true"
     private FeatureComponent componentC; // Decimal type, value "5.50"
+
+    /**
+     * Set up all required roles and permissions once before all tests run.
+     */
+    @BeforeAll
+    static void setupRoles(@Autowired TestTransactionHelper txHelper) {
+        // ADMIN needs the update permission for this entire class
+        Set<String> adminAuths = Set.of(
+                "catalog:product:update"
+        );
+        // READER can be used for denial (lacks the update permission)
+        Set<String> readerAuths = Set.of("catalog:product:read");
+
+        txHelper.createRoleInDb(ADMIN_ROLE, adminAuths);
+        txHelper.createRoleInDb(READER_ROLE, readerAuths);
+    }
 
     // Helper method to create DTOs
     private ProductFeatureDto createFeatureDto(FeatureComponent component, String value) {
@@ -75,32 +96,51 @@ public class ProductFeatureSyncIntegrationTest {
 
     @BeforeEach
     void setup() {
-        // 1. Setup ProductType
-        ProductType type = new ProductType();
-        type.setName("Checking Account");
-        productTypeRepository.save(type);
+        // PART 1: Find-or-Create unique dependencies (Product, Components)
+        // This only runs inserts if the data isn't already committed.
+        txHelper.doInTransaction(() -> {
+            // 1. Setup ProductType (find-or-create)
+            ProductType type = productTypeRepository.findByName("Checking Account")
+                    .orElseGet(() -> {
+                        ProductType newType = new ProductType();
+                        newType.setName("Checking Account");
+                        return productTypeRepository.save(newType);
+                    });
 
-        // 2. Setup Product
-        product = new Product();
-        product.setName("Sync Test Product");
-        product.setProductType(type);
-        productRepository.save(product);
+            // 2. Setup Product (find-or-create)
+            product = productRepository.findByName("Sync Test Product")
+                    .orElseGet(() -> {
+                        Product p = new Product();
+                        p.setName("Sync Test Product");
+                        p.setProductType(type);
+                        return productRepository.save(p);
+                    });
 
-        // 3. Setup Feature Components
-        componentA = new FeatureComponent();
-        componentA.setName("Monthly Limit");
-        componentA.setDataType(FeatureComponent.DataType.INTEGER);
-        featureComponentRepository.save(componentA);
+            // 3. Setup Feature Components (find-or-create)
+            componentA = findOrCreateFeatureComponent("Monthly Limit", FeatureComponent.DataType.INTEGER);
+            componentB = findOrCreateFeatureComponent("Free ATM Access", FeatureComponent.DataType.BOOLEAN);
+            componentC = findOrCreateFeatureComponent("Cashback Rate", FeatureComponent.DataType.DECIMAL);
+        });
 
-        componentB = new FeatureComponent();
-        componentB.setName("Free ATM Access");
-        componentB.setDataType(FeatureComponent.DataType.BOOLEAN);
-        featureComponentRepository.save(componentB);
+        // PART 2: CLEANUP - Ensure a clean slate of LINKS before every test
+        // This MUST run after Part 1 to ensure 'product' is initialized.
+        // It must also run in its own committed transaction.
+        txHelper.doInTransaction(() -> {
+            linkRepository.deleteAll(linkRepository.findByProductId(product.getId()));
+            linkRepository.flush();
+        });
+    }
 
-        componentC = new FeatureComponent();
-        componentC.setName("Cashback Rate");
-        componentC.setDataType(FeatureComponent.DataType.DECIMAL);
-        featureComponentRepository.save(componentC);
+    // New helper method for find-or-create pattern
+    private FeatureComponent findOrCreateFeatureComponent(String name, FeatureComponent.DataType dataType) {
+        // Requires findByName in FeatureComponentRepository
+        return featureComponentRepository.findByName(name)
+                .orElseGet(() -> {
+                    FeatureComponent component = new FeatureComponent();
+                    component.setName(name);
+                    component.setDataType(dataType);
+                    return featureComponentRepository.save(component);
+                });
     }
 
     // =================================================================
@@ -108,7 +148,7 @@ public class ProductFeatureSyncIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"some:other:permission"}) // Override default authority
+    @WithMockRole(roles = {READER_ROLE}) // <-- User has read permission, lacks update
     void shouldReturn403WhenSyncingFeaturesWithoutPermission() throws Exception {
         ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
         syncDto.setFeatures(List.of(createFeatureDto(componentA, "20")));
@@ -121,12 +161,12 @@ public class ProductFeatureSyncIntegrationTest {
 
     // =================================================================
     // 1. INITIAL CREATE (No existing links)
-    // All subsequent tests use the default @WithMockUser(authorities = {"catalog:product:update"})
+    // All subsequent tests use the default @WithMockRole(roles = {ADMIN_ROLE})
     // =================================================================
 
     @Test
     void shouldCreateNewFeaturesWhenNoLinksExist() throws Exception {
-        // ARRANGE: Target state includes A and B
+        // ARRANGE: Cleanup in @BeforeEach ensures no links exist here.
         ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
         syncDto.setFeatures(List.of(
                 createFeatureDto(componentA, "20"), // New link A
@@ -141,7 +181,9 @@ public class ProductFeatureSyncIntegrationTest {
                 .andExpect(jsonPath("$.features.length()", is(2)));
 
         // VERIFY: Check DB count
-        assertThat(linkRepository.findByProductId(product.getId())).hasSize(2);
+        txHelper.doInTransaction(() -> {
+            assertThat(linkRepository.findByProductId(product.getId())).hasSize(2);
+        });
     }
 
     // =================================================================
@@ -150,9 +192,11 @@ public class ProductFeatureSyncIntegrationTest {
 
     @Test
     void shouldPerformFullSync_CreateUpdateAndDelete() throws Exception {
-        // ARRANGE: Setup initial state (Only A and C linked)
-        linkRepository.save(createInitialLink(product, componentA, "10")); // Initial A
-        linkRepository.save(createInitialLink(product, componentC, "3.0")); // Initial C
+        // ARRANGE: Setup initial state (Only A and C linked). Needs to be committed.
+        txHelper.doInTransaction(() -> {
+            linkRepository.save(createInitialLink(product, componentA, "10")); // Initial A
+            linkRepository.save(createInitialLink(product, componentC, "3.0")); // Initial C
+        });
 
         // ARRANGE: Target state (B is created, A is updated, C is deleted)
         ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
@@ -169,19 +213,21 @@ public class ProductFeatureSyncIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.features.length()", is(2)));
 
-        // VERIFY 1: Check DB final state (Only A and B exist)
-        List<ProductFeatureLink> finalLinks = linkRepository.findByProductId(product.getId());
-        assertThat(finalLinks.stream().map(l -> l.getFeatureComponent().getId()).collect(Collectors.toSet()))
-                .containsExactlyInAnyOrder(componentA.getId(), componentB.getId());
+        // VERIFY: Check DB final state
+        txHelper.doInTransaction(() -> {
+            List<ProductFeatureLink> finalLinks = linkRepository.findByProductId(product.getId());
+            assertThat(finalLinks.stream().map(l -> l.getFeatureComponent().getId()).collect(Collectors.toSet()))
+                    .containsExactlyInAnyOrder(componentA.getId(), componentB.getId());
 
-        // VERIFY 2: Check update (A's value should be 50)
-        ProductFeatureLink linkA = finalLinks.stream()
-                .filter(l -> l.getFeatureComponent().getId().equals(componentA.getId()))
-                .findFirst().orElseThrow();
-        assertThat(linkA.getFeatureValue()).isEqualTo("50");
+            // Check update (A's value should be 50)
+            ProductFeatureLink linkA = finalLinks.stream()
+                    .filter(l -> l.getFeatureComponent().getId().equals(componentA.getId()))
+                    .findFirst().orElseThrow();
+            assertThat(linkA.getFeatureValue()).isEqualTo("50");
 
-        // VERIFY 3: Check deletion (C link should be gone)
-        assertThat(linkRepository.findByFeatureComponentId(componentC.getId())).isEmpty();
+            // Check deletion (C link should be gone)
+            assertThat(linkRepository.findByFeatureComponentId(componentC.getId())).isEmpty();
+        });
     }
 
     // =================================================================
@@ -207,6 +253,7 @@ public class ProductFeatureSyncIntegrationTest {
     @Test
     void shouldReturn404OnSyncWithNonExistentProduct() throws Exception {
         ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
+        // Use an existing FeatureComponent ID for a valid DTO structure
         syncDto.setFeatures(List.of(createFeatureDto(componentA, "1")));
 
         // ACT & ASSERT: Use a non-existent Product ID (99999)

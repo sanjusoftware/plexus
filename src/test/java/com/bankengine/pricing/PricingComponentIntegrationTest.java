@@ -1,5 +1,6 @@
 package com.bankengine.pricing;
 
+import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.pricing.dto.*;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
@@ -8,15 +9,14 @@ import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -30,7 +30,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 public class PricingComponentIntegrationTest {
 
     @Autowired
@@ -54,21 +53,49 @@ public class PricingComponentIntegrationTest {
     @Autowired
     private TestTransactionHelper txHelper;
 
+    private static final String ADMIN_ROLE = "TEST_ADMIN";
+    private static final String READER_ROLE = "TEST_READER";
+
+    /**
+     * Set up all required roles and permissions once before all tests run.
+     * This data is committed to the database and survives the test lifespan.
+     */
+    @BeforeAll
+    static void setupRoles(@Autowired TestTransactionHelper txHelper) {
+        // ADMIN has all permissions needed for CRUD on components and tiers
+        Set<String> adminAuths = Set.of(
+            "pricing:component:create", 
+            "pricing:component:read", 
+            "pricing:component:update", 
+            "pricing:component:delete",
+            "pricing:tier:create",
+            "pricing:tier:update",
+            "pricing:tier:delete"
+        );
+        // READER has only read permission
+        Set<String> readerAuths = Set.of("pricing:component:read");
+        
+        // Commit the roles in separate transactions
+        txHelper.createRoleInDb(ADMIN_ROLE, adminAuths);
+        txHelper.createRoleInDb(READER_ROLE, readerAuths);
+    }
+
     @BeforeEach
     void setupMetadata() {
         // Ensure metadata is committed in a separate transaction.
-        // The txHelper now handles creating customerSegment and transactionAmount metadata.
         txHelper.setupCommittedMetadata();
     }
 
     // Helper method to retrieve Tier/Value IDs after component is created and committed ---
     private PricingTier getTierFromComponentId(Long componentId) {
-        // Find the committed component and load its tiers. Assumes a single tier exists.
-        Optional<PricingComponent> componentOpt = componentRepository.findById(componentId);
-        if (componentOpt.isEmpty() || componentOpt.get().getPricingTiers().isEmpty()) {
-            throw new IllegalStateException("Setup failed: Component or Tier not found in DB after creation.");
-        }
-        return componentOpt.get().getPricingTiers().stream().findFirst().get();
+        return txHelper.doInTransaction(() -> {
+            Optional<PricingComponent> componentOpt = componentRepository.findById(componentId);
+
+            if (componentOpt.isEmpty() || componentOpt.get().getPricingTiers().isEmpty()) {
+                throw new IllegalStateException("Setup failed: Component or Tier not found in DB after creation.");
+            }
+            return componentOpt.get().getPricingTiers().stream().findFirst().get();
+        });
     }
     // ------------------------------------------------------------------------------------------------
 
@@ -113,7 +140,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"pricing:component:create"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldCreateComponentAndReturn201() throws Exception {
         mockMvc.perform(post("/api/v1/pricing-components")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -125,7 +152,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:component:create"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn400OnCreateWithInvalidType() throws Exception {
         CreatePricingComponentRequestDto dto = getCreateDto("BadType");
         dto.setType("INVALID_TYPE");
@@ -136,13 +163,22 @@ public class PricingComponentIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("Invalid component type provided: INVALID_TYPE")));
     }
+    
+    @Test
+    @WithMockRole(roles = {READER_ROLE})
+    void shouldReturn403WhenCreatingComponentWithReaderRole() throws Exception {
+        mockMvc.perform(post("/api/v1/pricing-components")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(getCreateDto("DeniedFee"))))
+                .andExpect(status().isForbidden());
+    }
 
     // =================================================================
     // 2. RETRIEVE (GET) TESTS
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"pricing:component:read"})
+    @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200AndListComponent() throws Exception {
         long initialCount = componentRepository.count();
         txHelper.createPricingComponentInDb("ComponentA");
@@ -156,7 +192,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = "pricing:component:read")
+    @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200AndComponentById() throws Exception {
         PricingComponent savedComponent = txHelper.createPricingComponentInDb("MortgageRate");
 
@@ -167,7 +203,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = "pricing:component:read")
+    @WithMockRole(roles = {READER_ROLE})
     void shouldReturn404WhenGettingNonExistentComponent() throws Exception {
         mockMvc.perform(get("/api/v1/pricing-components/99999"))
                 .andExpect(status().isNotFound())
@@ -179,7 +215,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"pricing:component:update"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldUpdateComponentAndReturn200() throws Exception {
         PricingComponent savedComponent = txHelper.createPricingComponentInDb("OldRate");
         UpdatePricingComponentRequestDto updateDto = new UpdatePricingComponentRequestDto();
@@ -200,7 +236,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"pricing:component:delete", "pricing:component:read"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldDeleteComponentAndReturn204() throws Exception {
         // NOTE: Component must exist and trigger DRL rebuild on delete, hence we use a component with a linked tier/condition.
         Long idToDelete = txHelper.createPricingComponentInDb("DeletableComponent").getId();
@@ -208,13 +244,13 @@ public class PricingComponentIntegrationTest {
         mockMvc.perform(delete("/api/v1/pricing-components/{id}", idToDelete))
                 .andExpect(status().isNoContent());
 
-        // Verify deletion
+        // Verify deletion (requires read permission, which ADMIN has)
         mockMvc.perform(get("/api/v1/pricing-components/{id}", idToDelete))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:component:delete"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn409WhenDeletingComponentWithTiers() throws Exception {
         // ARRANGE: 1. Create and COMMIT the component and COMMIT the dependency
         PricingComponent component = txHelper.createPricingComponentInDb("ComponentWithTiers");
@@ -233,7 +269,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"pricing:tier:create"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldAddTierAndValueToComponentAndReturn201() throws Exception {
         PricingComponent component = txHelper.createPricingComponentInDb("TieredComponent");
 
@@ -248,7 +284,7 @@ public class PricingComponentIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:tier:create"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404WhenAddingTierToNonExistentComponent() throws Exception {
         TierValueDto requestDto = getValidTierValueDto();
 
@@ -264,7 +300,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"pricing:tier:update"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldUpdateTierAndValueAndReturn200() throws Exception {
         // ARRANGE: Setup the records to be updated
         Long componentId = txHelper.createLinkedTierAndValue("ComponentToUpdate", "InitialTier");
@@ -310,7 +346,7 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"pricing:tier:delete"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldDeleteTierAndValueAndReturn204() throws Exception {
         // ARRANGE: Setup the records to be deleted
         Long componentId = txHelper.createLinkedTierAndValue("ComponentToDeleteFrom", "TierToDelete");
@@ -339,7 +375,8 @@ public class PricingComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockUser(authorities = {"pricing:tier:update", "pricing:tier:delete"})
+    // ADMIN role covers both pricing:tier:update and pricing:tier:delete
+    @WithMockRole(roles = {ADMIN_ROLE}) 
     void shouldReturn404ForNonExistentTierOrComponent() throws Exception {
         // ARRANGE: Setup a valid component ID
         Long componentId = txHelper.createLinkedTierAndValue("ComponentFor404Test", "ValidTier");

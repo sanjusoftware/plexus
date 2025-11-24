@@ -1,5 +1,7 @@
 package com.bankengine.pricing;
 
+import com.bankengine.auth.model.Role;
+import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.*;
 import jakarta.persistence.EntityManager;
@@ -26,7 +28,16 @@ public class TestTransactionHelper {
     @Autowired
     private PricingInputMetadataRepository metadataRepository;
     @Autowired
+    private TierConditionRepository tierConditionRepository; // Now used directly
+    @Autowired
     private EntityManager entityManager;
+    @Autowired
+    private RoleRepository roleRepository;
+
+
+    // =================================================================
+    // Pricing Metadata Helpers
+    // =================================================================
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void setupCommittedMetadata() {
@@ -47,6 +58,9 @@ public class TestTransactionHelper {
         });
     }
 
+    // =================================================================
+    // Pricing Component/Tier Helpers
+    // =================================================================
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PricingComponent createPricingComponentInDb(String name) {
@@ -119,9 +133,6 @@ public class TestTransactionHelper {
         return tierRepository.save(tier);
     }
 
-    @Autowired
-    private TierConditionRepository tierConditionRepository;
-
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createTierCondition(String attributeName) {
         PricingComponent component = createPricingComponentInDb("test-component");
@@ -137,5 +148,64 @@ public class TestTransactionHelper {
         condition.setOperator(TierCondition.Operator.EQ);
         condition.setAttributeValue("someValue");
         tierConditionRepository.save(condition);
+    }
+
+    // =================================================================
+    // Authentication/Role Helpers
+    // =================================================================
+
+    /**
+     * Creates and saves a Role entity with the specified authorities in a new transaction.
+     * Uses the find-or-create pattern to ensure idempotence and avoid unique constraint violations
+     * when run across multiple test classes.
+     *
+     * @param roleName The name of the role (e.g., "ADMIN").
+     * @param authorities The set of permissions assigned to this role.
+     * @return The persisted Role entity.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Role createRoleInDb(String roleName, Set<String> authorities) {
+
+        // 1. Find or Create the Role
+        return roleRepository.findByName(roleName)
+                .map(existingRole -> {
+                    // Role FOUND (This is the scenario causing problems across the suite)
+
+                    // 1. Get the current authorities
+                    Set<String> currentAuthorities = existingRole.getAuthorities();
+
+                    // 2. Combine the current authorities with the new ones needed for this test class
+                    Set<String> combinedAuthorities = new java.util.HashSet<>(currentAuthorities);
+                    combinedAuthorities.addAll(authorities); // Ensures the union
+
+                    // 3. Update and save the role only if the authority set has actually changed
+                    if (combinedAuthorities.size() > currentAuthorities.size()) {
+                        existingRole.setAuthorities(combinedAuthorities);
+                        return roleRepository.save(existingRole);
+                    }
+                    return existingRole;
+                })
+                .orElseGet(() -> {
+                    // Role NOT FOUND (Initial creation)
+                    Role newRole = new Role();
+                    newRole.setName(roleName);
+                    newRole.setAuthorities(authorities);
+                    // ... set other fields (bankId, etc.)
+                    return roleRepository.save(newRole);
+                });
+    }
+
+    /**
+     * Executes a lambda within a new transaction context.
+     * Useful for verifying data committed by other transactional methods.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public <T> T doInTransaction(java.util.function.Supplier<T> action) {
+        return action.get();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void doInTransaction(Runnable action) {
+        action.run();
     }
 }
