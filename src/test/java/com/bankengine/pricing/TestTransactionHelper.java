@@ -33,7 +33,7 @@ public class TestTransactionHelper {
     @Autowired
     private PricingInputMetadataRepository metadataRepository;
     @Autowired
-    private TierConditionRepository tierConditionRepository; // Now used directly
+    private TierConditionRepository tierConditionRepository;
     @Autowired
     private EntityManager entityManager;
     @Autowired
@@ -51,6 +51,22 @@ public class TestTransactionHelper {
     public void setupCommittedMetadata() {
         createAndSaveMetadata("customerSegment", "STRING");
         createAndSaveMetadata("transactionAmount", "DECIMAL");
+        entityManager.flush();
+        entityManager.clear();
+    }
+
+    /**
+     * Finds and deletes the specific metadata entities created during setup.
+     * This resolves the compile error in PricingComponentIntegrationTest.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void cleanupCommittedMetadata() {
+        metadataRepository.findByAttributeKey("customerSegment")
+                .ifPresent(metadataRepository::delete);
+
+        metadataRepository.findByAttributeKey("transactionAmount")
+                .ifPresent(metadataRepository::delete);
+
         entityManager.flush();
         entityManager.clear();
     }

@@ -4,14 +4,14 @@ import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.pricing.dto.*;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
+import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
+import com.bankengine.pricing.repository.TierConditionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -55,13 +56,19 @@ public class PricingComponentIntegrationTest {
     @Autowired
     private TestTransactionHelper txHelper;
 
+    @Autowired
+    private TierConditionRepository tierConditionRepository;
+
     public static final String ROLE_PREFIX = "PCIT_";
     private static final String ADMIN_ROLE = ROLE_PREFIX + "TEST_ADMIN";
     private static final String READER_ROLE = ROLE_PREFIX + "TEST_READER";
 
+    // =================================================================
+    // SETUP AND TEARDOWN (Committed Data Lifecycle)
+    // =================================================================
+
     /**
      * Set up all required roles and permissions once before all tests run.
-     * This data is committed to the database and survives the test lifespan.
      */
     @BeforeAll
     static void setupRoles(@Autowired TestTransactionHelper txHelper) {
@@ -87,7 +94,41 @@ public class PricingComponentIntegrationTest {
     void setupMetadata() {
         // Ensure metadata is committed in a separate transaction.
         txHelper.setupCommittedMetadata();
+        entityManager.clear();
     }
+
+    /**
+     * Cleans up ALL committed PricingComponent, PricingTier, and PriceValue entities
+     * created by the helper methods or API calls within the test methods.
+     */
+    @AfterEach
+    void cleanUpCommittedData() {
+        txHelper.doInTransaction(() -> {
+            // 1. Delete TierCondition (Child of PricingTier)
+            tierConditionRepository.deleteAllInBatch();
+            // 2. Delete PriceValue (Child of PricingTier)
+            valueRepository.deleteAllInBatch();
+            // 3. Delete PricingTier (Child of PricingComponent)
+            tierRepository.deleteAllInBatch();
+            // 4. Delete PricingComponent (Parent)
+            componentRepository.deleteAllInBatch();
+        });
+        txHelper.flushAndClear();
+    }
+
+    /**
+     * Cleans up the shared, committed metadata (e.g., 'customerSegment') after all tests.
+     */
+    @AfterAll
+    static void tearDownMetadata(@Autowired TestTransactionHelper txHelperStatic) {
+        txHelperStatic.cleanupCommittedMetadata();
+        txHelperStatic.flushAndClear();
+    }
+
+
+    // =================================================================
+    // HELPER METHODS
+    // =================================================================
 
     // Helper method to retrieve Tier/Value IDs after component is created and committed ---
     private PricingTier getTierFromComponentId(Long componentId) {
@@ -97,6 +138,7 @@ public class PricingComponentIntegrationTest {
             if (componentOpt.isEmpty() || componentOpt.get().getPricingTiers().isEmpty()) {
                 throw new IllegalStateException("Setup failed: Component or Tier not found in DB after creation.");
             }
+            // Use stream().findFirst() because we expect only one tier in the context of these helpers
             return componentOpt.get().getPricingTiers().stream().findFirst().get();
         });
     }
@@ -133,7 +175,7 @@ public class PricingComponentIntegrationTest {
     private TierConditionDto getDummyConditionDto() {
         TierConditionDto dto = new TierConditionDto();
         dto.setAttributeName("customerSegment");
-        dto.setOperator(com.bankengine.pricing.model.TierCondition.Operator.EQ);
+        dto.setOperator(TierCondition.Operator.EQ);
         dto.setAttributeValue("DEFAULT_SEGMENT");
         return dto;
     }
@@ -183,14 +225,18 @@ public class PricingComponentIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200AndListComponent() throws Exception {
-        long initialCount = componentRepository.count();
+        // ARRANGE: Ensure we start with a clean slate due to @AfterEach
         txHelper.createPricingComponentInDb("ComponentA");
         txHelper.createPricingComponentInDb("ComponentB");
-        long expectedCount = initialCount + 2;
+
+        // Count should be exactly 2 for this test
+        long expectedCount = 2;
 
         mockMvc.perform(get("/api/v1/pricing-components"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
+                // Asserting against a fixed count (2) is safer than asserting against initialCount + 2
+                // when relying on committed data cleanup.
                 .andExpect(jsonPath("$.length()", is((int)expectedCount)));
     }
 
@@ -264,7 +310,7 @@ public class PricingComponentIntegrationTest {
         mockMvc.perform(delete("/api/v1/pricing-components/{id}", component.getId()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status", is(409)))
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Cannot delete Pricing Component ID")));
+                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Cannot delete Pricing Component ID")));
     }
 
     // =================================================================
@@ -317,7 +363,7 @@ public class PricingComponentIntegrationTest {
         tierDto.setTierName("UpdatedTierName");
         tierDto.setMinThreshold(new BigDecimal("100.00"));
         tierDto.setMaxThreshold(new BigDecimal("999.99"));
-        tierDto.setConditions(java.util.List.of(getDummyConditionDto()));
+        tierDto.setConditions(List.of(getDummyConditionDto()));
 
         UpdatePriceValueRequestDto valueDto = new UpdatePriceValueRequestDto();
         valueDto.setPriceAmount(new BigDecimal("15.50"));
@@ -338,8 +384,10 @@ public class PricingComponentIntegrationTest {
                 .andExpect(jsonPath("$.priceAmount", is(15.50)))
                 .andExpect(jsonPath("$.currency", is("EUR")));
 
+        txHelper.flushAndClear();
+
         // VERIFY: Manually check the Tier entity in the DB
-        PricingTier updatedTier = tierRepository.findById(tierId).get();
+        PricingTier updatedTier = txHelper.doInTransaction(() -> tierRepository.findById(tierId)).get();
         assertThat(updatedTier.getTierName()).isEqualTo("UpdatedTierName");
         assertThat(updatedTier.getMaxThreshold()).isEqualTo(new BigDecimal("999.99"));
     }
@@ -357,7 +405,7 @@ public class PricingComponentIntegrationTest {
         // Fetch the IDs from the committed component
         PricingTier initialTier = getTierFromComponentId(componentId);
         Long finalTierId = initialTier.getId();
-        // Assumes PriceValue has a 1-to-1 relationship with PricingTier and is cascaded or easily found
+        // Get the PriceValue ID before deleting the Tier
         Long finalValueId = initialTier.getPriceValues().stream().findFirst().get().getId();
 
         // ACT: Call DELETE /{componentId}/tiers/{tierId}
@@ -366,11 +414,15 @@ public class PricingComponentIntegrationTest {
                 .andExpect(status().isNoContent());
 
         entityManager.clear();
-        // VERIFY 1: Tier entity is gone
-        assertThat(tierRepository.findById(finalTierId)).isEmpty();
 
-        // VERIFY 2: PriceValue entity is gone
-        assertThat(valueRepository.findById(finalValueId)).isEmpty();
+        // VERIFY: Check for deletion in a separate transaction
+        txHelper.doInTransaction(() -> {
+            // VERIFY 1: Tier entity is gone
+            assertThat(tierRepository.findById(finalTierId)).isEmpty();
+
+            // VERIFY 2: PriceValue entity is gone
+            assertThat(valueRepository.findById(finalValueId)).isEmpty();
+        });
     }
 
     // =================================================================
@@ -396,7 +448,7 @@ public class PricingComponentIntegrationTest {
         updateDto.getValue().setPriceAmount(new BigDecimal("1"));
         updateDto.getValue().setCurrency("USD");
         updateDto.getValue().setValueType("ABSOLUTE");
-        updateDto.getTier().setConditions(java.util.List.of(getDummyConditionDto()));
+        updateDto.getTier().setConditions(List.of(getDummyConditionDto()));
 
         // Test 1: PUT with non-existent Component ID
         mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
@@ -420,5 +472,4 @@ public class PricingComponentIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Pricing Tier not found")));
     }
-
 }
