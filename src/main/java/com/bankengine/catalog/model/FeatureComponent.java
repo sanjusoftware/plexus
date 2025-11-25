@@ -2,10 +2,7 @@ package com.bankengine.catalog.model;
 
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "feature_component")
@@ -13,6 +10,7 @@ import lombok.AllArgsConstructor;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@RequiredArgsConstructor
 public class FeatureComponent extends AuditableEntity {
 
     @Id
@@ -20,9 +18,11 @@ public class FeatureComponent extends AuditableEntity {
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @NonNull
     private String name; // e.g., "Max_Tenure", "Has_Overdraft"
 
     @Enumerated(EnumType.STRING)
+    @NonNull
     private DataType dataType; // To ensure value is stored/read correctly (e.g., STRING, INTEGER, BOOLEAN)
 
     public enum DataType {

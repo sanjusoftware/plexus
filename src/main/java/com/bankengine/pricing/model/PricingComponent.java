@@ -2,7 +2,9 @@ package com.bankengine.pricing.model;
 
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
@@ -12,19 +14,17 @@ import java.util.List;
 @Table(name = "pricing_component")
 @Getter
 @Setter
-// Define EntityGraph to enable multi-level eager fetching
+@NoArgsConstructor
+@AllArgsConstructor
 @NamedEntityGraph(
         name = "component-with-tiers-values-conditions",
         attributeNodes = {
-                // Start by fetching the List of Tiers (pricingTiers)
                 @NamedAttributeNode(value = "pricingTiers", subgraph = "tier-subgraph")
         },
         subgraphs = {
-                // Define how the Tier's sub-collections are fetched
                 @NamedSubgraph(
                         name = "tier-subgraph",
                         attributeNodes = {
-                                // Fetch the sub-collections needed for rule building
                                 @NamedAttributeNode("priceValues"),
                                 @NamedAttributeNode("conditions")
                         }
@@ -48,5 +48,10 @@ public class PricingComponent extends AuditableEntity {
 
     public enum ComponentType {
         FEE, RATE, WAIVER, BENEFIT, DISCOUNT
+    }
+
+    public PricingComponent(String name, ComponentType type) {
+        this.name = name;
+        this.type = type;
     }
 }

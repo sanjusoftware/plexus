@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -35,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @WithMockRole(roles = {ProductFeatureSyncIntegrationTest.ADMIN_ROLE})
 public class ProductFeatureSyncIntegrationTest {
 
@@ -60,8 +62,9 @@ public class ProductFeatureSyncIntegrationTest {
     private TestTransactionHelper txHelper;
 
     // --- Role Constants ---
-    public static final String ADMIN_ROLE = "CATALOG_ADMIN";
-    public static final String READER_ROLE = "CATALOG_READER";
+    public static final String ROLE_PREFIX = "PFST_";
+    public static final String ADMIN_ROLE = ROLE_PREFIX + "CATALOG_ADMIN";
+    public static final String READER_ROLE = ROLE_PREFIX + "CATALOG_READER";
 
     // Entities used for setup
     private Product product;
@@ -76,13 +79,18 @@ public class ProductFeatureSyncIntegrationTest {
     static void setupRoles(@Autowired TestTransactionHelper txHelper) {
         // ADMIN needs the update permission for this entire class
         Set<String> adminAuths = Set.of(
-                "catalog:product:update"
+                "catalog:product:update",
+                "catalog:feature:create",
+                "catalog:feature:update",
+                "catalog:feature:read"
         );
         // READER can be used for denial (lacks the update permission)
         Set<String> readerAuths = Set.of("catalog:product:read");
 
         txHelper.createRoleInDb(ADMIN_ROLE, adminAuths);
         txHelper.createRoleInDb(READER_ROLE, readerAuths);
+
+        txHelper.flushAndClear();
     }
 
     // Helper method to create DTOs

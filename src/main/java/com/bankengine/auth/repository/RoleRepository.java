@@ -3,6 +3,7 @@ package com.bankengine.auth.repository;
 import com.bankengine.auth.model.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.List;
@@ -25,4 +26,8 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
      * Retrieves a single Role entity by its exact name.
      */
     Optional<Role> findByName(String name);
+
+    /** Deletes a Role entity by its unique name. */
+    @Transactional
+    void deleteByName(String name);
 }

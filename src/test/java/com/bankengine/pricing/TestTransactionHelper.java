@@ -2,6 +2,10 @@ package com.bankengine.pricing;
 
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
+import com.bankengine.catalog.model.Product;
+import com.bankengine.catalog.model.ProductType;
+import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.*;
 import jakarta.persistence.EntityManager;
@@ -11,6 +15,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -33,7 +38,10 @@ public class TestTransactionHelper {
     private EntityManager entityManager;
     @Autowired
     private RoleRepository roleRepository;
-
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ProductTypeRepository productTypeRepository;
 
     // =================================================================
     // Pricing Metadata Helpers
@@ -196,6 +204,25 @@ public class TestTransactionHelper {
     }
 
     /**
+     * Creates a Product entity directly in the database, bypassing API security,
+     * to facilitate setup for integration tests.
+     */
+    public Long createProductInDb(String name, Long productTypeId) {
+        Product product = new Product();
+        product.setName(name);
+        product.setBankId("DB-SETUP");
+        product.setStatus("DRAFT");
+        product.setEffectiveDate(LocalDate.now().plusDays(1));
+
+        // Fetch the ProductType within the transaction boundary
+        ProductType productType = productTypeRepository.findById(productTypeId)
+                .orElseThrow(() -> new IllegalStateException("ProductType ID " + productTypeId + " not found during setup."));
+
+        product.setProductType(productType);
+        return productRepository.save(product).getId();
+    }
+
+    /**
      * Executes a lambda within a new transaction context.
      * Useful for verifying data committed by other transactional methods.
      */
@@ -207,5 +234,16 @@ public class TestTransactionHelper {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void doInTransaction(Runnable action) {
         action.run();
+    }
+
+    /**
+     * Forces all pending changes to the database and clears the Hibernate/JPA session cache.
+     * This is crucial for @BeforeAll setups to ensure subsequent security context loading
+     * (e.g., @WithMockRole) sees the freshly committed data.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void flushAndClear() {
+        entityManager.flush();
+        entityManager.clear();
     }
 }

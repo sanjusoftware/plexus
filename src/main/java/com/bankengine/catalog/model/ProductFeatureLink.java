@@ -37,4 +37,10 @@ public class ProductFeatureLink extends AuditableEntity {
     // or if the feature is "Monthly Fee", the value might be "10.00"
     @Column(name = "feature_value", nullable = false, length = 1000)
     private String featureValue;
+
+    public ProductFeatureLink(Product product, FeatureComponent featureComponent, String featureValue) {
+        this.product = product;
+        this.featureComponent = featureComponent;
+        this.featureValue = featureValue;
+    }
 }

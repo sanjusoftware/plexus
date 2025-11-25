@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 public class PricingComponentIntegrationTest {
 
     @Autowired
@@ -53,8 +55,9 @@ public class PricingComponentIntegrationTest {
     @Autowired
     private TestTransactionHelper txHelper;
 
-    private static final String ADMIN_ROLE = "TEST_ADMIN";
-    private static final String READER_ROLE = "TEST_READER";
+    public static final String ROLE_PREFIX = "PCIT_";
+    private static final String ADMIN_ROLE = ROLE_PREFIX + "TEST_ADMIN";
+    private static final String READER_ROLE = ROLE_PREFIX + "TEST_READER";
 
     /**
      * Set up all required roles and permissions once before all tests run.

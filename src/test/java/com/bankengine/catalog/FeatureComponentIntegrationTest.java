@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Set;
@@ -32,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 public class FeatureComponentIntegrationTest {
 
     @Autowired
@@ -59,8 +61,9 @@ public class FeatureComponentIntegrationTest {
     private Product sharedProduct;
 
     // --- Role Constants ---
-    private static final String ADMIN_ROLE = "CATALOG_ADMIN";
-    private static final String READER_ROLE = "CATALOG_READER";
+    public static final String ROLE_PREFIX = "FCIT_";
+    private static final String ADMIN_ROLE = ROLE_PREFIX + "CATALOG_ADMIN";
+    private static final String READER_ROLE = ROLE_PREFIX + "CATALOG_READER";
 
     /**
      * Set up all required roles and permissions once before all tests run.
