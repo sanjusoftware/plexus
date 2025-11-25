@@ -13,6 +13,7 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,95 +63,118 @@ public class ProductFeatureSyncIntegrationTest {
     @Autowired
     private TestTransactionHelper txHelper;
 
+    @Autowired
+    private EntityManager entityManager;
+
     // --- Role Constants ---
     public static final String ROLE_PREFIX = "PFST_";
     public static final String ADMIN_ROLE = ROLE_PREFIX + "CATALOG_ADMIN";
     public static final String READER_ROLE = ROLE_PREFIX + "CATALOG_READER";
 
     // Entities used for setup
-    private Product product;
-    private FeatureComponent componentA; // Integer type, value "10"
-    private FeatureComponent componentB; // Boolean type, value "true"
-    private FeatureComponent componentC; // Decimal type, value "5.50"
+    private static Product product;
+    private static FeatureComponent componentA; // Integer type, value "10"
+    private static FeatureComponent componentB; // Boolean type, value "true"
+    private static FeatureComponent componentC; // Decimal type, value "5.50"
+
 
     /**
-     * Set up all required roles and permissions once before all tests run.
+     * Set up all required roles, permissions, and shared committed entities once before all tests run.
      */
     @BeforeAll
-    static void setupRoles(@Autowired TestTransactionHelper txHelper) {
-        // ADMIN needs the update permission for this entire class
+    static void setupCommittedData(@Autowired TestTransactionHelper txHelperStatic,
+                                   @Autowired ProductRepository productRepoStatic,
+                                   @Autowired ProductTypeRepository productTypeRepoStatic,
+                                   @Autowired FeatureComponentRepository featureComponentRepoStatic) {
+
+        // 1. Setup Roles (Committed)
         Set<String> adminAuths = Set.of(
                 "catalog:product:update",
                 "catalog:feature:create",
                 "catalog:feature:update",
                 "catalog:feature:read"
         );
-        // READER can be used for denial (lacks the update permission)
         Set<String> readerAuths = Set.of("catalog:product:read");
 
-        txHelper.createRoleInDb(ADMIN_ROLE, adminAuths);
-        txHelper.createRoleInDb(READER_ROLE, readerAuths);
+        txHelperStatic.createRoleInDb(ADMIN_ROLE, adminAuths);
+        txHelperStatic.createRoleInDb(READER_ROLE, readerAuths);
 
-        txHelper.flushAndClear();
+        // 2. Setup Product and Components (Committed Transaction)
+        txHelperStatic.doInTransaction(() -> {
+
+            // Helper function to find or create a feature component
+            BiFunction<String, FeatureComponent.DataType, FeatureComponent> findOrCreateFeatureComponent = (name, dataType) ->
+                 featureComponentRepoStatic.findByName(name)
+                    .orElseGet(() -> {
+                        FeatureComponent component = new FeatureComponent();
+                        component.setName(name);
+                        component.setDataType(dataType);
+                        return featureComponentRepoStatic.save(component);
+                    });
+
+            // Setup ProductType (find-or-create)
+            ProductType type = productTypeRepoStatic.findByName("Checking Account")
+                    .orElseGet(() -> {
+                        ProductType newType = new ProductType();
+                        newType.setName("Checking Account");
+                        return productTypeRepoStatic.save(newType);
+                    });
+
+            // Setup Product (find-or-create)
+            product = productRepoStatic.findByName("Sync Test Product")
+                    .orElseGet(() -> {
+                        Product p = new Product();
+                        p.setName("Sync Test Product");
+                        p.setProductType(type);
+                        return productRepoStatic.save(p);
+                    });
+
+            // Setup Feature Components (find-or-create)
+            componentA = findOrCreateFeatureComponent.apply("Monthly Limit", FeatureComponent.DataType.INTEGER);
+            componentB = findOrCreateFeatureComponent.apply("Free ATM Access", FeatureComponent.DataType.BOOLEAN);
+            componentC = findOrCreateFeatureComponent.apply("Cashback Rate", FeatureComponent.DataType.DECIMAL);
+        });
+
+        txHelperStatic.flushAndClear();
     }
+
+
+    @BeforeEach
+    void setup() {
+        // CLEANUP: Ensure a clean slate of LINKS before every test.
+        // This MUST run in its own committed transaction.
+        txHelper.doInTransaction(() -> {
+            // Find links related to the static product and delete them.
+            linkRepository.deleteAllInBatch(linkRepository.findByProductId(product.getId()));
+        });
+
+        // Clear EntityManager cache just in case the link repository has stale data
+        entityManager.clear();
+    }
+
+    // =================================================================
+    // HELPER METHODS
+    // =================================================================
 
     // Helper method to create DTOs
     private ProductFeatureDto createFeatureDto(FeatureComponent component, String value) {
         ProductFeatureDto dto = new ProductFeatureDto();
+        // Use the statically initialized product
         dto.setProductId(product.getId());
         dto.setFeatureComponentId(component.getId());
         dto.setFeatureValue(value);
         return dto;
     }
 
-    @BeforeEach
-    void setup() {
-        // PART 1: Find-or-Create unique dependencies (Product, Components)
-        // This only runs inserts if the data isn't already committed.
-        txHelper.doInTransaction(() -> {
-            // 1. Setup ProductType (find-or-create)
-            ProductType type = productTypeRepository.findByName("Checking Account")
-                    .orElseGet(() -> {
-                        ProductType newType = new ProductType();
-                        newType.setName("Checking Account");
-                        return productTypeRepository.save(newType);
-                    });
-
-            // 2. Setup Product (find-or-create)
-            product = productRepository.findByName("Sync Test Product")
-                    .orElseGet(() -> {
-                        Product p = new Product();
-                        p.setName("Sync Test Product");
-                        p.setProductType(type);
-                        return productRepository.save(p);
-                    });
-
-            // 3. Setup Feature Components (find-or-create)
-            componentA = findOrCreateFeatureComponent("Monthly Limit", FeatureComponent.DataType.INTEGER);
-            componentB = findOrCreateFeatureComponent("Free ATM Access", FeatureComponent.DataType.BOOLEAN);
-            componentC = findOrCreateFeatureComponent("Cashback Rate", FeatureComponent.DataType.DECIMAL);
-        });
-
-        // PART 2: CLEANUP - Ensure a clean slate of LINKS before every test
-        // This MUST run after Part 1 to ensure 'product' is initialized.
-        // It must also run in its own committed transaction.
-        txHelper.doInTransaction(() -> {
-            linkRepository.deleteAll(linkRepository.findByProductId(product.getId()));
-            linkRepository.flush();
-        });
+    // Helper to create an initial link entity
+    private ProductFeatureLink createInitialLink(Product p, FeatureComponent fc, String value) {
+        ProductFeatureLink link = new ProductFeatureLink();
+        link.setProduct(p);
+        link.setFeatureComponent(fc);
+        link.setFeatureValue(value);
+        return link;
     }
 
-    // New helper method for find-or-create pattern
-    private FeatureComponent findOrCreateFeatureComponent(String name, FeatureComponent.DataType dataType) {
-        // Requires findByName in FeatureComponentRepository
-        return featureComponentRepository.findByName(name)
-                .orElseGet(() -> {
-                    FeatureComponent component = new FeatureComponent();
-                    component.setName(name);
-                    component.setDataType(dataType);
-                    return featureComponentRepository.save(component);
-                });
-    }
 
     // =================================================================
     // 0. SECURITY TEST
@@ -234,7 +259,7 @@ public class ProductFeatureSyncIntegrationTest {
             assertThat(linkA.getFeatureValue()).isEqualTo("50");
 
             // Check deletion (C link should be gone)
-            assertThat(linkRepository.findByFeatureComponentId(componentC.getId())).isEmpty();
+            assertThat(finalLinks.stream().anyMatch(l -> l.getFeatureComponent().getId().equals(componentC.getId()))).isFalse();
         });
     }
 
@@ -270,16 +295,5 @@ public class ProductFeatureSyncIntegrationTest {
                         .content(objectMapper.writeValueAsString(syncDto)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("Product not found")));
-    }
-
-    // =================================================================
-    // Helper to create an initial link entity
-    // =================================================================
-    private ProductFeatureLink createInitialLink(Product p, FeatureComponent fc, String value) {
-        ProductFeatureLink link = new ProductFeatureLink();
-        link.setProduct(p);
-        link.setFeatureComponent(fc);
-        link.setFeatureValue(value);
-        return link;
     }
 }
