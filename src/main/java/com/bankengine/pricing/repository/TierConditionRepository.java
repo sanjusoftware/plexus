@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * Repository for managing TierCondition entities.
  */
@@ -23,4 +25,6 @@ public interface TierConditionRepository extends JpaRepository<TierCondition, Lo
     @Modifying
     @Query("DELETE FROM TierCondition tc WHERE tc.pricingTier.id = ?1")
     void deleteByPricingTierId(Long pricingTierId);
+
+    void deleteByPricingTierIdIn(List<Long> pricingTierIds);
 }

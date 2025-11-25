@@ -95,6 +95,35 @@ public class TestTransactionHelper {
         return componentRepository.save(component);
     }
 
+    /**
+     * Deletes a Pricing Component and all related children (Tier, Value, Condition)
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void deleteComponentGraphById(Long componentId) {
+        componentRepository.findById(componentId).ifPresent(component -> {
+
+            // 1. Collect IDs of children
+            List<Long> tierIds = component.getPricingTiers().stream()
+                    .map(PricingTier::getId)
+                    .toList();
+
+            // 2. Delete Grandchildren (TierConditions)
+            tierConditionRepository.deleteByPricingTierIdIn(tierIds);
+
+            // 3. Delete Grandchildren (PriceValues)
+            valueRepository.deleteByPricingTierIdIn(tierIds);
+
+            // 4. Delete Children (PricingTiers)
+            tierRepository.deleteAllById(tierIds);
+
+            // 5. Delete Parent (PricingComponent)
+            componentRepository.delete(component);
+
+            // Ensure transaction flush completes the deletion
+            entityManager.flush();
+        });
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Long createLinkedTierAndValue(String componentName, String tierName) {
         // 1. Create Component

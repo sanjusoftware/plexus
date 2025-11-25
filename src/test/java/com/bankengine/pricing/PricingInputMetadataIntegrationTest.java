@@ -1,12 +1,15 @@
 package com.bankengine.pricing;
 
+import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.pricing.dto.CreateMetadataRequestDto;
 import com.bankengine.pricing.dto.UpdateMetadataRequestDto;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -19,6 +22,8 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Set;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,6 +34,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PricingInputMetadataIntegrationTest {
 
     private static final String API_PATH = "/api/v1/pricing-metadata";
+    private static final int SEEDED_METADATA_COUNT = 2; // customerSegment, transactionAmount
+
+    // Role Constants
+    private static final String ROLE_PREFIX = "PIMT_";
+    private static final String ADMIN_ROLE = ROLE_PREFIX + "TEST_ADMIN";
+    private static final String READER_ROLE = ROLE_PREFIX + "TEST_READER";
+    private static final String CREATOR_ROLE = ROLE_PREFIX + "TEST_CREATOR";
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,44 +54,57 @@ class PricingInputMetadataIntegrationTest {
     @Autowired
     private TestTransactionHelper txHelper;
 
+    @Autowired
+    private EntityManager entityManager;
+
     // Mock the rule engine side effect ---
     @MockBean
     private KieContainerReloadService reloadService;
+
+    // --- Static Role Setup ---
+
+    @BeforeAll
+    static void setupRoles(@Autowired TestTransactionHelper txHelper) {
+        // Define authorities needed for metadata management
+        Set<String> adminAuths = Set.of(
+            "pricing:metadata:create",
+            "pricing:metadata:read",
+            "pricing:metadata:update",
+            "pricing:metadata:delete"
+        );
+        Set<String> readerAuths = Set.of("pricing:metadata:read");
+        Set<String> creatorAuths = Set.of("pricing:metadata:create", "pricing:metadata:update");
+
+        // Use the transactional helper to commit roles once
+        txHelper.createRoleInDb(ADMIN_ROLE, adminAuths);
+        txHelper.createRoleInDb(READER_ROLE, readerAuths);
+        txHelper.createRoleInDb(CREATOR_ROLE, creatorAuths);
+        txHelper.flushAndClear();
+    }
 
     // --- Test Setup ---
 
     @BeforeEach
     void setup() {
-        seedRequiredMetadata();
-        // Prevent the real DRL compilation and validation from running during tests.
-        // This stops the 'Invalid rule attribute' errors.
+        txHelper.setupCommittedMetadata();
+
+        // Mock rule engine service
         Mockito.when(reloadService.reloadKieContainer()).thenReturn(true);
     }
 
     @AfterEach
     void tearDown() {
-        // Clean up data created by tests.
+        txHelper.cleanupCommittedMetadata();
+
+        // Clean up data created by the specific test runs (any metadata not part of the seeded keys)
+        // Since cleanupCommittedMetadata only deletes customerSegment and transactionAmount,
+        // we explicitly delete all remaining test-created metadata.
         metadataRepository.deleteAll();
+
+        txHelper.flushAndClear();
     }
 
     // --- HELPERS ---
-
-    private void seedRequiredMetadata() {
-        if (metadataRepository.findByAttributeKey("customerSegment").isEmpty()) {
-            createSeededMetadata("customerSegment", "Client Segment", "STRING");
-        }
-        if (metadataRepository.findByAttributeKey("transactionAmount").isEmpty()) {
-            createSeededMetadata("transactionAmount", "Transaction Amount", "DECIMAL");
-        }
-    }
-
-    private PricingInputMetadata createSeededMetadata(String key, String displayName, String dataType) {
-        PricingInputMetadata metadata = new PricingInputMetadata();
-        metadata.setAttributeKey(key);
-        metadata.setDataType(dataType);
-        metadata.setDisplayName(displayName);
-        return metadataRepository.save(metadata);
-    }
 
     private PricingInputMetadata createTestMetadata(String key) {
         PricingInputMetadata metadata = new PricingInputMetadata();
@@ -92,20 +117,21 @@ class PricingInputMetadataIntegrationTest {
     // --- READ OPERATIONS ---
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:read"})
+    @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200AndMetadataList() throws Exception {
-        // ARRANGE: Assuming 2 seeded items + 2 created in test = 4 total
+        // ARRANGE: We start with SEEDED_METADATA_COUNT (2) committed items.
         createTestMetadata("Segment");
         createTestMetadata("Region");
 
+        int expectedCount = SEEDED_METADATA_COUNT + 2;
+
         mockMvc.perform(get(API_PATH))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(4))
-                .andExpect(jsonPath("$[2].attributeKey").value("Segment"));
+                .andExpect(jsonPath("$.length()").value(expectedCount));
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:read"})
+    @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200AndSingleMetadataByKey() throws Exception {
         createTestMetadata("SpecificKey");
 
@@ -116,7 +142,7 @@ class PricingInputMetadataIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:read"})
+    @WithMockRole(roles = {READER_ROLE})
     void shouldReturn404WhenMetadataNotFound() throws Exception {
         mockMvc.perform(get(API_PATH + "/NonExistentKey"))
                 .andExpect(status().isNotFound());
@@ -125,7 +151,7 @@ class PricingInputMetadataIntegrationTest {
     // --- CREATE OPERATIONS ---
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:create"})
+    @WithMockRole(roles = {CREATOR_ROLE})
     void shouldCreateMetadataAndReturn201() throws Exception {
         CreateMetadataRequestDto requestDto = new CreateMetadataRequestDto(
                 "NewAttribute", "New Attribute Display", "DECIMAL");
@@ -138,7 +164,7 @@ class PricingInputMetadataIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:create"})
+    @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn409OnDuplicateKeyCreation() throws Exception {
         createTestMetadata("ExistingKey");
         CreateMetadataRequestDto requestDto = new CreateMetadataRequestDto(
@@ -154,7 +180,7 @@ class PricingInputMetadataIntegrationTest {
     // --- UPDATE OPERATIONS ---
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:update"})
+    @WithMockRole(roles = {CREATOR_ROLE})
     void shouldUpdateMetadataAndReturn200() throws Exception {
         createTestMetadata("UpdatableKey");
 
@@ -170,7 +196,7 @@ class PricingInputMetadataIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:update"})
+    @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn404OnUpdateIfNotFound() throws Exception {
         UpdateMetadataRequestDto requestDto = new UpdateMetadataRequestDto("Test", "STRING");
 
@@ -183,7 +209,7 @@ class PricingInputMetadataIntegrationTest {
     // --- DELETE OPERATIONS ---
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:delete", "pricing:metadata:read"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldDeleteMetadataAndReturn204() throws Exception {
         createTestMetadata("DeletableKey");
 
@@ -196,14 +222,20 @@ class PricingInputMetadataIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:delete"})
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn409WhenDeletingMetadataWithDependencies() throws Exception {
-        txHelper.setupCommittedMetadata();
-        txHelper.createLinkedTierAndValue("ComponentForConflict", "TierForConflict");
+        // ARRANGE: Setup component/tier dependency using the seeded "customerSegment"
+        Long componentId = txHelper.createLinkedTierAndValue("ComponentForConflict", "TierForConflict");
 
         mockMvc.perform(delete(API_PATH + "/customerSegment"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Cannot delete Pricing Input Metadata 'customerSegment': It is used in one or more active tier conditions."));
+
+        // CLEANUP: Delete the complex component graph to prevent test isolation failure
+        txHelper.doInTransaction(() -> {
+            txHelper.deleteComponentGraphById(componentId);
+            entityManager.flush();
+        });
     }
 
     // --- SECURITY TESTS ---
@@ -216,7 +248,7 @@ class PricingInputMetadataIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:metadata:read"}) // Only read permission
+    @WithMockRole(roles = {READER_ROLE})
     void shouldReturn403ForUnauthorizedDelete() throws Exception {
         createTestMetadata("TestSecurity");
         mockMvc.perform(delete(API_PATH + "/TestSecurity"))

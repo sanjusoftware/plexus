@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PriceValueRepository extends JpaRepository<PriceValue, Long> {
@@ -14,4 +15,6 @@ public interface PriceValueRepository extends JpaRepository<PriceValue, Long> {
     @Transactional
     @Query("DELETE FROM PriceValue pv WHERE pv.pricingTier.id = ?1")
     void deleteByPricingTierId(Long tierId);
+
+    void deleteByPricingTierIdIn(List<Long> pricingTierIds);
 }
