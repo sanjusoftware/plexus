@@ -13,8 +13,9 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -55,65 +56,101 @@ public class FeatureComponentIntegrationTest {
     private ProductFeatureLinkRepository linkRepository;
 
     @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
     private TestTransactionHelper txHelper;
 
-    // Shared data entities
-    private Product sharedProduct;
+    // Shared data entities - Must be static for use in @BeforeAll
+    private static Product sharedProduct;
+    private static Long EXISTING_PRODUCT_TYPE_ID;
 
     // --- Role Constants ---
     public static final String ROLE_PREFIX = "FCIT_";
     private static final String ADMIN_ROLE = ROLE_PREFIX + "CATALOG_ADMIN";
     private static final String READER_ROLE = ROLE_PREFIX + "CATALOG_READER";
+    private static final String UNAUTHORIZED_ROLE = ROLE_PREFIX + "UNAUTHORIZED_ROLE";
+
+
+    // =================================================================
+    // SETUP AND TEARDOWN (Committed Data Lifecycle)
+    // =================================================================
 
     /**
-     * Set up all required roles and permissions once before all tests run.
+     * Set up all required roles, permissions, and shared committed entities once before all tests run.
+     * This data is committed and visible to @WithMockRole.
      */
     @BeforeAll
-    static void setupRoles(@Autowired TestTransactionHelper txHelper) {
-        // ADMIN has all permissions needed for CRUD
+    static void setupCommittedData(@Autowired TestTransactionHelper txHelperStatic,
+                                   @Autowired ProductRepository productRepoStatic,
+                                   @Autowired ProductTypeRepository productTypeRepoStatic,
+                                   @Autowired FeatureComponentRepository featureRepoStatic,
+                                   @Autowired ProductFeatureLinkRepository linkRepoStatic) {
+
+        // 1. GLOBAL CLEANUP (Aggressive, ensures a clean start)
+        // Clean up entities created by this test class in case of previous test failure
+        txHelperStatic.doInTransaction(() -> {
+            linkRepoStatic.deleteAllInBatch();
+            featureRepoStatic.deleteAllInBatch();
+            productRepoStatic.deleteAllInBatch();
+            productTypeRepoStatic.deleteAllInBatch();
+        });
+        txHelperStatic.flushAndClear();
+
+        // 2. Setup Roles (Committed Transaction)
         Set<String> adminAuths = Set.of(
-                "catalog:feature:create",
-                "catalog:feature:read",
-                "catalog:feature:update",
-                "catalog:feature:delete"
+                "catalog:feature:create", "catalog:feature:read",
+                "catalog:feature:update", "catalog:feature:delete"
         );
-        // READER has only read permission
         Set<String> readerAuths = Set.of("catalog:feature:read");
+        Set<String> unauthorizedAuths = Set.of("some:other:permission");
 
-        // Commit the roles in separate transactions
-        txHelper.createRoleInDb(ADMIN_ROLE, adminAuths);
-        txHelper.createRoleInDb(READER_ROLE, readerAuths);
-    }
 
-    @BeforeEach
-    void setup() {
-        setupUniqueDependencies();
-    }
+        txHelperStatic.createRoleInDb(ADMIN_ROLE, adminAuths);
+        txHelperStatic.createRoleInDb(READER_ROLE, readerAuths);
+        txHelperStatic.createRoleInDb(UNAUTHORIZED_ROLE, unauthorizedAuths);
 
-    void setupUniqueDependencies() {
-        // Use the transaction helper to ensure the unique product types and products are created
-        // and committed only if they don't exist.
-        txHelper.doInTransaction(() -> {
-            // 1. Check/Create a minimal ProductType dependency first
-            ProductType sharedProductType = productTypeRepository.findByName("Test Type for Link")
+        // 3. Setup Committed Dependencies (ProductType and Product for Linking)
+        txHelperStatic.doInTransaction(() -> {
+            // a. Find/Create a minimal ProductType dependency
+            ProductType sharedProductType = productTypeRepoStatic.findByName("Test Type for Link")
                     .orElseGet(() -> {
                         ProductType newType = new ProductType();
                         newType.setName("Test Type for Link");
-                        return productTypeRepository.save(newType);
+                        return productTypeRepoStatic.save(newType);
                     });
 
-            // Set the instance variable for use in tests
-            this.sharedProduct = productRepository.findByName("Link Test Product")
+            EXISTING_PRODUCT_TYPE_ID = sharedProductType.getId();
+
+            // b. Find/Create a minimal Product entity to link to
+            sharedProduct = productRepoStatic.findByName("Link Test Product")
                     .orElseGet(() -> {
-                        // 2. Check/Create a minimal Product entity to link to
                         Product product = new Product();
                         product.setName("Link Test Product");
                         product.setStatus("ACTIVE");
                         product.setProductType(sharedProductType);
-                        return productRepository.save(product);
+                        return productRepoStatic.save(product);
                     });
         });
+
+        txHelperStatic.flushAndClear();
     }
+
+    /**
+     * Clean up ALL committed test data (created via committed helper or API) after each test.
+     */
+    @AfterEach
+    void tearDown() {
+        txHelper.doInTransaction(() -> {
+            linkRepository.deleteAllInBatch();
+            featureComponentRepository.deleteAllInBatch();
+        });
+        txHelper.flushAndClear();
+    }
+
+    // =================================================================
+    // HELPER METHODS
+    // =================================================================
 
     // Helper method to create a valid DTO for POST/PUT requests
     private CreateFeatureComponentRequestDto getCreateDto(String name) {
@@ -123,8 +160,7 @@ public class FeatureComponentIntegrationTest {
         return dto;
     }
 
-    // Helper method to create an entity directly in the DB
-    // NOTE: This helper is called by tests that rely on committed data (e.g., GET tests)
+    // Helper method to create an entity directly in the DB (data is committed)
     private FeatureComponent createFeatureComponentInDb(String name) {
         return txHelper.doInTransaction(() -> {
             return featureComponentRepository.findByName(name)
@@ -181,7 +217,7 @@ public class FeatureComponentIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockRole(roles = {}) // <-- No roles assigned, user is logged in but unauthorized
+    @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenReadingFeatureWithoutPermission() throws Exception {
         // The component must be created and committed before the test runs
         FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
@@ -289,13 +325,15 @@ public class FeatureComponentIntegrationTest {
         // Create a feature component
         FeatureComponent linkedComponent = createFeatureComponentInDb("LinkedFeature");
 
-        // Create the ProductFeatureLink using the Product
+        // Create the ProductFeatureLink using the static, committed Product
         ProductFeatureLink link = new ProductFeatureLink();
         link.setFeatureComponent(linkedComponent);
         link.setProduct(sharedProduct);
         link.setFeatureValue("Default Value Set");
 
-        linkRepository.save(link);
+        txHelper.doInTransaction(() -> {
+            linkRepository.save(link);
+        });
 
         // Attempt to delete the linked component
         mockMvc.perform(delete("/api/v1/features/{id}", linkedComponent.getId()))
