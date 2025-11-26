@@ -10,7 +10,7 @@ Plexus is a scalable banking platform built with Java and Spring Boot. It implem
 4.  **Rule Management Service (RMS) Integration:** Supports integration with external rules engines for dynamic calculation of discounts, waivers, and eligibility.
 5.  **Multi-Bank & Multi-Currency Support:** Designed for global deployment.
 
----
+***
 
 # Product Catalog and Pricing Model
 This system employs a decoupled, highly reusable architecture where Products are assembled by linking to reusable Components. This design prevents data duplication and centralizes maintenance for both feature configurations and complex pricing rules.
@@ -52,6 +52,21 @@ Plexus enforces security via an internally managed Role-Based Access Control (RB
 * **JWT Validation:** Tokens are validated against configurable claims (`iss`, `aud`, `exp`).
 * **Custom Authority Converter (`JwtAuthConverter`):** This component reads the custom **`roles`** claim (which supports an array of roles) from the JWT.
 * **Permission Mapping:** It uses the `PermissionMappingService` to fetch the complete set of unique, aggregated **Authorities** (`<domain>:<resource>:<action>`, e.g., `catalog:product:read`) from the internal database based on the roles present in the token.
+
+#### Sample Required JWT Payload
+For a token to be accepted and successfully authorize a user (e.g., a `SUPER_ADMIN`), the payload must include all configured claims:
+
+```json
+{
+  "sub": "dev_user_identifier",
+  "roles": ["SUPER_ADMIN", "ANALYST"], // MUST be a JSON array of role names
+  "iss": "http://localhost:8080",      // Must match security.jwt.issuer-uri
+  "aud": "bank-engine-api",            // Must match security.jwt.audience
+  "iat": 1732540800,                   // Issued At Timestamp (Unix epoch)
+  "exp": 1795697637                    // Expiration Timestamp (Unix epoch)
+}
+```
+
 
 ### B. Access Control
 Access is granted using method-level security with **`@PreAuthorize`**.
