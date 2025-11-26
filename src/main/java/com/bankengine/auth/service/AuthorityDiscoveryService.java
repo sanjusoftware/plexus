@@ -1,6 +1,7 @@
 package com.bankengine.auth.service;
 
 import org.springframework.aop.support.AopUtils;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -27,8 +28,13 @@ public class AuthorityDiscoveryService {
     /**
      * Scans all beans marked as @Controller or @RestController and extracts
      * all unique authority strings used in @PreAuthorize annotations.
+     * * The result is cached after the first execution for the application's lifetime,
+     * avoiding repeated reflection overhead.
      */
+    @Cacheable(value = "systemAuthorities", key = "'masterList'")
     public Set<String> discoverAllAuthorities() {
+        System.out.println("--- Executing Authority Discovery (Reflection Scan) ---");
+
         // 1. Get all beans annotated with @Controller or @RestController
         Stream<Object> controllerBeans = Stream.concat(
             applicationContext.getBeansWithAnnotation(RestController.class).values().stream(),
@@ -36,7 +42,7 @@ public class AuthorityDiscoveryService {
         ).distinct();
 
         // 2. Process the beans, handling potential Spring proxies
-        return controllerBeans
+        Set<String> authorities = controllerBeans
             .flatMap(bean -> {
                 // Get the target class, bypassing any Spring proxies (CGLIB)
                 Class<?> targetClass = AopUtils.getTargetClass(bean);
@@ -52,6 +58,9 @@ public class AuthorityDiscoveryService {
             // 5. Collect unique, non-null authorities
             .filter(authority -> authority != null && !authority.isEmpty())
             .collect(Collectors.toSet());
+
+        System.out.println("--- Authority Discovery Complete. Found " + authorities.size() + " authorities. ---");
+        return authorities;
     }
 
     /**
