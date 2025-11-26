@@ -3,6 +3,12 @@ package com.bankengine.auth.controller;
 import com.bankengine.auth.dto.RoleAuthorityMappingDto;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.RoleManagementService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,9 +19,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Set;
 
+
 @RestController
 @RequestMapping("/api/v1/roles")
 @RequiredArgsConstructor
+@Tag(name = "Role Management", description = "Endpoints for managing roles, authorities, and permissions.")
 public class RoleMappingController {
 
     private final RoleManagementService roleManagementService;
@@ -23,10 +31,16 @@ public class RoleMappingController {
 
     // --- Role Management Endpoints ---
 
-    /**
-     * Creates or updates a Role and assigns the given set of authorities to it.
-     * Requires ADMIN privileges.
-     */
+    @Operation(
+        summary = "Create or Update Role-Authority Mapping",
+        description = "Creates a new role or updates an existing one, assigning the specified set of authorities. Requires 'auth:role:write' authority.",
+        tags = {"Role Management"},
+        responses = {
+            @ApiResponse(responseCode = "201", description = "Role mapping created/updated successfully."),
+            @ApiResponse(responseCode = "400", description = "Invalid input or validation failed."),
+            @ApiResponse(responseCode = "403", description = "Forbidden. Missing 'auth:role:write' authority.")
+        }
+    )
     @PostMapping("/mapping")
     @PreAuthorize("hasAuthority('auth:role:write')")
     public ResponseEntity<Void> mapAuthoritiesToRole(@Valid @RequestBody RoleAuthorityMappingDto dto) {
@@ -34,20 +48,45 @@ public class RoleMappingController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    /**
-     * Retrieves the authorities mapped to a specific role.
-     * Requires ADMIN privileges.
-     */
+    @Operation(
+        summary = "Retrieve Authorities by Role Name",
+        description = "Fetches the complete set of authorities (permissions) currently mapped to the given role. Requires 'auth:role:read' authority.",
+        tags = {"Role Management"},
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Successfully retrieved authorities.",
+                content = @Content(mediaType = "application/json",
+                                   schema = @Schema(implementation = String.class)) // The schema is Set<String>
+            ),
+            @ApiResponse(responseCode = "404", description = "Role not found."),
+            @ApiResponse(responseCode = "403", description = "Forbidden. Missing 'auth:role:read' authority.")
+        }
+    )
     @GetMapping("/{roleName}")
     @PreAuthorize("hasAuthority('auth:role:read')")
-    public ResponseEntity<Set<String>> getRoleAuthorities(@PathVariable String roleName) {
+    public ResponseEntity<Set<String>> getRoleAuthorities(
+        @Parameter(description = "The unique name of the role (e.g., 'DEV_ADMIN')")
+        @PathVariable String roleName
+    ) {
         Set<String> authorities = roleManagementService.getAuthoritiesByRoleName(roleName);
         return ResponseEntity.ok(authorities);
     }
 
-    /**
-     * Lists all defined roles in the system.
-     */
+    @Operation(
+        summary = "List All Defined Roles",
+        description = "Retrieves a list of all unique role names currently defined in the system. Requires 'auth:role:read' authority.",
+        tags = {"Role Management"},
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Successfully retrieved the list of role names.",
+                content = @Content(mediaType = "application/json",
+                                   schema = @Schema(implementation = String.class)) // The schema is List<String>
+            ),
+            @ApiResponse(responseCode = "403", description = "Forbidden. Missing 'auth:role:read' authority.")
+        }
+    )
     @GetMapping
     @PreAuthorize("hasAuthority('auth:role:read')")
     public ResponseEntity<List<String>> getAllRoleNames() {
@@ -57,10 +96,20 @@ public class RoleMappingController {
 
     // --- UI Utility Endpoints ---
 
-    /**
-     * Fetches all unique authorities used across ALL controllers in the application
-     * via reflection. This list is used by the Admin UI to build the permission assignment matrix.
-     */
+    @Operation(
+        summary = "Discover All System Authorities",
+        description = "Utility endpoint to discover all unique authorities (permissions) used across the entire application by scanning code. Used for Admin UI configuration. Requires 'auth:role:read' authority.",
+        tags = {"UI Utility"},
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Successfully retrieved all discoverable authorities.",
+                content = @Content(mediaType = "application/json",
+                                   schema = @Schema(implementation = String.class)) // The schema is Set<String>
+            ),
+            @ApiResponse(responseCode = "403", description = "Forbidden. Missing 'auth:role:read' authority.")
+        }
+    )
     @GetMapping("/system-authorities")
     @PreAuthorize("hasAuthority('auth:role:read')") // Can be granted to a lower-level reader
     public ResponseEntity<Set<String>> getSystemAuthorities() {

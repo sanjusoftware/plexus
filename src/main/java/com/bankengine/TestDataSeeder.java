@@ -1,5 +1,7 @@
 package com.bankengine;
 
+import com.bankengine.auth.model.Role;
+import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
 import com.bankengine.catalog.model.Product;
@@ -15,12 +17,16 @@ import com.bankengine.pricing.model.TierCondition.Operator;
 import com.bankengine.pricing.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @Profile("dev")
@@ -37,6 +43,8 @@ public class TestDataSeeder implements CommandLineRunner {
     private final ProductPricingLinkRepository productPricingLinkRepository;
     private final TierConditionRepository tierConditionRepository;
     private final PricingInputMetadataRepository pricingInputMetadataRepository;
+    private final RoleRepository roleRepository;
+    private final ApplicationContext applicationContext; // ADDED FIELD
 
     public TestDataSeeder(
             ProductTypeRepository productTypeRepository,
@@ -46,7 +54,11 @@ public class TestDataSeeder implements CommandLineRunner {
             PricingComponentRepository pricingComponentRepository,
             PricingTierRepository pricingTierRepository,
             PriceValueRepository priceValueRepository,
-            ProductPricingLinkRepository productPricingLinkRepository, TierConditionRepository tierConditionRepository, PricingInputMetadataRepository pricingInputMetadataRepository) {
+            ProductPricingLinkRepository productPricingLinkRepository,
+            TierConditionRepository tierConditionRepository,
+            PricingInputMetadataRepository pricingInputMetadataRepository,
+            RoleRepository roleRepository,
+            ApplicationContext applicationContext) { // ADDED ApplicationContext to constructor
         this.productTypeRepository = productTypeRepository;
         this.featureComponentRepository = featureComponentRepository;
         this.productRepository = productRepository;
@@ -57,17 +69,100 @@ public class TestDataSeeder implements CommandLineRunner {
         this.productPricingLinkRepository = productPricingLinkRepository;
         this.tierConditionRepository = tierConditionRepository;
         this.pricingInputMetadataRepository = pricingInputMetadataRepository;
+        this.roleRepository = roleRepository;
+        this.applicationContext = applicationContext; // Assign ApplicationContext
     }
 
     @Override
-    @Transactional
     public void run(String... args) {
         System.out.println("--- Seeding Development Data ---");
-        seedProductTypes();
-        seedFeaturesAndProducts();
-        seedPricingInputMetadata();
-        seedPricingComponents();
+
+        // FIX: Get a proxy reference to *this* bean to ensure @Transactional methods are intercepted.
+        TestDataSeeder proxy = applicationContext.getBean(TestDataSeeder.class);
+
+        // Call the transactional methods via the proxy
+        proxy.seedTestRoles();
+        proxy.seedProductTypes();
+        proxy.seedFeaturesAndProducts();
+        proxy.seedPricingInputMetadata();
+        proxy.seedPricingComponents();
+
         System.out.println("--- Seeding Complete ---");
+    }
+
+    @Transactional
+    public void seedTestRoles() {
+        System.out.println("Seeding Application Roles...");
+
+        // The exhaustive list of all 25 system authorities
+        final Set<String> ALL_AUTHORITIES = Set.of(
+                "pricing:metadata:read", "catalog:product:activate", "pricing:metadata:create",
+                "pricing:metadata:update", "pricing:tier:create", "pricing:component:create",
+                "pricing:metadata:delete", "catalog:product:update", "catalog:feature:create",
+                "catalog:product-type:read", "catalog:product:read", "pricing:component:delete",
+                "pricing:tier:delete", "pricing:tier:update", "auth:role:write",
+                "catalog:feature:read", "pricing:component:read", "catalog:feature:delete",
+                "pricing:component:update", "catalog:product:deactivate", "catalog:product:create",
+                "pricing:calculate", "catalog:feature:update", "auth:role:read",
+                "catalog:product-type:create"
+        );
+
+        // --- 1. Define Permissions Sets ---
+
+        // Read Permissions (for Analyst role)
+        Set<String> readPermissions = ALL_AUTHORITIES.stream()
+                .filter(p -> p.endsWith(":read"))
+                .collect(Collectors.toSet());
+        readPermissions.add("pricing:calculate");
+
+        // Pricing Permissions (for Pricing Engineer)
+        Set<String> pricingPermissions = ALL_AUTHORITIES.stream()
+                .filter(p -> p.startsWith("pricing:") && !p.endsWith(":read"))
+                .collect(Collectors.toSet());
+        pricingPermissions.addAll(Set.of(
+                "pricing:component:read",
+                "pricing:metadata:read",
+                "pricing:calculate"
+        ));
+
+        // Catalog Permissions (for Product Manager)
+        Set<String> catalogPermissions = ALL_AUTHORITIES.stream()
+                .filter(p -> p.startsWith("catalog:") && !p.endsWith(":read"))
+                .collect(Collectors.toSet());
+        catalogPermissions.addAll(Set.of(
+                "catalog:product:read",
+                "catalog:feature:read",
+                "catalog:product-type:read"
+        ));
+
+        // Auth Permissions (for Auth Manager)
+        Set<String> authPermissions = ALL_AUTHORITIES.stream()
+                .filter(p -> p.startsWith("auth:"))
+                .collect(Collectors.toSet());
+
+
+        // --- 2. Helper Method to Create and Save Role ---
+        List<Role> rolesToSeed = List.of(
+                createRole("SUPER_ADMIN", ALL_AUTHORITIES), // Full control
+                createRole("PRICING_ENGINEER", pricingPermissions),
+                createRole("PRODUCT_MANAGER", catalogPermissions),
+                createRole("AUTH_MANAGER", authPermissions),
+                createRole("ANALYST", readPermissions)
+        );
+
+        // Filter out roles that already exist and save the rest
+        rolesToSeed.stream()
+                .filter(role -> roleRepository.findByName(role.getName()).isEmpty())
+                .forEach(roleRepository::save);
+
+        System.out.println("Seeded or ensured existence of 5 application roles.");
+    }
+
+    private Role createRole(String name, Set<String> authorities) {
+        Role role = new Role();
+        role.setName(name);
+        role.setAuthorities(new HashSet<>(authorities));
+        return role;
     }
 
     private PricingInputMetadata createMetadata(String key, String displayName, String dataType) {
@@ -78,7 +173,8 @@ public class TestDataSeeder implements CommandLineRunner {
         return metadata;
     }
 
-    private void seedPricingInputMetadata() {
+    @Transactional
+    public void seedPricingInputMetadata() {
         if (pricingInputMetadataRepository.count() == 0) {
             System.out.println("Seeding Pricing Input Metadata...");
             pricingInputMetadataRepository.saveAll(List.of(
@@ -88,7 +184,8 @@ public class TestDataSeeder implements CommandLineRunner {
         }
     }
 
-    private void seedProductTypes() {
+    @Transactional
+    public void seedProductTypes() {
         if (productTypeRepository.count() == 0) {
             productTypeRepository.saveAll(List.of(
                     createType("CASA"),
@@ -105,7 +202,8 @@ public class TestDataSeeder implements CommandLineRunner {
         return type;
     }
 
-    private void seedFeaturesAndProducts() {
+    @Transactional
+    public void seedFeaturesAndProducts() {
         // --- 1. Get Product Types for Foreign Keys ---
         ProductType casaType = productTypeRepository.findByName("CASA")
                 .orElseThrow(() -> new RuntimeException("CASA type not found."));
@@ -154,7 +252,8 @@ public class TestDataSeeder implements CommandLineRunner {
         return condition;
     }
 
-    private void seedPricingComponents() {
+    @Transactional
+    public void seedPricingComponents() {
 
         // --- 1. Seed Component: Annual Card Fee ---
         PricingComponent annualFee = new PricingComponent();

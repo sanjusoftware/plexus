@@ -15,6 +15,7 @@ import org.kie.api.runtime.KieContainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 @Configuration
 public class DroolsConfig {
@@ -32,6 +33,7 @@ public class DroolsConfig {
     public static final String KSESSION_NAME = "KSession1";
 
     @Bean
+    @Lazy // This prevents synchronous blocking during startup
     public KieContainer kieContainer() {
         KieServices kieServices = KieServices.Factory.get();
 
@@ -46,7 +48,7 @@ public class DroolsConfig {
 
         // Add the rule content to the file system
         String ruleContent = ruleBuilderService.buildAllRulesForCompilation();
-        kieFileSystem.write("src/main/resources/rules/initial_rules.drl", ruleContent);
+        kieFileSystem.write("src/main/resources/bankengine/pricing/rules/initial_rules.drl", ruleContent);
 
         // Define the release ID and write the POM
         ReleaseId releaseId = kieServices.newReleaseId(GROUP_ID, ARTIFACT_ID, VERSION);

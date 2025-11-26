@@ -46,8 +46,7 @@ public class DroolsRuleBuilderService {
         finalDrl.append(getDrlHeader());
         List<PricingComponent> components = componentRepository.findAllEagerlyForRules();
 
-        // 1. Pre-load All Required Metadata (Optional but efficient)
-        // We now use the bulk fetch from the dedicated service.
+        // --- 2. Pre-loading Metadata ---
         Set<String> allRequiredAttributes = components.stream()
                 .flatMap(component -> component.getPricingTiers().stream())
                 .flatMap(tier -> tier.getConditions().stream())
