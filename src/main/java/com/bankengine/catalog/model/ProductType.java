@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "product_type")
+@Table(name = "product_type", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"bank_id", "name"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,6 +21,6 @@ public class ProductType extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name; // e.g., "Loan", "Credit Card", "CASA"
 }

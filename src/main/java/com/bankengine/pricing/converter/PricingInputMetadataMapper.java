@@ -1,12 +1,13 @@
 package com.bankengine.pricing.converter;
 
+import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.dto.CreateMetadataRequestDto;
 import com.bankengine.pricing.dto.MetadataResponseDto;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(config = MapStructConfig.class)
 public interface PricingInputMetadataMapper {
 
     /**

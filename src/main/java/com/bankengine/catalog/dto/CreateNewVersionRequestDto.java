@@ -20,7 +20,4 @@ public class CreateNewVersionRequestDto {
 
     @NotNull(message = "New effective date is required for the new version.")
     private LocalDate newEffectiveDate;
-
-    // The client would then use the synchronization endpoints (PUT /features, PUT /pricing)
-    // on the ID of the newly created version to make structural changes.
 }

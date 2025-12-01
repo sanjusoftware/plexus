@@ -1,5 +1,6 @@
 package com.bankengine.catalog.service;
 
+import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.converter.ProductTypeMapper;
 import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
 import com.bankengine.catalog.model.ProductType;
@@ -42,13 +43,20 @@ public class ProductTypeServiceTest {
 
     @Test
     void testCreateProductType() {
-        CreateProductTypeRequestDto dto = new CreateProductTypeRequestDto();
-        when(productTypeMapper.toEntity(dto)).thenReturn(new ProductType());
-        when(productTypeRepository.save(any(ProductType.class))).thenReturn(new ProductType());
+        final String TEST_BANK_ID = "BANK_A_UNIT_TEST";
+        BankContextHolder.setBankId(TEST_BANK_ID);
 
-        ProductType result = productTypeService.createProductType(dto);
+        try {
+            CreateProductTypeRequestDto dto = new CreateProductTypeRequestDto();
+            when(productTypeMapper.toEntity(dto)).thenReturn(new ProductType());
+            when(productTypeRepository.save(any(ProductType.class))).thenReturn(new ProductType());
 
-        assertNotNull(result);
-        verify(productTypeRepository, times(1)).save(any(ProductType.class));
+            ProductType result = productTypeService.createProductType(dto);
+
+            assertNotNull(result);
+            verify(productTypeRepository, times(1)).save(any(ProductType.class));
+        } finally {
+            BankContextHolder.clear();
+        }
     }
 }

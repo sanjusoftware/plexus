@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "feature_component")
+@Table(name = "feature_component", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"bank_id", "name"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,7 +19,7 @@ public class FeatureComponent extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     @NonNull
     private String name; // e.g., "Max_Tenure", "Has_Overdraft"
 

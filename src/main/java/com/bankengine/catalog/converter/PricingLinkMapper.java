@@ -2,14 +2,14 @@ package com.bankengine.catalog.converter;
 
 import com.bankengine.catalog.dto.ProductPricingDto;
 import com.bankengine.catalog.dto.ProductPricingLinkDto;
+import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.model.ProductPricingLink;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(config = MapStructConfig.class)
 public interface PricingLinkMapper {
 
     @Mapping(target = "pricingComponentName", source = "link.pricingComponent.name")
@@ -29,5 +29,7 @@ public interface PricingLinkMapper {
     @Mapping(target = "pricingComponent", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "fixedValue", ignore = true)
+    @Mapping(target = "useRulesEngine", ignore = true)
     ProductPricingLink toEntity(ProductPricingDto dto);
 }

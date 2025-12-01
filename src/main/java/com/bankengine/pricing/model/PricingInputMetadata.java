@@ -11,7 +11,7 @@ import lombok.Setter;
  */
 @Entity
 @Table(name = "pricing_input_metadata", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"attribute_key"})
+        @UniqueConstraint(columnNames = {"bank_id", "attribute_key"})
 })
 @Getter
 @Setter

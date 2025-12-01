@@ -1,17 +1,17 @@
 package com.bankengine.pricing.converter;
 
+import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.dto.*;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(config = MapStructConfig.class)
 public interface PricingComponentMapper {
 
     PriceValueResponseDto toPriceValueDto(PriceValue entity);

@@ -1,6 +1,7 @@
 package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
+import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
@@ -15,6 +16,7 @@ import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.test.config.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -22,10 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,22 +35,29 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
 @Transactional
-public class ProductIntegrationTest {
+public class ProductIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-    @Autowired private ProductRepository productRepository;
-    @Autowired private ProductTypeRepository productTypeRepository;
-    @Autowired private FeatureComponentRepository featureComponentRepository;
-    @Autowired private PricingComponentRepository pricingComponentRepository;
-    @Autowired private ProductFeatureLinkRepository featureLinkRepository;
-    @Autowired private ProductPricingLinkRepository pricingLinkRepository;
-    @Autowired private EntityManager entityManager;
-    @Autowired private TestTransactionHelper txHelper;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ProductTypeRepository productTypeRepository;
+    @Autowired
+    private FeatureComponentRepository featureComponentRepository;
+    @Autowired
+    private PricingComponentRepository pricingComponentRepository;
+    @Autowired
+    private ProductFeatureLinkRepository featureLinkRepository;
+    @Autowired
+    private ProductPricingLinkRepository pricingLinkRepository;
+    @Autowired
+    private EntityManager entityManager;
+    @Autowired
+    private TestTransactionHelper txHelper;
 
     private static Long EXISTING_PRODUCT_TYPE_ID;
     private final String PRODUCT_API_BASE = "/api/v1/products";
@@ -68,8 +74,6 @@ public class ProductIntegrationTest {
 
     /**
      * Set up committed, required roles and the base ProductType once before all tests run.
-     * This data must be committed because @WithMockRole requires roles to exist in the DB,
-     * and ProductType is static setup data required by nearly all tests.
      */
     @BeforeAll
     static void setupRoles(@Autowired TestTransactionHelper txHelperStatic,
@@ -78,48 +82,51 @@ public class ProductIntegrationTest {
                            @Autowired ProductFeatureLinkRepository featureLinkRepoStatic,
                            @Autowired ProductPricingLinkRepository pricingLinkRepoStatic) {
 
-        // 1. AGGRESSIVE GLOBAL CLEANUP: Run once to ensure the entire schema is clean
-        // before starting the test class (in case of previous test failure).
-        txHelperStatic.doInTransaction(() -> {
-            // NOTE: We must delete ProductType here, but not in @AfterEach.
-            featureLinkRepoStatic.deleteAllInBatch();
-            pricingLinkRepoStatic.deleteAllInBatch();
-            productRepoStatic.deleteAllInBatch();
-            productTypeRepoStatic.deleteAllInBatch();
-        });
-        txHelperStatic.flushAndClear();
+        // CRITICAL: Set the thread-local bank context for the static method's thread
+        // This relies on TEST_BANK_ID being public/protected in AbstractIntegrationTest.
+        BankContextHolder.setBankId(TEST_BANK_ID);
 
-        // 2. Setup Roles and Base ProductType (Committed Transaction)
-        Set<String> adminAuths = Set.of(
-                "catalog:product:create",
-                "catalog:product:read",
-                "catalog:product:update",
-                "catalog:product:activate",
-                "catalog:product:deactivate"
-        );
-        Set<String> readerAuths = Set.of("catalog:product:read");
-        Set<String> unauthorizedAuths = Set.of("some:other:permission");
+        try {
+            // 1. AGGRESSIVE GLOBAL CLEANUP
+            txHelperStatic.doInTransaction(() -> {
+                featureLinkRepoStatic.deleteAllInBatch();
+                pricingLinkRepoStatic.deleteAllInBatch();
+                productRepoStatic.deleteAllInBatch();
+                productTypeRepoStatic.deleteAllInBatch();
+            });
+            txHelperStatic.flushAndClear();
 
-        // Use txHelper for committed creation of roles (unique name avoids suite conflict)
-        txHelperStatic.createRoleInDb(ADMIN_ROLE, adminAuths);
-        txHelperStatic.createRoleInDb(READER_ROLE, readerAuths);
-        txHelperStatic.createRoleInDb(UNAUTHORIZED_ROLE, unauthorizedAuths);
+            // 2. Setup Roles and Base ProductType (Committed Transaction)
+            Set<String> adminAuths = Set.of(
+                    "catalog:product:create",
+                    "catalog:product:read",
+                    "catalog:product:update",
+                    "catalog:product:activate",
+                    "catalog:product:deactivate"
+            );
+            Set<String> readerAuths = Set.of("catalog:product:read");
+            Set<String> unauthorizedAuths = Set.of("some:other:permission");
 
-        // Setup Base ProductType (Committed Transaction)
-        txHelperStatic.doInTransaction(() -> {
-            // Find or create the base type
-            ProductType productType = productTypeRepoStatic.findByName("Base Checking Type")
-                    .orElseGet(() -> {
-                        ProductType newType = new ProductType();
-                        newType.setName("Base Checking Type");
-                        return productTypeRepoStatic.save(newType);
-                    });
+            txHelperStatic.createRoleInDb(ADMIN_ROLE, adminAuths);
+            txHelperStatic.createRoleInDb(READER_ROLE, readerAuths);
+            txHelperStatic.createRoleInDb(UNAUTHORIZED_ROLE, unauthorizedAuths);
 
-            // Assign the static ID
-            EXISTING_PRODUCT_TYPE_ID = productType.getId();
-        });
+            txHelperStatic.doInTransaction(() -> {
+                ProductType productType = productTypeRepoStatic.findByName("Base Checking Type")
+                        .orElseGet(() -> {
+                            ProductType newType = new ProductType();
+                            newType.setName("Base Checking Type");
+                            newType.setBankId(TEST_BANK_ID);
+                            return productTypeRepoStatic.save(newType);
+                        });
 
-        txHelperStatic.flushAndClear();
+                EXISTING_PRODUCT_TYPE_ID = productType.getId();
+            });
+
+            txHelperStatic.flushAndClear();
+        } finally {
+            BankContextHolder.clear();
+        }
     }
 
     /**
@@ -155,11 +162,13 @@ public class ProductIntegrationTest {
     // HELPER METHODS
     // =================================================================
 
-    /** Helper to create a product type entity. */
+    /**
+     * Helper to create a product type entity.
+     */
     private Long createProductType(String name) {
         ProductType productType = new ProductType();
         productType.setName(name);
-        // This is test data, created within the @Transactional class scope, so it rolls back.
+        productType.setBankId(TEST_BANK_ID);
         return productTypeRepository.save(productType).getId();
     }
 
@@ -188,17 +197,21 @@ public class ProductIntegrationTest {
         return root.path("id").asLong();
     }
 
-    /** Simplified helper for common product creation scenarios (Active/Draft). */
+    /**
+     * Simplified helper for common product creation scenarios (Active/Draft).
+     */
     private Long createProductViaApi(String status) throws Exception {
         LocalDate effectiveDate = status.equals("ACTIVE")
                 ? LocalDate.now().minusDays(1)
                 : LocalDate.now().plusDays(1);
 
-        return createProductViaApi(status, status + " Product", "BC-001",
+        return createProductViaApi(status, status + " Product", TEST_BANK_ID,
                 EXISTING_PRODUCT_TYPE_ID, effectiveDate, null);
     }
 
-    /** Standard DTO for creation tests (no complex logic, just default values). */
+    /**
+     * Standard DTO for creation tests (no complex logic, just default values).
+     */
     private CreateProductRequestDto getStandardCreateDto(String status) {
         CreateProductRequestDto dto = new CreateProductRequestDto();
         dto.setName("Standard Product Name");
@@ -209,16 +222,31 @@ public class ProductIntegrationTest {
         return dto;
     }
 
-    /** Helper to create multiple products for search testing. */
+    /**
+     * Helper to create multiple products for search testing.
+     */
     private void setupMultipleProductsForSearch() throws Exception {
-        // Requires ADMIN_ROLE context for 'create' permission
-        createProductViaApi("DRAFT", "Draft Product A", "BANKA", EXISTING_PRODUCT_TYPE_ID, LocalDate.now().plusDays(1), null);
-        createProductViaApi("ACTIVE", "Active Checking", "BANKA", EXISTING_PRODUCT_TYPE_ID, LocalDate.now().minusDays(1), null);
+        // --- PRODUCTS FOR CURRENT TENANT (TEST_BANK_ID) - EXPECTED TO BE VISIBLE (4 TOTAL) ---
+        createProductViaApi("DRAFT", "Draft Product A", TEST_BANK_ID, EXISTING_PRODUCT_TYPE_ID, LocalDate.now().plusDays(1), null);
+        createProductViaApi("ACTIVE", "Active Checking", TEST_BANK_ID, EXISTING_PRODUCT_TYPE_ID, LocalDate.now().minusDays(1), null);
 
-        // This product type is committed, so it also needs to be cleaned up by @AfterEach's committed cleanup
         Long typeBId = createProductType("Type B");
-        createProductViaApi("INACTIVE", "Inactive Savings", "BANKB", typeBId, LocalDate.now().minusMonths(1), LocalDate.now().minusDays(10));
-        createProductViaApi("ACTIVE", "Premium Card", "BANKA", EXISTING_PRODUCT_TYPE_ID, LocalDate.now().minusDays(1), null);
+        createProductViaApi("INACTIVE", "Inactive Savings", TEST_BANK_ID, typeBId, LocalDate.now().minusMonths(1), LocalDate.now().minusDays(10));
+        createProductViaApi("ACTIVE", "Premium Card", TEST_BANK_ID, EXISTING_PRODUCT_TYPE_ID, LocalDate.now().minusDays(1), null);
+
+        // --- PRODUCTS FOR FOREIGN TENANT (OTHER_BANK_ID) - EXPECTED TO BE HIDDEN (2 TOTAL) ---
+        BankContextHolder.setBankId(OTHER_BANK_ID);
+        try {
+            // Create Product Type for the foreign bank
+            Long foreignTypeId = createProductType("Foreign Type X");
+
+            // Create products explicitly tagged with the foreign bank ID
+            createProductViaApi("ACTIVE", "Foreign Product 1", OTHER_BANK_ID, foreignTypeId, LocalDate.now().minusDays(1), null);
+            createProductViaApi("DRAFT", "Foreign Product 2", OTHER_BANK_ID, foreignTypeId, LocalDate.now().plusDays(1), null);
+        } finally {
+            // CRITICAL: Always clear the context after creation
+            BankContextHolder.clear();
+        }
     }
 
 
@@ -238,11 +266,9 @@ public class ProductIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200WhenAccessingSecureEndpointWithToken() throws Exception {
-        // ARRANGE: Need committed data for a valid response
         Product product = new Product();
         product.setName("Test Security Product");
-        // Since this test doesn't rely on API creation, we use the repo directly.
-        // It will be rolled back by the class-level @Transactional.
+        product.setBankId(TEST_BANK_ID);
         product.setProductType(productTypeRepository.findById(EXISTING_PRODUCT_TYPE_ID).get());
         productRepository.save(product);
 
@@ -396,7 +422,8 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockRole(roles = {ADMIN_ROLE}) // ADMIN has 'activate'
+    @WithMockRole(roles = {ADMIN_ROLE})
+        // ADMIN has 'activate'
     void shouldActivateDraftProductAndSetStatusToActive() throws Exception {
         // ARRANGE: Create a DRAFT product with future effective date
         Long productId = createProductViaApi("DRAFT");
@@ -404,7 +431,9 @@ public class ProductIntegrationTest {
 
         // Simplified DTO creation for activation
         String activationDtoJson = objectMapper.writeValueAsString(new Object() {
-            public LocalDate getEffectiveDate() { return activationDate; }
+            public LocalDate getEffectiveDate() {
+                return activationDate;
+            }
         });
 
         // ACT: Call POST /activate
@@ -417,7 +446,8 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockRole(roles = {ADMIN_ROLE}) // ADMIN has 'deactivate'
+    @WithMockRole(roles = {ADMIN_ROLE})
+        // ADMIN has 'deactivate'
     void shouldDeactivateActiveProductAndSetStatusToInactive() throws Exception {
         // ARRANGE: Create an ACTIVE product
         Long productId = createProductViaApi("ACTIVE");
@@ -431,7 +461,8 @@ public class ProductIntegrationTest {
     }
 
     @Test
-    @WithMockRole(roles = {ADMIN_ROLE}) // ADMIN has 'update'
+    @WithMockRole(roles = {ADMIN_ROLE})
+        // ADMIN has 'update'
     void shouldExtendProductExpirationDate() throws Exception {
         // ARRANGE: Create an ACTIVE product
         Long productId = createProductViaApi("ACTIVE");
@@ -447,51 +478,67 @@ public class ProductIntegrationTest {
                 .andExpect(jsonPath("$.expirationDate").value(newExpirationDate.toString()));
     }
 
-// Versioning (Copy-and-Update) Tests
+    // Versioning (Copy-and-Update) Tests
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldCreateNewVersionWhenActiveProductIsVersioned() throws Exception {
-        // ARRANGE: Create a base ACTIVE product (V1)
-        Product oldProduct = productRepository.findById(createProductViaApi("ACTIVE")).get();
-        LocalDate newEffectiveDate = LocalDate.now().plusMonths(3);
+        BankContextHolder.setBankId(TEST_BANK_ID);
+        try {
+            // ARRANGE: Create a base ACTIVE product (V1)
+            Product oldProduct = productRepository.findById(createProductViaApi("ACTIVE")).get();
+            LocalDate newEffectiveDate = LocalDate.now().plusMonths(3);
 
-        // ARRANGE: Link features and pricing to the old product (These are auto-rolled back)
-        FeatureComponent feature = featureComponentRepository.save(new FeatureComponent("Test Feature", FeatureComponent.DataType.STRING));
-        featureLinkRepository.save(new ProductFeatureLink(oldProduct, feature, "Test Value"));
+            // ARRANGE: Link features and pricingComponent to the old product (These are auto-rolled back)
+            FeatureComponent feature = new FeatureComponent("Test Feature", FeatureComponent.DataType.STRING);
+            feature.setBankId(TEST_BANK_ID);
+            feature = featureComponentRepository.save(feature);
 
-        PricingComponent pricing = pricingComponentRepository.save(new PricingComponent("Test Pricing", PricingComponent.ComponentType.FEE));
-        pricingLinkRepository.save(new ProductPricingLink(oldProduct, pricing, "Test Context"));
+            ProductFeatureLink featureLink = new ProductFeatureLink(oldProduct, feature, "Test Value");
+            featureLink.setBankId(TEST_BANK_ID);
+            featureLinkRepository.save(featureLink);
 
-        // Refresh the entity to ensure associations are loaded for the service call
-        entityManager.flush();
-        entityManager.refresh(oldProduct);
+            PricingComponent pricingComponent = new PricingComponent("Test Pricing", PricingComponent.ComponentType.FEE);
+            pricingComponent.setBankId(TEST_BANK_ID);
+            pricingComponent = pricingComponentRepository.save(pricingComponent);
 
-        // ARRANGE: Setup DTO
-        CreateNewVersionRequestDto versionDto = new CreateNewVersionRequestDto("Gold Checking Account V2.0", newEffectiveDate);
+            ProductPricingLink pricingLink = new ProductPricingLink(oldProduct, pricingComponent, "Test Context", null, true);
+            pricingLink.setBankId(TEST_BANK_ID);
+            pricingLinkRepository.save(pricingLink);
 
-        // ACT: Call POST /new-version
-        String responseJson = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProduct.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(versionDto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("DRAFT"))
-                .andReturn().getResponse().getContentAsString();
+            // Refresh the entity to ensure associations are loaded for the service call
+            entityManager.flush();
+            entityManager.refresh(oldProduct);
 
-        Long newProductId = objectMapper.readValue(responseJson, ProductResponseDto.class).getId();
+            // ARRANGE: Setup DTO
+            CreateNewVersionRequestDto versionDto = new CreateNewVersionRequestDto("Gold Checking Account V2.0", newEffectiveDate);
 
-        // ASSERT 1: Verify the old product (V1) was archived
-        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProduct.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ARCHIVED"))
-                .andExpect(jsonPath("$.expirationDate").value(newEffectiveDate.minusDays(1).toString()));
+            // ACT: Call POST /new-version
+            String responseJson = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProduct.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(versionDto)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.status").value("DRAFT"))
+                    .andReturn().getResponse().getContentAsString();
 
-        // ASSERT 2: Verify the new product (V2) has the cloned links
-        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", newProductId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.features.length()").value(1))
-                .andExpect(jsonPath("$.features[0].featureName").value("Test Feature"))
-                .andExpect(jsonPath("$.pricing.length()").value(1));
+            Long newProductId = objectMapper.readValue(responseJson, ProductResponseDto.class).getId();
+
+            // ASSERT 1: Verify the old product (V1) was archived
+            mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProduct.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("ARCHIVED"))
+                    .andExpect(jsonPath("$.expirationDate").value(newEffectiveDate.minusDays(1).toString()));
+
+            // ASSERT 2: Verify the new product (V2) has the cloned links
+            mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", newProductId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.features.length()").value(1))
+                    .andExpect(jsonPath("$.features[0].featureName").value("Test Feature"))
+                    .andExpect(jsonPath("$.pricing.length()").value(1));
+
+        } finally {
+            BankContextHolder.clear();
+        }
     }
 
     @Test
@@ -515,10 +562,8 @@ public class ProductIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturnAllProductsWhenNoFilterCriteriaAreProvided() throws Exception {
-        // This helper uses createProductViaApi, which commits data, requiring cleanup.
         setupMultipleProductsForSearch();
 
-        // ACT & ASSERT: Send GET request with NO query parameters
         mockMvc.perform(get(PRODUCT_API_BASE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -529,7 +574,7 @@ public class ProductIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldFilterProductsByStatusAndName() throws Exception {
-        setupMultipleProductsForSearch(); // ARRANGE: Set up products
+        setupMultipleProductsForSearch();
 
         // ACT & ASSERT: Search for ACTIVE products where name contains 'Checking'
         mockMvc.perform(get(PRODUCT_API_BASE)
@@ -546,12 +591,12 @@ public class ProductIntegrationTest {
     void shouldFilterProductsByBankIdAndProductType() throws Exception {
         // ARRANGE: Set up products with different types and banks
         Long typeCId = createProductType("Type C");
-        createProductViaApi("ACTIVE", "Exclusive Product", "BANKC", typeCId, LocalDate.now().minusDays(1), null);
+        createProductViaApi("ACTIVE", "Exclusive Product", TEST_BANK_ID, typeCId, LocalDate.now().minusDays(1), null);
         createProductViaApi("DRAFT", "Other Bank Product", "BANKD", EXISTING_PRODUCT_TYPE_ID, LocalDate.now().plusDays(1), null);
 
         // ACT & ASSERT: Search for products in BANKC with type ID = typeCId
         mockMvc.perform(get(PRODUCT_API_BASE)
-                        .param("bankId", "BANKC")
+                        .param("bankId", TEST_BANK_ID)
                         .param("productTypeId", String.valueOf(typeCId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -562,7 +607,7 @@ public class ProductIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturnZeroProductsWhenNoCriteriaMatch() throws Exception {
-        setupMultipleProductsForSearch(); // ARRANGE: Set up products
+        setupMultipleProductsForSearch();
 
         // ACT & ASSERT: Search using a combination that won't match any product
         mockMvc.perform(get(PRODUCT_API_BASE)
@@ -577,9 +622,9 @@ public class ProductIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldFilterProductsByEffectiveDateRange() throws Exception {
         // ARRANGE: Set up three products with staggered dates.
-        createProductViaApi("ACTIVE", "Current Product", "BANKA", EXISTING_PRODUCT_TYPE_ID, LocalDate.now().minusDays(1), null); // T-1
-        createProductViaApi("DRAFT", "Future Product", "BANKA", EXISTING_PRODUCT_TYPE_ID, LocalDate.now().plusDays(1), null); // T+1
-        createProductViaApi("ARCHIVED", "Old Product", "BANKA", EXISTING_PRODUCT_TYPE_ID, LocalDate.now().minusMonths(1), LocalDate.now().minusDays(10)); // T-30
+        createProductViaApi("ACTIVE", "Current Product", TEST_BANK_ID, EXISTING_PRODUCT_TYPE_ID, LocalDate.now().minusDays(1), null); // T-1
+        createProductViaApi("DRAFT", "Future Product", TEST_BANK_ID, EXISTING_PRODUCT_TYPE_ID, LocalDate.now().plusDays(1), null); // T+1
+        createProductViaApi("ARCHIVED", "Old Product", TEST_BANK_ID, EXISTING_PRODUCT_TYPE_ID, LocalDate.now().minusMonths(1), LocalDate.now().minusDays(10)); // T-30
 
         // ACT & ASSERT 1: effectiveDateFrom >= tomorrow (Future products)
         LocalDate tomorrow = LocalDate.now().plusDays(1);

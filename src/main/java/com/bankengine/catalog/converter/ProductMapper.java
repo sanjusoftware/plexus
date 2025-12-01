@@ -6,14 +6,14 @@ import com.bankengine.catalog.dto.ProductResponseDto;
 import com.bankengine.catalog.dto.UpdateProductRequestDto;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
+import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING,
+@Mapper(config = MapStructConfig.class,
         uses = {ProductTypeMapper.class, FeatureLinkMapper.class, PricingLinkMapper.class})
 public interface ProductMapper {
 
@@ -35,6 +35,7 @@ public interface ProductMapper {
     @Mapping(target = "productPricingLinks", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "bundleLinks", ignore = true)
     Product toEntity(CreateProductRequestDto dto, ProductType productType);
 
     @Mapping(target = "id", ignore = true)
@@ -46,6 +47,7 @@ public interface ProductMapper {
     @Mapping(target = "effectiveDate", ignore = true)
     @Mapping(target = "expirationDate", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "bundleLinks", ignore = true)
     void updateFromDto(UpdateProductRequestDto dto, @MappingTarget Product product);
 
     @Mapping(target = "id", ignore = true)

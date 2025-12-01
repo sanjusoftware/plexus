@@ -12,6 +12,7 @@ import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.test.config.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
@@ -19,10 +20,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -35,11 +33,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
 @WithMockRole(roles = {ProductPricingSyncIntegrationTest.ADMIN_ROLE})
-public class ProductPricingSyncIntegrationTest {
+public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -91,6 +86,7 @@ public class ProductPricingSyncIntegrationTest {
                     .orElseGet(() -> {
                         ProductType newType = new ProductType();
                         newType.setName("Savings Account");
+                        newType.setBankId(TEST_BANK_ID);
                         return productTypeRepoStatic.save(newType);
                     });
 
@@ -100,6 +96,7 @@ public class ProductPricingSyncIntegrationTest {
                         Product p = new Product();
                         p.setName("Pricing Sync Product");
                         p.setProductType(type);
+                        p.setBankId(TEST_BANK_ID);
                         return productRepoStatic.save(p);
                     });
 
@@ -109,6 +106,7 @@ public class ProductPricingSyncIntegrationTest {
                         PricingComponent c = new PricingComponent();
                         c.setName("Standard Interest Rate");
                         c.setType(PricingComponent.ComponentType.RATE);
+                        c.setBankId(TEST_BANK_ID);
                         return pricingComponentRepoStatic.save(c);
                     });
 
@@ -117,6 +115,7 @@ public class ProductPricingSyncIntegrationTest {
                         PricingComponent c = new PricingComponent();
                         c.setName("Monthly Maintenance Fee");
                         c.setType(PricingComponent.ComponentType.FEE);
+                        c.setBankId(TEST_BANK_ID);
                         return pricingComponentRepoStatic.save(c);
                     });
 
@@ -125,6 +124,7 @@ public class ProductPricingSyncIntegrationTest {
                         PricingComponent c = new PricingComponent();
                         c.setName("Loyalty Discount");
                         c.setType(PricingComponent.ComponentType.DISCOUNT);
+                        c.setBankId(TEST_BANK_ID);
                         return pricingComponentRepoStatic.save(c);
                     });
         });

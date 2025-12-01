@@ -1,6 +1,7 @@
 package com.bankengine.rules.service;
 
 import com.bankengine.config.DroolsConfig;
+import com.bankengine.pricing.service.BundleDroolsRuleBuilderService;
 import com.bankengine.pricing.service.DroolsRuleBuilderService;
 import org.kie.api.KieServices;
 import org.kie.api.builder.*;
@@ -22,6 +23,7 @@ public class KieContainerReloadService {
     private final AtomicReference<KieContainer> activeKieContainer;
 
     private final DroolsRuleBuilderService ruleBuilderService;
+    private final BundleDroolsRuleBuilderService bundleRuleBuilderService;
 
     // Release ID constants must match DroolsConfig
     private static final String GROUP_ID = "com.bankengine";
@@ -34,10 +36,10 @@ public class KieContainerReloadService {
     private static final String KSESSION_NAME = DroolsConfig.KSESSION_NAME;
 
     @Autowired
-    public KieContainerReloadService(KieContainer initialKieContainer, DroolsRuleBuilderService ruleBuilderService) {
-        // Initialize the atomic reference with the container built by DroolsConfig
+    public KieContainerReloadService(KieContainer initialKieContainer, DroolsRuleBuilderService ruleBuilderService, BundleDroolsRuleBuilderService bundleRuleBuilderService) {
         this.activeKieContainer = new AtomicReference<>(initialKieContainer);
         this.ruleBuilderService = ruleBuilderService;
+        this.bundleRuleBuilderService = bundleRuleBuilderService;
     }
 
     /**
@@ -56,7 +58,8 @@ public class KieContainerReloadService {
         KieServices kieServices = KieServices.Factory.get();
 
         // 1. Fetch DRL content from the database
-        String ruleContent = ruleBuilderService.buildAllRulesForCompilation();
+        String productRuleContent = ruleBuilderService.buildAllRulesForCompilation();
+        String bundleRuleContent = bundleRuleBuilderService.buildAllBundleRulesForCompilation();
 
         // 2. Setup the virtual file system
         KieFileSystem kieFileSystem = kieServices.newKieFileSystem();
@@ -67,7 +70,8 @@ public class KieContainerReloadService {
 
         // 4. Write the new DRL content and POM
         // Use the same file name as DroolsConfig for consistency, though it's rewritten here.
-        kieFileSystem.write("src/main/resources/rules/initial_rules.drl", ruleContent);
+        kieFileSystem.write("src/main/resources/rules/product_rules.drl", productRuleContent);
+        kieFileSystem.write("src/main/resources/rules/bundle_rules.drl", bundleRuleContent);
         kieFileSystem.generateAndWritePomXML(RELEASE_ID);
 
         // 5. Compile the rules
@@ -79,7 +83,7 @@ public class KieContainerReloadService {
             System.err.println("❌ DROOLS COMPILATION ERROR during reload!");
             System.err.println(kieBuilder.getResults().toString());
             // Log the problematic DRL content for debugging
-            System.err.println("Failed DRL Content:\n" + ruleContent);
+            System.err.println("Failed DRL Content:\n" + productRuleContent);
             return false;
         }
 

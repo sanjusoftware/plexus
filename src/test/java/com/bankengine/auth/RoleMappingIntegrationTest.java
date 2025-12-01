@@ -117,7 +117,7 @@ public class RoleMappingIntegrationTest {
     @Test
     @WithMockUser(authorities = "wrong:authority")
     void shouldDenyAccessWithoutAuthority() throws Exception {
-        RoleAuthorityMappingDto dto = getMappingDto("DENIED_ROLE", Set.of("some:irrelevant:permission"));
+        RoleAuthorityMappingDto dto = getMappingDto("DENIED_ROLE", Set.of("catalog:feature:read"));
 
         mockMvc.perform(post(ROLE_API + "/mapping")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -133,16 +133,10 @@ public class RoleMappingIntegrationTest {
         mockMvc.perform(get(ROLE_API + "/system-authorities"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", isA(java.util.List.class)))
-                // Verify core permissions are present from existing controllers
                 .andExpect(jsonPath("$", hasItem("pricing:component:read")))
                 .andExpect(jsonPath("$", hasItem("catalog:feature:create")))
-                // Verify permissions from the new Role Mapping Controller are present
                 .andExpect(jsonPath("$", hasItem("auth:role:write")))
                 .andExpect(jsonPath("$", hasItem(READ_AUTH)));
     }
-
-    // --- 3. Permission Lookup Service Test (Conceptual Check) ---
-    // NOTE: Testing cache interaction requires specialized tools (like a mock cache)
-    // or relying on logs/timing. We rely on the correct annotation placement for safety.
 
 }

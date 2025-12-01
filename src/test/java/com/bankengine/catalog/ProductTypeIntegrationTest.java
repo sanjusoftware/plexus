@@ -1,6 +1,7 @@
 package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
+import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
@@ -8,15 +9,13 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.test.config.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Set;
@@ -28,11 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-
-class ProductTypeIntegrationTest {
+class ProductTypeIntegrationTest extends AbstractIntegrationTest {
 
     private static final String API_URL = "/api/v1/product-types";
 
@@ -93,7 +88,6 @@ class ProductTypeIntegrationTest {
      */
     @AfterEach
     void cleanUp() {
-        // Execute all deletions in a new transaction to ensure commit
         txHelper.doInTransaction(() -> {
             productFeatureLinkRepository.deleteAllInBatch();
             productPricingLinkRepository.deleteAllInBatch();
@@ -103,12 +97,12 @@ class ProductTypeIntegrationTest {
         txHelper.flushAndClear();
     }
 
-    // --- Helper Method ---
-    // Uses txHelper to ensure the ProductType is COMMITTED for subsequent GET checks or Conflict checks
     private ProductType createAndSaveProductType(String name) {
+        final String currentBankId = BankContextHolder.getBankId();
         return txHelper.doInTransaction(() -> {
             ProductType type = new ProductType();
             type.setName(name);
+            type.setBankId(currentBankId);
             return productTypeRepository.save(type);
         });
     }

@@ -1,5 +1,6 @@
 package com.bankengine.auth.config;
 
+import com.bankengine.auth.security.BankContextFilter;
 import com.bankengine.auth.security.JwtAuthConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -26,24 +28,26 @@ import javax.crypto.spec.SecretKeySpec;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    // Inject the secret key from application.properties
     @Value("${security.jwt.secret-key}")
     private String jwtSecretKey;
 
-    // Inject the issuer URI for token validation
     @Value("${security.jwt.issuer-uri}")
     private String jwtIssuerUri;
 
     private final JwtAuthConverter jwtAuthConverter;
+    private final BankContextFilter bankContextFilter; // <-- NEW FIELD
 
-    public SecurityConfig(JwtAuthConverter jwtAuthConverter) {
+    public SecurityConfig(JwtAuthConverter jwtAuthConverter, BankContextFilter bankContextFilter) { // <-- INJECT FILTER
         this.jwtAuthConverter = jwtAuthConverter;
+        this.bankContextFilter = bankContextFilter;
     }
 
-    // The security filter chain defines authorization rules
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // 5. TENANCY FILTER: Inject the BankContextFilter AFTER the JWT (Bearer Token) authentication has occurred.
+                .addFilterAfter(bankContextFilter, BearerTokenAuthenticationFilter.class)
+
                 // 1. STATELESS: Use stateless session management (essential for JWT)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
@@ -57,7 +61,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/h2-console/**" // Allow H2 console access in dev
+                                "/h2-console/**"
                         ).permitAll()
 
                         // Allow POST for /products for initial testing
@@ -84,20 +88,14 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Bean to configure the JWT Decoder (validation logic)
     @Bean
     public JwtDecoder jwtDecoder() {
         SecretKeySpec secretKey = new SecretKeySpec(jwtSecretKey.getBytes(), "HMACSHA256");
-
-        // 1. Create the decoder without claim validation initially
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
 
-        // 2. Use JwtValidators helper to create a complete validator (including expiration and issuer)
         OAuth2TokenValidator<Jwt> validator = JwtValidators.createDefaultWithIssuer(jwtIssuerUri);
-
-        // 3. Apply the validator to the decoder
         decoder.setJwtValidator(validator);
 
         return decoder;

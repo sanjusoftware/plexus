@@ -1,6 +1,7 @@
 package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
+import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.dto.ProductFeatureDto;
 import com.bankengine.catalog.dto.ProductFeatureSyncDto;
 import com.bankengine.catalog.model.FeatureComponent;
@@ -12,16 +13,14 @@ import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.TestTransactionHelper;
+import com.bankengine.test.config.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -36,11 +35,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
 @WithMockRole(roles = {ProductFeatureSyncIntegrationTest.ADMIN_ROLE})
-public class ProductFeatureSyncIntegrationTest {
+public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -87,6 +83,7 @@ public class ProductFeatureSyncIntegrationTest {
                                    @Autowired ProductTypeRepository productTypeRepoStatic,
                                    @Autowired FeatureComponentRepository featureComponentRepoStatic) {
 
+        BankContextHolder.setBankId(TEST_BANK_ID);
         // 1. Setup Roles (Committed)
         Set<String> adminAuths = Set.of(
                 "catalog:product:update",

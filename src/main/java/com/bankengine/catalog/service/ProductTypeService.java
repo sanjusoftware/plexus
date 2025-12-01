@@ -1,5 +1,6 @@
 package com.bankengine.catalog.service;
 
+import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.converter.ProductTypeMapper;
 import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
 import com.bankengine.catalog.model.ProductType;
@@ -38,9 +39,10 @@ public class ProductTypeService {
      */
     @Transactional
     public ProductType createProductType(CreateProductTypeRequestDto requestDto) {
-        // NOTE: Add logic here to check for duplicate names if needed
+        String bankId = BankContextHolder.getBankId();
 
         ProductType productType = productTypeMapper.toEntity(requestDto);
+        productType.setBankId(bankId);
 
         return productTypeRepository.save(productType);
     }

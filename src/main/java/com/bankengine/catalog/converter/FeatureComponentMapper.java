@@ -4,12 +4,12 @@ import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
 import com.bankengine.catalog.dto.FeatureComponentResponseDto;
 import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
 import com.bankengine.catalog.model.FeatureComponent;
+import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(config = MapStructConfig.class)
 public interface FeatureComponentMapper {
 
     @Mapping(target = "id", ignore = true)

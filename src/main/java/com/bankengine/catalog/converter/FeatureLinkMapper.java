@@ -3,14 +3,14 @@ package com.bankengine.catalog.converter;
 import com.bankengine.catalog.dto.ProductFeatureDto;
 import com.bankengine.catalog.dto.ProductFeatureLinkDto;
 import com.bankengine.catalog.model.ProductFeatureLink;
+import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(config = MapStructConfig.class)
 public interface FeatureLinkMapper {
 
     @Mapping(target = "featureName", source = "link.featureComponent.name")

@@ -3,13 +3,13 @@ package com.bankengine.catalog.converter;
 import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
 import com.bankengine.catalog.dto.ProductTypeResponseDto;
 import com.bankengine.catalog.model.ProductType;
+import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(config = MapStructConfig.class)
 public interface ProductTypeMapper {
 
     ProductTypeResponseDto toResponseDto(ProductType entity);

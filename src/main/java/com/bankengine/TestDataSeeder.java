@@ -32,6 +32,9 @@ import java.util.stream.Collectors;
 @Profile("dev")
 public class TestDataSeeder implements CommandLineRunner {
 
+    private static final String BANK_A = "GLOBAL-BANK-001";
+    private static final String BANK_B = "LOCAL-BANK-002";
+
     // Inject all necessary Repositories
     private final ProductTypeRepository productTypeRepository;
     private final FeatureComponentRepository featureComponentRepository;
@@ -44,7 +47,7 @@ public class TestDataSeeder implements CommandLineRunner {
     private final TierConditionRepository tierConditionRepository;
     private final PricingInputMetadataRepository pricingInputMetadataRepository;
     private final RoleRepository roleRepository;
-    private final ApplicationContext applicationContext; // ADDED FIELD
+    private final ApplicationContext applicationContext;
 
     public TestDataSeeder(
             ProductTypeRepository productTypeRepository,
@@ -58,7 +61,7 @@ public class TestDataSeeder implements CommandLineRunner {
             TierConditionRepository tierConditionRepository,
             PricingInputMetadataRepository pricingInputMetadataRepository,
             RoleRepository roleRepository,
-            ApplicationContext applicationContext) { // ADDED ApplicationContext to constructor
+            ApplicationContext applicationContext) {
         this.productTypeRepository = productTypeRepository;
         this.featureComponentRepository = featureComponentRepository;
         this.productRepository = productRepository;
@@ -70,31 +73,39 @@ public class TestDataSeeder implements CommandLineRunner {
         this.tierConditionRepository = tierConditionRepository;
         this.pricingInputMetadataRepository = pricingInputMetadataRepository;
         this.roleRepository = roleRepository;
-        this.applicationContext = applicationContext; // Assign ApplicationContext
+        this.applicationContext = applicationContext;
     }
 
     @Override
     public void run(String... args) {
         System.out.println("--- Seeding Development Data ---");
 
-        // FIX: Get a proxy reference to *this* bean to ensure @Transactional methods are intercepted.
         TestDataSeeder proxy = applicationContext.getBean(TestDataSeeder.class);
 
-        // Call the transactional methods via the proxy
         proxy.seedTestRoles();
         proxy.seedProductTypes();
-        proxy.seedFeaturesAndProducts();
         proxy.seedPricingInputMetadata();
-        proxy.seedPricingComponents();
 
-        System.out.println("--- Seeding Complete ---");
+        // --- Seed Data for BANK A ---
+        System.out.println("\n--- Seeding Data for " + BANK_A + " ---");
+        proxy.seedFeaturesAndProducts(BANK_A);
+        proxy.seedPricingComponentsAndLinks(BANK_A);
+        proxy.seedBundlePricingRules(BANK_A); // <-- Added for consistency
+
+        // --- Seed Data for BANK B ---
+        System.out.println("\n--- Seeding Data for " + BANK_B + " ---");
+        proxy.seedFeaturesAndProducts(BANK_B);
+        proxy.seedPricingComponentsAndLinks(BANK_B);
+        proxy.seedBundlePricingRules(BANK_B);
+
+        System.out.println("\n--- Seeding Complete ---");
     }
 
     @Transactional
     public void seedTestRoles() {
         System.out.println("Seeding Application Roles...");
 
-        // The exhaustive list of all 25 system authorities
+        // The exhaustive list of all system authorities
         final Set<String> ALL_AUTHORITIES = Set.of(
                 "pricing:metadata:read", "catalog:product:activate", "pricing:metadata:create",
                 "pricing:metadata:update", "pricing:tier:create", "pricing:component:create",
@@ -104,7 +115,8 @@ public class TestDataSeeder implements CommandLineRunner {
                 "catalog:feature:read", "pricing:component:read", "catalog:feature:delete",
                 "pricing:component:update", "catalog:product:deactivate", "catalog:product:create",
                 "pricing:calculate", "catalog:feature:update", "auth:role:read",
-                "catalog:product-type:create"
+                "catalog:product-type:create",
+                "pricing:bundle:calculate:read"
         );
 
         // --- 1. Define Permissions Sets ---
@@ -114,6 +126,7 @@ public class TestDataSeeder implements CommandLineRunner {
                 .filter(p -> p.endsWith(":read"))
                 .collect(Collectors.toSet());
         readPermissions.add("pricing:calculate");
+        readPermissions.add("pricing:bundle:calculate:read");
 
         // Pricing Permissions (for Pricing Engineer)
         Set<String> pricingPermissions = ALL_AUTHORITIES.stream()
@@ -122,7 +135,8 @@ public class TestDataSeeder implements CommandLineRunner {
         pricingPermissions.addAll(Set.of(
                 "pricing:component:read",
                 "pricing:metadata:read",
-                "pricing:calculate"
+                "pricing:calculate",
+                "pricing:bundle:calculate:read"
         ));
 
         // Catalog Permissions (for Product Manager)
@@ -140,22 +154,19 @@ public class TestDataSeeder implements CommandLineRunner {
                 .filter(p -> p.startsWith("auth:"))
                 .collect(Collectors.toSet());
 
-
-        // --- 2. Helper Method to Create and Save Role ---
         List<Role> rolesToSeed = List.of(
                 createRole("SUPER_ADMIN", ALL_AUTHORITIES), // Full control
                 createRole("PRICING_ENGINEER", pricingPermissions),
-                createRole("PRODUCT_MANAGER", catalogPermissions),
-                createRole("AUTH_MANAGER", authPermissions),
+                createRole("PRODUCT_MANAGER", ALL_AUTHORITIES.stream().filter(p -> p.startsWith("catalog:")).collect(Collectors.toSet())),
+                createRole("AUTH_MANAGER", ALL_AUTHORITIES.stream().filter(p -> p.startsWith("auth:")).collect(Collectors.toSet())),
                 createRole("ANALYST", readPermissions)
         );
 
-        // Filter out roles that already exist and save the rest
         rolesToSeed.stream()
                 .filter(role -> roleRepository.findByName(role.getName()).isEmpty())
                 .forEach(roleRepository::save);
 
-        System.out.println("Seeded or ensured existence of 5 application roles.");
+        System.out.println("Seeded or ensured existence of 5 application roles. Added bundle authority.");
     }
 
     private Role createRole(String name, Set<String> authorities) {
@@ -179,9 +190,17 @@ public class TestDataSeeder implements CommandLineRunner {
             System.out.println("Seeding Pricing Input Metadata...");
             pricingInputMetadataRepository.saveAll(List.of(
                     createMetadata("customerSegment", "Client Segment", "STRING"),
-                    createMetadata("transactionAmount", "Transaction Amount", "DECIMAL")
+                    createMetadata("transactionAmount", "Transaction Amount", "DECIMAL"),
+                    createMetadata("productId", "Product ID", "LONG"),
+                    createMetadata("bankId", "Bank ID", "STRING")
             ));
         }
+    }
+
+    private ProductType createType(String name) {
+        ProductType type = new ProductType();
+        type.setName(name);
+        return type;
     }
 
     @Transactional
@@ -194,38 +213,6 @@ public class TestDataSeeder implements CommandLineRunner {
                     createType("Package")
             ));
         }
-    }
-
-    private ProductType createType(String name) {
-        ProductType type = new ProductType();
-        type.setName(name);
-        return type;
-    }
-
-    @Transactional
-    public void seedFeaturesAndProducts() {
-        // --- 1. Get Product Types for Foreign Keys ---
-        ProductType casaType = productTypeRepository.findByName("CASA")
-                .orElseThrow(() -> new RuntimeException("CASA type not found."));
-
-        // --- 2. Seed Feature Components ---
-        FeatureComponent maxTxn = createFeature("Max_Free_ATM_Txn", DataType.INTEGER);
-        FeatureComponent minBalance = createFeature("Minimum_Balance", DataType.DECIMAL);
-        featureComponentRepository.saveAll(List.of(maxTxn, minBalance));
-
-        // --- 3. Seed Product ---
-        Product premiumAccount = new Product();
-        premiumAccount.setName("Premium Savings Account");
-        premiumAccount.setBankId("GLOBAL-BANK-001");
-        premiumAccount.setProductType(casaType);
-        premiumAccount.setEffectiveDate(LocalDate.now());
-        premiumAccount.setStatus("ACTIVE");
-        productRepository.save(premiumAccount);
-
-        // --- 4. Link Features to Product ---
-        ProductFeatureLink link1 = createLink(premiumAccount, maxTxn, "10"); // 10 free txns
-        ProductFeatureLink link2 = createLink(premiumAccount, minBalance, "5000.00"); // $5000 min
-        linkRepository.saveAll(List.of(link1, link2));
     }
 
     private FeatureComponent createFeature(String name, DataType type) {
@@ -252,21 +239,83 @@ public class TestDataSeeder implements CommandLineRunner {
         return condition;
     }
 
+
+    /**
+     * Seeds features and products scoped to a specific bankId.
+     */
     @Transactional
-    public void seedPricingComponents() {
+    public void seedFeaturesAndProducts(String bankId) {
+        // --- 1. Get Product Types for Foreign Keys ---
+        ProductType casaType = productTypeRepository.findByName("CASA")
+                .orElseThrow(() -> new RuntimeException("CASA type not found."));
 
-        // --- 1. Seed Component: Annual Card Fee ---
-        PricingComponent annualFee = new PricingComponent();
-        annualFee.setName("Annual_Credit_Card_Fee");
-        annualFee.setType(ComponentType.FEE);
-        PricingComponent savedFeeComponent = pricingComponentRepository.save(annualFee);
+        ProductType packageType = productTypeRepository.findByName("Package")
+                .orElseThrow(() -> new RuntimeException("Package type not found."));
 
-        // --- 2. Create Tier 1: High Net Worth (Waived Fee) ---
+        // --- 2. Seed Feature Components (Tenant-Agnostic) ---
+        FeatureComponent maxTxn = featureComponentRepository.findByName("Max_Free_ATM_Txn").orElseGet(() -> featureComponentRepository.save(createFeature("Max_Free_ATM_Txn", DataType.INTEGER)));
+        FeatureComponent minBalance = featureComponentRepository.findByName("Minimum_Balance").orElseGet(() -> featureComponentRepository.save(createFeature("Minimum_Balance", DataType.DECIMAL)));
+        featureComponentRepository.saveAll(List.of(maxTxn, minBalance));
+
+        // --- 3. Seed Products ---
+        Product savingsAccount = new Product();
+        savingsAccount.setName(bankId.equals(BANK_A) ? "Global Savings Account" : "Local Savings Account");
+        savingsAccount.setBankId(bankId);
+        savingsAccount.setProductType(casaType);
+        savingsAccount.setEffectiveDate(LocalDate.now());
+        savingsAccount.setStatus("ACTIVE");
+        productRepository.save(savingsAccount);
+
+        Product checkingAccount = new Product();
+        checkingAccount.setName(bankId.equals(BANK_A) ? "Global Checking Account" : "Local Checking Account");
+        checkingAccount.setBankId(bankId);
+        checkingAccount.setProductType(casaType);
+        checkingAccount.setEffectiveDate(LocalDate.now());
+        checkingAccount.setStatus("ACTIVE");
+        productRepository.save(checkingAccount);
+
+        Product bundleProduct = new Product();
+        bundleProduct.setName(bankId.equals(BANK_A) ? "Global Elite Bundle" : "Local Basic Bundle");
+        bundleProduct.setBankId(bankId);
+        bundleProduct.setProductType(packageType);
+        bundleProduct.setEffectiveDate(LocalDate.now());
+        bundleProduct.setStatus("ACTIVE");
+        productRepository.save(bundleProduct);
+
+
+        // --- 4. Link Features to Product ---
+        ProductFeatureLink link1 = createLink(savingsAccount, maxTxn, bankId.equals(BANK_A) ? "10" : "5"); // Bank A gets 10, Bank B gets 5
+        ProductFeatureLink link2 = createLink(savingsAccount, minBalance, "5000.00");
+        linkRepository.saveAll(List.of(link1, link2));
+
+        System.out.println("Seeded " + productRepository.countByBankId(bankId) + " products for " + bankId + ".");
+    }
+
+    /**
+     * Seeds pricing components and links products to them, scoped to a specific bankId.
+     */
+    @Transactional
+    public void seedPricingComponentsAndLinks(String bankId) {
+
+        // --- 1. Seed Component: Monthly Fee (Shared Name, Retrieve or Create) ---
+        String componentName = "Monthly_Maintenance_Fee";
+        PricingComponent monthlyFee = pricingComponentRepository.findByName(componentName).orElseGet(() -> {
+            PricingComponent newComponent = new PricingComponent();
+            newComponent.setName(componentName);
+            newComponent.setType(ComponentType.FEE);
+            return pricingComponentRepository.save(newComponent);
+        });
+        PricingComponent savedFeeComponent = monthlyFee; // Use the found or saved component
+
+        // --- 2. Define Pricing Tier Logic (DIFFERENT PER BANK) ---
+
+        // --- Tier 1: Premium Client (Waived Fee) ---
         PricingTier tierPremium = new PricingTier();
-        tierPremium.setTierName("Premium Tier");
+        tierPremium.setTierName("Premium Waived Tier " + bankId); // Add Bank ID for unique tier names
         tierPremium.setPricingComponent(savedFeeComponent);
         PricingTier savedTierPremium = pricingTierRepository.save(tierPremium);
 
+        // Condition: PREMIUM segment
         TierCondition condPremium = createCondition(
                 savedTierPremium,
                 "customerSegment",
@@ -277,58 +326,86 @@ public class TestDataSeeder implements CommandLineRunner {
 
         PriceValue valuePremium = new PriceValue();
         valuePremium.setPriceAmount(BigDecimal.ZERO);
-        valuePremium.setValueType(PriceValue.ValueType.WAIVED); // Fee is waived
+        valuePremium.setValueType(PriceValue.ValueType.WAIVED);
         valuePremium.setCurrency("USD");
         valuePremium.setPricingTier(savedTierPremium);
-        priceValueRepository.save(valuePremium); // <-- Saves the linked PriceValue
+        priceValueRepository.save(valuePremium);
 
-        // --- 3. Create Tier 2: Standard Client ($50 Fee) ---
-        // Find the component to link the tier to
-        PricingComponent standardFeeComponent = pricingComponentRepository.findByName("Annual_Credit_Card_Fee")
-                .orElseThrow(() -> new RuntimeException("Fee component not found."));
+        // --- Tier 2: Standard Client (DIFFERENT FEE PER BANK) ---
         PricingTier tierStandard = new PricingTier();
-        tierStandard.setTierName("Standard Tier");
-        tierStandard.setMinThreshold(new BigDecimal("0.00"));
-        tierStandard.setMaxThreshold(new BigDecimal("10000.00")); // Max annual spend of $10,000
+        tierStandard.setTierName("Standard Fee Tier " + bankId); // Add Bank ID for unique tier names
 
-        tierStandard.setPricingComponent(standardFeeComponent);
+        BigDecimal standardFee = bankId.equals(BANK_A) ? new BigDecimal("20.00") : new BigDecimal("10.00"); // BANK A = $20, BANK B = $10
+
+        tierStandard.setPricingComponent(savedFeeComponent);
         PricingTier savedTierStandard = pricingTierRepository.save(tierStandard);
 
+        // Condition: STANDARD segment (FIXED: The condition for standard segment was missing)
         TierCondition condStandard = createCondition(
                 savedTierStandard,
-                "transactionAmount",
-                Operator.LE,
-                "10000.00"
+                "customerSegment", // <-- Condition must be on customerSegment
+                Operator.EQ,
+                "STANDARD"
         );
         tierConditionRepository.save(condStandard);
-        savedTierStandard.setConditions(java.util.Set.of(condStandard)); // Update in-memory set
 
         PriceValue valueStandard = new PriceValue();
-        valueStandard.setPriceAmount(new BigDecimal("50.00"));
+        valueStandard.setPriceAmount(standardFee);
         valueStandard.setValueType(PriceValue.ValueType.ABSOLUTE);
         valueStandard.setCurrency("USD");
         valueStandard.setPricingTier(savedTierStandard);
-        priceValueRepository.save(valueStandard); // <-- Saves the linked PriceValue
+        priceValueRepository.save(valueStandard);
 
-        // --- 4. Link Product to Pricing Component ---
+        // --- 3. Link Product to Pricing Component ---
 
-        // Retrieve seeded Product ("Premium Savings Account")
-        Product premiumAccount = productRepository.findByName("Premium Savings Account")
-                .orElseThrow(() -> new RuntimeException("Product not found for linking."));
+        // Retrieve seeded Product (e.g., Savings Account)
+        Product savingsAccount = productRepository.findByName(bankId.equals(BANK_A) ? "Global Savings Account" : "Local Savings Account")
+                .orElseThrow(() -> new RuntimeException("Savings Account not found for linking in " + bankId));
 
-        // Retrieve seeded Pricing Component ("Annual_Credit_Card_Fee")
-        PricingComponent annualFeeComponent = pricingComponentRepository.findByName("Annual_Credit_Card_Fee")
-                .orElseThrow(() -> new RuntimeException("Pricing Component not found for linking."));
+        // Create the Link (This link will be filtered by BankId)
+        ProductPricingLink link = new ProductPricingLink();
+        link.setProduct(savingsAccount);
+        link.setPricingComponent(savedFeeComponent);
+        link.setContext("CORE_FEE"); // Define the purpose of this link
+        link.setUseRulesEngine(true);
+        productPricingLinkRepository.save(link);
+
+        System.out.println("Seeded Pricing Component '" + componentName +
+                "' with two tiers, linked to '" + savingsAccount.getName() + "'.");
+    }
+
+    /**
+     * Seeds a bundle pricing rule metadata component and links it to the bundle product.
+     */
+    @Transactional
+    public void seedBundlePricingRules(String bankId) {
+
+        // --- 1. Seed Component: Bundle Fee Waiver (Retrieve or Create) ---
+        String componentName = "Annual_Bundle_Waiver";
+        PricingComponent bundleWaiver = pricingComponentRepository.findByName(componentName).orElseGet(() -> {
+            PricingComponent newComponent = new PricingComponent();
+            newComponent.setName(componentName);
+            newComponent.setType(ComponentType.WAIVER);
+            return pricingComponentRepository.save(newComponent);
+        });
+
+        // --- 2. Simple Pricing Link (Fixed Waiver for the Bundle Product) ---
+
+        // Retrieve seeded Bundle Product
+        Product bundleProduct = productRepository.findByName(bankId.equals(BANK_A) ? "Global Elite Bundle" : "Local Basic Bundle")
+                .orElseThrow(() -> new RuntimeException("Bundle Product not found for linking in " + bankId));
 
         // Create the Link
         ProductPricingLink link = new ProductPricingLink();
-        link.setProduct(premiumAccount);
-        link.setPricingComponent(annualFeeComponent);
-        link.setContext("CORE_FEE"); // Define the purpose of this link
+        link.setProduct(bundleProduct);
+        link.setPricingComponent(bundleWaiver);
+        link.setContext("BUNDLE_DISCOUNT_TARGET"); // The DRL rule will target this specific context
 
+        // This is a fixed, simple waiver of $50, which is overridable by Drools
+        link.setFixedValue(new BigDecimal("-50.00"));
+        link.setUseRulesEngine(false); // Can be complex (true) or simple (false)
         productPricingLinkRepository.save(link);
 
-        System.out.println("Linked Product '" + premiumAccount.getName() +
-                "' to Pricing Component '" + annualFeeComponent.getName() + "'.");
+        System.out.println("Seeded bundle component '" + componentName + "' linked to '" + bundleProduct.getName() + "'.");
     }
 }

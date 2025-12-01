@@ -1,6 +1,7 @@
 package com.bankengine.pricing.repository;
 
 import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.PricingComponent.ComponentType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,4 +27,9 @@ public interface PricingComponentRepository extends JpaRepository<PricingCompone
     @EntityGraph(value = "component-with-tiers-values-conditions", type = EntityGraph.EntityGraphType.LOAD)
     @Query("SELECT c FROM PricingComponent c")
     List<PricingComponent> findAllEagerlyForRules();
+
+    /**
+     * Finds all PricingComponents whose type is in the provided list.
+     */
+    List<PricingComponent> findByTypeIn(List<ComponentType> types);
 }

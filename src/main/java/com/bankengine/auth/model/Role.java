@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 import java.util.Set;
 
 @Entity
-@Table(name = "role")
+@Table(name = "role", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"bank_id", "name"})
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,17 +20,15 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", unique = true, nullable = false, length = 50)
+    @Column(name = "name", nullable = false, length = 50)
     private String name;
 
     @Column(name = "bank_id", nullable = true)
     private String bankId;
 
-    // Use @ElementCollection to store a set of simple strings (Authorities)
-    // The collection value (the authority string) is mapped to the 'authority_name' column.
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
-            name = "role_authority", // Custom join table name
+            name = "role_authority",
             joinColumns = @JoinColumn(name = "role_id")
     )
     @Column(name = "authority_name", nullable = false, length = 100)

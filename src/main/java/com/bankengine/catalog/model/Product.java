@@ -3,17 +3,19 @@ package com.bankengine.catalog.model;
 import com.bankengine.common.model.AuditableEntity;
 import com.bankengine.pricing.model.ProductPricingLink;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
 @Entity
-@Table(name = "product")
+@Table(name = "product", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"bank_id", "name"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,7 +42,9 @@ public class Product extends AuditableEntity {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ProductPricingLink> productPricingLinks = new ArrayList<>();
 
-    private String bankId;
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<BundleProductLink> bundleLinks = new ArrayList<>();
+
     private LocalDate effectiveDate;
     private String status; // e.g., "ACTIVE", "DRAFT", "INACTIVE"
 }

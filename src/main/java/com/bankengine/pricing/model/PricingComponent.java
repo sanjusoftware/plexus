@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "pricing_component")
+@Table(name = "pricing_component", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"bank_id", "name"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -37,11 +39,11 @@ public class PricingComponent extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name; // e.g., "Annual Fee", "Base Interest Rate", "ATM Withdrawal Fee"
 
     @Enumerated(EnumType.STRING)
-    private ComponentType type; // e.g., FEE, RATE, WAIVER, BENEFIT
+    private ComponentType type;
 
     @OneToMany(mappedBy = "pricingComponent", fetch = FetchType.LAZY)
     private List<PricingTier> pricingTiers = new ArrayList<>();

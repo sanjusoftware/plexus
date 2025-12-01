@@ -1,6 +1,7 @@
 package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
+import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
 import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
 import com.bankengine.catalog.model.FeatureComponent;
@@ -12,16 +13,14 @@ import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.TestTransactionHelper;
+import com.bankengine.test.config.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Set;
@@ -32,10 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-public class FeatureComponentIntegrationTest {
+public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -78,7 +74,6 @@ public class FeatureComponentIntegrationTest {
 
     /**
      * Set up all required roles, permissions, and shared committed entities once before all tests run.
-     * This data is committed and visible to @WithMockRole.
      */
     @BeforeAll
     static void setupCommittedData(@Autowired TestTransactionHelper txHelperStatic,
@@ -87,57 +82,66 @@ public class FeatureComponentIntegrationTest {
                                    @Autowired FeatureComponentRepository featureRepoStatic,
                                    @Autowired ProductFeatureLinkRepository linkRepoStatic) {
 
-        // 1. GLOBAL CLEANUP (Aggressive, ensures a clean start)
-        // Clean up entities created by this test class in case of previous test failure
-        txHelperStatic.doInTransaction(() -> {
-            linkRepoStatic.deleteAllInBatch();
-            featureRepoStatic.deleteAllInBatch();
-            productRepoStatic.deleteAllInBatch();
-            productTypeRepoStatic.deleteAllInBatch();
-        });
-        txHelperStatic.flushAndClear();
+        // Set the context for the static @BeforeAll execution thread
+        BankContextHolder.setBankId(TEST_BANK_ID);
 
-        // 2. Setup Roles (Committed Transaction)
-        Set<String> adminAuths = Set.of(
-                "catalog:feature:create", "catalog:feature:read",
-                "catalog:feature:update", "catalog:feature:delete"
-        );
-        Set<String> readerAuths = Set.of("catalog:feature:read");
-        Set<String> unauthorizedAuths = Set.of("some:other:permission");
+        try {
+            // 1. GLOBAL CLEANUP (Aggressive, ensures a clean start)
+            txHelperStatic.doInTransaction(() -> {
+                linkRepoStatic.deleteAllInBatch();
+                featureRepoStatic.deleteAllInBatch();
+                productRepoStatic.deleteAllInBatch();
+                productTypeRepoStatic.deleteAllInBatch();
+            });
+            txHelperStatic.flushAndClear();
+
+            // 2. Setup Roles (Committed Transaction)
+            Set<String> adminAuths = Set.of(
+                    "catalog:feature:create", "catalog:feature:read",
+                    "catalog:feature:update", "catalog:feature:delete"
+            );
+            Set<String> readerAuths = Set.of("catalog:feature:read");
+            Set<String> unauthorizedAuths = Set.of("some:other:permission");
 
 
-        txHelperStatic.createRoleInDb(ADMIN_ROLE, adminAuths);
-        txHelperStatic.createRoleInDb(READER_ROLE, readerAuths);
-        txHelperStatic.createRoleInDb(UNAUTHORIZED_ROLE, unauthorizedAuths);
+            txHelperStatic.createRoleInDb(ADMIN_ROLE, adminAuths);
+            txHelperStatic.createRoleInDb(READER_ROLE, readerAuths);
+            txHelperStatic.createRoleInDb(UNAUTHORIZED_ROLE, unauthorizedAuths);
 
-        // 3. Setup Committed Dependencies (ProductType and Product for Linking)
-        txHelperStatic.doInTransaction(() -> {
-            // a. Find/Create a minimal ProductType dependency
-            ProductType sharedProductType = productTypeRepoStatic.findByName("Test Type for Link")
-                    .orElseGet(() -> {
-                        ProductType newType = new ProductType();
-                        newType.setName("Test Type for Link");
-                        return productTypeRepoStatic.save(newType);
-                    });
+            // 3. Setup Committed Dependencies (ProductType and Product for Linking)
+            txHelperStatic.doInTransaction(() -> {
+                // a. Find/Create a minimal ProductType dependency
+                ProductType sharedProductType = productTypeRepoStatic.findByName("Test Type for Link")
+                        .orElseGet(() -> {
+                            ProductType newType = new ProductType();
+                            newType.setName("Test Type for Link");
+                            // bank_id is injected here by AuditorAware
+                            return productTypeRepoStatic.save(newType);
+                        });
 
-            EXISTING_PRODUCT_TYPE_ID = sharedProductType.getId();
+                EXISTING_PRODUCT_TYPE_ID = sharedProductType.getId();
 
-            // b. Find/Create a minimal Product entity to link to
-            sharedProduct = productRepoStatic.findByName("Link Test Product")
-                    .orElseGet(() -> {
-                        Product product = new Product();
-                        product.setName("Link Test Product");
-                        product.setStatus("ACTIVE");
-                        product.setProductType(sharedProductType);
-                        return productRepoStatic.save(product);
-                    });
-        });
+                // b. Find/Create a minimal Product entity to link to
+                sharedProduct = productRepoStatic.findByName("Link Test Product")
+                        .orElseGet(() -> {
+                            Product product = new Product();
+                            product.setName("Link Test Product");
+                            product.setStatus("ACTIVE");
+                            product.setProductType(sharedProductType);
+                            // bank_id is injected here by AuditorAware
+                            return productRepoStatic.save(product);
+                        });
+            });
 
-        txHelperStatic.flushAndClear();
+            txHelperStatic.flushAndClear();
+        } finally {
+            BankContextHolder.clear();
+        }
     }
 
     /**
      * Clean up ALL committed test data (created via committed helper or API) after each test.
+     * NOTE: The BankContextHolder cleanup is handled by the parent class's @AfterEach.
      */
     @AfterEach
     void tearDown() {
@@ -147,6 +151,7 @@ public class FeatureComponentIntegrationTest {
         });
         txHelper.flushAndClear();
     }
+
 
     // =================================================================
     // HELPER METHODS

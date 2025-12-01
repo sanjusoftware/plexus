@@ -1,8 +1,10 @@
 package com.bankengine.pricing.integration;
 
-import com.bankengine.pricing.dto.CreatePriceValueRequestDto;
-import com.bankengine.pricing.dto.CreatePricingTierRequestDto;
-import com.bankengine.pricing.dto.TierConditionDto;
+import com.bankengine.catalog.model.Product;
+import com.bankengine.catalog.model.ProductType;
+import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.pricing.dto.*;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.TierCondition.Operator;
@@ -10,6 +12,7 @@ import com.bankengine.pricing.repository.*;
 import com.bankengine.pricing.service.PricingCalculationService;
 import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.rules.service.KieContainerReloadService;
+import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.web.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
@@ -17,26 +20,21 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-public class DroolsIntegrationTest {
+public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private PricingComponentRepository componentRepository;
     @Autowired private PricingTierRepository tierRepository;
@@ -52,6 +50,8 @@ public class DroolsIntegrationTest {
     @Autowired private EntityManager entityManager;
     @Autowired private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private ProductTypeRepository productTypeRepository;
 
     private static final String TEST_COMPONENT_NAME = "FeeComponent";
     private static final String TEST_SEGMENT = "PREMIUM";
@@ -59,13 +59,27 @@ public class DroolsIntegrationTest {
     private static final BigDecimal TEST_AMOUNT = new BigDecimal("100000.00");
     private static final BigDecimal EXPECTED_PRICE_INITIAL = new BigDecimal("10.00");
     private static final BigDecimal EXPECTED_PRICE_NEW = new BigDecimal("50.00");
+    private Long productId;
+    private Product persistedProduct;
 
     private void safeDeleteAllPricingData() {
         // MUST DELETE IN DEPENDENCY ORDER: Child before Parent
+
+        // 1. Links (Child of Product & Component)
+        productPricingLinkRepository.deleteAllInBatch();
+
+        // 2. Pricing Tier Children
         tierConditionRepository.deleteAllInBatch();
         valueRepository.deleteAllInBatch();
+
+        // 3. Pricing Tier
         tierRepository.deleteAllInBatch();
-        productPricingLinkRepository.deleteAllInBatch();
+
+        // 4. Product/ProductType cleanup
+        productRepository.deleteAllInBatch();
+        productTypeRepository.deleteAllInBatch(); // Parent entity
+
+        // 5. Remaining Parent entities
         componentRepository.deleteAllInBatch();
         pricingInputMetadataRepository.deleteAllInBatch();
     }
@@ -90,22 +104,35 @@ public class DroolsIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Wrap all setup (cleanup + seeding) in a single transaction.
         transactionTemplate.executeWithoutResult(status -> {
-
-            // CRITICAL FIX 1: Execute safe sequential cleanup FIRST
             safeDeleteAllPricingData();
-
-            // CRITICAL FIX 2: Ensure the essential metadata exists BEFORE rule generation
             seedRequiredMetadata();
 
-            // H2 FIX: Reset ID sequences for clean component creation
             entityManager.createNativeQuery("ALTER TABLE PRICING_COMPONENT ALTER COLUMN ID RESTART WITH 1").executeUpdate();
 
-            // Seed initial rule (PREMIUM: 10.00)
+            ProductType productType = new ProductType();
+            productType.setName("Test Type");
+            productType.setBankId(TEST_BANK_ID);
+            ProductType persistedProductType = productTypeRepository.save(productType);
+
+            // 1. Create and Persist the required Product Entity
+            Product product = new Product();
+            product.setName("Test Product for Pricing");
+            product.setBankId(TEST_BANK_ID);
+            product.setProductType(persistedProductType);
+
+            this.persistedProduct = productRepository.save(product);
+
+            // 2. Seed initial rule (The component ID will be 1)
             seedDatabaseWithTestRule(TEST_COMPONENT_NAME, TEST_SEGMENT, EXPECTED_PRICE_INITIAL);
 
-            // Flush and clear the EntityManager after setup to ensure data is committed
+            // 3. Fetch the created component
+            PricingComponent createdComponent = componentRepository.findByName(TEST_COMPONENT_NAME)
+                    .orElseThrow(() -> new IllegalStateException("Test component not found after seeding."));
+
+            // 4. Create the link using the PERSISTED product entity
+            createProductPricingLink(this.persistedProduct, createdComponent);
+
             entityManager.flush();
             entityManager.clear();
         });
@@ -119,6 +146,15 @@ public class DroolsIntegrationTest {
         transactionTemplate.executeWithoutResult(status -> {
             safeDeleteAllPricingData();
         });
+    }
+
+    private void createProductPricingLink(Product product, PricingComponent component) {
+        ProductPricingLink link = new ProductPricingLink();
+        link.setProduct(product);
+        link.setPricingComponent(component);
+        link.setBankId(TEST_BANK_ID);
+        link.setUseRulesEngine(true);
+        productPricingLinkRepository.save(link);
     }
 
     private void seedDatabaseWithTestRule(String name, String segment, BigDecimal price) {
@@ -171,7 +207,17 @@ public class DroolsIntegrationTest {
      */
     @Test
     void testInitialDbRuleFiresSuccessfully() {
-        PriceValue result = pricingCalculationService.getCalculatedPrice(TEST_SEGMENT, TEST_AMOUNT);
+        PriceRequest request = PriceRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT)
+                .amount(TEST_AMOUNT)
+                .build();
+
+        List<PriceValueResponseDto> results = pricingCalculationService.getProductPricing(request);
+
+        assertFalse(results.isEmpty(), "Expected at least one price component result.");
+        PriceValueResponseDto result = results.get(0);
+
         assertEquals(EXPECTED_PRICE_INITIAL, result.getPriceAmount(), "Initial rule execution should return 10.00.");
     }
 
@@ -185,7 +231,6 @@ public class DroolsIntegrationTest {
     @WithMockUser(authorities = {"pricing:component:create", "pricing:tier:create", "pricing:value:create"})
     void testRuleIsLiveImmediatelyAfterCreation() {
         // ARRANGE: Get the ID of the component we seeded in setUp (PREMIUM: 10.00)
-        // We ensure the service starts clean by using a new component.
 
         // --- Setup for the NEW component and rule (STANDARD: 50.00) ---
 
@@ -223,7 +268,18 @@ public class DroolsIntegrationTest {
                 valueDto);
 
         // ASSERT: The new rule should be immediately active and fire for the new segment
-        PriceValue result = pricingCalculationService.getCalculatedPrice(TEST_SEGMENT_OTHER, TEST_AMOUNT);
+        // **FIXED:** Updated method call and return type.
+        PriceRequest request = PriceRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT_OTHER)
+                .amount(TEST_AMOUNT)
+                .build();
+
+        List<PriceValueResponseDto> results = pricingCalculationService.getProductPricing(request);
+
+        assertFalse(results.isEmpty(), "Expected at least one price component result.");
+        PriceValueResponseDto result = results.get(0);
+
 
         assertEquals(EXPECTED_PRICE_NEW, result.getPriceAmount(),
                 "The new rule for the 'STANDARD' segment should be active immediately after creation and return 50.00.");
@@ -233,6 +289,7 @@ public class DroolsIntegrationTest {
      * 2. Test Rule Deletion and Fallback (Safety Test)
      */
     @Test
+    @WithMockUser(authorities = {"pricing:component:delete"})
     void testRuleReloadAfterFullComponentDeletion() {
         // ARRANGE: Get the committed component's ID
         final PricingComponent[] componentRef = new PricingComponent[1];
@@ -254,7 +311,16 @@ public class DroolsIntegrationTest {
         );
 
         // ACT 1: Execute baseline check
-        PriceValue resultBefore = pricingCalculationService.getCalculatedPrice(TEST_SEGMENT, TEST_AMOUNT);
+        PriceRequest baselineRequest = PriceRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT)
+                .amount(TEST_AMOUNT)
+                .build();
+
+        List<PriceValueResponseDto> resultsBefore = pricingCalculationService.getProductPricing(baselineRequest);
+        assertFalse(resultsBefore.isEmpty(), "Baseline check expected at least one price component result.");
+
+        PriceValueResponseDto resultBefore = resultsBefore.get(0);
         assertEquals(EXPECTED_PRICE_INITIAL, resultBefore.getPriceAmount(), "Baseline rule execution must succeed (10.00).");
 
         // ACT 2: Delete the Tier (Runs in REQUIRES_NEW and COMMITS deletion)
@@ -263,10 +329,24 @@ public class DroolsIntegrationTest {
         Assertions.assertEquals(0L, getTierCountDirectly(componentId),
                 "Database tier count must be zero after first deletion transaction commits.");
 
-        // ACT 3: Delete the component
+        // Delete the ProductPricingLink and COMMIT it immediately
         transactionTemplate.execute(new TransactionCallbackWithoutResult() {
             @Override
             protected void doInTransactionWithoutResult(TransactionStatus status) {
+                // Delete dependency using direct JDBC
+                jdbcTemplate.update(
+                        "DELETE FROM PRODUCT_PRICING_LINK WHERE PRICING_COMPONENT_ID = ?",
+                        componentId
+                );
+                // This transaction block commits here, making the deletion visible to the next operation.
+            }
+        });
+
+        // ACT 3: Step 2. Delete the component in a new transaction
+        transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+            @Override
+            protected void doInTransactionWithoutResult(TransactionStatus status) {
+                entityManager.clear();
                 pricingComponentService.deletePricingComponent(componentId);
             }
         });
@@ -276,8 +356,14 @@ public class DroolsIntegrationTest {
         assertTrue(success, "KieContainer must reload successfully after component deletion.");
 
         // ASSERT: Calculation should now fail (rules are deleted)
+        PriceRequest failRequest = PriceRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT)
+                .amount(TEST_AMOUNT)
+                .build();
+
         assertThrows(NotFoundException.class,
-                () -> pricingCalculationService.getCalculatedPrice(TEST_SEGMENT, TEST_AMOUNT),
+                () -> pricingCalculationService.getProductPricing(failRequest),
                 "Rule execution must now throw NotFoundException after rule deletion.");
     }
 

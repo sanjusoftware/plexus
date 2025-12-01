@@ -131,6 +131,7 @@ public class ProductService {
                 newLink.setProduct(product);
                 newLink.setFeatureComponent(component);
                 newLink.setFeatureValue(dto.getFeatureValue());
+                newLink.setBankId(product.getBankId());
                 linkRepository.save(newLink);
             }
         }
@@ -182,7 +183,7 @@ public class ProductService {
                 newLink.setProduct(product);
                 newLink.setPricingComponent(component);
                 newLink.setContext(dto.getContext());
-
+                newLink.setBankId(product.getBankId());
                 pricingLinkRepository.save(newLink);
             }
         }
@@ -243,7 +244,7 @@ public class ProductService {
         link.setProduct(product);
         link.setFeatureComponent(component);
         link.setFeatureValue(dto.getFeatureValue());
-
+        link.setBankId(product.getBankId());
         linkRepository.save(link);
         return getProductResponseById(product.getId());
     }
@@ -386,6 +387,9 @@ public class ProductService {
             throw new IllegalStateException("Only ACTIVE products can be used as a base for a new version.");
         }
 
+        // Retrieve the bank ID once for the entire cloning process
+        String bankId = oldProduct.getBankId();
+
         // 2. Archive the Old Product
         oldProduct.setStatus("ARCHIVED");
         // Set the expiration date to the day *before* the new version becomes effective
@@ -397,7 +401,7 @@ public class ProductService {
 
         // Inherited configuration fields
         newProduct.setProductType(oldProduct.getProductType());
-        newProduct.setBankId(oldProduct.getBankId());
+        newProduct.setBankId(bankId);
 
         // New version metadata
         newProduct.setName(requestDto.getNewName());
@@ -416,6 +420,7 @@ public class ProductService {
                     newLink.setProduct(savedNewProduct);
                     newLink.setFeatureComponent(oldLink.getFeatureComponent());
                     newLink.setFeatureValue(oldLink.getFeatureValue());
+                    newLink.setBankId(bankId);
                     return newLink;
                 })
                 .collect(Collectors.toList());
@@ -431,6 +436,7 @@ public class ProductService {
                     newLink.setProduct(savedNewProduct);
                     newLink.setPricingComponent(oldLink.getPricingComponent());
                     newLink.setContext(oldLink.getContext());
+                    newLink.setBankId(bankId);
                     return newLink;
                 })
                 .collect(Collectors.toList());

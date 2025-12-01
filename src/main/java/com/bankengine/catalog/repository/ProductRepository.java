@@ -19,4 +19,6 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     // Custom finder method required by the TestDataSeeder
     Optional<Product> findByName(String name);
+
+    long countByBankId(String bankId);
 }

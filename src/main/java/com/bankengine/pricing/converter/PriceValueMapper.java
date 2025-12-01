@@ -1,15 +1,15 @@
 package com.bankengine.pricing.converter;
 
+import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.dto.CreatePriceValueRequestDto;
 import com.bankengine.pricing.dto.PriceValueResponseDto;
 import com.bankengine.pricing.dto.UpdatePriceValueRequestDto;
 import com.bankengine.pricing.model.PriceValue;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(config = MapStructConfig.class)
 public interface PriceValueMapper {
 
     // For addTierAndValue
@@ -28,7 +28,9 @@ public interface PriceValueMapper {
     @Mapping(target = "updatedAt", ignore = true)
     void updateFromDto(UpdatePriceValueRequestDto dto, @MappingTarget PriceValue entity);
 
-    // For updateTierAndValue (response) and addTierAndValue (response)
-    @Mapping(target = "valueType", source = "valueType") // MapStruct can map Enum to String via toString/name()
+    @Mapping(target = "valueType", source = "valueType")
+    @Mapping(source = "pricingTier.pricingComponent.name", target = "pricingComponentCode")
+    @Mapping(target = "context", constant = "PRODUCT_TIER")
+    @Mapping(target = "sourceType", constant = "CATALOG")
     PriceValueResponseDto toResponseDto(PriceValue entity);
 }

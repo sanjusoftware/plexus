@@ -246,7 +246,7 @@ public class PricingComponentService {
                     "Cannot delete Pricing Component ID %d ('%s'): It is currently linked to %d active product(s). Unlink all product dependencies first.",
                     id, component.getName(), linkCount
             );
-            // Throws exception, which the GlobalExceptionHandler maps to 409 Conflict
+
             throw new DependencyViolationException(message);
         }
 

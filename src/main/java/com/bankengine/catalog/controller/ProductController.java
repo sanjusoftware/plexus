@@ -55,7 +55,7 @@ public class ProductController {
     @GetMapping
     @PreAuthorize("hasAuthority('catalog:product:read')")
     public ResponseEntity<Page<ProductResponseDto>> searchProducts(
-            @Valid ProductSearchRequestDto criteria) { // Spring automatically maps query params to this DTO
+            @Valid ProductSearchRequestDto criteria) {
         Page<ProductResponseDto> productPage = productService.searchProducts(criteria);
         return new ResponseEntity<>(productPage, HttpStatus.OK);
     }

@@ -1,19 +1,18 @@
 package com.bankengine.catalog.converter;
 
 import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
+import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.UpdateProductRequestDto;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.LocalDate;
-
-import com.bankengine.catalog.dto.ProductResponseDto;
-import com.bankengine.catalog.dto.UpdateProductRequestDto;
-
 import java.util.Collections;
 import java.util.List;
 
@@ -23,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
+@ActiveProfiles("test")
 public class ProductMapperTest {
 
     @Autowired

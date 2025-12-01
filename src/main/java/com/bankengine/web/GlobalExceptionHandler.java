@@ -1,5 +1,6 @@
 package com.bankengine.web;
 
+import com.bankengine.common.exception.ValidationException;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -49,7 +50,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * NEW: 2a. Handles custom business validation errors (e.g., product multi-bundling constraint). (400 BAD REQUEST)
+     */
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleCustomValidationException(ValidationException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        Map<String, Object> body = createErrorBody(status, "Business Validation Failed", ex.getMessage());
+        return new ResponseEntity<>(body, status);
+    }
+
+    /**
      * 2. Handles generic bad request errors (e.g., from service layer checks). (400 BAD REQUEST)
+     * NOTE: You might want to remove this and use ValidationException instead if it covers all your intended uses.
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
