@@ -2,8 +2,9 @@ package com.bankengine.pricing.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.math.BigDecimal;
 import lombok.Data;
+
+import java.math.BigDecimal;
 
 @Data
 public class CreatePriceValueRequestDto {
@@ -14,6 +15,4 @@ public class CreatePriceValueRequestDto {
     @NotBlank(message = "Value type is required (e.g., ABSOLUTE, PERCENTAGE).")
     private String valueType;
 
-    @NotBlank(message = "Currency is required (e.g., USD, EUR).")
-    private String currency;
 }

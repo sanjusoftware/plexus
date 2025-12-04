@@ -1,19 +1,18 @@
 package com.bankengine.rules.service;
 
-import com.bankengine.config.DroolsConfig;
+import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.config.drools.DroolsKieModuleBuilder;
 import com.bankengine.pricing.service.BundleDroolsRuleBuilderService;
 import com.bankengine.pricing.service.DroolsRuleBuilderService;
 import org.kie.api.KieServices;
-import org.kie.api.builder.*;
-import org.kie.api.builder.model.KieBaseModel;
-import org.kie.api.builder.model.KieModuleModel;
-import org.kie.api.builder.model.KieSessionModel;
-import org.kie.api.conf.EqualityBehaviorOption;
-import org.kie.api.conf.EventProcessingOption;
+import org.kie.api.builder.ReleaseId;
 import org.kie.api.runtime.KieContainer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service
@@ -22,24 +21,25 @@ public class KieContainerReloadService {
     // Holds the currently active KieContainer instance
     private final AtomicReference<KieContainer> activeKieContainer;
 
+    // CRITICAL FIX: Inject the Spring proxy of this service into itself
+    // to enable @Transactional processing on self-invoked methods.
+    @Autowired
+    @Lazy
+    private KieContainerReloadService self;
+
     private final DroolsRuleBuilderService ruleBuilderService;
     private final BundleDroolsRuleBuilderService bundleRuleBuilderService;
-
-    // Release ID constants must match DroolsConfig
-    private static final String GROUP_ID = "com.bankengine";
-    private static final String ARTIFACT_ID = "plexus-rules";
-    private static final String VERSION = "1.0.0";
-    private static final ReleaseId RELEASE_ID = KieServices.Factory.get().newReleaseId(GROUP_ID, ARTIFACT_ID, VERSION);
-
-    // KIE Base/Session constants must match DroolsConfig
-    private static final String KBASE_NAME = DroolsConfig.KBASE_NAME;
-    private static final String KSESSION_NAME = DroolsConfig.KSESSION_NAME;
+    private final DroolsKieModuleBuilder moduleBuilder;
 
     @Autowired
-    public KieContainerReloadService(KieContainer initialKieContainer, DroolsRuleBuilderService ruleBuilderService, BundleDroolsRuleBuilderService bundleRuleBuilderService) {
+    public KieContainerReloadService(KieContainer initialKieContainer,
+                                     DroolsRuleBuilderService ruleBuilderService,
+                                     BundleDroolsRuleBuilderService bundleRuleBuilderService,
+                                     DroolsKieModuleBuilder moduleBuilder) {
         this.activeKieContainer = new AtomicReference<>(initialKieContainer);
         this.ruleBuilderService = ruleBuilderService;
         this.bundleRuleBuilderService = bundleRuleBuilderService;
+        this.moduleBuilder = moduleBuilder;
     }
 
     /**
@@ -50,75 +50,79 @@ public class KieContainerReloadService {
         return activeKieContainer.get();
     }
 
+    // -------------------------------------------------------------------------
+    // Worker Method (Relies on existing BankContextHolder for filtering)
+    // -------------------------------------------------------------------------
+
     /**
      * Fetches rules from the DB, compiles the DRL, and swaps the active KieContainer.
+     * This method relies on the current thread having the correct bankId set
+     * in the BankContextHolder.
      * @return true if compilation was successful, false otherwise.
      */
+    @Transactional(readOnly = true)
     public boolean reloadKieContainer() {
         KieServices kieServices = KieServices.Factory.get();
 
-        // 1. Fetch DRL content from the database
-        String productRuleContent = ruleBuilderService.buildAllRulesForCompilation();
-        String bundleRuleContent = bundleRuleBuilderService.buildAllBundleRulesForCompilation();
+        try {
+            // 1. Fetch DRL content from the database. The @Transactional proxy now
+            //    runs, starting a transaction and enabling the Hibernate filter.
+            String productRuleContent = ruleBuilderService.buildAllRulesForCompilation();
+            String bundleRuleContent = bundleRuleBuilderService.buildAllRulesForCompilation();
 
-        // 2. Setup the virtual file system
-        KieFileSystem kieFileSystem = kieServices.newKieFileSystem();
+            // 2. Prepare content map
+            Map<String, String> drlContent = Map.of(
+                    DroolsKieModuleBuilder.PRODUCT_RULES_PATH, productRuleContent,
+                    DroolsKieModuleBuilder.BUNDLE_RULES_PATH, bundleRuleContent
+            );
 
-        // 3. Programmatically define the KieModule configuration (must match DroolsConfig)
-        KieModuleModel kModuleModel = createKieModuleModel(kieServices);
-        kieFileSystem.writeKModuleXML(kModuleModel.toXML());
+            // 3. Delegate the build, installation, and error checking
+            ReleaseId releaseId = moduleBuilder.buildAndInstallKieModule(drlContent);
 
-        // 4. Write the new DRL content and POM
-        // Use the same file name as DroolsConfig for consistency, though it's rewritten here.
-        kieFileSystem.write("src/main/resources/rules/product_rules.drl", productRuleContent);
-        kieFileSystem.write("src/main/resources/rules/bundle_rules.drl", bundleRuleContent);
-        kieFileSystem.generateAndWritePomXML(RELEASE_ID);
+            // 4. Create the new container and swap the reference (thread-safe update)
+            KieContainer newContainer = kieServices.newKieContainer(releaseId);
+            activeKieContainer.set(newContainer);
 
-        // 5. Compile the rules
-        KieBuilder kieBuilder = kieServices.newKieBuilder(kieFileSystem);
-        kieBuilder.buildAll();
+            System.out.println("✅ Drools KieContainer successfully reloaded with new rules.");
+            return true;
 
-        // 6. Check for errors
-        if (kieBuilder.getResults().hasMessages(Message.Level.ERROR)) {
+        } catch (RuntimeException e) {
             System.err.println("❌ DROOLS COMPILATION ERROR during reload!");
-            System.err.println(kieBuilder.getResults().toString());
-            // Log the problematic DRL content for debugging
-            System.err.println("Failed DRL Content:\n" + productRuleContent);
+            System.err.println(e.getMessage());
             return false;
         }
-
-        // 7. Update the active KieContainer instance
-        KieModule kieModule = kieBuilder.getKieModule();
-        // Register the new module version
-        kieServices.getRepository().addKieModule(kieModule);
-
-        // Create the new container and swap the reference (thread-safe update)
-        KieContainer newContainer = kieServices.newKieContainer(kieModule.getReleaseId());
-        activeKieContainer.set(newContainer);
-
-        System.out.println("✅ Drools KieContainer successfully reloaded with new rules.");
-        return true;
     }
 
+    // -------------------------------------------------------------------------
+    // Overloaded Method (For Test/Manual Context Override)
+    // -------------------------------------------------------------------------
+
     /**
-     * Helper method to programmatically create a minimal, valid kmodule.xml equivalent.
-     * MUST match the configuration in DroolsConfig.
+     * Overload to execute rule reload within a specific bank context.
+     * This is intended for integration tests or maintenance calls where the
+     * BankContextHolder may not be correctly set by the request flow.
+     *
+     * @param bankId The bankId to use for the rule compilation database read.
+     * @return true if compilation was successful, false otherwise.
      */
-    private KieModuleModel createKieModuleModel(KieServices kieServices) {
-        KieModuleModel kModuleModel = kieServices.newKieModuleModel();
+    public boolean reloadKieContainer(String bankId) {
+        if (bankId == null) {
+            // Use 'self' to call the transactional method
+            return self.reloadKieContainer();
+        }
 
-        // Define a default KIE Base
-        KieBaseModel kBaseModel = kModuleModel.newKieBaseModel(KBASE_NAME)
-                .setDefault(true)
-                .addPackage("*")
-                .setEqualsBehavior(EqualityBehaviorOption.EQUALITY)
-                .setEventProcessingMode(EventProcessingOption.CLOUD);
+        // 1. SAVE the current context (CRITICAL for thread safety)
+        String previousBankId = BankContextHolder.getBankId();
+        try {
+            // 2. SET the required bankId for the DB read
+            BankContextHolder.setBankId(bankId);
 
-        // Define a default KIE Session within that base
-        kBaseModel.newKieSessionModel(KSESSION_NAME)
-                .setDefault(true)
-                .setType(KieSessionModel.KieSessionType.STATEFUL);
+            // 3. Delegate to the worker method using the proxy
+            return self.reloadKieContainer(); // <-- Use 'self' here
 
-        return kModuleModel;
+        } finally {
+            // 4. RESTORE the original context (CRITICAL)
+            BankContextHolder.setBankId(previousBankId);
+        }
     }
 }

@@ -4,6 +4,7 @@ import com.bankengine.common.model.AuditableEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import java.util.Set;
 @Table(name = "pricing_tier")
 @Getter
 @Setter
+@NoArgsConstructor
 public class PricingTier extends AuditableEntity {
 
     @Id
@@ -24,14 +26,11 @@ public class PricingTier extends AuditableEntity {
     @JoinColumn(name = "component_id", nullable = false)
     private PricingComponent pricingComponent;
 
-    // Bidirectional link to all price values in this tier
-    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     @JsonIgnore
     private Set<PriceValue> priceValues = new HashSet<>();
 
-    // Bidirectional link to all TierConditions for this tier
-    // The DroolsRuleBuilderService will iterate over this list.
-    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private Set<TierCondition> conditions = new HashSet<>();
 
     private String tierName;
@@ -39,5 +38,12 @@ public class PricingTier extends AuditableEntity {
     // Numeric Tiers (e.g., Loan Amount Min/Max)
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
+
+    public PricingTier(PricingComponent pricingComponent, String tierName, BigDecimal minThreshold, BigDecimal maxThreshold) {
+        this.pricingComponent = pricingComponent;
+        this.tierName = tierName;
+        this.minThreshold = minThreshold;
+        this.maxThreshold = maxThreshold;
+    }
 
 }

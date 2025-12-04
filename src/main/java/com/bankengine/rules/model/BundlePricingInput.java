@@ -20,6 +20,9 @@ public class BundlePricingInput {
     private String customerSegment;
     private BigDecimal grossTotalAmount;
 
+    // Map for custom runtime facts defined in PricingInputMetadata
+    private Map<String, Object> customAttributes = new HashMap<>();
+
     // Output map updated by the DRL rules (RHS)
     // Key: adjustment code, Value: monetary amount (negative for deductions)
     private final Map<String, BigDecimal> adjustments = new HashMap<>();

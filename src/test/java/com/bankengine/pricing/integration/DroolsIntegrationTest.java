@@ -4,11 +4,14 @@ import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
-import com.bankengine.pricing.dto.*;
+import com.bankengine.pricing.dto.PriceRequest;
+import com.bankengine.pricing.dto.PriceValueResponseDto;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.TierCondition.Operator;
-import com.bankengine.pricing.repository.*;
+import com.bankengine.pricing.repository.PricingComponentRepository;
+import com.bankengine.pricing.repository.PricingInputMetadataRepository;
+import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.pricing.service.PricingCalculationService;
 import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.rules.service.KieContainerReloadService;
@@ -25,10 +28,12 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,177 +41,118 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired private PricingComponentRepository componentRepository;
-    @Autowired private PricingTierRepository tierRepository;
-    @Autowired private PriceValueRepository valueRepository;
-    @Autowired private TierConditionRepository tierConditionRepository;
-    @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
-    @Autowired private PricingInputMetadataRepository pricingInputMetadataRepository;
-
-    @Autowired private KieContainerReloadService kieContainerReloadService;
-    @Autowired private PricingComponentService pricingComponentService;
-    @Autowired private PricingCalculationService pricingCalculationService;
-    @Autowired private MockMvc mockMvc;
-    @Autowired private EntityManager entityManager;
-    @Autowired private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
-    @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private ProductRepository productRepository;
-    @Autowired private ProductTypeRepository productTypeRepository;
-
-    private static final String TEST_COMPONENT_NAME = "FeeComponent";
-    private static final String TEST_SEGMENT = "PREMIUM";
-    private static final String TEST_SEGMENT_OTHER = "STANDARD";
-    private static final BigDecimal TEST_AMOUNT = new BigDecimal("100000.00");
+    // --- SETUP VARIABLES ---
+    private static final String TEST_COMPONENT_NAME = "AnnualFeeComponent";
+    private static final String TEST_SEGMENT = "RETAIL";
+    private static final BigDecimal TEST_AMOUNT = new BigDecimal("1000.00");
     private static final BigDecimal EXPECTED_PRICE_INITIAL = new BigDecimal("10.00");
-    private static final BigDecimal EXPECTED_PRICE_NEW = new BigDecimal("50.00");
-    private Long productId;
     private Product persistedProduct;
+    private ProductType persistedProductType;
 
-    private void safeDeleteAllPricingData() {
-        // MUST DELETE IN DEPENDENCY ORDER: Child before Parent
+    // --- REPOSITORIES & SERVICES ---
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ProductTypeRepository productTypeRepository;
+    @Autowired
+    private PricingComponentRepository componentRepository;
+    @Autowired
+    private ProductPricingLinkRepository productPricingLinkRepository;
+    @Autowired
+    private PricingInputMetadataRepository metadataRepository;
+    @Autowired
+    private PricingCalculationService pricingCalculationService;
+    @Autowired
+    private PricingComponentService pricingComponentService;
+    @Autowired
+    private KieContainerReloadService kieContainerReloadService;
+    @Autowired
+    private EntityManager entityManager;
+    @Autowired
+    private JdbcTemplate jdbcTemplate; // Used for direct DB checks and cleanup
+    @Autowired
+    private MockMvc mockMvc; // For testing the API endpoint
 
-        // 1. Links (Child of Product & Component)
-        productPricingLinkRepository.deleteAllInBatch();
-
-        // 2. Pricing Tier Children
-        tierConditionRepository.deleteAllInBatch();
-        valueRepository.deleteAllInBatch();
-
-        // 3. Pricing Tier
-        tierRepository.deleteAllInBatch();
-
-        // 4. Product/ProductType cleanup
-        productRepository.deleteAllInBatch();
-        productTypeRepository.deleteAllInBatch(); // Parent entity
-
-        // 5. Remaining Parent entities
-        componentRepository.deleteAllInBatch();
-        pricingInputMetadataRepository.deleteAllInBatch();
-    }
-
-    private void seedRequiredMetadata() {
-        if (pricingInputMetadataRepository.findByAttributeKey("customerSegment").isEmpty()) {
-             PricingInputMetadata metadata = new PricingInputMetadata();
-             metadata.setAttributeKey("customerSegment");
-             metadata.setDisplayName("Client Segment");
-             metadata.setDataType("STRING");
-             pricingInputMetadataRepository.save(metadata);
-        }
-        if (pricingInputMetadataRepository.findByAttributeKey("transactionAmount").isEmpty()) {
-             PricingInputMetadata metadata = new PricingInputMetadata();
-             metadata.setAttributeKey("transactionAmount");
-             metadata.setDisplayName("Transaction Amount");
-             metadata.setDataType("DECIMAL");
-             pricingInputMetadataRepository.save(metadata);
-        }
-    }
-    // --------------------------------
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @BeforeEach
-    void setUp() {
-        transactionTemplate.executeWithoutResult(status -> {
-            safeDeleteAllPricingData();
-            seedRequiredMetadata();
+    void setup() {
+        cleanupData();
 
-            entityManager.createNativeQuery("ALTER TABLE PRICING_COMPONENT ALTER COLUMN ID RESTART WITH 1").executeUpdate();
-
+        // 💡 FIX 1: Wrap all persistence operations in a TransactionTemplate block
+        // This ensures an active transaction is available for save/flush operations (fixing TransactionRequiredException)
+        // and commits the data, making it visible for the rule builder service.
+        transactionTemplate.execute(status -> {
+            // 1. Setup Product Type
             ProductType productType = new ProductType();
-            productType.setName("Test Type");
-            productType.setBankId(TEST_BANK_ID);
-            ProductType persistedProductType = productTypeRepository.save(productType);
+            productType.setName("LOAN_TYPE");
+            persistedProductType = productTypeRepository.save(productType);
 
-            // 1. Create and Persist the required Product Entity
+            // 2. Setup Product
             Product product = new Product();
-            product.setName("Test Product for Pricing");
-            product.setBankId(TEST_BANK_ID);
+            product.setName("Test Loan");
             product.setProductType(persistedProductType);
+            persistedProduct = productRepository.save(product);
 
-            this.persistedProduct = productRepository.save(product);
+            // 3. Setup Pricing Component Graph: A simple Annual Fee (10.00) if segment is RETAIL
+            PricingComponent component = new PricingComponent(TEST_COMPONENT_NAME, PricingComponent.ComponentType.FEE);
+            component = componentRepository.save(component);
 
-            // 2. Seed initial rule (The component ID will be 1)
-            seedDatabaseWithTestRule(TEST_COMPONENT_NAME, TEST_SEGMENT, EXPECTED_PRICE_INITIAL);
+            PricingTier tier = new PricingTier(component, "Base Tier", BigDecimal.ZERO, null);
 
-            // 3. Fetch the created component
-            PricingComponent createdComponent = componentRepository.findByName(TEST_COMPONENT_NAME)
-                    .orElseThrow(() -> new IllegalStateException("Test component not found after seeding."));
+            TierCondition condition = new TierCondition();
+            condition.setPricingTier(tier);
+            condition.setAttributeName("customerSegment");
+            condition.setOperator(Operator.EQ);
+            condition.setAttributeValue(TEST_SEGMENT);
+            condition.setConnector(TierCondition.LogicalConnector.AND);
+            tier.getConditions().add(condition);
 
-            // 4. Create the link using the PERSISTED product entity
-            createProductPricingLink(this.persistedProduct, createdComponent);
+            PriceValue priceValue = new PriceValue(tier, EXPECTED_PRICE_INITIAL, ValueType.ABSOLUTE);
+            tier.getPriceValues().add(priceValue);
 
+            component.getPricingTiers().add(tier);
+            componentRepository.save(component);
+
+            // 4. Link Product to Pricing Component
+            productPricingLinkRepository.save(new ProductPricingLink(
+                    persistedProduct,
+                    component,
+                    "ANNUAL_FEE",
+                    null,
+                    true // Use Rules Engine
+            ));
+
+            // Ensure all setup data is visible in the database before rule reload (Line 123 fix).
             entityManager.flush();
-            entityManager.clear();
-        });
+            return null;
+        }); // Transaction commits here
 
-        assertTrue(kieContainerReloadService.reloadKieContainer(),
-                "KieContainer must reload successfully after data seeding.");
+        // 5. Build and Deploy Rules (must be outside the persistence transaction)
+        boolean success = kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
+        assertTrue(success, "KieContainer must reload successfully during setup.");
     }
 
     @AfterEach
-    void tearDown() {
-        transactionTemplate.executeWithoutResult(status -> {
-            safeDeleteAllPricingData();
-        });
+    void cleanup() {
+        cleanupData();
     }
 
-    private void createProductPricingLink(Product product, PricingComponent component) {
-        ProductPricingLink link = new ProductPricingLink();
-        link.setProduct(product);
-        link.setPricingComponent(component);
-        link.setBankId(TEST_BANK_ID);
-        link.setUseRulesEngine(true);
-        productPricingLinkRepository.save(link);
-    }
-
-    private void seedDatabaseWithTestRule(String name, String segment, BigDecimal price) {
-        // 1. Price Value
-        PriceValue priceValue = new PriceValue();
-        priceValue.setPriceAmount(price);
-        priceValue.setValueType(ValueType.ABSOLUTE);
-        priceValue.setCurrency("USD");
-
-        // 2. Tier Condition: customerSegment == segment
-        TierCondition condition = new TierCondition();
-        condition.setAttributeName("customerSegment");
-        condition.setOperator(Operator.EQ);
-        condition.setAttributeValue(segment);
-
-        // 3. Pricing Component (save first to get ID)
-        PricingComponent component = new PricingComponent();
-        component.setName(name);
-        component.setType(PricingComponent.ComponentType.FEE);
-        componentRepository.save(component);
-
-        // 4. Pricing Tier
-        PricingTier tier = new PricingTier();
-        tier.setTierName("Tier for " + segment);
-
-        // Set the bidirectional link
-        condition.setPricingTier(tier);
-        priceValue.setPricingTier(tier);
-
-        // Set collections on the Tier
-        tier.setConditions(Set.of(condition));
-        tier.setPriceValues(Set.of(priceValue));
-
-        // Set the crucial @ManyToOne link
-        tier.setPricingComponent(component);
-
-        // 5. Save the Tier (This persists the Tier and generates its ID)
-        tierRepository.save(tier);
-
-        // 6. Save children of the Tier.
-        tierConditionRepository.save(condition);
-        valueRepository.save(priceValue);
-
-        // 7. Update component's in-memory collection (for immediate use)
-        component.getPricingTiers().add(tier);
+    private void cleanupData() {
+        productPricingLinkRepository.deleteAllInBatch();
+        componentRepository.deleteAllInBatch();
+        productRepository.deleteAllInBatch();
+        productTypeRepository.deleteAllInBatch();
+        metadataRepository.deleteAllInBatch();
     }
 
     /**
-     * Test the full pipeline: DB Data -> DRL Generation -> KieContainer Compilation -> Rule Firing.
+     * 1. Standard Rule Execution Integration Test (Baseline Check)
      */
     @Test
-    void testInitialDbRuleFiresSuccessfully() {
+    @WithMockUser(authorities = {"pricing:calculation:read"})
+    void testStandardRuleExecution_Success() {
         PriceRequest request = PriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
@@ -215,78 +161,173 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         List<PriceValueResponseDto> results = pricingCalculationService.getProductPricing(request);
 
+        // ASSERT
         assertFalse(results.isEmpty(), "Expected at least one price component result.");
         PriceValueResponseDto result = results.get(0);
-
-        assertEquals(EXPECTED_PRICE_INITIAL, result.getPriceAmount(), "Initial rule execution should return 10.00.");
+        assertEquals(EXPECTED_PRICE_INITIAL, result.getPriceAmount(), "Rule execution must succeed and return the expected price.");
+        assertEquals(ValueType.ABSOLUTE.name(), result.getValueType(), "Value type must be ABSOLUTE.");
     }
 
-    // --- New Lifecycle Tests ---
+    // --- NEW TESTS FOR CUSTOM ATTRIBUTES AND BENEFITS ---
 
     /**
-     * 1. Test Rule Reload After Creation (Lifecycle Test)
-     * Verifies that the automatic reload trigger in PricingComponentService works.
+     * 2. Test Rule Execution with Custom Input Attribute (from customAttributes map)
      */
     @Test
-    @WithMockUser(authorities = {"pricing:component:create", "pricing:tier:create", "pricing:value:create"})
-    void testRuleIsLiveImmediatelyAfterCreation() {
-        // ARRANGE: Get the ID of the component we seeded in setUp (PREMIUM: 10.00)
+    // 💡 FIX 2: Removed @Transactional to allow explicit transaction template control.
+    @WithMockUser(authorities = {"pricing:calculation:read", "pricing:metadata:write", "pricing:component:write"})
+    void testRuleExecutionWithCustomInputAttribute() {
 
-        // --- Setup for the NEW component and rule (STANDARD: 50.00) ---
+        // 💡 FIX 2: Wrap all setup logic in a committed transaction so the rule builder can read it.
+        transactionTemplate.execute(status -> {
+            // ARRANGE 1: Setup custom metadata input
+            PricingInputMetadata metadata = new PricingInputMetadata();
+            metadata.setAttributeKey("CLIENT_AGE");
+            metadata.setDataType("INTEGER");
+            metadata.setDisplayName("Client Age for Pricing");
+            metadataRepository.save(metadata);
 
-        // 1. Create a NEW Pricing Component
-        PricingComponent newComponent = new PricingComponent();
-        newComponent.setName("NewFeeComponent");
-        newComponent.setType(PricingComponent.ComponentType.FEE);
-        newComponent = componentRepository.save(newComponent);
-        Long newComponentId = newComponent.getId();
+            // ARRANGE 2: Create a new component graph that uses the custom attribute
+            String customCompName = "AgeRuleComponent";
+            PricingComponent component = new PricingComponent(customCompName, PricingComponent.ComponentType.FEE);
+            PricingComponent persistedComponent = componentRepository.save(component);
 
-        // 2. Setup the PRICE VALUE DTO
-        CreatePriceValueRequestDto valueDto = new CreatePriceValueRequestDto();
-        valueDto.setPriceAmount(EXPECTED_PRICE_NEW); // 50.00
-        valueDto.setValueType(PriceValue.ValueType.ABSOLUTE.name());
-        valueDto.setCurrency("USD");
+            // Tier condition: IF CLIENT_AGE > 60 THEN $20.00
+            PricingTier tier = new PricingTier(persistedComponent, "Senior Tier", BigDecimal.ZERO, null);
 
-        // 3. Setup the TIER DTO
-        CreatePricingTierRequestDto tierDto = new CreatePricingTierRequestDto();
-        tierDto.setTierName("Standard Tier");
+            TierCondition condition = new TierCondition();
+            condition.setPricingTier(tier);
+            condition.setAttributeName("CLIENT_AGE"); // CRITICAL: Use the custom attribute key "CLIENT_AGE"
+            condition.setOperator(Operator.GT);
+            condition.setAttributeValue("60");
+            condition.setConnector(TierCondition.LogicalConnector.AND);
+            tier.getConditions().add(condition);
 
-        // Define the required rule condition: customerSegment == "STANDARD"
-        TierConditionDto conditionDto = new TierConditionDto();
-        conditionDto.setAttributeName("customerSegment");
-        conditionDto.setOperator(TierCondition.Operator.EQ);
-        conditionDto.setAttributeValue(TEST_SEGMENT_OTHER); // "STANDARD"
+            PriceValue priceValue = new PriceValue(tier, new BigDecimal("20.00"), ValueType.ABSOLUTE);
+            tier.getPriceValues().add(priceValue);
 
-        tierDto.setConditions(Set.of(conditionDto));
+            persistedComponent.getPricingTiers().add(tier);
+            componentRepository.save(persistedComponent);
 
-        // ACT 2: Call the service method, triggering the automatic rule reload
-        // This creates a rule: Rule_NewFeeComponent_Tier_X (customerSegment == "STANDARD" -> 50.00)
-        // This method is assumed to internally call the KieContainerReloadService.
-        pricingComponentService.addTierAndValue(
-                newComponentId,
-                tierDto,
-                valueDto);
+            // Link component to product (using the same product from setup)
+            productPricingLinkRepository.save(new ProductPricingLink(
+                    persistedProduct,
+                    persistedComponent,
+                    "AGE_RULE",
+                    null,
+                    true
+            ));
 
-        // ASSERT: The new rule should be immediately active and fire for the new segment
-        // **FIXED:** Updated method call and return type.
+            entityManager.flush(); // Commit data to be visible to KieContainerReloadService
+            return null;
+        }); // Transaction commits here
+
+        // Reload Rules
+        assertTrue(kieContainerReloadService.reloadKieContainer(TEST_BANK_ID), "KieContainer must reload successfully with new custom rule.");
+
+        // ACT & ASSERT 1: Test Success (Age 65 > 60)
+        PriceRequest successRequest = PriceRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT)
+                .amount(TEST_AMOUNT)
+                .customAttributes(Collections.singletonMap("CLIENT_AGE", 65L))
+                .build();
+
+        List<PriceValueResponseDto> successResults = pricingCalculationService.getProductPricing(successRequest);
+
+        // The service should return two prices: the Annual Fee (10.00) + the Age Fee (20.00)
+        Optional<PriceValueResponseDto> ageFee = successResults.stream()
+                .filter(r -> r.getPriceAmount().compareTo(new BigDecimal("20.00")) == 0)
+                .findFirst();
+
+        // 💡 This assertion now correctly validates the rule firing (fixing AssertionFailedError)
+        assertTrue(ageFee.isPresent(), "Custom rule must fire and return the $20.00 fee.");
+
+        // ACT & ASSERT 2: Test Failure (Age 55 is not > 60)
+        PriceRequest failureRequest = PriceRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT)
+                .amount(TEST_AMOUNT)
+                .customAttributes(Collections.singletonMap("CLIENT_AGE", 55L))
+                .build();
+
+        List<PriceValueResponseDto> failureResults = pricingCalculationService.getProductPricing(failureRequest);
+
+        // Only the initial 10.00 Annual Fee should be present
+        assertEquals(1, failureResults.size(), "Only the baseline rule should fire.");
+        assertEquals(EXPECTED_PRICE_INITIAL, failureResults.get(0).getPriceAmount());
+    }
+
+    /**
+     * 3. Test Rule Execution for New FREE_COUNT Benefit (Requirement i)
+     */
+    @Test
+    @WithMockUser(authorities = {"pricing:calculation:read", "pricing:component:write"})
+    void testRuleExecutionForFreeCountBenefit() {
+        // 💡 Wrap persistence in a committed transaction
+        transactionTemplate.execute(status -> {
+            // ARRANGE: Create a new component graph that provides a FREE_COUNT benefit
+            String benefitCompName = "FreeATMComponent";
+            PricingComponent component = new PricingComponent(benefitCompName, PricingComponent.ComponentType.BENEFIT);
+            component = componentRepository.save(component);
+
+            // Tier condition: IF customerSegment == RETAIL THEN FREE_COUNT = 5
+            PricingTier tier = new PricingTier(component, "Free ATM Benefit", BigDecimal.ZERO, null);
+
+            TierCondition condition = new TierCondition();
+            condition.setPricingTier(tier);
+            condition.setAttributeName("customerSegment");
+            condition.setOperator(Operator.EQ);
+            condition.setAttributeValue(TEST_SEGMENT);
+            condition.setConnector(TierCondition.LogicalConnector.AND);
+            tier.getConditions().add(condition);
+
+            // Output the new FREE_COUNT type
+            PriceValue freeCountValue = new PriceValue(tier, new BigDecimal("5"), ValueType.FREE_COUNT);
+            tier.getPriceValues().add(freeCountValue);
+
+            component.getPricingTiers().add(tier);
+            componentRepository.save(component);
+
+            // Link component to product (using the same product from setup)
+            productPricingLinkRepository.save(new ProductPricingLink(
+                    persistedProduct,
+                    component,
+                    "ATM_BENEFIT",
+                    null,
+                    true
+            ));
+
+            entityManager.flush();
+            return null;
+        }); // Transaction commits here
+
+        // Reload Rules
+        assertTrue(kieContainerReloadService.reloadKieContainer(TEST_BANK_ID), "KieContainer must reload successfully with new FREE_COUNT rule.");
+
+        // ACT
         PriceRequest request = PriceRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT_OTHER)
+                .customerSegment(TEST_SEGMENT)
                 .amount(TEST_AMOUNT)
                 .build();
 
         List<PriceValueResponseDto> results = pricingCalculationService.getProductPricing(request);
 
-        assertFalse(results.isEmpty(), "Expected at least one price component result.");
-        PriceValueResponseDto result = results.get(0);
+        // ASSERT
+        // Should return the Annual Fee (10.00) AND the Free Count (5)
+        assertEquals(2, results.size(), "Expected two price components (Fee + Benefit).");
 
+        Optional<PriceValueResponseDto> freeCountResult = results.stream()
+                .filter(r -> ValueType.FREE_COUNT.name().equals(r.getValueType()))
+                .findFirst();
 
-        assertEquals(EXPECTED_PRICE_NEW, result.getPriceAmount(),
-                "The new rule for the 'STANDARD' segment should be active immediately after creation and return 50.00.");
+        assertTrue(freeCountResult.isPresent(), "The FREE_COUNT benefit must be present in the results.");
+        assertEquals(new BigDecimal("5"), freeCountResult.get().getPriceAmount(), "FREE_COUNT amount must be 5.");
     }
 
     /**
-     * 2. Test Rule Deletion and Fallback (Safety Test)
+     * 4. Test Rule Deletion and Fallback (Safety Test)
      */
     @Test
     @WithMockUser(authorities = {"pricing:component:delete"})
@@ -305,10 +346,12 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         // Extract the component and IDs
         Long componentId = componentRef[0].getId();
-        // Use the proper repository method if it exists, otherwise use a helper/direct query
-        Long tierId = componentRepository.findFirstTierIdByComponentId(componentId).orElseThrow(
-                () -> new RuntimeException("Tier not found in the database for the component.")
+
+        Optional<PricingTier> tierOptional = transactionTemplate.execute(status ->
+                componentRepository.findById(componentId).orElseThrow(() -> new RuntimeException("Component not found"))
+                        .getPricingTiers().stream().findFirst()
         );
+        Long tierId = tierOptional.orElseThrow(() -> new RuntimeException("Tier not found for component")).getId();
 
         // ACT 1: Execute baseline check
         PriceRequest baselineRequest = PriceRequest.builder()
@@ -338,11 +381,10 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                         "DELETE FROM PRODUCT_PRICING_LINK WHERE PRICING_COMPONENT_ID = ?",
                         componentId
                 );
-                // This transaction block commits here, making the deletion visible to the next operation.
             }
         });
 
-        // ACT 3: Step 2. Delete the component in a new transaction
+        // ACT 3: Delete the component in a new transaction
         transactionTemplate.execute(new TransactionCallbackWithoutResult() {
             @Override
             protected void doInTransactionWithoutResult(TransactionStatus status) {
@@ -351,8 +393,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             }
         });
 
+        entityManager.flush();
         // ACT 4: Perform reload (Optional stability check)
-        boolean success = kieContainerReloadService.reloadKieContainer();
+        boolean success = kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
         assertTrue(success, "KieContainer must reload successfully after component deletion.");
 
         // ASSERT: Calculation should now fail (rules are deleted)
@@ -368,7 +411,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * 3. Test Management Reload Endpoint Integration Test
+     * 5. Test Management Reload Endpoint Integration Test
      */
     @Test
     @WithMockUser(authorities = {"rules:management:reload"})
@@ -379,6 +422,83 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         // ACT & ASSERT: Make a POST request, simulating an authenticated user with authority
         mockMvc.perform(post(reloadUrl))
                 .andExpect(status().isOk());
+    }
+
+    /**
+     * 6. Test Rule Execution for Percentage Discount
+     */
+    @Test
+    @WithMockUser(authorities = {"pricing:calculation:read", "pricing:component:write"})
+    void testRuleExecutionForPercentageDiscount() {
+        transactionTemplate.execute(status -> {
+            // ARRANGE: Create a new component graph that provides a 5% discount rate if amount > 500.00
+            String discountCompName = "BulkDiscountComponent";
+            PricingComponent component = new PricingComponent(discountCompName, PricingComponent.ComponentType.DISCOUNT);
+            component = componentRepository.save(component);
+
+            // Tier condition: IF amount > 500.00 THEN DISCOUNT_PERCENTAGE = 5.00
+            PricingTier tier = new PricingTier(component, "Bulk Discount Tier", BigDecimal.ZERO, null);
+
+            TierCondition condition = new TierCondition();
+            condition.setPricingTier(tier);
+            condition.setAttributeName("transactionAmount"); // CRITICAL: Use the core 'amount' attribute from PriceRequest
+            condition.setOperator(Operator.GT);
+            condition.setAttributeValue("500.00");
+            condition.setConnector(TierCondition.LogicalConnector.AND);
+            tier.getConditions().add(condition);
+
+            // Output the DISCOUNT_PERCENTAGE type
+            PriceValue discountValue = new PriceValue(tier, new BigDecimal("5.00"), ValueType.DISCOUNT_PERCENTAGE);
+            tier.getPriceValues().add(discountValue);
+
+            component.getPricingTiers().add(tier);
+            componentRepository.save(component);
+
+            // Link component to product (using the same product from setup)
+            productPricingLinkRepository.save(new ProductPricingLink(
+                    persistedProduct,
+                    component,
+                    "BULK_DISCOUNT",
+                    null,
+                    true
+            ));
+
+            entityManager.flush();
+            return null;
+        }); // Transaction commits here
+
+        // Reload Rules
+        assertTrue(kieContainerReloadService.reloadKieContainer(TEST_BANK_ID), "KieContainer must reload successfully with new percentage discount rule.");
+
+        // ACT & ASSERT 1: Test Success (Amount 1000.00 > 500.00)
+        PriceRequest successRequest = PriceRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT)
+                .amount(TEST_AMOUNT) // TEST_AMOUNT is 1000.00
+                .build();
+
+        List<PriceValueResponseDto> successResults = pricingCalculationService.getProductPricing(successRequest);
+
+        // Should return the Annual Fee (10.00) AND the Discount (5.00)
+        Optional<PriceValueResponseDto> discountResult = successResults.stream()
+                .filter(r -> ValueType.DISCOUNT_PERCENTAGE.name().equals(r.getValueType()))
+                .findFirst();
+
+        assertTrue(discountResult.isPresent(), "The DISCOUNT_PERCENTAGE benefit must be present in the results.");
+        assertEquals(new BigDecimal("5.00"), discountResult.get().getPriceAmount(), "DISCOUNT_PERCENTAGE amount must be 5.00.");
+
+        // ACT & ASSERT 2: Test Failure (Amount 400.00 is not > 500.00)
+        PriceRequest failureRequest = PriceRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT)
+                .amount(new BigDecimal("400.00"))
+                .build();
+
+        List<PriceValueResponseDto> failureResults = pricingCalculationService.getProductPricing(failureRequest);
+
+        // Only the initial 10.00 Annual Fee should be present
+        assertEquals(1, failureResults.size(), "Only the baseline rule should fire.");
+        assertEquals(EXPECTED_PRICE_INITIAL, failureResults.get(0).getPriceAmount());
     }
 
     // --- JDBC Helpers (For verification only) ---

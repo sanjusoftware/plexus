@@ -69,8 +69,7 @@ public class PricingCalculationService {
         // Use the Builder to construct the final response DTO
         PriceValueResponseDto.PriceValueResponseDtoBuilder resultBuilder = PriceValueResponseDto.builder()
             .context(link.getContext())
-            .pricingComponentCode(link.getPricingComponent().getName())
-            .currency("USD"); // Assuming default currency for now
+            .pricingComponentCode(link.getPricingComponent().getName());
 
         // --- 1. Simple Pricing: Use the fixed value stored on the link entity ---
         if (!link.isUseRulesEngine()) {
@@ -94,7 +93,6 @@ public class PricingCalculationService {
             return Optional.of(resultBuilder
                 .priceAmount(finalInputFact.getPriceAmount())
                 .valueType(PriceValue.ValueType.valueOf(finalInputFact.getValueType()))
-                .currency(finalInputFact.getCurrency())
                 .sourceType("RULES_ENGINE")
                 .build());
         }
@@ -117,7 +115,7 @@ public class PricingCalculationService {
         input.setCustomAttributes(new HashMap<>());
 
         // Populate the map using the required keys for the DRL rules
-        input.getCustomAttributes().put(PRODUCT_ID_KEY, request.getProductId().toString());
+        input.getCustomAttributes().put(PRODUCT_ID_KEY, request.getProductId());
         input.getCustomAttributes().put(CUSTOMER_SEGMENT_KEY, request.getCustomerSegment());
         input.getCustomAttributes().put(TRANSACTION_AMOUNT_KEY, request.getAmount());
         input.getCustomAttributes().put(BANK_ID_KEY, bankId);

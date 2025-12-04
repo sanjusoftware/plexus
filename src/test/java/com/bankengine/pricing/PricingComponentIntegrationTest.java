@@ -158,8 +158,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         CreatePriceValueRequestDto valueDto = new CreatePriceValueRequestDto();
         valueDto.setPriceAmount(new BigDecimal("5.00"));
-        valueDto.setCurrency("USD");
-        valueDto.setValueType("ABSOLUTE"); // Must be a valid PriceValue.ValueType
+        valueDto.setValueType("ABSOLUTE");
 
         TierValueDto requestDto = new TierValueDto();
         requestDto.setTier(tierDto);
@@ -323,8 +322,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.priceAmount", is(5.00)))
-                .andExpect(jsonPath("$.currency", is("USD")));
+                .andExpect(jsonPath("$.priceAmount", is(5.00)));
     }
 
     @Test
@@ -362,8 +360,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         UpdatePriceValueRequestDto valueDto = new UpdatePriceValueRequestDto();
         valueDto.setPriceAmount(new BigDecimal("15.50"));
-        valueDto.setCurrency("EUR");
-        valueDto.setValueType("PERCENTAGE"); // Use another valid type
+        valueDto.setValueType("PERCENTAGE");
 
         UpdateTierValueDto requestDto = new UpdateTierValueDto();
         requestDto.setTier(tierDto);
@@ -376,8 +373,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
                 // ASSERT: Check the updated PriceValue fields
-                .andExpect(jsonPath("$.priceAmount", is(15.50)))
-                .andExpect(jsonPath("$.currency", is("EUR")));
+                .andExpect(jsonPath("$.priceAmount", is(15.50)));
 
         txHelper.flushAndClear();
 
@@ -441,13 +437,12 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         updateDto.setValue(new UpdatePriceValueRequestDto());
         updateDto.getTier().setTierName("Placeholder");
         updateDto.getValue().setPriceAmount(new BigDecimal("1"));
-        updateDto.getValue().setCurrency("USD");
         updateDto.getValue().setValueType("ABSOLUTE");
         updateDto.getTier().setConditions(List.of(getDummyConditionDto()));
 
         // Test 1: PUT with non-existent Component ID
         mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
-                        nonExistentId, existingTierId) // <--- USED LOCAL VARIABLE
+                        nonExistentId, existingTierId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isNotFound())

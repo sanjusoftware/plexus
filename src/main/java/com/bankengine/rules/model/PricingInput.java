@@ -16,6 +16,5 @@ public class PricingInput {
     private Long matchedTierId;
     private BigDecimal priceAmount;
     private String valueType;
-    private String currency;
     private boolean ruleFired = false;
 }

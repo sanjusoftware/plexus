@@ -35,7 +35,7 @@ public class BundleDroolsRuleBuilderService {
         return """
             package bankengine.bundle.rules;
             
-            import %s; // The bundle fact
+            import %s;
             import java.math.BigDecimal;
             
             """.formatted(BUNDLE_INPUT_FACT);
@@ -46,9 +46,8 @@ public class BundleDroolsRuleBuilderService {
      * We look for PricingComponents of type WAIVER or DISCOUNT.
      */
     @Transactional(readOnly = true)
-    public String buildAllBundleRulesForCompilation() {
+    public String buildAllRulesForCompilation() {
         StringBuilder finalDrl = new StringBuilder();
-        finalDrl.append(getDrlHeader());
         finalDrl.append(getDrlHeader());
 
         // We assume a custom method on the repository exists to fetch the correct components
@@ -137,12 +136,7 @@ public class BundleDroolsRuleBuilderService {
     }
 
     public String buildPlaceholderRules() {
-        return """
-            package bankengine.bundle.rules;
-
-            import com.bankengine.rules.model.BundlePricingInput;
-            import java.math.BigDecimal;
-
+        return getDrlHeader() + """
             rule "PlaceholderRule_Bundle_DoNothing"
                 when
                     $input : BundlePricingInput ( )

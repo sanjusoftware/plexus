@@ -3,6 +3,7 @@ package com.bankengine.pricing.model;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
 @Table(name = "price_value")
 @Getter
 @Setter
+@NoArgsConstructor
 public class PriceValue extends AuditableEntity {
 
     @Id
@@ -27,9 +29,18 @@ public class PriceValue extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private ValueType valueType; // ABSOLUTE (e.g., $50), PERCENTAGE (e.g., 2.5%)
 
-    private String currency; // e.g., USD, EUR, INR
-
     public enum ValueType {
-        ABSOLUTE, PERCENTAGE, WAIVED, DISCOUNT_PERCENTAGE, DISCOUNT_ABSOLUTE
+        ABSOLUTE,
+        PERCENTAGE,
+        WAIVED,
+        DISCOUNT_PERCENTAGE,
+        DISCOUNT_ABSOLUTE,
+        FREE_COUNT
+    }
+
+    public PriceValue(PricingTier pricingTier, BigDecimal priceAmount, ValueType valueType) {
+        this.pricingTier = pricingTier;
+        this.priceAmount = priceAmount;
+        this.valueType = valueType;
     }
 }

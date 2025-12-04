@@ -45,11 +45,11 @@ public class PricingComponent extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private ComponentType type;
 
-    @OneToMany(mappedBy = "pricingComponent", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "pricingComponent", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PricingTier> pricingTiers = new ArrayList<>();
 
     public enum ComponentType {
-        FEE, RATE, WAIVER, BENEFIT, DISCOUNT
+        FEE, RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE
     }
 
     public PricingComponent(String name, ComponentType type) {

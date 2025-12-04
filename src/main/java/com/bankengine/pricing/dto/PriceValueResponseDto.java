@@ -13,7 +13,6 @@ public class PriceValueResponseDto {
     private Long id;
     private BigDecimal priceAmount;
     private ValueType valueType;
-    private String currency;
 
     /** Code of the pricing component (e.g., "ANNUAL_FEE", "INTEREST_RATE"). */
     private String pricingComponentCode;

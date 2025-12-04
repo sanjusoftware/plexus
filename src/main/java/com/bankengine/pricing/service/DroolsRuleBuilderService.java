@@ -148,12 +148,10 @@ public class DroolsRuleBuilderService {
             PriceValue priceValue = tier.getPriceValues().iterator().next();
             String priceAmount = priceValue.getPriceAmount().toPlainString();
             String valueType = priceValue.getValueType().name();
-            String currency = priceValue.getCurrency();
 
             rhs.append(String.format("        $input.setMatchedTierId(%dL);\n", tier.getId()));
             rhs.append(String.format("        $input.setPriceAmount(new BigDecimal(\"%s\"));\n", priceAmount));
             rhs.append(String.format("        $input.setValueType(\"%s\");\n", valueType));
-            rhs.append(String.format("        $input.setCurrency(\"%s\");\n", currency));
             rhs.append("        $input.setRuleFired(true);\n");
             rhs.append("        update($input);\n");
         } else {
@@ -164,14 +162,7 @@ public class DroolsRuleBuilderService {
     }
 
     public String buildPlaceholderRules() {
-        return """
-            package bankengine.pricing.rules;
-
-            import com.bankengine.rules.model.PricingInput;
-            import com.bankengine.pricing.model.PriceValue;
-            import java.math.BigDecimal;
-            import java.util.Map;
-
+        return getDrlHeader() + """
             rule "PlaceholderRule_DoNothing"
                 when
                     $input : PricingInput ( )

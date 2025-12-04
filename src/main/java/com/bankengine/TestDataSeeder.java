@@ -327,7 +327,6 @@ public class TestDataSeeder implements CommandLineRunner {
         PriceValue valuePremium = new PriceValue();
         valuePremium.setPriceAmount(BigDecimal.ZERO);
         valuePremium.setValueType(PriceValue.ValueType.WAIVED);
-        valuePremium.setCurrency("USD");
         valuePremium.setPricingTier(savedTierPremium);
         priceValueRepository.save(valuePremium);
 
@@ -352,7 +351,6 @@ public class TestDataSeeder implements CommandLineRunner {
         PriceValue valueStandard = new PriceValue();
         valueStandard.setPriceAmount(standardFee);
         valueStandard.setValueType(PriceValue.ValueType.ABSOLUTE);
-        valueStandard.setCurrency("USD");
         valueStandard.setPricingTier(savedTierStandard);
         priceValueRepository.save(valueStandard);
 

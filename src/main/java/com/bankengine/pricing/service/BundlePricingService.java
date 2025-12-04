@@ -112,7 +112,6 @@ public class BundlePricingService {
             .pricingComponentCode(entry.getKey())
             .priceAmount(entry.getValue())
             .context("BUNDLE_ADJUSTMENT")
-            .currency("USD")
             .sourceType("BUNDLE_RULES")
             .build()
         ).collect(Collectors.toList());

@@ -16,9 +16,6 @@ public class UpdatePriceValueRequestDto {
     @NotNull(message = "Price amount is required.")
     private BigDecimal priceAmount;
 
-    @NotBlank(message = "Currency is required (e.g., USD, EUR).")
-    private String currency;
-
     @NotBlank(message = "Value Type is required (e.g., ABSOLUTE, PERCENTAGE).")
     private String valueType;
 }

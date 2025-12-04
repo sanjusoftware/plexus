@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 
 @Data
 @Builder
@@ -33,5 +34,8 @@ public class PriceRequest {
     // --- Customer/Bank Context ---
     @NotNull(message = "Customer Segment is mandatory for pricing rule matching.")
     private String customerSegment; // e.g., "RETAIL", "SME", "PREMIUM"
+
+    // Field to hold custom pricing attributes for Drools
+    private Map<String, Object> customAttributes;
 
 }

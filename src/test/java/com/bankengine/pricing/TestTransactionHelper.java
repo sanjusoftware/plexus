@@ -153,7 +153,6 @@ public class TestTransactionHelper {
         PriceValue value = new PriceValue();
         value.setPricingTier(savedTier);
         value.setPriceAmount(new BigDecimal("10.00"));
-        value.setCurrency("USD");
         value.setValueType(PriceValue.ValueType.ABSOLUTE);
         valueRepository.save(value);
 

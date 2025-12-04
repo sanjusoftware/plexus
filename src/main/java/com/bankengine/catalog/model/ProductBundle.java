@@ -1,6 +1,7 @@
 package com.bankengine.catalog.model;
 
 import com.bankengine.common.model.AuditableEntity;
+import com.bankengine.pricing.model.BundlePricingLink;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -47,4 +48,8 @@ public class ProductBundle extends AuditableEntity {
     // MappedBy field updated to reference 'productBundle' in the link entity
     @OneToMany(mappedBy = "productBundle", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BundleProductLink> containedProducts = new ArrayList<>();
+
+    // Link to pricing logic for the bundle itself (e.g., the monthly fee or discount)
+    @OneToMany(mappedBy = "productBundle", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BundlePricingLink> bundlePricingLinks = new ArrayList<>();
 }
