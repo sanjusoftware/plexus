@@ -43,4 +43,16 @@ public class PriceValue extends AuditableEntity {
         this.priceAmount = priceAmount;
         this.valueType = valueType;
     }
+
+    // ------------------------------------------------
+    // 💡 REQUIRED FIELDS FOR DROOLS FACT INSERTION
+    // ------------------------------------------------
+
+    // Used by setMatchedTierId(Long)
+    @Transient
+    private Long matchedTierId;
+
+    // Used by setComponentCode(String)
+    @Transient
+    private String componentCode;
 }

@@ -25,4 +25,6 @@ public class PriceValueResponseDto {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    private Long matchedTierId;
 }

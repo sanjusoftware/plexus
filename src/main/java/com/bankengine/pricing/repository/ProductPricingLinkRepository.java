@@ -2,6 +2,8 @@ package com.bankengine.pricing.repository;
 
 import com.bankengine.pricing.model.ProductPricingLink;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -15,4 +17,8 @@ public interface ProductPricingLinkRepository extends JpaRepository<ProductPrici
 
     // Required to provide a dependency count for helpful error messages
     long countByPricingComponentId(Long pricingComponentId);
+
+    @Transactional
+    @Modifying
+    void deleteByProductId(Long productId);
 }

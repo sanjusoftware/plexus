@@ -3,32 +3,28 @@ package com.bankengine.pricing.service;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
-import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.service.drl.DroolsExpressionBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Service responsible for converting Bundle-level PricingComponent configuration
- * (WAIVER/DISCOUNT Tiers) into a Drools Rule Language (DRL) string for runtime evaluation
- * by the BundleRulesEngineService.
+ * (WAIVER/DISCOUNT Tiers) into a Drools Rule Language (DRL) string for runtime evaluation.
  */
 @Service
-public class BundleDroolsRuleBuilderService {
+public class BundleRuleBuilderService extends AbstractRuleBuilderService {
 
-    @Autowired
-    private PricingComponentRepository componentRepository;
+    public BundleRuleBuilderService(
+            PricingComponentRepository componentRepository,
+            PricingInputMetadataService metadataService,
+            DroolsExpressionBuilder droolsExpressionBuilder) {
+        super(componentRepository, metadataService, droolsExpressionBuilder);
+    }
 
-    @Autowired
-    private DroolsExpressionBuilder droolsExpressionBuilder;
-
-    // We assume the BundlePricingInput fact is used here
     private static final String BUNDLE_INPUT_FACT = "com.bankengine.rules.model.BundlePricingInput";
 
     private String getDrlHeader() {
@@ -36,27 +32,22 @@ public class BundleDroolsRuleBuilderService {
             package bankengine.bundle.rules;
             
             import %s;
+            import com.bankengine.pricing.model.PriceValue;
             import java.math.BigDecimal;
             
             """.formatted(BUNDLE_INPUT_FACT);
     }
 
-    /**
-     * Builds DRL rules specifically for Bundle adjustments.
-     * We look for PricingComponents of type WAIVER or DISCOUNT.
-     */
     @Transactional(readOnly = true)
+    @Override
     public String buildAllRulesForCompilation() {
         StringBuilder finalDrl = new StringBuilder();
         finalDrl.append(getDrlHeader());
 
-        // We assume a custom method on the repository exists to fetch the correct components
         List<PricingComponent> components = componentRepository.findByTypeIn(
                 List.of(PricingComponent.ComponentType.WAIVER, PricingComponent.ComponentType.DISCOUNT)
         );
 
-        // NOTE: Unlike component pricing, bundle rules should apply to the bundle input fact.
-        // The DRL will enforce multi-tenancy using the bankId fact.
         for (PricingComponent component : components) {
             finalDrl.append(generateBundleComponentRulesBody(component));
             finalDrl.append("\n\n// --- End Bundle Component: ").append(component.getName()).append(" ---\n\n");
@@ -83,36 +74,32 @@ public class BundleDroolsRuleBuilderService {
                 tier.getId());
 
         rule.append("rule \"").append(ruleName).append("\"\n");
+        rule.append("    no-loop true\n");
+        rule.append("    salience ").append(tier.getId()).append("\n");
         rule.append("    when\n");
-        // Use the Tier Conditions (e.g., grossTotalAmount > 100)
         rule.append(buildLHSCondition(tier));
         rule.append("    then\n");
-        // Apply adjustment logic
         rule.append(buildRHSAction(tier, component.getName()));
         rule.append("end\n");
         return rule.toString();
     }
 
-    /**
-     * The LHS condition logic is largely reusable, but targets the BundlePricingInput fact.
-     * This requires DroolsExpressionBuilder to be able to access the new Bundle facts.
-     */
     private String buildLHSCondition(PricingTier tier) {
         StringBuilder lhs = new StringBuilder();
-        Set<TierCondition> conditions = tier.getConditions();
 
-        // Logic to construct the condition string (relying on DroolsExpressionBuilder)
         String fullCondition = tier.getConditions().stream()
-                // Assume droolsExpressionBuilder.buildExpression is enhanced to support BundlePricingInput fields
-                // For now, we'll assume the conditions check fields that are available in BundlePricingInput
-                .map(condition -> droolsExpressionBuilder.buildExpression(condition, /* Metadata lookup needed */ null))
+                .map(condition -> {
+                    return droolsExpressionBuilder.buildExpression(
+                            condition,
+                            getFactAttributeMetadata(condition.getAttributeName())
+                    );
+                })
                 .collect(Collectors.joining(" AND "));
 
-
-        // IMPORTANT: Add the multi-tenancy check directly in the DRL LHS
-        // The BundlePricingInput must have a field named 'bankId'
-        lhs.append(String.format("        $input : %s ( bankId != null, bankId == $input.getBankId(), %s )\n",
-                BUNDLE_INPUT_FACT.substring(BUNDLE_INPUT_FACT.lastIndexOf(".") + 1), fullCondition));
+        lhs.append(String.format("        $input : %s ( bankId != null, bankId == $input.getBankId()%s%s )\n",
+                BUNDLE_INPUT_FACT.substring(BUNDLE_INPUT_FACT.lastIndexOf(".") + 1),
+                fullCondition.isEmpty() ? "" : ", ",
+                fullCondition));
 
         return lhs.toString();
     }

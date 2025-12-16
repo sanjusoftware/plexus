@@ -1,8 +1,8 @@
 package com.bankengine.config;
 
 import com.bankengine.config.drools.DroolsKieModuleBuilder;
-import com.bankengine.pricing.service.BundleDroolsRuleBuilderService;
-import com.bankengine.pricing.service.DroolsRuleBuilderService;
+import com.bankengine.pricing.service.BundleRuleBuilderService;
+import com.bankengine.pricing.service.ProductRuleBuilderService;
 import org.kie.api.KieServices;
 import org.kie.api.builder.ReleaseId;
 import org.kie.api.runtime.KieContainer;
@@ -17,10 +17,10 @@ import java.util.Map;
 public class DroolsConfig {
 
     @Autowired
-    private DroolsRuleBuilderService ruleBuilderService;
+    private ProductRuleBuilderService ruleBuilderService;
 
     @Autowired
-    private BundleDroolsRuleBuilderService bundleRuleBuilderService;
+    private BundleRuleBuilderService bundleRuleBuilderService;
 
     @Autowired
     private DroolsKieModuleBuilder moduleBuilder;

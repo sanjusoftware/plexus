@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @Service
 public class PricingInputMetadataService {
 
-    private final PricingInputMetadataRepository repository;
+    private final PricingInputMetadataRepository pricingInputMetadataRepository;
     private final TierConditionRepository tierConditionRepository;
     private final PricingInputMetadataMapper mapper;
     private final KieContainerReloadService reloadService;
@@ -35,12 +35,12 @@ public class PricingInputMetadataService {
      */
     @Autowired
     public PricingInputMetadataService(
-            PricingInputMetadataRepository repository,
+            PricingInputMetadataRepository pricingInputMetadataRepository,
             TierConditionRepository tierConditionRepository,
             PricingInputMetadataMapper mapper,
             @Lazy KieContainerReloadService reloadService
     ) {
-        this.repository = repository;
+        this.pricingInputMetadataRepository = pricingInputMetadataRepository;
         this.tierConditionRepository = tierConditionRepository;
         this.mapper = mapper;
         this.reloadService = reloadService;
@@ -52,7 +52,7 @@ public class PricingInputMetadataService {
     @Transactional(readOnly = true)
     @Cacheable(value = "pricingMetadata", key = "#attributeKey")
     public PricingInputMetadata getMetadataEntityByKey(String attributeKey) {
-        return repository.findByAttributeKey(attributeKey)
+        return pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new IllegalArgumentException(
                         String.format("Invalid rule attribute '%s'. Not found in PricingInputMetadata registry.", attributeKey)));
     }
@@ -63,19 +63,19 @@ public class PricingInputMetadataService {
      */
     @Transactional(readOnly = true)
     public List<PricingInputMetadata> getMetadataEntitiesByKeys(Set<String> attributeKeys) {
-        return repository.findByAttributeKeyIn(attributeKeys);
+        return pricingInputMetadataRepository.findByAttributeKeyIn(attributeKeys);
     }
 
     @Transactional(readOnly = true)
     public List<MetadataResponseDto> findAllMetadata() {
-        return repository.findAll().stream()
+        return pricingInputMetadataRepository.findAll().stream()
                 .map(mapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public MetadataResponseDto getMetadataByKey(String attributeKey) {
-        return repository.findByAttributeKey(attributeKey)
+        return pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .map(mapper::toResponseDto)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
     }
@@ -83,7 +83,7 @@ public class PricingInputMetadataService {
     @Transactional
     public MetadataResponseDto createMetadata(CreateMetadataRequestDto dto) {
         // Business Rule: Key must be unique. Check before attempting save.
-        if (repository.findByAttributeKey(dto.getAttributeKey()).isPresent()) {
+        if (pricingInputMetadataRepository.findByAttributeKey(dto.getAttributeKey()).isPresent()) {
             throw new DependencyViolationException(
                     "Cannot create Pricing Input Metadata: An attribute with the key '" + dto.getAttributeKey() + "' already exists."
             );
@@ -91,7 +91,7 @@ public class PricingInputMetadataService {
 
         // Map DTO to Entity and save
         PricingInputMetadata entity = mapper.toEntity(dto);
-        PricingInputMetadata savedEntity = repository.save(entity);
+        PricingInputMetadata savedEntity = pricingInputMetadataRepository.save(entity);
 
         reloadService.reloadKieContainer();
 
@@ -100,13 +100,13 @@ public class PricingInputMetadataService {
 
     @Transactional
     public MetadataResponseDto updateMetadata(String attributeKey, UpdateMetadataRequestDto dto) {
-        PricingInputMetadata entity = repository.findByAttributeKey(attributeKey)
+        PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 
         entity.setDisplayName(dto.getDisplayName());
         entity.setDataType(dto.getDataType());
 
-        PricingInputMetadata updatedEntity = repository.save(entity);
+        PricingInputMetadata updatedEntity = pricingInputMetadataRepository.save(entity);
         reloadService.reloadKieContainer();
 
         return mapper.toResponseDto(updatedEntity);
@@ -114,7 +114,7 @@ public class PricingInputMetadataService {
 
     @Transactional
     public void deleteMetadata(String attributeKey) {
-        PricingInputMetadata entity = repository.findByAttributeKey(attributeKey)
+        PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 
         if (tierConditionRepository.existsByAttributeName(entity.getAttributeKey())) {
@@ -124,7 +124,7 @@ public class PricingInputMetadataService {
             );
         }
 
-        repository.delete(entity);
+        pricingInputMetadataRepository.delete(entity);
         reloadService.reloadKieContainer();
     }
 }

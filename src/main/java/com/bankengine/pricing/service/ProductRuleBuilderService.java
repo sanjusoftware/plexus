@@ -3,7 +3,6 @@ package com.bankengine.pricing.service;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.service.drl.DroolsExpressionBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,20 +12,18 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Service responsible for converting PricingComponent configuration (Tiers, Conditions, Values)
+ * Service responsible for converting Product PricingComponent configuration (Tiers, Conditions, Values)
  * into a Drools Rule Language (DRL) string for runtime evaluation.
  */
 @Service
-public class DroolsRuleBuilderService {
+public class ProductRuleBuilderService extends AbstractRuleBuilderService {
 
-    @Autowired
-    private PricingComponentRepository componentRepository;
-
-    @Autowired
-    private PricingInputMetadataService metadataService;
-
-    @Autowired
-    private DroolsExpressionBuilder droolsExpressionBuilder;
+    public ProductRuleBuilderService(
+            PricingComponentRepository componentRepository,
+            PricingInputMetadataService metadataService,
+            DroolsExpressionBuilder droolsExpressionBuilder) {
+        super(componentRepository, metadataService, droolsExpressionBuilder);
+    }
 
     private String getDrlHeader() {
         return """
@@ -41,22 +38,11 @@ public class DroolsRuleBuilderService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public String buildAllRulesForCompilation() {
         StringBuilder finalDrl = new StringBuilder();
         finalDrl.append(getDrlHeader());
         List<PricingComponent> components = componentRepository.findAllEagerlyForRules();
-
-        // --- 2. Pre-loading Metadata ---
-        Set<String> allRequiredAttributes = components.stream()
-                .flatMap(component -> component.getPricingTiers().stream())
-                .flatMap(tier -> tier.getConditions().stream())
-                .map(TierCondition::getAttributeName)
-                .collect(Collectors.toSet());
-
-        // This call prefetches all required metadata entities in one transactional query
-        // and prime's the cache for subsequent single lookups in buildLHSCondition.
-        metadataService.getMetadataEntitiesByKeys(allRequiredAttributes);
-
 
         for (PricingComponent component : components) {
             finalDrl.append(generateComponentRulesBody(component));
@@ -76,7 +62,6 @@ public class DroolsRuleBuilderService {
                 .collect(Collectors.joining("\n\n"));
     }
 
-
     private String buildSingleTierRule(PricingComponent component, PricingTier tier) {
         StringBuilder rule = new StringBuilder();
 
@@ -85,25 +70,22 @@ public class DroolsRuleBuilderService {
                 tier.getId());
 
         rule.append("rule \"").append(ruleName).append("\"\n");
+        rule.append("    no-loop true\n");
+        rule.append("    salience ").append(tier.getId()).append("\n");
         rule.append("    when\n");
         rule.append(buildLHSCondition(tier));
         rule.append("    then\n");
-        rule.append(buildRHSAction(tier));
+        rule.append(buildRHSAction(component, tier));
         rule.append("end\n");
         return rule.toString();
     }
 
-
-    /**
-     * Uses the injected metadataService for resolution.
-     */
     private String buildLHSCondition(PricingTier tier) {
         StringBuilder lhs = new StringBuilder();
         Set<TierCondition> conditions = tier.getConditions();
 
         if (!conditions.isEmpty()) {
             StringBuilder conditionBuilder = new StringBuilder();
-
             Iterator<TierCondition> iterator = conditions.iterator();
 
             while (iterator.hasNext()) {
@@ -136,24 +118,28 @@ public class DroolsRuleBuilderService {
         return lhs.toString();
     }
 
-    private PricingInputMetadata getFactAttributeMetadata(String attributeName) {
-        // The service layer now handles the cache check and the database fallback logic.
-        return metadataService.getMetadataEntityByKey(attributeName);
-    }
-
-    private String buildRHSAction(PricingTier tier) {
+    /**
+     * Updated RHS action builder to insert a new PriceValue fact
+     * instead of updating the PricingInput fact.
+     */
+    private String buildRHSAction(PricingComponent component, PricingTier tier) {
         StringBuilder rhs = new StringBuilder();
 
         if (tier.getPriceValues() != null && !tier.getPriceValues().isEmpty()) {
             PriceValue priceValue = tier.getPriceValues().iterator().next();
             String priceAmount = priceValue.getPriceAmount().toPlainString();
             String valueType = priceValue.getValueType().name();
+            String componentCode = component.getName().replaceAll("\\s", "_");
 
-            rhs.append(String.format("        $input.setMatchedTierId(%dL);\n", tier.getId()));
-            rhs.append(String.format("        $input.setPriceAmount(new BigDecimal(\"%s\"));\n", priceAmount));
-            rhs.append(String.format("        $input.setValueType(\"%s\");\n", valueType));
-            rhs.append("        $input.setRuleFired(true);\n");
-            rhs.append("        update($input);\n");
+            // --- New Logic: Create and Insert a PriceValue object ---
+            rhs.append("        PriceValue priceValueFact = new PriceValue();\n");
+            rhs.append(String.format("        priceValueFact.setMatchedTierId(Long.valueOf(%dL));\n", tier.getId()));
+            rhs.append(String.format("        priceValueFact.setPriceAmount(new BigDecimal(\"%s\"));\n", priceAmount));
+            rhs.append(String.format("        priceValueFact.setValueType(PriceValue.ValueType.valueOf(\"%s\"));\n", valueType));
+            rhs.append(String.format("        priceValueFact.setComponentCode(\"%s\");\n", componentCode));
+            rhs.append("        insert(priceValueFact);\n");
+            // --- End New Logic ---
+
         } else {
             rhs.append("// No price actions defined for this tier.\n");
         }

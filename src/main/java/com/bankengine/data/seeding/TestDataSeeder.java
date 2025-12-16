@@ -1,4 +1,4 @@
-package com.bankengine;
+package com.bankengine.data.seeding;
 
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
@@ -45,9 +45,9 @@ public class TestDataSeeder implements CommandLineRunner {
     private final PriceValueRepository priceValueRepository;
     private final ProductPricingLinkRepository productPricingLinkRepository;
     private final TierConditionRepository tierConditionRepository;
-    private final PricingInputMetadataRepository pricingInputMetadataRepository;
     private final RoleRepository roleRepository;
     private final ApplicationContext applicationContext;
+    private final CoreMetadataSeeder coreMetadataSeeder;
 
     public TestDataSeeder(
             ProductTypeRepository productTypeRepository,
@@ -59,9 +59,8 @@ public class TestDataSeeder implements CommandLineRunner {
             PriceValueRepository priceValueRepository,
             ProductPricingLinkRepository productPricingLinkRepository,
             TierConditionRepository tierConditionRepository,
-            PricingInputMetadataRepository pricingInputMetadataRepository,
             RoleRepository roleRepository,
-            ApplicationContext applicationContext) {
+            ApplicationContext applicationContext, CoreMetadataSeeder coreMetadataSeeder) {
         this.productTypeRepository = productTypeRepository;
         this.featureComponentRepository = featureComponentRepository;
         this.productRepository = productRepository;
@@ -71,9 +70,9 @@ public class TestDataSeeder implements CommandLineRunner {
         this.priceValueRepository = priceValueRepository;
         this.productPricingLinkRepository = productPricingLinkRepository;
         this.tierConditionRepository = tierConditionRepository;
-        this.pricingInputMetadataRepository = pricingInputMetadataRepository;
         this.roleRepository = roleRepository;
         this.applicationContext = applicationContext;
+        this.coreMetadataSeeder = coreMetadataSeeder;
     }
 
     @Override
@@ -186,15 +185,7 @@ public class TestDataSeeder implements CommandLineRunner {
 
     @Transactional
     public void seedPricingInputMetadata() {
-        if (pricingInputMetadataRepository.count() == 0) {
-            System.out.println("Seeding Pricing Input Metadata...");
-            pricingInputMetadataRepository.saveAll(List.of(
-                    createMetadata("customerSegment", "Client Segment", "STRING"),
-                    createMetadata("transactionAmount", "Transaction Amount", "DECIMAL"),
-                    createMetadata("productId", "Product ID", "LONG"),
-                    createMetadata("bankId", "Bank ID", "STRING")
-            ));
-        }
+        coreMetadataSeeder.seedCorePricingInputMetadata();
     }
 
     private ProductType createType(String name) {

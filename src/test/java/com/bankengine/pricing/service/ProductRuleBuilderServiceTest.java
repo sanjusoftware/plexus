@@ -22,9 +22,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for DroolsRuleBuilderService focusing on DRL syntax generation.
+ * Unit tests for ProductRuleBuilderService focusing on DRL syntax generation.
  */
-public class DroolsRuleBuilderServiceTest {
+public class ProductRuleBuilderServiceTest {
 
     @Mock
     private PricingComponentRepository componentRepository;
@@ -34,7 +34,7 @@ public class DroolsRuleBuilderServiceTest {
     private DroolsExpressionBuilder droolsExpressionBuilder;
 
     @InjectMocks
-    private DroolsRuleBuilderService droolsRuleBuilderService;
+    private ProductRuleBuilderService productRuleBuilderService;
 
     private static final String MOCKED_DRL_EXPRESSION = "((java.math.BigDecimal) customAttributes[\"transactionAmount\"]) > 500";
 
@@ -76,19 +76,19 @@ public class DroolsRuleBuilderServiceTest {
         when(metadataService.getMetadataEntityByKey("transactionAmount")).thenReturn(metadata);
 
         when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class)))
-            .thenReturn(MOCKED_DRL_EXPRESSION);
+                .thenReturn(MOCKED_DRL_EXPRESSION);
 
         // ACT
-        String drl = droolsRuleBuilderService.buildAllRulesForCompilation();
+        String drl = productRuleBuilderService.buildAllRulesForCompilation();
 
         // ASSERT
         assertTrue(drl.contains("Rule_TestFee_Tier_100"), "DRL must contain the rule header.");
-        // Assertion now relies on the fixed mock setup to find the string
         assertTrue(drl.contains(MOCKED_DRL_EXPRESSION), "DRL must contain the expression from the builder.");
 
-        // Use a more precise check for the price amount action
-        assertTrue(drl.contains("        $input.setPriceAmount(new BigDecimal(\"10.00\"));"), "DRL must contain the price setter RHS action.");
-        assertTrue(drl.contains("        update($input);\n"), "DRL must contain the mandatory 'update($input);' action.");
+        assertTrue(drl.contains("        PriceValue priceValueFact = new PriceValue();\n"), "DRL must contain the PriceValue fact creation.");
+        assertTrue(drl.contains("        priceValueFact.setPriceAmount(new BigDecimal(\"10.00\"));\n"), "DRL must contain the price setter for PriceValue fact.");
+        assertTrue(drl.contains("        priceValueFact.setValueType(PriceValue.ValueType.valueOf(\"ABSOLUTE\"));\n"), "DRL must contain the ValueType setter for PriceValue fact.");
+        assertTrue(drl.contains("        insert(priceValueFact);\n"), "DRL must contain the 'insert(priceValueFact);' action.");
     }
 
     @Test
@@ -138,37 +138,49 @@ public class DroolsRuleBuilderServiceTest {
 
         // Stub the expression builder to return the expected DRL fragment
         when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class)))
-            .thenReturn(MOCKED_DRL_EXPRESSION);
+                .thenReturn(MOCKED_DRL_EXPRESSION);
 
         // ACT
-        String drl = droolsRuleBuilderService.buildAllRulesForCompilation();
+        String drl = productRuleBuilderService.buildAllRulesForCompilation();
 
         // ASSERT
-        // Rule 1: Custom Attribute (TestFee_Tier_200)
-        assertTrue(drl.contains("Rule_TestFee_Tier_200"), "DRL must contain the descriptive rule header (Rule_<ComponentName>_Tier_<TierId>).");
+        // --- Rule 1: ABSOLUTE Fee (TestFee_Tier_200) ---
+        assertTrue(drl.contains("Rule_TestFee_Tier_200"), "DRL must contain the ABSOLUTE rule header.");
         assertTrue(drl.contains(MOCKED_DRL_EXPRESSION),
-                   "DRL must contain the expression from the builder for the custom attribute.");
+                "DRL must contain the expression from the builder for the custom attribute.");
 
-        // Standard PriceValue Output (for Tier 200)
-        assertTrue(drl.contains("        $input.setPriceAmount(new BigDecimal(\"10.00\"));"), "DRL must contain the price setter for the standard RHS action.");
-        assertTrue(drl.contains("        $input.setValueType(\"ABSOLUTE\");"), "DRL must contain the ValueType RHS action.");
+        // Assert the NEW insertion logic for Tier 200 (10.00, ABSOLUTE)
+        assertTrue(drl.contains("priceValueFact.setPriceAmount(new BigDecimal(\"10.00\"));"),
+                "Tier 200 must set PriceAmount to 10.00 via the PriceValue fact.");
+        assertTrue(drl.contains("priceValueFact.setValueType(PriceValue.ValueType.valueOf(\"ABSOLUTE\"));"),
+                "Tier 200 must set ValueType to ABSOLUTE via the PriceValue fact.");
 
-        // Rule 2: FREE_COUNT
-        assertTrue(drl.contains("Rule_TestFee_Tier_500"), "DRL must contain the FREE_COUNT rule header (Rule_TestFee_Tier_500).");
+
+        // --- Rule 2: FREE_COUNT Benefit (TestFee_Tier_500) ---
+        assertTrue(drl.contains("Rule_TestFee_Tier_500"), "DRL must contain the FREE_COUNT rule header.");
+
         // Check for the unconditional rule trigger
-        assertTrue(drl.contains("        $input : PricingInput ( true )\n"), "DRL must contain the unconditional rule trigger.");
-        assertTrue(drl.contains("        $input.setPriceAmount(new BigDecimal(\"5\"));"), "DRL must contain the FREE_COUNT price amount (the count value).");
-        assertTrue(drl.contains("        $input.setValueType(\"FREE_COUNT\");"), "DRL must contain the FREE_COUNT ValueType.");
+        assertTrue(drl.contains("        $input : PricingInput ( true )\n"),
+                "DRL must contain the unconditional rule trigger.");
 
-        assertTrue(drl.contains("        update($input);\n"),
-                   "DRL must contain the mandatory 'update($input);' action.");
+        // Assert the NEW insertion logic for Tier 500 (5, FREE_COUNT)
+        assertTrue(drl.contains("priceValueFact.setPriceAmount(new BigDecimal(\"5\"));"),
+                "Tier 500 must set PriceAmount to 5 via the PriceValue fact.");
+        assertTrue(drl.contains("priceValueFact.setValueType(PriceValue.ValueType.valueOf(\"FREE_COUNT\"));"),
+                "Tier 500 must set ValueType to FREE_COUNT via the PriceValue fact.");
+
+        // Both rules must include the common insertion and creation statements
+        assertTrue(drl.contains("PriceValue priceValueFact = new PriceValue();"),
+                "DRL must contain the PriceValue fact creation.");
+        assertTrue(drl.contains("insert(priceValueFact);"),
+                "DRL must contain the 'insert(priceValueFact);' action.");
     }
 
 
     @Test
     void buildRules_shouldReturnPlaceholderRulesWhenNoComponentsExist() {
         when(componentRepository.findAllEagerlyForRules()).thenReturn(Collections.emptyList());
-        String drl = droolsRuleBuilderService.buildAllRulesForCompilation();
+        String drl = productRuleBuilderService.buildAllRulesForCompilation();
         assertTrue(drl.contains("PlaceholderRule_DoNothing"), "DRL should contain the placeholder rule when no components are found.");
     }
 }

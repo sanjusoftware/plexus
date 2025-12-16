@@ -36,6 +36,9 @@ public class DroolsExpressionBuilder {
         String dataType = metadata.getDataType().toUpperCase();
         boolean needsQuotes = "STRING".equals(dataType) || "DATE".equals(dataType);
 
+        // Check if the type requires BigDecimal comparison logic
+        boolean isBigDecimal = "java.math.BigDecimal".equals(metadata.getFqnType());
+
         // 1. Determine the fact property access path and casting
         String accessPath;
         // DRL Map Access: customAttributes["attributeName"]
@@ -62,18 +65,42 @@ public class DroolsExpressionBuilder {
         }
 
         // Handle relational operators (EQ, GT, LT, etc.)
-        String operatorSymbol = switch (operator) {
-            case EQ -> "=="; case NE -> "!="; case GT -> ">";
-            case GE -> ">="; case LT -> "<"; case LE -> "<=";
-            default -> throw new IllegalStateException("Unsupported operator: " + operator);
-        };
+        if (isBigDecimal) {
+            // CRITICAL FIX: Use compareTo() for BigDecimal. The RHS must be a new BigDecimal instance.
+            String bigDecimalFqn = metadata.getFqnType(); // "java.math.BigDecimal"
+            // RHS: new java.math.BigDecimal("500.00")
+            String rhs = String.format("new %s(\"%s\")", bigDecimalFqn, attributeValue.trim());
 
-        String formattedValue = needsQuotes
-                ? String.format("\"%s\"", attributeValue.trim())
-                : attributeValue.trim();
+            // LHS.compareTo(RHS) > 0
+            return switch (operator) {
+                case EQ -> String.format("%s.compareTo(%s) == 0", accessPath, rhs);
+                case NE -> String.format("%s.compareTo(%s) != 0", accessPath, rhs);
+                case GT -> String.format("%s.compareTo(%s) > 0", accessPath, rhs);
+                case GE -> String.format("%s.compareTo(%s) >= 0", accessPath, rhs);
+                case LT -> String.format("%s.compareTo(%s) < 0", accessPath, rhs);
+                case LE -> String.format("%s.compareTo(%s) <= 0", accessPath, rhs);
+                default -> throw new IllegalStateException("Unsupported operator for BigDecimal: " + operator);
+            };
 
-        // 3. Combine access path, operator, and value
-        // Example result: "((java.math.BigDecimal) customAttributes["amount"]) > 1000"
-        return String.format("%s %s %s", accessPath, operatorSymbol, formattedValue);
+        } else {
+            // Logic for non-BigDecimal types (String, Long, Boolean, LocalDate)
+            String operatorSymbol = switch (operator) {
+                case EQ -> "==";
+                case NE -> "!=";
+                case GT -> ">";
+                case GE -> ">=";
+                case LT -> "<";
+                case LE -> "<=";
+                default -> throw new IllegalStateException("Unsupported operator: " + operator);
+            };
+
+            String formattedValue = needsQuotes
+                    ? String.format("\"%s\"", attributeValue.trim())
+                    : attributeValue.trim();
+
+            // 3. Combine access path, operator, and value
+            // Example result: "((java.lang.Long) customAttributes["age"]) > 18"
+            return String.format("%s %s %s", accessPath, operatorSymbol, formattedValue);
+        }
     }
 }

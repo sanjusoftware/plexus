@@ -2,8 +2,8 @@ package com.bankengine.rules.service;
 
 import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.config.drools.DroolsKieModuleBuilder;
-import com.bankengine.pricing.service.BundleDroolsRuleBuilderService;
-import com.bankengine.pricing.service.DroolsRuleBuilderService;
+import com.bankengine.pricing.service.BundleRuleBuilderService;
+import com.bankengine.pricing.service.ProductRuleBuilderService;
 import org.kie.api.KieServices;
 import org.kie.api.builder.ReleaseId;
 import org.kie.api.runtime.KieContainer;
@@ -18,26 +18,23 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class KieContainerReloadService {
 
-    // Holds the currently active KieContainer instance
     private final AtomicReference<KieContainer> activeKieContainer;
 
-    // CRITICAL FIX: Inject the Spring proxy of this service into itself
-    // to enable @Transactional processing on self-invoked methods.
     @Autowired
     @Lazy
     private KieContainerReloadService self;
 
-    private final DroolsRuleBuilderService ruleBuilderService;
-    private final BundleDroolsRuleBuilderService bundleRuleBuilderService;
+    private final ProductRuleBuilderService productRuleBuilderService;
+    private final BundleRuleBuilderService bundleRuleBuilderService;
     private final DroolsKieModuleBuilder moduleBuilder;
 
     @Autowired
     public KieContainerReloadService(KieContainer initialKieContainer,
-                                     DroolsRuleBuilderService ruleBuilderService,
-                                     BundleDroolsRuleBuilderService bundleRuleBuilderService,
+                                     ProductRuleBuilderService productRuleBuilderService,
+                                     BundleRuleBuilderService bundleRuleBuilderService,
                                      DroolsKieModuleBuilder moduleBuilder) {
         this.activeKieContainer = new AtomicReference<>(initialKieContainer);
-        this.ruleBuilderService = ruleBuilderService;
+        this.productRuleBuilderService = productRuleBuilderService;
         this.bundleRuleBuilderService = bundleRuleBuilderService;
         this.moduleBuilder = moduleBuilder;
     }
@@ -67,7 +64,7 @@ public class KieContainerReloadService {
         try {
             // 1. Fetch DRL content from the database. The @Transactional proxy now
             //    runs, starting a transaction and enabling the Hibernate filter.
-            String productRuleContent = ruleBuilderService.buildAllRulesForCompilation();
+            String productRuleContent = productRuleBuilderService.buildAllRulesForCompilation();
             String bundleRuleContent = bundleRuleBuilderService.buildAllRulesForCompilation();
 
             // 2. Prepare content map

@@ -14,9 +14,8 @@ import org.kie.api.runtime.KieSession;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +24,6 @@ public class PricingCalculationService {
     private final KieContainerReloadService kieContainerReloadService;
     private final ProductPricingLinkRepository productPricingLinkRepository;
 
-    // Drools fact keys
     private static final String CUSTOMER_SEGMENT_KEY = "customerSegment";
     private static final String TRANSACTION_AMOUNT_KEY = "transactionAmount";
     private static final String PRODUCT_ID_KEY = "productId";
@@ -39,10 +37,7 @@ public class PricingCalculationService {
     @Transactional(readOnly = true)
     public List<PriceValueResponseDto> getProductPricing(PriceRequest request) {
 
-        // 1. Get current tenant ID securely
         String bankId = BankContextHolder.getBankId();
-
-        // 2. Fetch all applicable pricing links for the Product ID (automatically filtered by Bank ID via Hibernate)
         List<ProductPricingLink> links = productPricingLinkRepository.findByProductId(request.getProductId());
 
         if (links.isEmpty()) {
@@ -50,67 +45,58 @@ public class PricingCalculationService {
                 request.getProductId(), bankId));
         }
 
-        // 3. Process all components and collect results, mapping PriceValue to the Response DTO
-        return links.stream()
-            .map(link -> processPricingComponent(link, request, bankId))
+        // --- 1. Separate Links: Fixed vs. Rules Engine ---
+        List<ProductPricingLink> fixedLinks = links.stream().filter(link -> !link.isUseRulesEngine()).toList();
+        List<ProductPricingLink> rulesLinks = links.stream().filter(ProductPricingLink::isUseRulesEngine).toList();
+
+        List<PriceValueResponseDto> results = new ArrayList<>();
+
+        // 2. Process Fixed Pricing (Existing Logic)
+        results.addAll(fixedLinks.stream()
+            .map(this::processFixedPricingComponent)
             .filter(Optional::isPresent)
             .map(Optional::get)
-            .toList();
+            .toList());
+
+        // 3. Process Rules Engine Pricing
+        if (!rulesLinks.isEmpty()) {
+             Collection<PriceValue> ruleFacts = determinePriceWithDrools(request, bankId);
+             results.addAll(
+                 ruleFacts.stream()
+                     .map(this::mapPriceValueToDto)
+                     .toList()
+             );
+        }
+
+        // TODO: Future enhancement: Implement aggregation logic here to return a single final chargeable price.
+
+        return results;
     }
 
     /**
-     * Determines the price for a single ProductPricingLink based on its configuration.
+     * Helper to process fixed pricing components (extracted from original processPricingComponent).
      */
-    private Optional<PriceValueResponseDto> processPricingComponent(
-        ProductPricingLink link,
-        PriceRequest request,
-        String bankId) {
-
-        // Use the Builder to construct the final response DTO
-        PriceValueResponseDto.PriceValueResponseDtoBuilder resultBuilder = PriceValueResponseDto.builder()
-            .context(link.getContext())
-            .pricingComponentCode(link.getPricingComponent().getName());
-
-        // --- 1. Simple Pricing: Use the fixed value stored on the link entity ---
-        if (!link.isUseRulesEngine()) {
-            if (link.getFixedValue() != null) {
-                return Optional.of(resultBuilder
-                    .priceAmount(link.getFixedValue())
-                    .valueType(PriceValue.ValueType.ABSOLUTE) // Assume absolute for fixed fees
-                    .sourceType("FIXED_VALUE")
-                    .build());
-            }
-            return Optional.empty();
-        }
-
-        // --- 2. Complex Pricing: Use Drools Rules Engine ---
-
-        PricingInput finalInputFact = determinePriceWithDrools(request, bankId);
-
-        // 3. Extract the result
-        if (finalInputFact.isRuleFired() && finalInputFact.getMatchedTierId() != null) {
-
-            return Optional.of(resultBuilder
-                .priceAmount(finalInputFact.getPriceAmount())
-                .valueType(PriceValue.ValueType.valueOf(finalInputFact.getValueType()))
-                .sourceType("RULES_ENGINE")
+    private Optional<PriceValueResponseDto> processFixedPricingComponent(ProductPricingLink link) {
+        if (link.getFixedValue() != null) {
+            return Optional.of(PriceValueResponseDto.builder()
+                .context(link.getContext())
+                .pricingComponentCode(link.getPricingComponent().getName())
+                .priceAmount(link.getFixedValue())
+                .valueType(PriceValue.ValueType.ABSOLUTE)
+                .sourceType("FIXED_VALUE")
                 .build());
         }
-
-        // 4. Fallback for no match
         return Optional.empty();
     }
 
-
     /**
-     * Executes the Drools Rules Engine, populating the input fact with catalog and context data.
+     * Executes the Drools Rules Engine, populating the input fact and collecting all inserted PriceValue facts.
+     * * @return Collection of PriceValue facts inserted by the rules.
      */
-    private PricingInput determinePriceWithDrools(PriceRequest request, String bankId) {
+    private Collection<PriceValue> determinePriceWithDrools(PriceRequest request, String bankId) {
 
-        // Get the active KieSession from the reloaded container
         KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
 
-        // 1. Create the Input Fact
         PricingInput input = new PricingInput();
         input.setCustomAttributes(new HashMap<>());
 
@@ -120,19 +106,43 @@ public class PricingCalculationService {
         input.getCustomAttributes().put(TRANSACTION_AMOUNT_KEY, request.getAmount());
         input.getCustomAttributes().put(BANK_ID_KEY, bankId);
 
-        try {
-            // 2. Insert the input fact into the working memory
-            kieSession.insert(input);
+        if (request.getCustomAttributes() != null) {
+            input.getCustomAttributes().putAll(request.getCustomAttributes());
+        }
 
-            // 3. Fire all matching rules
+        try {
+            kieSession.insert(input);
             kieSession.fireAllRules();
 
-            // The input object is updated by the 'update($input)' action in the DRL.
-            return input;
+            // Collect all inserted PriceValue facts from the working memory.
+            Collection<PriceValue> insertedObjects = (Collection<PriceValue>) kieSession.getObjects(
+                    new org.kie.api.runtime.ClassObjectFilter(PriceValue.class)
+            );
+
+            Collection<PriceValue> safeCopy = insertedObjects.stream()
+                    .filter(PriceValue.class::isInstance)
+                    .collect(Collectors.toList());
+
+            return safeCopy;
 
         } finally {
-            // Always dispose of the stateful KieSession after use
             kieSession.dispose();
         }
+    }
+
+    /**
+     * Maps the runtime PriceValue fact to the response DTO.
+     */
+    private PriceValueResponseDto mapPriceValueToDto(PriceValue fact) {
+        String context = fact.getComponentCode() != null ? fact.getComponentCode() : "RULES_ENGINE";
+
+        return PriceValueResponseDto.builder()
+            .context(context)
+            .pricingComponentCode(fact.getComponentCode())
+            .priceAmount(fact.getPriceAmount())
+            .valueType(fact.getValueType())
+            .sourceType("RULES_ENGINE")
+            .matchedTierId(fact.getMatchedTierId())
+            .build();
     }
 }

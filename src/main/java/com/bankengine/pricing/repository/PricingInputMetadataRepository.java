@@ -18,7 +18,7 @@ public interface PricingInputMetadataRepository extends JpaRepository<PricingInp
 
     /**
      * Finds a list of metadata records whose keys are in the provided set.
-     * Used by DroolsRuleBuilderService to efficiently load the cache before building rules.
+     * Used by ProductRuleBuilderService to efficiently load the cache before building rules.
      */
     List<PricingInputMetadata> findByAttributeKeyIn(Set<String> attributeKeys);
 }

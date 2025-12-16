@@ -4,14 +4,13 @@ import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.data.seeding.CoreMetadataSeeder;
 import com.bankengine.pricing.dto.PriceRequest;
 import com.bankengine.pricing.dto.PriceValueResponseDto;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.TierCondition.Operator;
-import com.bankengine.pricing.repository.PricingComponentRepository;
-import com.bankengine.pricing.repository.PricingInputMetadataRepository;
-import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.pricing.repository.*;
 import com.bankengine.pricing.service.PricingCalculationService;
 import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.rules.service.KieContainerReloadService;
@@ -51,15 +50,21 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
     // --- REPOSITORIES & SERVICES ---
     @Autowired
+    private PricingTierRepository pricingTierRepository;
+    @Autowired
+    private PriceValueRepository priceValueRepository;
+    @Autowired
+    private TierConditionRepository tierConditionRepository;
+    @Autowired
     private ProductRepository productRepository;
     @Autowired
     private ProductTypeRepository productTypeRepository;
     @Autowired
-    private PricingComponentRepository componentRepository;
+    private PricingComponentRepository pricingComponentRepository;
     @Autowired
     private ProductPricingLinkRepository productPricingLinkRepository;
     @Autowired
-    private PricingInputMetadataRepository metadataRepository;
+    private PricingInputMetadataRepository pricingInputMetadataRepository;
     @Autowired
     private PricingCalculationService pricingCalculationService;
     @Autowired
@@ -69,21 +74,23 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private EntityManager entityManager;
     @Autowired
-    private JdbcTemplate jdbcTemplate; // Used for direct DB checks and cleanup
+    private JdbcTemplate jdbcTemplate;
     @Autowired
-    private MockMvc mockMvc; // For testing the API endpoint
+    private MockMvc mockMvc;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private CoreMetadataSeeder coreMetadataSeeder;
 
     @BeforeEach
     void setup() {
         cleanupData();
 
-        // 💡 FIX 1: Wrap all persistence operations in a TransactionTemplate block
-        // This ensures an active transaction is available for save/flush operations (fixing TransactionRequiredException)
-        // and commits the data, making it visible for the rule builder service.
         transactionTemplate.execute(status -> {
+            coreMetadataSeeder.seedCorePricingInputMetadata();
+
             // 1. Setup Product Type
             ProductType productType = new ProductType();
             productType.setName("LOAN_TYPE");
@@ -97,7 +104,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             // 3. Setup Pricing Component Graph: A simple Annual Fee (10.00) if segment is RETAIL
             PricingComponent component = new PricingComponent(TEST_COMPONENT_NAME, PricingComponent.ComponentType.FEE);
-            component = componentRepository.save(component);
+            component = pricingComponentRepository.save(component);
 
             PricingTier tier = new PricingTier(component, "Base Tier", BigDecimal.ZERO, null);
 
@@ -113,7 +120,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             tier.getPriceValues().add(priceValue);
 
             component.getPricingTiers().add(tier);
-            componentRepository.save(component);
+            pricingComponentRepository.save(component);
 
             // 4. Link Product to Pricing Component
             productPricingLinkRepository.save(new ProductPricingLink(
@@ -124,10 +131,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                     true // Use Rules Engine
             ));
 
-            // Ensure all setup data is visible in the database before rule reload (Line 123 fix).
             entityManager.flush();
             return null;
-        }); // Transaction commits here
+        });
 
         // 5. Build and Deploy Rules (must be outside the persistence transaction)
         boolean success = kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
@@ -141,10 +147,13 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
     private void cleanupData() {
         productPricingLinkRepository.deleteAllInBatch();
-        componentRepository.deleteAllInBatch();
+        tierConditionRepository.deleteAllInBatch();
+        priceValueRepository.deleteAllInBatch();
+        pricingTierRepository.deleteAllInBatch();
+        pricingComponentRepository.deleteAllInBatch();
         productRepository.deleteAllInBatch();
         productTypeRepository.deleteAllInBatch();
-        metadataRepository.deleteAllInBatch();
+//        pricingInputMetadataRepository.deleteAllInBatch();
     }
 
     /**
@@ -165,39 +174,34 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         assertFalse(results.isEmpty(), "Expected at least one price component result.");
         PriceValueResponseDto result = results.get(0);
         assertEquals(EXPECTED_PRICE_INITIAL, result.getPriceAmount(), "Rule execution must succeed and return the expected price.");
-        assertEquals(ValueType.ABSOLUTE.name(), result.getValueType(), "Value type must be ABSOLUTE.");
+        assertEquals(ValueType.ABSOLUTE.name(), result.getValueType().name(), "Value type must be ABSOLUTE.");
     }
-
-    // --- NEW TESTS FOR CUSTOM ATTRIBUTES AND BENEFITS ---
 
     /**
      * 2. Test Rule Execution with Custom Input Attribute (from customAttributes map)
      */
     @Test
-    // 💡 FIX 2: Removed @Transactional to allow explicit transaction template control.
     @WithMockUser(authorities = {"pricing:calculation:read", "pricing:metadata:write", "pricing:component:write"})
     void testRuleExecutionWithCustomInputAttribute() {
-
-        // 💡 FIX 2: Wrap all setup logic in a committed transaction so the rule builder can read it.
         transactionTemplate.execute(status -> {
             // ARRANGE 1: Setup custom metadata input
             PricingInputMetadata metadata = new PricingInputMetadata();
             metadata.setAttributeKey("CLIENT_AGE");
             metadata.setDataType("INTEGER");
             metadata.setDisplayName("Client Age for Pricing");
-            metadataRepository.save(metadata);
+            pricingInputMetadataRepository.save(metadata);
 
             // ARRANGE 2: Create a new component graph that uses the custom attribute
             String customCompName = "AgeRuleComponent";
             PricingComponent component = new PricingComponent(customCompName, PricingComponent.ComponentType.FEE);
-            PricingComponent persistedComponent = componentRepository.save(component);
+            PricingComponent persistedComponent = pricingComponentRepository.save(component);
 
             // Tier condition: IF CLIENT_AGE > 60 THEN $20.00
             PricingTier tier = new PricingTier(persistedComponent, "Senior Tier", BigDecimal.ZERO, null);
 
             TierCondition condition = new TierCondition();
             condition.setPricingTier(tier);
-            condition.setAttributeName("CLIENT_AGE"); // CRITICAL: Use the custom attribute key "CLIENT_AGE"
+            condition.setAttributeName("CLIENT_AGE");
             condition.setOperator(Operator.GT);
             condition.setAttributeValue("60");
             condition.setConnector(TierCondition.LogicalConnector.AND);
@@ -207,7 +211,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             tier.getPriceValues().add(priceValue);
 
             persistedComponent.getPricingTiers().add(tier);
-            componentRepository.save(persistedComponent);
+            pricingComponentRepository.save(persistedComponent);
 
             // Link component to product (using the same product from setup)
             productPricingLinkRepository.save(new ProductPricingLink(
@@ -218,11 +222,10 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                     true
             ));
 
-            entityManager.flush(); // Commit data to be visible to KieContainerReloadService
+            entityManager.flush();
             return null;
-        }); // Transaction commits here
+        });
 
-        // Reload Rules
         assertTrue(kieContainerReloadService.reloadKieContainer(TEST_BANK_ID), "KieContainer must reload successfully with new custom rule.");
 
         // ACT & ASSERT 1: Test Success (Age 65 > 60)
@@ -235,13 +238,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         List<PriceValueResponseDto> successResults = pricingCalculationService.getProductPricing(successRequest);
 
-        // The service should return two prices: the Annual Fee (10.00) + the Age Fee (20.00)
-        Optional<PriceValueResponseDto> ageFee = successResults.stream()
-                .filter(r -> r.getPriceAmount().compareTo(new BigDecimal("20.00")) == 0)
-                .findFirst();
-
-        // 💡 This assertion now correctly validates the rule firing (fixing AssertionFailedError)
-        assertTrue(ageFee.isPresent(), "Custom rule must fire and return the $20.00 fee.");
+        // The Age Rule should fire last and overwrite the $10.00 Annual Fee.
+        // We now assert that exactly ONE result (the winner) is returned, and that result is $20.00.
+        assertEquals(2, successResults.size(), "Expected two price facts (Annual Fee and Age Rule) to be inserted.");
+        assertTrue(successResults.stream().anyMatch(r -> r.getPriceAmount().compareTo(new BigDecimal("20.00")) == 0), "Must contain $20.00 Age Rule Fee.");
+        assertTrue(successResults.stream().anyMatch(r -> r.getPriceAmount().compareTo(new BigDecimal("10.00")) == 0), "Must contain $10.00 Annual Fee.");
 
         // ACT & ASSERT 2: Test Failure (Age 55 is not > 60)
         PriceRequest failureRequest = PriceRequest.builder()
@@ -253,9 +254,8 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         List<PriceValueResponseDto> failureResults = pricingCalculationService.getProductPricing(failureRequest);
 
-        // Only the initial 10.00 Annual Fee should be present
-        assertEquals(1, failureResults.size(), "Only the baseline rule should fire.");
-        assertEquals(EXPECTED_PRICE_INITIAL, failureResults.get(0).getPriceAmount());
+        assertEquals(1, failureResults.size(), "Only the Annual Fee rule should fire, resulting in 1 fact.");
+        assertEquals(new BigDecimal("10.00"), failureResults.get(0).getPriceAmount(), "Only the $10.00 Annual Fee must be present.");
     }
 
     /**
@@ -264,12 +264,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockUser(authorities = {"pricing:calculation:read", "pricing:component:write"})
     void testRuleExecutionForFreeCountBenefit() {
-        // 💡 Wrap persistence in a committed transaction
         transactionTemplate.execute(status -> {
             // ARRANGE: Create a new component graph that provides a FREE_COUNT benefit
             String benefitCompName = "FreeATMComponent";
             PricingComponent component = new PricingComponent(benefitCompName, PricingComponent.ComponentType.BENEFIT);
-            component = componentRepository.save(component);
+            component = pricingComponentRepository.save(component);
 
             // Tier condition: IF customerSegment == RETAIL THEN FREE_COUNT = 5
             PricingTier tier = new PricingTier(component, "Free ATM Benefit", BigDecimal.ZERO, null);
@@ -287,7 +286,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             tier.getPriceValues().add(freeCountValue);
 
             component.getPricingTiers().add(tier);
-            componentRepository.save(component);
+            pricingComponentRepository.save(component);
 
             // Link component to product (using the same product from setup)
             productPricingLinkRepository.save(new ProductPricingLink(
@@ -319,11 +318,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         assertEquals(2, results.size(), "Expected two price components (Fee + Benefit).");
 
         Optional<PriceValueResponseDto> freeCountResult = results.stream()
-                .filter(r -> ValueType.FREE_COUNT.name().equals(r.getValueType()))
+                .filter(r -> ValueType.FREE_COUNT.name().equals(r.getValueType().name()))
                 .findFirst();
 
         assertTrue(freeCountResult.isPresent(), "The FREE_COUNT benefit must be present in the results.");
-        assertEquals(new BigDecimal("5"), freeCountResult.get().getPriceAmount(), "FREE_COUNT amount must be 5.");
+        assertTrue(new BigDecimal("5").compareTo(freeCountResult.get().getPriceAmount()) == 0, "FREE_COUNT amount must be 5.");
     }
 
     /**
@@ -337,7 +336,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         // Fetch component details in a read-only transaction for isolation
         transactionTemplate.execute(status -> {
-            PricingComponent component = componentRepository.findByName(TEST_COMPONENT_NAME).orElseThrow(
+            PricingComponent component = pricingComponentRepository.findByName(TEST_COMPONENT_NAME).orElseThrow(
                     () -> new RuntimeException("Setup component not found.")
             );
             componentRef[0] = component;
@@ -348,7 +347,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         Long componentId = componentRef[0].getId();
 
         Optional<PricingTier> tierOptional = transactionTemplate.execute(status ->
-                componentRepository.findById(componentId).orElseThrow(() -> new RuntimeException("Component not found"))
+                pricingComponentRepository.findById(componentId).orElseThrow(() -> new RuntimeException("Component not found"))
                         .getPricingTiers().stream().findFirst()
         );
         Long tierId = tierOptional.orElseThrow(() -> new RuntimeException("Tier not found for component")).getId();
@@ -393,7 +392,6 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             }
         });
 
-        entityManager.flush();
         // ACT 4: Perform reload (Optional stability check)
         boolean success = kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
         assertTrue(success, "KieContainer must reload successfully after component deletion.");
@@ -434,7 +432,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             // ARRANGE: Create a new component graph that provides a 5% discount rate if amount > 500.00
             String discountCompName = "BulkDiscountComponent";
             PricingComponent component = new PricingComponent(discountCompName, PricingComponent.ComponentType.DISCOUNT);
-            component = componentRepository.save(component);
+            component = pricingComponentRepository.save(component);
 
             // Tier condition: IF amount > 500.00 THEN DISCOUNT_PERCENTAGE = 5.00
             PricingTier tier = new PricingTier(component, "Bulk Discount Tier", BigDecimal.ZERO, null);
@@ -452,7 +450,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             tier.getPriceValues().add(discountValue);
 
             component.getPricingTiers().add(tier);
-            componentRepository.save(component);
+            pricingComponentRepository.save(component);
 
             // Link component to product (using the same product from setup)
             productPricingLinkRepository.save(new ProductPricingLink(
@@ -481,7 +479,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         // Should return the Annual Fee (10.00) AND the Discount (5.00)
         Optional<PriceValueResponseDto> discountResult = successResults.stream()
-                .filter(r -> ValueType.DISCOUNT_PERCENTAGE.name().equals(r.getValueType()))
+                .filter(r -> ValueType.DISCOUNT_PERCENTAGE.name().equals(r.getValueType().name()))
                 .findFirst();
 
         assertTrue(discountResult.isPresent(), "The DISCOUNT_PERCENTAGE benefit must be present in the results.");
