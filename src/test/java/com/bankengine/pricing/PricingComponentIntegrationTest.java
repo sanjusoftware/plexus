@@ -140,24 +140,24 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     }
     // ------------------------------------------------------------------------------------------------
 
-    private CreatePricingComponentRequestDto getCreateDto(String name) {
-        CreatePricingComponentRequestDto dto = new CreatePricingComponentRequestDto();
-        dto.setName(name);
-        dto.setType("FEE");
-        return dto;
+    private PricingComponentRequest getCreateDto(String name) {
+        PricingComponentRequest pricingComponentRequest = new PricingComponentRequest();
+        pricingComponentRequest.setName(name);
+        pricingComponentRequest.setType("FEE");
+        return pricingComponentRequest;
     }
 
     // --- Helper Method to create a valid TierValueDto ---
     private TierValueDto getValidTierValueDto() {
-        CreatePricingTierRequestDto tierDto = new CreatePricingTierRequestDto();
+        PricingTierRequest tierDto = new PricingTierRequest();
         tierDto.setTierName("Default Tier");
         // This condition uses "customerSegment", which is now guaranteed to exist via txHelper.
-        tierDto.setConditions(Set.of(getDummyConditionDto()));
+        tierDto.setConditions(List.of(getDummyConditionDto()));
 
         // Ensure all mandatory fields are set to pass validation
         tierDto.setMinThreshold(new BigDecimal("0.00"));
 
-        CreatePriceValueRequestDto valueDto = new CreatePriceValueRequestDto();
+        PriceValueRequest valueDto = new PriceValueRequest();
         valueDto.setPriceAmount(new BigDecimal("5.00"));
         valueDto.setValueType("ABSOLUTE");
 
@@ -194,7 +194,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn400OnCreateWithInvalidType() throws Exception {
-        CreatePricingComponentRequestDto dto = getCreateDto("BadType");
+        PricingComponentRequest dto = getCreateDto("BadType");
         dto.setType("INVALID_TYPE");
 
         mockMvc.perform(post("/api/v1/pricing-components")
@@ -262,7 +262,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldUpdateComponentAndReturn200() throws Exception {
         PricingComponent savedComponent = txHelper.createPricingComponentInDb("OldRate");
-        UpdatePricingComponentRequestDto updateDto = new UpdatePricingComponentRequestDto();
+        PricingComponentRequest updateDto = new PricingComponentRequest();
         updateDto.setName("NewRate");
         updateDto.setType("FEE"); // Change type
 
@@ -350,13 +350,13 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         Long tierId = initialTier.getId();
 
         // ARRANGE: Create the update DTOs
-        UpdatePricingTierRequestDto tierDto = new UpdatePricingTierRequestDto();
+        PricingTierRequest tierDto = new PricingTierRequest();
         tierDto.setTierName("UpdatedTierName");
         tierDto.setMinThreshold(new BigDecimal("100.00"));
         tierDto.setMaxThreshold(new BigDecimal("999.99"));
         tierDto.setConditions(List.of(getDummyConditionDto()));
 
-        UpdatePriceValueRequestDto valueDto = new UpdatePriceValueRequestDto();
+        PriceValueRequest valueDto = new PriceValueRequest();
         valueDto.setPriceAmount(new BigDecimal("15.50"));
         valueDto.setValueType("PERCENTAGE");
 
@@ -434,8 +434,8 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         UpdateTierValueDto updateDto = new UpdateTierValueDto();
         // Populate DTO with valid data to pass initial validation
-        updateDto.setTier(new UpdatePricingTierRequestDto());
-        updateDto.setValue(new UpdatePriceValueRequestDto());
+        updateDto.setTier(new PricingTierRequest());
+        updateDto.setValue(new PriceValueRequest());
         updateDto.getTier().setTierName("Placeholder");
         updateDto.getValue().setPriceAmount(new BigDecimal("1"));
         updateDto.getValue().setValueType("ABSOLUTE");

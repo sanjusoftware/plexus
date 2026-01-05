@@ -1,5 +1,3 @@
-// src/main/java/com/bankengine/pricing/dto/UpdatePriceValueRequestDto.java
-
 package com.bankengine.pricing.dto;
 
 import jakarta.validation.constraints.NotBlank;
@@ -11,7 +9,7 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class UpdatePriceValueRequestDto {
+public class PriceValueRequest {
 
     @NotNull(message = "Price amount is required.")
     private BigDecimal priceAmount;

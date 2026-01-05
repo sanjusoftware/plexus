@@ -1,8 +1,7 @@
 package com.bankengine.pricing.controller;
 
-import com.bankengine.pricing.dto.CreatePricingComponentRequestDto;
+import com.bankengine.pricing.dto.PricingComponentRequest;
 import com.bankengine.pricing.dto.PricingComponentResponseDto;
-import com.bankengine.pricing.dto.UpdatePricingComponentRequestDto;
 import com.bankengine.pricing.service.PricingComponentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -66,7 +65,7 @@ public class PricingComponentController {
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., name conflict).")
     @PostMapping
     @PreAuthorize("hasAuthority('pricing:component:create')")
-    public ResponseEntity<PricingComponentResponseDto> createComponent(@Valid @RequestBody CreatePricingComponentRequestDto requestDto) {
+    public ResponseEntity<PricingComponentResponseDto> createComponent(@Valid @RequestBody PricingComponentRequest requestDto) {
         PricingComponentResponseDto createdComponent = pricingComponentService.createComponent(requestDto);
         return new ResponseEntity<>(createdComponent, HttpStatus.CREATED);
     }
@@ -83,7 +82,7 @@ public class PricingComponentController {
     public ResponseEntity<PricingComponentResponseDto> updatePricingComponent(
             @Parameter(description = "ID of the pricing component to update", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody UpdatePricingComponentRequestDto requestDto) {
+            @Valid @RequestBody PricingComponentRequest requestDto) {
 
         PricingComponentResponseDto updatedComponent = pricingComponentService.updateComponent(id, requestDto);
         return new ResponseEntity<>(updatedComponent, HttpStatus.OK);

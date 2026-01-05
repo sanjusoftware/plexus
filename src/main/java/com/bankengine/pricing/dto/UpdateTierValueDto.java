@@ -11,9 +11,9 @@ public class UpdateTierValueDto {
 
     @Valid
     @NotNull(message = "Tier details must be provided.")
-    private UpdatePricingTierRequestDto tier;
+    private PricingTierRequest tier;
 
     @Valid
     @NotNull(message = "Value details must be provided.")
-    private UpdatePriceValueRequestDto value;
+    private PriceValueRequest value;
 }

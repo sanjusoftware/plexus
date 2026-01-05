@@ -1,9 +1,8 @@
 package com.bankengine.pricing.converter;
 
 import com.bankengine.config.MapStructConfig;
-import com.bankengine.pricing.dto.CreatePriceValueRequestDto;
+import com.bankengine.pricing.dto.PriceValueRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
-import com.bankengine.pricing.dto.UpdatePriceValueRequestDto;
 import com.bankengine.pricing.model.PriceValue;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -14,13 +13,13 @@ public interface PriceValueMapper {
 
     // For addTierAndValue
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "pricingTier", ignore = true) // Set manually in service
-    @Mapping(target = "valueType", ignore = true)   // Set manually in service due to UPPERCASE logic
+    @Mapping(target = "pricingTier", ignore = true)
+    @Mapping(target = "valueType", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "matchedTierId", ignore = true)
     @Mapping(target = "componentCode", ignore = true)
-    PriceValue toEntity(CreatePriceValueRequestDto dto);
+    PriceValue toEntity(PriceValueRequest dto);
 
     // For updateTierAndValue (update)
     @Mapping(target = "id", ignore = true)
@@ -30,7 +29,7 @@ public interface PriceValueMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "matchedTierId", ignore = true)
     @Mapping(target = "componentCode", ignore = true)
-    void updateFromDto(UpdatePriceValueRequestDto dto, @MappingTarget PriceValue entity);
+    void updateFromDto(PriceValueRequest dto, @MappingTarget PriceValue entity);
 
     @Mapping(target = "valueType", source = "valueType")
     @Mapping(source = "pricingTier.pricingComponent.name", target = "componentCode")

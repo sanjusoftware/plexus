@@ -134,7 +134,7 @@ public class PricingComponentService {
     }
 
     @Transactional
-    public PricingComponentResponseDto createComponent(CreatePricingComponentRequestDto requestDto) {
+    public PricingComponentResponseDto createComponent(PricingComponentRequest requestDto) {
         PricingComponent component = pricingComponentMapper.toEntity(requestDto);
         try {
             component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
@@ -159,7 +159,7 @@ public class PricingComponentService {
     }
 
     @Transactional
-    public PricingComponentResponseDto updateComponent(Long id, UpdatePricingComponentRequestDto requestDto) {
+    public PricingComponentResponseDto updateComponent(Long id, PricingComponentRequest requestDto) {
         PricingComponent component = getPricingComponentById(id);
         pricingComponentMapper.updateFromDto(requestDto, component);
         try {
@@ -192,8 +192,8 @@ public class PricingComponentService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ProductPricingCalculationResult.PriceComponentDetail addTierAndValue(
             Long componentId,
-            CreatePricingTierRequestDto tierDto,
-            CreatePriceValueRequestDto valueDto) {
+            PricingTierRequest tierDto,
+            PriceValueRequest valueDto) {
 
         PricingComponent component = getPricingComponentById(componentId);
         PricingTier tier = pricingTierMapper.toEntity(tierDto);

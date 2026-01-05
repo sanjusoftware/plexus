@@ -1,8 +1,7 @@
 package com.bankengine.pricing.converter;
 
 import com.bankengine.config.MapStructConfig;
-import com.bankengine.pricing.dto.CreatePricingTierRequestDto;
-import com.bankengine.pricing.dto.UpdatePricingTierRequestDto;
+import com.bankengine.pricing.dto.PricingTierRequest;
 import com.bankengine.pricing.model.PricingTier;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -18,7 +17,7 @@ public interface PricingTierMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "conditions", ignore = true)
-    PricingTier toEntity(CreatePricingTierRequestDto dto);
+    PricingTier toEntity(PricingTierRequest pricingTierRequest);
 
     // For updateTierAndValue
     @Mapping(target = "id", ignore = true)
@@ -27,5 +26,5 @@ public interface PricingTierMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "conditions", ignore = true)
-    void updateFromDto(UpdatePricingTierRequestDto dto, @MappingTarget PricingTier entity);
+    void updateFromDto(PricingTierRequest pricingTierRequest, @MappingTarget PricingTier entity);
 }

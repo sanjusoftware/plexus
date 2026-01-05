@@ -1,7 +1,10 @@
 package com.bankengine.pricing.converter;
 
 import com.bankengine.config.MapStructConfig;
-import com.bankengine.pricing.dto.*;
+import com.bankengine.pricing.dto.PricingComponentRequest;
+import com.bankengine.pricing.dto.PricingComponentResponseDto;
+import com.bankengine.pricing.dto.PricingTierResponseDto;
+import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
@@ -33,12 +36,12 @@ public interface PricingComponentMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "pricingTiers", ignore = true)
-    PricingComponent toEntity(CreatePricingComponentRequestDto dto);
+    PricingComponent toEntity(PricingComponentRequest dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "type", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "pricingTiers", ignore = true)
-    void updateFromDto(UpdatePricingComponentRequestDto dto, @MappingTarget PricingComponent entity);
+    void updateFromDto(PricingComponentRequest dto, @MappingTarget PricingComponent entity);
 }

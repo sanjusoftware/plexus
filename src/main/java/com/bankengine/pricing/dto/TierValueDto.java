@@ -1,12 +1,10 @@
 package com.bankengine.pricing.dto;
 
-import com.bankengine.pricing.model.PricingTier;
-import com.bankengine.pricing.model.PriceValue;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 /**
  * DTO to bundle a PricingTier and its corresponding PriceValue
@@ -16,11 +14,11 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TierValueDto {
-    @Valid // Apply validation to the nested DTO
+    @Valid
     @NotNull(message = "Pricing Tier data is required.")
-    private CreatePricingTierRequestDto tier;
+    private PricingTierRequest tier;
 
-    @Valid // Apply validation to the nested DTO
+    @Valid
     @NotNull(message = "Price Value data is required.")
-    private CreatePriceValueRequestDto value;
+    private PriceValueRequest value;
 }
