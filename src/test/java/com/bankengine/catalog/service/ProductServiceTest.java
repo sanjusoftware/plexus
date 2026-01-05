@@ -1,7 +1,10 @@
 package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.ProductMapper;
-import com.bankengine.catalog.dto.*;
+import com.bankengine.catalog.dto.ProductFeatureDto;
+import com.bankengine.catalog.dto.ProductRequest;
+import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.ProductSearchRequestDto;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -63,7 +66,7 @@ public class ProductServiceTest {
 
     @Test
     void testCreateProduct() {
-        CreateProductRequestDto dto = new CreateProductRequestDto();
+        ProductRequest dto = new ProductRequest();
         dto.setProductTypeId(1L);
         when(productTypeRepository.findById(1L)).thenReturn(Optional.of(new ProductType()));
         when(productRepository.save(any(Product.class))).thenReturn(new Product());
@@ -86,7 +89,7 @@ public class ProductServiceTest {
         Product product = new Product();
         product.setStatus("ACTIVE");
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        assertThrows(IllegalStateException.class, () -> productService.updateProduct(1L, new UpdateProductRequestDto()));
+        assertThrows(IllegalStateException.class, () -> productService.updateProduct(1L, new ProductRequest()));
     }
 
     @Test

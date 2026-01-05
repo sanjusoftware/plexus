@@ -1,9 +1,8 @@
 package com.bankengine.catalog.converter;
 
 import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
-import com.bankengine.catalog.dto.CreateProductRequestDto;
+import com.bankengine.catalog.dto.ProductRequest;
 import com.bankengine.catalog.dto.ProductResponseDto;
-import com.bankengine.catalog.dto.UpdateProductRequestDto;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.config.MapStructConfig;
@@ -36,7 +35,7 @@ public interface ProductMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)
-    Product toEntity(CreateProductRequestDto dto, ProductType productType);
+    Product toEntity(ProductRequest dto, ProductType productType);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "productType", ignore = true)
@@ -48,7 +47,7 @@ public interface ProductMapper {
     @Mapping(target = "expirationDate", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)
-    void updateFromDto(UpdateProductRequestDto dto, @MappingTarget Product product);
+    void updateFromDto(ProductRequest dto, @MappingTarget Product product);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "productType", source = "oldProduct.productType")

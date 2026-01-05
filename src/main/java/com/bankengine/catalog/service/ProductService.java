@@ -198,7 +198,10 @@ public class ProductService {
      * Creates a new Product from a DTO, converting to Entity and performing lookups.
      */
     @Transactional
-    public ProductResponseDto createProduct(CreateProductRequestDto requestDto) {
+    public ProductResponseDto createProduct(ProductRequest requestDto) {
+        if (requestDto.getProductTypeId() == null) {
+            throw new IllegalArgumentException("Product Type ID is required for creation.");
+        }
         // 1. Look up the required ProductType entity (using centralized lookup)
         ProductType productType = getProductTypeById(requestDto.getProductTypeId());
 
@@ -280,7 +283,7 @@ public class ProductService {
      * Used for administrative updates before launch.
      */
     @Transactional
-    public ProductResponseDto updateProduct(Long id, UpdateProductRequestDto dto) {
+    public ProductResponseDto updateProduct(Long id, ProductRequest dto) {
         Product product = getProductEntityById(id);
 
         // Don't allow update to INACTIVE/ARCHIVED product

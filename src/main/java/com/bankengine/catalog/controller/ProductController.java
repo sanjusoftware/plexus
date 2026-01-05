@@ -40,7 +40,7 @@ public class ProductController {
             content = @Content(schema = @Schema(implementation = String.class)))
     @PostMapping
     @PreAuthorize("hasAuthority('catalog:product:create')")
-    public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody CreateProductRequestDto requestDto) {
+    public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody ProductRequest requestDto) {
         ProductResponseDto responseDto = productService.createProduct(requestDto);
         return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
     }
@@ -107,7 +107,7 @@ public class ProductController {
     public ResponseEntity<ProductResponseDto> updateProduct(
             @Parameter(description = "The unique ID of the product to update", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody UpdateProductRequestDto requestDto) {
+            @Valid @RequestBody ProductRequest requestDto) {
 
         ProductResponseDto responseDto = productService.updateProduct(id, requestDto);
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
@@ -123,7 +123,7 @@ public class ProductController {
     public ResponseEntity<ProductResponseDto> activateProduct(
             @Parameter(description = "ID of the product to activate", required = true)
             @PathVariable Long id,
-            @RequestBody(required = false) ProductActivationDto dto) { // DTO might only contain effectiveDate
+            @RequestBody(required = false) ProductActivationDto dto) {
 
         LocalDate effectiveDate = (dto != null) ? dto.getEffectiveDate() : null;
         ProductResponseDto responseDto = productService.activateProduct(id, effectiveDate);

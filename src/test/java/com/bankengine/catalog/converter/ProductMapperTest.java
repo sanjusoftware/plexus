@@ -1,8 +1,8 @@
 package com.bankengine.catalog.converter;
 
 import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
+import com.bankengine.catalog.dto.ProductRequest;
 import com.bankengine.catalog.dto.ProductResponseDto;
-import com.bankengine.catalog.dto.UpdateProductRequestDto;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
@@ -88,7 +88,7 @@ public class ProductMapperTest {
 
     @Test
     void testUpdateFromDto() {
-        UpdateProductRequestDto dto = new UpdateProductRequestDto();
+        ProductRequest dto = new ProductRequest();
         dto.setName("Updated Product");
 
         Product entity = new Product();
