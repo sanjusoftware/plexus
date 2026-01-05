@@ -24,5 +24,5 @@ public class ProductPriceResultDto {
     private BigDecimal grossPrice;
 
     // The detailed price results for each component (calculated by PricingCalculationService)
-    private List<PriceValueResponseDto> componentPrices;
+    private List<ProductPricingCalculationResult.PriceComponentDetail> componentPrices;
 }

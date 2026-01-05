@@ -6,7 +6,8 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.data.seeding.CoreMetadataSeeder;
 import com.bankengine.pricing.dto.PriceRequest;
-import com.bankengine.pricing.dto.PriceValueResponseDto;
+import com.bankengine.pricing.dto.ProductPricingCalculationResult;
+import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.TierCondition.Operator;
@@ -168,17 +169,20 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                 .amount(TEST_AMOUNT)
                 .build();
 
-        List<PriceValueResponseDto> results = pricingCalculationService.getProductPricing(request);
+        ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
+        List<PriceComponentDetail> components = result.getComponentBreakdown();
 
         // ASSERT
-        assertFalse(results.isEmpty(), "Expected at least one price component result.");
-        PriceValueResponseDto result = results.get(0);
-        assertEquals(EXPECTED_PRICE_INITIAL, result.getPriceAmount(), "Rule execution must succeed and return the expected price.");
-        assertEquals(ValueType.ABSOLUTE.name(), result.getValueType().name(), "Value type must be ABSOLUTE.");
+        assertFalse(components.isEmpty(), "Expected at least one price component result.");
+        PriceComponentDetail firstComponent = components.get(0);
+
+        // Use .getAmount() instead of .getPriceAmount()
+        assertEquals(EXPECTED_PRICE_INITIAL, firstComponent.getAmount(), "Rule execution must succeed.");
+        assertEquals(ValueType.ABSOLUTE.name(), firstComponent.getValueType().name());
     }
 
     /**
-     * 2. Test Rule Execution with Custom Input Attribute (from customAttributes map)
+     * 2. Test Rule Execution with Custom Input Attribute
      */
     @Test
     @WithMockUser(authorities = {"pricing:calculation:read", "pricing:metadata:write", "pricing:component:write"})
@@ -236,15 +240,12 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                 .customAttributes(Collections.singletonMap("CLIENT_AGE", 65L))
                 .build();
 
-        List<PriceValueResponseDto> successResults = pricingCalculationService.getProductPricing(successRequest);
+        List<PriceComponentDetail> successResults = pricingCalculationService.getProductPricing(successRequest).getComponentBreakdown();
 
-        // The Age Rule should fire last and overwrite the $10.00 Annual Fee.
-        // We now assert that exactly ONE result (the winner) is returned, and that result is $20.00.
-        assertEquals(2, successResults.size(), "Expected two price facts (Annual Fee and Age Rule) to be inserted.");
-        assertTrue(successResults.stream().anyMatch(r -> r.getPriceAmount().compareTo(new BigDecimal("20.00")) == 0), "Must contain $20.00 Age Rule Fee.");
-        assertTrue(successResults.stream().anyMatch(r -> r.getPriceAmount().compareTo(new BigDecimal("10.00")) == 0), "Must contain $10.00 Annual Fee.");
+        assertEquals(2, successResults.size(), "Expected two price facts.");
+        assertTrue(successResults.stream().anyMatch(r -> r.getAmount().compareTo(new BigDecimal("20.00")) == 0));
+        assertTrue(successResults.stream().anyMatch(r -> r.getAmount().compareTo(new BigDecimal("10.00")) == 0));
 
-        // ACT & ASSERT 2: Test Failure (Age 55 is not > 60)
         PriceRequest failureRequest = PriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
@@ -252,14 +253,14 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                 .customAttributes(Collections.singletonMap("CLIENT_AGE", 55L))
                 .build();
 
-        List<PriceValueResponseDto> failureResults = pricingCalculationService.getProductPricing(failureRequest);
+        List<PriceComponentDetail> failureResults = pricingCalculationService.getProductPricing(failureRequest).getComponentBreakdown();
 
         assertEquals(1, failureResults.size(), "Only the Annual Fee rule should fire, resulting in 1 fact.");
-        assertEquals(new BigDecimal("10.00"), failureResults.get(0).getPriceAmount(), "Only the $10.00 Annual Fee must be present.");
+        assertEquals(new BigDecimal("10.00"), failureResults.get(0).getAmount(), "Only the $10.00 Annual Fee must be present.");
     }
 
     /**
-     * 3. Test Rule Execution for New FREE_COUNT Benefit (Requirement i)
+     * 3. Test Rule Execution for New FREE_COUNT Benefit
      */
     @Test
     @WithMockUser(authorities = {"pricing:calculation:read", "pricing:component:write"})
@@ -311,22 +312,22 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                 .amount(TEST_AMOUNT)
                 .build();
 
-        List<PriceValueResponseDto> results = pricingCalculationService.getProductPricing(request);
+        List<PriceComponentDetail> results = pricingCalculationService.getProductPricing(request).getComponentBreakdown();
 
         // ASSERT
         // Should return the Annual Fee (10.00) AND the Free Count (5)
         assertEquals(2, results.size(), "Expected two price components (Fee + Benefit).");
 
-        Optional<PriceValueResponseDto> freeCountResult = results.stream()
+        Optional<PriceComponentDetail> freeCountResult = results.stream()
                 .filter(r -> ValueType.FREE_COUNT.name().equals(r.getValueType().name()))
                 .findFirst();
 
         assertTrue(freeCountResult.isPresent(), "The FREE_COUNT benefit must be present in the results.");
-        assertTrue(new BigDecimal("5").compareTo(freeCountResult.get().getPriceAmount()) == 0, "FREE_COUNT amount must be 5.");
+        assertTrue(new BigDecimal("5").compareTo(freeCountResult.get().getAmount()) == 0, "FREE_COUNT amount must be 5.");
     }
 
     /**
-     * 4. Test Rule Deletion and Fallback (Safety Test)
+     * 4. Test Rule Deletion and Fallback
      */
     @Test
     @WithMockUser(authorities = {"pricing:component:delete"})
@@ -359,11 +360,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                 .amount(TEST_AMOUNT)
                 .build();
 
-        List<PriceValueResponseDto> resultsBefore = pricingCalculationService.getProductPricing(baselineRequest);
-        assertFalse(resultsBefore.isEmpty(), "Baseline check expected at least one price component result.");
-
-        PriceValueResponseDto resultBefore = resultsBefore.get(0);
-        assertEquals(EXPECTED_PRICE_INITIAL, resultBefore.getPriceAmount(), "Baseline rule execution must succeed (10.00).");
+        List<PriceComponentDetail> resultsBefore = pricingCalculationService.getProductPricing(baselineRequest).getComponentBreakdown();
+        assertFalse(resultsBefore.isEmpty());
+        assertEquals(EXPECTED_PRICE_INITIAL, resultsBefore.get(0).getAmount());
 
         // ACT 2: Delete the Tier (Runs in REQUIRES_NEW and COMMITS deletion)
         pricingComponentService.deleteTierAndValue(componentId, tierId);
@@ -472,31 +471,28 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         PriceRequest successRequest = PriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
-                .amount(TEST_AMOUNT) // TEST_AMOUNT is 1000.00
+                .amount(TEST_AMOUNT)
                 .build();
 
-        List<PriceValueResponseDto> successResults = pricingCalculationService.getProductPricing(successRequest);
+        // FIX: Extract from breakdown
+        List<PriceComponentDetail> successResults = pricingCalculationService.getProductPricing(successRequest).getComponentBreakdown();
 
-        // Should return the Annual Fee (10.00) AND the Discount (5.00)
-        Optional<PriceValueResponseDto> discountResult = successResults.stream()
+        Optional<PriceComponentDetail> discountResult = successResults.stream()
                 .filter(r -> ValueType.DISCOUNT_PERCENTAGE.name().equals(r.getValueType().name()))
                 .findFirst();
 
         assertTrue(discountResult.isPresent(), "The DISCOUNT_PERCENTAGE benefit must be present in the results.");
-        assertEquals(new BigDecimal("5.00"), discountResult.get().getPriceAmount(), "DISCOUNT_PERCENTAGE amount must be 5.00.");
+        assertEquals(new BigDecimal("5.00"), discountResult.get().getAmount(), "DISCOUNT_PERCENTAGE amount must be 5.00.");
 
-        // ACT & ASSERT 2: Test Failure (Amount 400.00 is not > 500.00)
         PriceRequest failureRequest = PriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(new BigDecimal("400.00"))
                 .build();
 
-        List<PriceValueResponseDto> failureResults = pricingCalculationService.getProductPricing(failureRequest);
-
-        // Only the initial 10.00 Annual Fee should be present
+        List<PriceComponentDetail> failureResults = pricingCalculationService.getProductPricing(failureRequest).getComponentBreakdown();
         assertEquals(1, failureResults.size(), "Only the baseline rule should fire.");
-        assertEquals(EXPECTED_PRICE_INITIAL, failureResults.get(0).getPriceAmount());
+        assertEquals(EXPECTED_PRICE_INITIAL, failureResults.get(0).getAmount());
     }
 
     // --- JDBC Helpers (For verification only) ---

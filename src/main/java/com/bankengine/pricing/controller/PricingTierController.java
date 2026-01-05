@@ -1,6 +1,6 @@
 package com.bankengine.pricing.controller;
 
-import com.bankengine.pricing.dto.PriceValueResponseDto;
+import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.TierValueDto;
 import com.bankengine.pricing.dto.UpdateTierValueDto;
 import com.bankengine.pricing.service.PricingComponentService;
@@ -34,18 +34,21 @@ public class PricingTierController {
     @Operation(summary = "Add a new pricing tier and value to a component",
             description = "Defines a PricingTier and its associated PriceValue (e.g., condition, threshold, and amount) under a specified component.")
     @ApiResponse(responseCode = "201", description = "Pricing Tier and Value successfully created and linked.",
-            content = @Content(schema = @Schema(implementation = PriceValueResponseDto.class)))
+            content = @Content(schema = @Schema(implementation = ProductPricingCalculationResult.PriceComponentDetail.class)))
     @ApiResponse(responseCode = "400", description = "Invalid data (e.g., componentId not found, invalid threshold values).")
     @PostMapping
     @PreAuthorize("hasAuthority('pricing:tier:create')")
-    public ResponseEntity<PriceValueResponseDto> addTieredPricing(
+    public ResponseEntity<ProductPricingCalculationResult.PriceComponentDetail> addTieredPricing(
             @Parameter(description = "The ID of the existing Pricing Component.", required = true)
             @PathVariable Long componentId,
             @Valid @RequestBody TierValueDto dto) {
-        PriceValueResponseDto responseDto = pricingComponentService.addTierAndValue(
+
+        // FIX: Return type updated to PriceComponentDetail
+        ProductPricingCalculationResult.PriceComponentDetail responseDto = pricingComponentService.addTierAndValue(
                 componentId,
                 dto.getTier(),
                 dto.getValue());
+
         return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
     }
 
@@ -56,21 +59,22 @@ public class PricingTierController {
     @Operation(summary = "Update an existing pricing tier and its value",
             description = "Modifies the condition, thresholds (tier) and/or the amount/type (value) of an existing tier.")
     @ApiResponse(responseCode = "200", description = "Pricing Tier and Value successfully updated.",
-            content = @Content(schema = @Schema(implementation = PriceValueResponseDto.class)))
+            content = @Content(schema = @Schema(implementation = ProductPricingCalculationResult.PriceComponentDetail.class)))
     @ApiResponse(responseCode = "404", description = "Pricing Component or Tier not found.")
     @PutMapping("/{tierId}")
     @PreAuthorize("hasAuthority('pricing:tier:update')")
-    public ResponseEntity<PriceValueResponseDto> updateTieredPricing(
+    public ResponseEntity<ProductPricingCalculationResult.PriceComponentDetail> updateTieredPricing(
             @Parameter(description = "ID of the existing Pricing Component (for context).", required = true)
             @PathVariable Long componentId,
             @Parameter(description = "ID of the existing Pricing Tier.", required = true)
             @PathVariable Long tierId,
             @Valid @RequestBody UpdateTierValueDto dto) {
 
-        PriceValueResponseDto responseDto = pricingComponentService.updateTierAndValue(
+        ProductPricingCalculationResult.PriceComponentDetail responseDto = pricingComponentService.updateTierAndValue(
                 componentId,
                 tierId,
                 dto);
+
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 

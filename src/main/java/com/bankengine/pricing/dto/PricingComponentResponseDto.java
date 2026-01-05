@@ -15,5 +15,5 @@ public class PricingComponentResponseDto {
     private ComponentType type;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<PricingTierResponseDto> pricingTiers;
+    private List<ProductPricingCalculationResult.PriceComponentDetail> pricingTiers;
 }

@@ -14,5 +14,5 @@ public class PricingTierResponseDto {
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
     private List<TierConditionDto> conditions;
-    private List<PriceValueResponseDto> priceValues;
+    private List<ProductPricingCalculationResult.PriceComponentDetail> priceValues;
 }

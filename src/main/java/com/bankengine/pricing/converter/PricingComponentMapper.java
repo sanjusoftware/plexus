@@ -14,14 +14,18 @@ import java.util.List;
 @Mapper(config = MapStructConfig.class)
 public interface PricingComponentMapper {
 
-    PriceValueResponseDto toPriceValueDto(PriceValue entity);
+    @Mapping(target = "componentCode", source = "pricingTier.pricingComponent.name")
+    @Mapping(target = "amount", source = "priceAmount")
+    @Mapping(target = "context", constant = "CATALOG_DETAIL")
+    @Mapping(target = "sourceType", constant = "CATALOG")
+    ProductPricingCalculationResult.PriceComponentDetail toPriceValueDto(PriceValue entity);
 
-    // MapStruct automatically maps the nested List<PriceValue> to List<PriceValueResponseDto>
     @Mapping(target = "priceValues", source = "priceValues")
     PricingTierResponseDto toPricingTierDto(PricingTier entity);
 
     @Mapping(target = "pricingTiers", source = "pricingTiers")
     PricingComponentResponseDto toResponseDto(PricingComponent entity);
+
     List<PricingComponentResponseDto> toResponseDtoList(List<PricingComponent> entities);
 
     @Mapping(target = "id", ignore = true)

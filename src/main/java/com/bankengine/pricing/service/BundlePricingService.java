@@ -5,7 +5,9 @@ import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
 import com.bankengine.pricing.dto.BundlePriceResponse.ProductPricingResult;
 import com.bankengine.pricing.dto.PriceRequest;
-import com.bankengine.pricing.dto.PriceValueResponseDto;
+import com.bankengine.pricing.dto.ProductPricingCalculationResult;
+import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
+import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.rules.model.BundlePricingInput;
 import com.bankengine.rules.service.BundleRulesEngineService;
 import com.bankengine.web.exception.NotFoundException;
@@ -26,93 +28,65 @@ public class BundlePricingService {
     private final PricingCalculationService pricingCalculationService;
     private final BundleRulesEngineService bundleRulesEngineService;
 
-    /**
-     * Calculates the aggregated price for an entire product bundle, including individual product pricing
-     * and bundle-level adjustments using the dedicated rules engine.
-     * @param request The bundle pricing request DTO.
-     * @return A comprehensive response DTO with aggregated and itemized prices.
-     */
     @Transactional(readOnly = true)
     public BundlePriceResponse calculateTotalBundlePrice(BundlePriceRequest request) {
 
         if (request.getProducts() == null || request.getProducts().isEmpty()) {
-            throw new NotFoundException("The bundle must contain at least one product for pricing.");
+            throw new NotFoundException("The bundle must contain at least one product.");
         }
 
         List<ProductPricingResult> productResults = new ArrayList<>();
         BigDecimal grossTotal = BigDecimal.ZERO;
-        String currentBankId = BankContextHolder.getBankId(); // Fetch bank ID once
+        String currentBankId = BankContextHolder.getBankId();
 
-        // 1. Calculate pricing for each individual product in the bundle
         for (BundlePriceRequest.ProductRequest productReq : request.getProducts()) {
-
-            // a. Prepare the single-product request DTO
             PriceRequest singlePriceRequest = new PriceRequest();
             singlePriceRequest.setProductId(productReq.getProductId());
             singlePriceRequest.setAmount(productReq.getAmount());
             singlePriceRequest.setCustomerSegment(request.getCustomerSegment());
             singlePriceRequest.setEffectiveDate(request.getEffectiveDate());
 
-            // b. Call the existing PricingCalculationService
-            List<PriceValueResponseDto> components = pricingCalculationService.getProductPricing(singlePriceRequest);
+            ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(singlePriceRequest);
 
-            // c. Aggregate and store the product result
-            BigDecimal productTotal = components.stream()
-                    // Sum all prices for the product's total amount (assuming PriceValueResponseDto::getPriceAmount is non-null)
-                    .map(PriceValueResponseDto::getPriceAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+            BigDecimal productTotal = result.getFinalChargeablePrice();
             grossTotal = grossTotal.add(productTotal);
 
             productResults.add(ProductPricingResult.builder()
                     .productId(productReq.getProductId())
                     .productTotalAmount(productTotal)
-                    .pricingComponents(components)
+                    .pricingComponents(result.getComponentBreakdown())
                     .build());
         }
 
-        // 2. Apply bundle-level adjustments using the Rules Engine
-
-        // a. Prepare the Bundle Rules Input Fact
         BundlePricingInput bundleInputFact = new BundlePricingInput();
-        bundleInputFact.setBankId(currentBankId); // Pass the multi-tenant ID to the rules
+        bundleInputFact.setBankId(currentBankId);
         bundleInputFact.setCustomerSegment(request.getCustomerSegment());
         bundleInputFact.setGrossTotalAmount(grossTotal);
 
-        // b. Run the dedicated bundle rules engine
         BundlePricingInput adjustedFact = bundleRulesEngineService.determineBundleAdjustments(bundleInputFact);
 
-        // c. Convert the Drools output (Map<String, BigDecimal>) to the DTO response list (List<PriceValueResponseDto>)
-        List<PriceValueResponseDto> bundleAdjustments = convertAdjustmentsToDto(adjustedFact.getAdjustments());
+        List<PriceComponentDetail> bundleAdjustments = convertAdjustmentsToDetail(adjustedFact.getAdjustments());
 
-        // Sum the (negative) adjustments
         BigDecimal adjustmentTotal = bundleAdjustments.stream()
-                .map(PriceValueResponseDto::getPriceAmount)
+                .map(PriceComponentDetail::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Net Total = Gross Total + Adjustments
-        BigDecimal netTotal = grossTotal.add(adjustmentTotal);
-
-        // 3. Build and return the final response
         return BundlePriceResponse.builder()
                 .productBundleId(request.getProductBundleId())
                 .grossTotalAmount(grossTotal)
                 .bundleAdjustments(bundleAdjustments)
                 .productResults(productResults)
-                .netTotalAmount(netTotal)
+                .netTotalAmount(grossTotal.add(adjustmentTotal))
                 .build();
     }
 
-    /**
-     * Helper to map the raw Drools output (Map<String, BigDecimal>) into the standardized DTO.
-     * **FIX 2:** Updated method signature to correctly accept the Map output from BundlePricingInput.
-     */
-    private List<PriceValueResponseDto> convertAdjustmentsToDto(Map<String, BigDecimal> adjustments) {
-        return adjustments.entrySet().stream().map(entry -> PriceValueResponseDto.builder()
-            .pricingComponentCode(entry.getKey())
-            .priceAmount(entry.getValue())
+    private List<PriceComponentDetail> convertAdjustmentsToDetail(Map<String, BigDecimal> adjustments) {
+        return adjustments.entrySet().stream().map(entry -> PriceComponentDetail.builder()
+            .componentCode(entry.getKey())
+            .amount(entry.getValue())
             .context("BUNDLE_ADJUSTMENT")
             .sourceType("BUNDLE_RULES")
+            .valueType(PriceValue.ValueType.DISCOUNT_ABSOLUTE)
             .build()
         ).collect(Collectors.toList());
     }

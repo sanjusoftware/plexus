@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -295,16 +296,14 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn409WhenDeletingComponentWithTiers() throws Exception {
-        // ARRANGE: 1. Create and COMMIT the component and COMMIT the dependency
         PricingComponent component = txHelper.createPricingComponentInDb("ComponentWithTiers");
-        // We use createCommittedTierDependency which now includes a TierCondition
         txHelper.createCommittedTierDependency(component.getId(), "Tier 1");
 
-        // ACT: Attempt to delete the component.
         mockMvc.perform(delete("/api/v1/pricing-components/{id}", component.getId()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status", is(409)))
-                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Cannot delete Pricing Component ID")));
+                .andExpect(jsonPath("$.message", containsString("Cannot delete component")))
+                .andExpect(jsonPath("$.message", containsString("association with 1 tiers exists")));
     }
 
     // =================================================================
@@ -315,21 +314,20 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldAddTierAndValueToComponentAndReturn201() throws Exception {
         PricingComponent component = txHelper.createPricingComponentInDb("TieredComponent");
-
         TierValueDto requestDto = getValidTierValueDto();
-
         mockMvc.perform(post("/api/v1/pricing-components/{componentId}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.priceAmount", is(5.00)));
+                .andExpect(jsonPath("$.amount", is(5.00)))
+                .andExpect(jsonPath("$.componentCode").value("TieredComponent"))
+                .andExpect(jsonPath("$.valueType").value("ABSOLUTE"));
     }
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404WhenAddingTierToNonExistentComponent() throws Exception {
         TierValueDto requestDto = getValidTierValueDto();
-
         mockMvc.perform(post("/api/v1/pricing-components/99999/tiers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -368,12 +366,15 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         // ACT: Call PUT /{componentId}/tiers/{tierId}
         mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
-                        componentId, tierId) // <--- USED LOCAL VARIABLES
+                        componentId, tierId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
                 // ASSERT: Check the updated PriceValue fields
-                .andExpect(jsonPath("$.priceAmount", is(15.50)));
+                .andExpect(jsonPath("$.amount", is(15.50)))
+                .andExpect(jsonPath("$.componentCode").value("ComponentToUpdate"))
+                .andExpect(jsonPath("$.valueType").value("PERCENTAGE"))
+                .andExpect(jsonPath("$.context").value("PRODUCT_TIER"));
 
         txHelper.flushAndClear();
 
@@ -446,7 +447,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Pricing Component not found")));
+                .andExpect(jsonPath("$.message", containsString("Pricing Component not found")));
 
         // Test 2: PUT with non-existent Tier ID
         mockMvc.perform(put("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
@@ -454,12 +455,12 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Pricing Tier not found")));
+                .andExpect(jsonPath("$.message", containsString("Pricing Tier not found")));
 
         // Test 3: DELETE with non-existent Tier ID
         mockMvc.perform(delete("/api/v1/pricing-components/{componentId}/tiers/{tierId}",
                         existingComponentId, nonExistentId))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Pricing Tier not found")));
+                .andExpect(jsonPath("$.message", containsString("Pricing Tier not found")));
     }
 }
