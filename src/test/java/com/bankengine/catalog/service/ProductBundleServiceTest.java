@@ -7,7 +7,6 @@ import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
-import com.bankengine.catalog.repository.ProductRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,10 +28,7 @@ import static org.mockito.Mockito.*;
 class ProductBundleServiceTest {
 
     @Mock private ProductBundleRepository bundleRepository;
-    @Mock private ProductRepository productRepository;
     @Mock private BundleProductLinkRepository bundleProductLinkRepository;
-    @Mock private CatalogConstraintService constraintService;
-
     @InjectMocks private ProductBundleService bundleService;
 
     @BeforeEach
@@ -161,5 +157,53 @@ class ProductBundleServiceTest {
                 () -> bundleService.activateBundle(1L));
 
         assertEquals("Cannot activate bundle. Products must be ACTIVE: Home Loan", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Create Bundle - Fail when multiple Main Accounts provided")
+    void createBundle_ShouldThrowException_WhenMultipleMainAccounts() {
+        // Arrange
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setName("Bad Bundle");
+
+        ProductBundleRequest.BundleItemRequest item1 = new ProductBundleRequest.BundleItemRequest();
+        item1.setProductId(1L);
+        item1.setMainAccount(true); // First Main
+
+        ProductBundleRequest.BundleItemRequest item2 = new ProductBundleRequest.BundleItemRequest();
+        item2.setProductId(2L);
+        item2.setMainAccount(true); // Second Main (Illegal)
+
+        request.setItems(List.of(item1, item2));
+
+        // Act & Assert
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> bundleService.createBundle(request));
+
+        assertEquals("A bundle can only have 1 Main Account item.", ex.getMessage());
+        verify(bundleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Clone Bundle - Fail when source has data integrity issue (Multiple Mains)")
+    void cloneBundle_ShouldThrowException_WhenSourceHasMultipleMainAccounts() {
+        // Arrange: Simulate a database state that violates the rule
+        ProductBundle source = new ProductBundle();
+        source.setId(1L);
+
+        // Create two links marked as Main Account
+        BundleProductLink link1 = new BundleProductLink(source, new Product(), true, true);
+        BundleProductLink link2 = new BundleProductLink(source, new Product(), true, true);
+
+        source.setContainedProducts(List.of(link1, link2));
+
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(source));
+
+        // Act & Assert
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> bundleService.cloneBundle(1L, "New Name"));
+
+        assertTrue(ex.getMessage().contains("Source bundle has multiple Main Accounts"));
+        verify(bundleRepository, never()).save(any());
     }
 }

@@ -36,7 +36,7 @@ public class ProductBundleService {
     public void activateBundle(Long bundleId) {
         ProductBundle bundle = getBundle(bundleId);
 
-        // 1. Validate Bundle State
+        // 1. Basic State Validations
         if (bundle.getStatus() != ProductBundle.BundleStatus.DRAFT) {
             throw new IllegalStateException("Only DRAFT bundles can be activated. Current: " + bundle.getStatus());
         }
@@ -45,7 +45,15 @@ public class ProductBundleService {
             throw new IllegalStateException("Cannot activate a bundle with no products.");
         }
 
-        // 2. Validate Product States (Constituents must be ACTIVE)
+        // 2. Validate "One Main Account" Rule (Double check before activation)
+        long mainAccountCount = bundle.getContainedProducts().stream()
+                .filter(BundleProductLink::isMainAccount)
+                .count();
+        if (mainAccountCount > 1) {
+            throw new IllegalStateException("Data Integrity Error: Bundle has more than 1 Main Account.");
+        }
+
+        // 3. Validate Product States (Constituents must be ACTIVE)
         List<String> inactiveProducts = bundle.getContainedProducts().stream()
                 .map(BundleProductLink::getProduct)
                 .filter(p -> !"ACTIVE".equalsIgnoreCase(p.getStatus()))
@@ -57,13 +65,12 @@ public class ProductBundleService {
                     String.join(", ", inactiveProducts));
         }
 
-        // 3. Temporal Alignment
-        // If the bundle was set to activate in the past, snap it to today.
+        // 4. Temporal Alignment
         if (bundle.getActivationDate().isBefore(LocalDate.now())) {
             bundle.setActivationDate(LocalDate.now());
         }
 
-        // 4. Finalize
+        // 5. Finalize
         bundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
         productBundleRepository.save(bundle);
     }
@@ -72,7 +79,6 @@ public class ProductBundleService {
     public Long updateBundle(Long oldBundleId, ProductBundleRequest dto) {
         String bankId = BankContextHolder.getBankId();
 
-        // 1. Retrieve and archive the existing bundle
         ProductBundle oldBundle = getBundle(oldBundleId);
         oldBundle.setStatus(ProductBundle.BundleStatus.ARCHIVED);
         oldBundle.setExpiryDate(LocalDate.now());
@@ -87,6 +93,14 @@ public class ProductBundleService {
         ProductBundle source = getBundle(bundleId);
         String bankId = BankContextHolder.getBankId();
 
+        // VALIDATION: Ensure source is valid before cloning
+        long mainCount = source.getContainedProducts().stream()
+                .filter(BundleProductLink::isMainAccount)
+                .count();
+        if (mainCount > 1) {
+            throw new IllegalStateException("Cannot clone: Source bundle has multiple Main Accounts.");
+        }
+
         ProductBundle cloned = new ProductBundle();
         cloned.setBankId(bankId);
         cloned.setName(newName);
@@ -95,11 +109,10 @@ public class ProductBundleService {
         cloned.setEligibilitySegment(source.getEligibilitySegment());
         cloned.setActivationDate(source.getActivationDate());
         cloned.setExpiryDate(source.getExpiryDate());
-        cloned.setStatus(ProductBundle.BundleStatus.DRAFT); // Always clone as DRAFT
+        cloned.setStatus(ProductBundle.BundleStatus.DRAFT);
 
         ProductBundle savedClone = productBundleRepository.save(cloned);
 
-        // Deep clone the links
         source.getContainedProducts().forEach(oldLink -> {
             BundleProductLink newLink = new BundleProductLink(
                 savedClone,
@@ -118,7 +131,6 @@ public class ProductBundleService {
     public void archiveBundle(Long bundleId) {
         ProductBundle bundle = getBundle(bundleId);
         bundle.setStatus(ProductBundle.BundleStatus.ARCHIVED);
-        // We set expiryDate to now if it wasn't already expired
         if (bundle.getExpiryDate() == null || bundle.getExpiryDate().isAfter(LocalDate.now())) {
             bundle.setExpiryDate(LocalDate.now());
         }
@@ -126,6 +138,16 @@ public class ProductBundleService {
     }
 
     private ProductBundle saveBundleWithLinks(ProductBundleRequest dto, String bankId, ProductBundle.BundleStatus status) {
+        // VALIDATION: Check Main Account constraint
+        if (dto.getItems() != null) {
+            long mainCount = dto.getItems().stream()
+                    .filter(ProductBundleRequest.BundleItemRequest::isMainAccount)
+                    .count();
+            if (mainCount > 1) {
+                throw new IllegalArgumentException("A bundle can only have 1 Main Account item.");
+            }
+        }
+
         ProductBundle bundle = new ProductBundle();
         bundle.setBankId(bankId);
         bundle.setCode(dto.getCode());
