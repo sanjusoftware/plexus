@@ -134,7 +134,7 @@ public class PricingComponentService {
     }
 
     @Transactional
-    public PricingComponentResponseDto createComponent(PricingComponentRequest requestDto) {
+    public PricingComponentResponse createComponent(PricingComponentRequest requestDto) {
         PricingComponent component = pricingComponentMapper.toEntity(requestDto);
         try {
             component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
@@ -147,19 +147,19 @@ public class PricingComponentService {
     }
 
     @Transactional(readOnly = true)
-    public List<PricingComponentResponseDto> findAllComponents() {
+    public List<PricingComponentResponse> findAllComponents() {
         List<PricingComponent> components = componentRepository.findAll();
         return pricingComponentMapper.toResponseDtoList(components);
     }
 
     @Transactional(readOnly = true)
-    public PricingComponentResponseDto getComponentById(Long id) {
+    public PricingComponentResponse getComponentById(Long id) {
         PricingComponent component = getPricingComponentById(id);
         return pricingComponentMapper.toResponseDto(component);
     }
 
     @Transactional
-    public PricingComponentResponseDto updateComponent(Long id, PricingComponentRequest requestDto) {
+    public PricingComponentResponse updateComponent(Long id, PricingComponentRequest requestDto) {
         PricingComponent component = getPricingComponentById(id);
         pricingComponentMapper.updateFromDto(requestDto, component);
         try {

@@ -2,8 +2,8 @@ package com.bankengine.pricing.converter;
 
 import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.dto.PricingComponentRequest;
-import com.bankengine.pricing.dto.PricingComponentResponseDto;
-import com.bankengine.pricing.dto.PricingTierResponseDto;
+import com.bankengine.pricing.dto.PricingComponentResponse;
+import com.bankengine.pricing.dto.PricingTierResponse;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
@@ -24,12 +24,12 @@ public interface PricingComponentMapper {
     ProductPricingCalculationResult.PriceComponentDetail toPriceValueDto(PriceValue entity);
 
     @Mapping(target = "priceValues", source = "priceValues")
-    PricingTierResponseDto toPricingTierDto(PricingTier entity);
+    PricingTierResponse toPricingTierDto(PricingTier entity);
 
     @Mapping(target = "pricingTiers", source = "pricingTiers")
-    PricingComponentResponseDto toResponseDto(PricingComponent entity);
+    PricingComponentResponse toResponseDto(PricingComponent entity);
 
-    List<PricingComponentResponseDto> toResponseDtoList(List<PricingComponent> entities);
+    List<PricingComponentResponse> toResponseDtoList(List<PricingComponent> entities);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "type", ignore = true)

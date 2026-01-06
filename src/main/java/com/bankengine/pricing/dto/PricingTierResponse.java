@@ -8,7 +8,7 @@ import java.util.List;
 
 @Value
 @Builder
-public class PricingTierResponseDto {
+public class PricingTierResponse {
     private Long id;
     private String tierName;
     private BigDecimal minThreshold;

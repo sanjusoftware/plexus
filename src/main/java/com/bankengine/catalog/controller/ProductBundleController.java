@@ -1,7 +1,7 @@
 package com.bankengine.catalog.controller;
 
-import com.bankengine.catalog.dto.BundleProductLinkRequestDto;
-import com.bankengine.catalog.dto.ProductBundleCreationDto;
+import com.bankengine.catalog.dto.BundleProductLinkRequest;
+import com.bankengine.catalog.dto.ProductBundleRequest;
 import com.bankengine.catalog.service.ProductBundleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ public class ProductBundleController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('catalog:bundle:create')")
-    public Long createProductBundle(@Valid @RequestBody ProductBundleCreationDto dto) {
+    public Long createProductBundle(@Valid @RequestBody ProductBundleRequest dto) {
         return bundleService.createBundle(dto);
     }
 
@@ -28,7 +28,7 @@ public class ProductBundleController {
     @PreAuthorize("hasAuthority('catalog:bundle:update')")
     public void linkProductToBundle(
             @PathVariable Long bundleId,
-            @Valid @RequestBody BundleProductLinkRequestDto dto) {
+            @Valid @RequestBody BundleProductLinkRequest dto) {
 
         bundleService.linkProduct(
                 bundleId,

@@ -1,7 +1,7 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.pricing.converter.PricingInputMetadataMapper;
-import com.bankengine.pricing.dto.MetadataResponseDto;
+import com.bankengine.pricing.dto.MetadataResponse;
 import com.bankengine.pricing.dto.PricingMetadataRequest;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
@@ -66,21 +66,21 @@ public class PricingInputMetadataService {
     }
 
     @Transactional(readOnly = true)
-    public List<MetadataResponseDto> findAllMetadata() {
+    public List<MetadataResponse> findAllMetadata() {
         return pricingInputMetadataRepository.findAll().stream()
                 .map(mapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public MetadataResponseDto getMetadataByKey(String attributeKey) {
+    public MetadataResponse getMetadataByKey(String attributeKey) {
         return pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .map(mapper::toResponseDto)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
     }
 
     @Transactional
-    public MetadataResponseDto createMetadata(PricingMetadataRequest dto) {
+    public MetadataResponse createMetadata(PricingMetadataRequest dto) {
         // Business Rule: Key must be unique. Check before attempting save.
         if (pricingInputMetadataRepository.findByAttributeKey(dto.getAttributeKey()).isPresent()) {
             throw new DependencyViolationException(
@@ -98,7 +98,7 @@ public class PricingInputMetadataService {
     }
 
     @Transactional
-    public MetadataResponseDto updateMetadata(String attributeKey, PricingMetadataRequest dto) {
+    public MetadataResponse updateMetadata(String attributeKey, PricingMetadataRequest dto) {
         PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 

@@ -7,7 +7,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class ProductBundleCreationDto {
+public class ProductBundleRequest {
 
     @NotBlank(message = "Bundle code is required.")
     private String code;

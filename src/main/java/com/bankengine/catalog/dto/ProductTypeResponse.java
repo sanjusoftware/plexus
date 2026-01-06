@@ -5,7 +5,7 @@ import lombok.Value;
 
 @Value
 @Builder
-public class ProductTypeResponseDto {
+public class ProductTypeResponse {
     private Long id;
     private String name;
 }

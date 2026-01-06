@@ -1,7 +1,7 @@
 package com.bankengine.catalog.controller;
 
 import com.bankengine.catalog.dto.FeatureComponentRequest;
-import com.bankengine.catalog.dto.FeatureComponentResponseDto;
+import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.service.FeatureComponentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,12 +35,12 @@ public class FeatureComponentController {
     @Operation(summary = "Create a new reusable feature component",
                description = "Defines a generic feature that can be linked to multiple products.")
     @ApiResponse(responseCode = "201", description = "Feature component successfully created.",
-                 content = @Content(schema = @Schema(implementation = FeatureComponentResponseDto.class)))
+                 content = @Content(schema = @Schema(implementation = FeatureComponentResponse.class)))
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., duplicate name).")
     @PostMapping
     @PreAuthorize("hasAuthority('catalog:feature:create')")
-    public ResponseEntity<FeatureComponentResponseDto> createFeature(@Valid @RequestBody FeatureComponentRequest requestDto) {
-        FeatureComponentResponseDto createdComponent = featureComponentService.createFeature(requestDto);
+    public ResponseEntity<FeatureComponentResponse> createFeature(@Valid @RequestBody FeatureComponentRequest requestDto) {
+        FeatureComponentResponse createdComponent = featureComponentService.createFeature(requestDto);
         return new ResponseEntity<>(createdComponent, HttpStatus.CREATED);
     }
 
@@ -53,8 +53,8 @@ public class FeatureComponentController {
     @ApiResponse(responseCode = "200", description = "List of all feature components successfully retrieved.")
     @GetMapping
     @PreAuthorize("hasAuthority('catalog:feature:read')")
-    public ResponseEntity<List<FeatureComponentResponseDto>> getAllFeatures() {
-        List<FeatureComponentResponseDto> features = featureComponentService.getAllFeatures();
+    public ResponseEntity<List<FeatureComponentResponse>> getAllFeatures() {
+        List<FeatureComponentResponse> features = featureComponentService.getAllFeatures();
         return new ResponseEntity<>(features, HttpStatus.OK);
     }
 
@@ -64,10 +64,10 @@ public class FeatureComponentController {
     @ApiResponse(responseCode = "404", description = "Feature component not found.")
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('catalog:feature:read')")
-    public ResponseEntity<FeatureComponentResponseDto> getFeatureById(
+    public ResponseEntity<FeatureComponentResponse> getFeatureById(
             @Parameter(description = "ID of the feature component", required = true)
             @PathVariable Long id) {
-        FeatureComponentResponseDto responseDto = featureComponentService.getFeatureResponseById(id);
+        FeatureComponentResponse responseDto = featureComponentService.getFeatureResponseById(id);
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
     }
 
@@ -76,17 +76,17 @@ public class FeatureComponentController {
     @Operation(summary = "Update an existing feature component",
             description = "Updates the name and/or data type of an existing feature component.")
     @ApiResponse(responseCode = "200", description = "Feature component successfully updated.",
-            content = @Content(schema = @Schema(implementation = FeatureComponentResponseDto.class)))
+            content = @Content(schema = @Schema(implementation = FeatureComponentResponse.class)))
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., invalid data type).")
     @ApiResponse(responseCode = "404", description = "Feature component not found.")
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('catalog:feature:update')")
-    public ResponseEntity<FeatureComponentResponseDto> updateFeature(
+    public ResponseEntity<FeatureComponentResponse> updateFeature(
             @Parameter(description = "ID of the feature component to update", required = true)
             @PathVariable Long id,
             @Valid @RequestBody FeatureComponentRequest requestDto) {
 
-        FeatureComponentResponseDto updatedComponent = featureComponentService.updateFeature(id, requestDto);
+        FeatureComponentResponse updatedComponent = featureComponentService.updateFeature(id, requestDto);
         return new ResponseEntity<>(updatedComponent, HttpStatus.OK);
     }
 

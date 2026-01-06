@@ -4,7 +4,7 @@ import com.bankengine.catalog.converter.ProductMapper;
 import com.bankengine.catalog.dto.ProductFeatureRequest;
 import com.bankengine.catalog.dto.ProductRequest;
 import com.bankengine.catalog.dto.ProductResponse;
-import com.bankengine.catalog.dto.ProductSearchRequestDto;
+import com.bankengine.catalog.dto.ProductSearchRequest;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -53,7 +53,7 @@ public class ProductServiceTest {
 
     @Test
     void testSearchProducts() {
-        ProductSearchRequestDto criteria = new ProductSearchRequestDto();
+        ProductSearchRequest criteria = new ProductSearchRequest();
         Page<Product> productPage = new PageImpl<>(Collections.singletonList(new Product()));
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(productPage);
         when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());

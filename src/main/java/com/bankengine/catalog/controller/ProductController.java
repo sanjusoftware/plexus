@@ -56,7 +56,7 @@ public class ProductController {
     @ApiResponse(responseCode = "200", description = "Successfully retrieved list of products.")
     @GetMapping
     @PreAuthorize("hasAuthority('catalog:product:read')")
-    public ResponseEntity<Page<ProductResponse>> searchProducts(@Valid ProductSearchRequestDto criteria) {
+    public ResponseEntity<Page<ProductResponse>> searchProducts(@Valid ProductSearchRequest criteria) {
         return ResponseEntity.ok(productService.searchProducts(criteria));
     }
 
@@ -158,7 +158,7 @@ public class ProductController {
     public ResponseEntity<ProductResponse> extendProductExpiration(
             @Parameter(description = "ID of the product to extend", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody ProductExpirationDto dto) {
+            @Valid @RequestBody ProductExpirationRequest dto) {
         return ResponseEntity.ok(productService.extendProductExpiration(id, dto.getExpirationDate()));
     }
 

@@ -1,7 +1,7 @@
 package com.bankengine.catalog.converter;
 
 import com.bankengine.catalog.dto.ProductTypeRequest;
-import com.bankengine.catalog.dto.ProductTypeResponseDto;
+import com.bankengine.catalog.dto.ProductTypeResponse;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -22,7 +22,7 @@ public class ProductTypeMapperTest {
         entity.setId(1L);
         entity.setName("Test Product Type");
 
-        ProductTypeResponseDto dto = mapper.toResponseDto(entity);
+        ProductTypeResponse dto = mapper.toResponseDto(entity);
 
         assertNotNull(dto);
         assertEquals(entity.getId(), dto.getId());
@@ -35,7 +35,7 @@ public class ProductTypeMapperTest {
         entity.setId(1L);
         entity.setName("Test Product Type");
 
-        List<ProductTypeResponseDto> dtoList = mapper.toResponseDtoList(Collections.singletonList(entity));
+        List<ProductTypeResponse> dtoList = mapper.toResponseDtoList(Collections.singletonList(entity));
 
         assertNotNull(dtoList);
         assertEquals(1, dtoList.size());

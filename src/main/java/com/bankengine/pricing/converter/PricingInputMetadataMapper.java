@@ -1,7 +1,7 @@
 package com.bankengine.pricing.converter;
 
 import com.bankengine.config.MapStructConfig;
-import com.bankengine.pricing.dto.MetadataResponseDto;
+import com.bankengine.pricing.dto.MetadataResponse;
 import com.bankengine.pricing.dto.PricingMetadataRequest;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import org.mapstruct.Mapper;
@@ -17,7 +17,7 @@ public interface PricingInputMetadataMapper {
     @Mapping(target = "attributeKey", source = "attributeKey")
     @Mapping(target = "displayName", source = "displayName")
     @Mapping(target = "dataType", source = "dataType")
-    MetadataResponseDto toResponseDto(PricingInputMetadata pricingInputMetadata);
+    MetadataResponse toResponseDto(PricingInputMetadata pricingInputMetadata);
 
     /**
      * Maps the PricingInputMetadata entity to the request DTO.

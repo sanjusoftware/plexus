@@ -2,7 +2,7 @@ package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.FeatureComponentMapper;
 import com.bankengine.catalog.dto.FeatureComponentRequest;
-import com.bankengine.catalog.dto.FeatureComponentResponseDto;
+import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
@@ -45,9 +45,9 @@ public class FeatureComponentServiceTest {
         when(componentRepository.existsByName(dto.getName())).thenReturn(false);
         when(featureComponentMapper.toEntity(dto)).thenReturn(new FeatureComponent());
         when(componentRepository.save(any(FeatureComponent.class))).thenReturn(new FeatureComponent());
-        when(featureComponentMapper.toResponseDto(any(FeatureComponent.class))).thenReturn(new FeatureComponentResponseDto());
+        when(featureComponentMapper.toResponseDto(any(FeatureComponent.class))).thenReturn(new FeatureComponentResponse());
 
-        FeatureComponentResponseDto response = featureComponentService.createFeature(dto);
+        FeatureComponentResponse response = featureComponentService.createFeature(dto);
 
         assertNotNull(response);
         verify(componentRepository, times(1)).save(any(FeatureComponent.class));
@@ -83,7 +83,7 @@ public class FeatureComponentServiceTest {
     @Test
     void testGetAllFeatures() {
         when(componentRepository.findAll()).thenReturn(Collections.singletonList(new FeatureComponent()));
-        when(featureComponentMapper.toResponseDto(any(FeatureComponent.class))).thenReturn(new FeatureComponentResponseDto());
+        when(featureComponentMapper.toResponseDto(any(FeatureComponent.class))).thenReturn(new FeatureComponentResponse());
 
         assertEquals(1, featureComponentService.getAllFeatures().size());
     }
@@ -100,9 +100,9 @@ public class FeatureComponentServiceTest {
         when(componentRepository.findById(1L)).thenReturn(Optional.of(existingComponent));
         when(componentRepository.existsByName(dto.getName())).thenReturn(false);
         when(componentRepository.save(any(FeatureComponent.class))).thenReturn(new FeatureComponent());
-        when(featureComponentMapper.toResponseDto(any(FeatureComponent.class))).thenReturn(new FeatureComponentResponseDto());
+        when(featureComponentMapper.toResponseDto(any(FeatureComponent.class))).thenReturn(new FeatureComponentResponse());
 
-        FeatureComponentResponseDto response = featureComponentService.updateFeature(1L, dto);
+        FeatureComponentResponse response = featureComponentService.updateFeature(1L, dto);
 
         assertNotNull(response);
         verify(componentRepository, times(1)).save(any(FeatureComponent.class));

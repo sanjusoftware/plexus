@@ -1,7 +1,7 @@
 package com.bankengine.pricing.controller;
 
 import com.bankengine.pricing.dto.PricingComponentRequest;
-import com.bankengine.pricing.dto.PricingComponentResponseDto;
+import com.bankengine.pricing.dto.PricingComponentResponse;
 import com.bankengine.pricing.service.PricingComponentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,25 +32,25 @@ public class PricingComponentController {
     @Operation(summary = "Retrieve all pricing components (with Tiers and Price Values)",
             description = "Returns a list of all reusable pricing component definitions, including their associated Tiers and Prices.")
     @ApiResponse(responseCode = "200", description = "List of components successfully retrieved.",
-            content = @Content(array = @ArraySchema(schema = @Schema(implementation = PricingComponentResponseDto.class)))) // Use new DTO
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = PricingComponentResponse.class)))) // Use new DTO
     @GetMapping
     @PreAuthorize("hasAuthority('pricing:component:read')")
-    public ResponseEntity<List<PricingComponentResponseDto>> getAllPricingComponents() {
-        List<PricingComponentResponseDto> componentResponseDtoList = pricingComponentService.findAllComponents();
+    public ResponseEntity<List<PricingComponentResponse>> getAllPricingComponents() {
+        List<PricingComponentResponse> componentResponseDtoList = pricingComponentService.findAllComponents();
         return ResponseEntity.ok(componentResponseDtoList);
     }
 
     @Operation(summary = "Retrieve a pricing component by ID (with Tiers and Price Values)",
             description = "Returns a single pricing component definition by ID, including its associated Tiers and Prices.")
     @ApiResponse(responseCode = "200", description = "Component successfully retrieved.",
-            content = @Content(schema = @Schema(implementation = PricingComponentResponseDto.class))) // Use new DTO
+            content = @Content(schema = @Schema(implementation = PricingComponentResponse.class))) // Use new DTO
     @ApiResponse(responseCode = "404", description = "Pricing component not found.")
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('pricing:component:read')")
-    public ResponseEntity<PricingComponentResponseDto> getPricingComponentById(
+    public ResponseEntity<PricingComponentResponse> getPricingComponentById(
             @Parameter(description = "ID of the pricing component to retrieve", required = true)
             @PathVariable Long id) {
-        PricingComponentResponseDto responseDto = pricingComponentService.getComponentById(id);
+        PricingComponentResponse responseDto = pricingComponentService.getComponentById(id);
         return ResponseEntity.ok(responseDto);
     }
 
@@ -61,12 +61,12 @@ public class PricingComponentController {
     @Operation(summary = "Define a new global pricing component",
                description = "Creates the high-level pricing definition (e.g., 'FX Fee') before tiers are added.")
     @ApiResponse(responseCode = "201", description = "Pricing Component successfully created.",
-                 content = @Content(schema = @Schema(implementation = PricingComponentResponseDto.class)))
+                 content = @Content(schema = @Schema(implementation = PricingComponentResponse.class)))
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., name conflict).")
     @PostMapping
     @PreAuthorize("hasAuthority('pricing:component:create')")
-    public ResponseEntity<PricingComponentResponseDto> createComponent(@Valid @RequestBody PricingComponentRequest requestDto) {
-        PricingComponentResponseDto createdComponent = pricingComponentService.createComponent(requestDto);
+    public ResponseEntity<PricingComponentResponse> createComponent(@Valid @RequestBody PricingComponentRequest requestDto) {
+        PricingComponentResponse createdComponent = pricingComponentService.createComponent(requestDto);
         return new ResponseEntity<>(createdComponent, HttpStatus.CREATED);
     }
 
@@ -74,17 +74,17 @@ public class PricingComponentController {
     @Operation(summary = "Update an existing pricing component",
             description = "Updates the name and/or type of an existing pricing component.")
     @ApiResponse(responseCode = "200", description = "Pricing component successfully updated.",
-            content = @Content(schema = @Schema(implementation = PricingComponentResponseDto.class)))
+            content = @Content(schema = @Schema(implementation = PricingComponentResponse.class)))
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., invalid type).")
     @ApiResponse(responseCode = "404", description = "Component not found.")
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('pricing:component:update')")
-    public ResponseEntity<PricingComponentResponseDto> updatePricingComponent(
+    public ResponseEntity<PricingComponentResponse> updatePricingComponent(
             @Parameter(description = "ID of the pricing component to update", required = true)
             @PathVariable Long id,
             @Valid @RequestBody PricingComponentRequest requestDto) {
 
-        PricingComponentResponseDto updatedComponent = pricingComponentService.updateComponent(id, requestDto);
+        PricingComponentResponse updatedComponent = pricingComponentService.updateComponent(id, requestDto);
         return new ResponseEntity<>(updatedComponent, HttpStatus.OK);
     }
 

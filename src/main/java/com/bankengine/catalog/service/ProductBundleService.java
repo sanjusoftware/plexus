@@ -1,7 +1,7 @@
 package com.bankengine.catalog.service;
 
 import com.bankengine.auth.security.BankContextHolder;
-import com.bankengine.catalog.dto.ProductBundleCreationDto;
+import com.bankengine.catalog.dto.ProductBundleRequest;
 import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
@@ -23,7 +23,7 @@ public class ProductBundleService {
     private final CatalogConstraintService constraintService;
 
     @Transactional
-    public Long createBundle(ProductBundleCreationDto dto) {
+    public Long createBundle(ProductBundleRequest dto) {
         String bankId = BankContextHolder.getBankId();
 
         ProductBundle bundle = new ProductBundle();

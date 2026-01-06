@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
-public class ProductSearchRequestDto {
+public class ProductSearchRequest {
 
     // Metadata Filters
     private String name; // Partial match (like %name%)

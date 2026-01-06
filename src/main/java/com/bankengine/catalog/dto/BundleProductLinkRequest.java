@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class BundleProductLinkRequestDto {
+public class BundleProductLinkRequest {
 
     @NotNull(message = "Product ID is required for linking.")
     private Long productId;

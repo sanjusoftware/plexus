@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MetadataResponseDto {
+public class MetadataResponse {
 
     private Long id; // Internal database ID
 

@@ -2,7 +2,7 @@ package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.FeatureComponentMapper;
 import com.bankengine.catalog.dto.FeatureComponentRequest;
-import com.bankengine.catalog.dto.FeatureComponentResponseDto;
+import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
@@ -31,7 +31,7 @@ public class FeatureComponentService {
     /**
      * Creates a new reusable Feature Component definition from a DTO.
      */
-    public FeatureComponentResponseDto createFeature(FeatureComponentRequest requestDto) {
+    public FeatureComponentResponse createFeature(FeatureComponentRequest requestDto) {
         // 1. Validation (Unique name check)
         if (componentRepository.existsByName(requestDto.getName())) {
             throw new IllegalArgumentException("Feature Component name must be unique.");
@@ -64,7 +64,7 @@ public class FeatureComponentService {
      * Retrieves all features and converts them to DTOs for external consumption.
      */
     @Transactional(readOnly = true)
-    public List<FeatureComponentResponseDto> getAllFeatures() {
+    public List<FeatureComponentResponse> getAllFeatures() {
         List<FeatureComponent> components = componentRepository.findAll();
 
         return components.stream()
@@ -76,7 +76,7 @@ public class FeatureComponentService {
      * Retrieves a single feature and converts it to a DTO.
      */
     @Transactional(readOnly = true)
-    public FeatureComponentResponseDto getFeatureResponseById(Long id) {
+    public FeatureComponentResponse getFeatureResponseById(Long id) {
         FeatureComponent component = getFeatureComponentById(id);
         return featureComponentMapper.toResponseDto(component);
     }
@@ -85,7 +85,7 @@ public class FeatureComponentService {
      * Updates an existing Feature Component.
      */
     @Transactional
-    public FeatureComponentResponseDto updateFeature(Long id, FeatureComponentRequest requestDto) {
+    public FeatureComponentResponse updateFeature(Long id, FeatureComponentRequest requestDto) {
         // 1. Validate component exists (handles 404)
         FeatureComponent component = getFeatureComponentById(id);
 

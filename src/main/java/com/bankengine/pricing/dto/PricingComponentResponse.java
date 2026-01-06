@@ -9,7 +9,7 @@ import java.util.List;
 
 @Value
 @Builder
-public class PricingComponentResponseDto {
+public class PricingComponentResponse {
     private Long id;
     private String name;
     private ComponentType type;

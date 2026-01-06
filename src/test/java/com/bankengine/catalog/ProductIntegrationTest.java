@@ -310,7 +310,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     void shouldExtendProductExpirationDate() throws Exception {
         Long productId = createProductViaApi("ACTIVE");
         LocalDate newExp = LocalDate.now().plusYears(1);
-        ProductExpirationDto dto = new ProductExpirationDto();
+        ProductExpirationRequest dto = new ProductExpirationRequest();
         dto.setExpirationDate(newExp);
 
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/expiration", productId)

@@ -58,7 +58,7 @@ public class ProductService {
      * Searches and filters products based on criteria, returning paginated results.
      */
     @Transactional(readOnly = true)
-    public Page<ProductResponse> searchProducts(ProductSearchRequestDto criteria) {
+    public Page<ProductResponse> searchProducts(ProductSearchRequest criteria) {
 
         // 1. Build the dynamic query specification
         Specification<Product> specification = ProductSpecification.filterBy(criteria);

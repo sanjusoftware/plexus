@@ -1,6 +1,6 @@
 package com.bankengine.catalog.repository.specification;
 
-import com.bankengine.catalog.dto.ProductSearchRequestDto;
+import com.bankengine.catalog.dto.ProductSearchRequest;
 import com.bankengine.catalog.model.Product;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -16,7 +16,7 @@ public class ProductSpecification {
     /**
      * Builds a composite Specification based on the provided search criteria DTO.
      */
-    public static Specification<Product> filterBy(ProductSearchRequestDto criteria) {
+    public static Specification<Product> filterBy(ProductSearchRequest criteria) {
         return (Root<Product> root, CriteriaQuery<?> query, CriteriaBuilder builder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
