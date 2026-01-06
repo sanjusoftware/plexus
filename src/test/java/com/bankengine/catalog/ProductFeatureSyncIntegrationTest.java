@@ -2,7 +2,7 @@ package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.auth.security.BankContextHolder;
-import com.bankengine.catalog.dto.ProductFeatureRequest;
+import com.bankengine.catalog.dto.ProductFeature;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -153,8 +153,8 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     // =================================================================
 
     // Helper method to create DTOs
-    private ProductFeatureRequest createFeatureDto(FeatureComponent component, String value) {
-        ProductFeatureRequest dto = new ProductFeatureRequest();
+    private ProductFeature createFeatureDto(FeatureComponent component, String value) {
+        ProductFeature dto = new ProductFeature();
         dto.setFeatureComponentId(component.getId());
         dto.setFeatureValue(value);
         return dto;
@@ -177,7 +177,7 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE}) // <-- User has read permission, lacks update
     void shouldReturn403WhenSyncingFeaturesWithoutPermission() throws Exception {
-        List<ProductFeatureRequest> features = List.of(createFeatureDto(componentA, "20"));
+        List<ProductFeature> features = List.of(createFeatureDto(componentA, "20"));
 
         mockMvc.perform(put("/api/v1/products/{id}/features", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -192,7 +192,7 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateNewFeaturesWhenNoLinksExist() throws Exception {
-        List<ProductFeatureRequest> features = List.of(
+        List<ProductFeature> features = List.of(
                 createFeatureDto(componentA, "20"), // New link A
                 createFeatureDto(componentB, "false") // New link B
         );
@@ -223,7 +223,7 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
         });
 
         // ARRANGE: Target state (B is created, A is updated, C is deleted)
-        List<ProductFeatureRequest> features = List.of(
+        List<ProductFeature> features = List.of(
                 createFeatureDto(componentA, "50"), // A is updated (10 -> 50)
                 createFeatureDto(componentB, "true") // B is created
         );
@@ -260,7 +260,7 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     void shouldReturn400OnSyncWithInvalidFeatureValueType() throws Exception {
         // ARRANGE: Attempt to set a STRING value on a BOOLEAN feature (B)
-        List<ProductFeatureRequest> features = List.of(
+        List<ProductFeature> features = List.of(
                 createFeatureDto(componentB, "Not a boolean value")
         );
 
@@ -275,7 +275,7 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     void shouldReturn404OnSyncWithNonExistentProduct() throws Exception {
         // Use an existing FeatureComponent ID for a valid DTO structure
-        List<ProductFeatureRequest> features = List.of(createFeatureDto(componentA, "1"));
+        List<ProductFeature> features = List.of(createFeatureDto(componentA, "1"));
 
         // ACT & ASSERT: Use a non-existent Product ID (99999)
         mockMvc.perform(put("/api/v1/products/99999/features")

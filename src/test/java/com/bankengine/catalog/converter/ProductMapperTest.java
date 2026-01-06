@@ -1,8 +1,8 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.NewProductVersionRequest;
 import com.bankengine.catalog.dto.ProductRequest;
 import com.bankengine.catalog.dto.ProductResponse;
+import com.bankengine.catalog.dto.ProductVersionRequest;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ public class ProductMapperTest {
         oldProduct.setProductType(productType);
         oldProduct.setBankId("BANK-001");
 
-        NewProductVersionRequest requestDto = new NewProductVersionRequest();
+        ProductVersionRequest requestDto = new ProductVersionRequest();
         requestDto.setNewName("New Product Name");
         requestDto.setNewEffectiveDate(LocalDate.now().plusDays(1));
 

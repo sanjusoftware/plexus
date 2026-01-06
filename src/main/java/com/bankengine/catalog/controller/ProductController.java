@@ -15,9 +15,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "Product Management", description = "Operations for creating and managing product definitions.")
 @RestController
@@ -92,7 +94,7 @@ public class ProductController {
     public ResponseEntity<ProductResponse> linkFeatureToProduct(
             @Parameter(description = "The unique ID of the product", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody ProductFeatureRequest dto) {
+            @Valid @RequestBody ProductFeature dto) {
         return ResponseEntity.ok(productService.linkFeatureToProduct(id, dto));
     }
 
@@ -158,8 +160,12 @@ public class ProductController {
     public ResponseEntity<ProductResponse> extendProductExpiration(
             @Parameter(description = "ID of the product to extend", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody ProductExpirationRequest dto) {
-        return ResponseEntity.ok(productService.extendProductExpiration(id, dto.getExpirationDate()));
+            @RequestBody Map<String, LocalDate> payload) {
+        LocalDate expirationDate = payload.get("expirationDate");
+        if (expirationDate == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "expirationDate is required");
+        }
+        return ResponseEntity.ok(productService.extendProductExpiration(id, expirationDate));
     }
 
     /**
@@ -176,7 +182,7 @@ public class ProductController {
     public ResponseEntity<ProductResponse> syncProductFeatures(
             @Parameter(description = "The unique ID of the product to update", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody List<ProductFeatureRequest> requests) {
+            @Valid @RequestBody List<ProductFeature> requests) {
         return ResponseEntity.ok(productService.syncProductFeatures(id, requests));
     }
 
@@ -193,7 +199,7 @@ public class ProductController {
     public ResponseEntity<ProductResponse> syncProductPricing(
             @Parameter(description = "The unique ID of the product to update", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody List<ProductPricingRequest> requests) {
+            @Valid @RequestBody List<ProductPricing> requests) {
         ProductResponse response = productService.syncProductPricing(id, requests);
         return ResponseEntity.ok(response);
     }
@@ -212,7 +218,7 @@ public class ProductController {
     public ResponseEntity<ProductResponse> createNewVersion(
             @Parameter(description = "The ID of the currently ACTIVE product to be versioned/replaced.", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody NewProductVersionRequest requestDto) {
+            @Valid @RequestBody ProductVersionRequest requestDto) {
         return new ResponseEntity<>(productService.createNewVersion(id, requestDto), HttpStatus.CREATED);
     }
 }

@@ -17,6 +17,6 @@ public class ProductResponse {
     private LocalDate expirationDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<ProductFeatureResponse> features;
-    private List<ProductPricingResponse> pricing;
+    private List<ProductFeature> features;
+    private List<ProductPricing> pricing;
 }

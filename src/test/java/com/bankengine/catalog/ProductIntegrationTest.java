@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -310,11 +311,10 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     void shouldExtendProductExpirationDate() throws Exception {
         Long productId = createProductViaApi("ACTIVE");
         LocalDate newExp = LocalDate.now().plusYears(1);
-        ProductExpirationRequest dto = new ProductExpirationRequest();
-        dto.setExpirationDate(newExp);
+        Map<String, Object> payload = Map.of("expirationDate", newExp.toString());
 
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/expiration", productId)
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.expirationDate").value(newExp.toString()));
     }
@@ -332,7 +332,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         feature.setBankId(TEST_BANK_ID);
         feature = featureComponentRepository.save(feature);
 
-        ProductFeatureRequest featureReq = ProductFeatureRequest.builder()
+        ProductFeature featureReq = ProductFeature.builder()
                 .featureComponentId(feature.getId())
                 .featureValue("Value 1")
                 .build();
@@ -353,7 +353,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         pricing.setBankId(TEST_BANK_ID);
         pricing = pricingComponentRepository.save(pricing);
 
-        ProductPricingRequest pricingReq = ProductPricingRequest.builder()
+        ProductPricing pricingReq = ProductPricing.builder()
                 .pricingComponentId(pricing.getId())
                 .context("DEFAULT")
                 .build();
@@ -405,7 +405,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
 
         // 3. Execute Versioning
         LocalDate newEffectiveDate = LocalDate.now().plusMonths(3);
-        NewProductVersionRequest versionDto = new NewProductVersionRequest("Checking Account V2", newEffectiveDate);
+        ProductVersionRequest versionDto = new ProductVersionRequest("Checking Account V2", newEffectiveDate);
 
         String responseJson = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProductId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -435,7 +435,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldCreateNewVersionWhenActiveProductIsVersioned() throws Exception {
         Long oldId = createProductViaApi("ACTIVE");
-        NewProductVersionRequest dto = new NewProductVersionRequest("V2", LocalDate.now().plusMonths(1));
+        ProductVersionRequest dto = new ProductVersionRequest("V2", LocalDate.now().plusMonths(1));
 
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldId)
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
@@ -449,7 +449,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn400WhenVersioningDraftProduct() throws Exception {
         Long productId = createProductViaApi("DRAFT");
-        NewProductVersionRequest dto = new NewProductVersionRequest("Fail", LocalDate.now());
+        ProductVersionRequest dto = new ProductVersionRequest("Fail", LocalDate.now());
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", productId)
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());

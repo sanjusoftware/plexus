@@ -14,11 +14,13 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductFeatureRequest {
+public class ProductFeature {
 
     @NotNull(message = "Feature Component ID is required")
-    private Long featureComponentId;
+    private Long featureComponentId; // Used for Request
+
+    private String featureName; // Used for Response
 
     @NotBlank(message = "Feature value cannot be blank")
-    private String featureValue;
+    private String featureValue; // Used for both
 }

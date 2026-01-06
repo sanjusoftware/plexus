@@ -1,6 +1,5 @@
 package com.bankengine.catalog.controller;
 
-import com.bankengine.catalog.dto.BundleProductLinkRequest;
 import com.bankengine.catalog.dto.ProductBundleRequest;
 import com.bankengine.catalog.service.ProductBundleService;
 import jakarta.validation.Valid;
@@ -23,18 +22,41 @@ public class ProductBundleController {
         return bundleService.createBundle(dto);
     }
 
-    @PostMapping("/{bundleId}/links")
-    @ResponseStatus(HttpStatus.CREATED)
+    /**
+     * Versioned Update: Archives the old bundle and creates a new version from the DTO.
+     */
+    @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('catalog:bundle:update')")
-    public void linkProductToBundle(
-            @PathVariable Long bundleId,
-            @Valid @RequestBody BundleProductLinkRequest dto) {
+    public Long updateProductBundle(@PathVariable Long id, @Valid @RequestBody ProductBundleRequest dto) {
+        return bundleService.updateBundle(id, dto);
+    }
 
-        bundleService.linkProduct(
-                bundleId,
-                dto.getProductId(),
-                dto.isMainAccount(),
-                dto.isMandatory()
-        );
+    /**
+     * Activation: Validates that constituent products are ACTIVE and flips the bundle status.
+     */
+    @PostMapping("/{id}/activate")
+    @PreAuthorize("hasAuthority('catalog:bundle:activate')")
+    public void activateBundle(@PathVariable Long id) {
+        bundleService.activateBundle(id);
+    }
+
+    /**
+     * Cloning: Deep copies the bundle and its links into a new DRAFT bundle.
+     */
+    @PostMapping("/{id}/clone")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('catalog:bundle:create')")
+    public Long cloneBundle(@PathVariable Long id, @RequestParam String newName) {
+        return bundleService.cloneBundle(id, newName);
+    }
+
+    /**
+     * Archive: Soft delete that sets status to ARCHIVED and snaps the expiry date.
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('catalog:bundle:delete')")
+    public void archiveBundle(@PathVariable Long id) {
+        bundleService.archiveBundle(id);
     }
 }

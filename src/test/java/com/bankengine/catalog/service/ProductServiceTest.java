@@ -1,7 +1,7 @@
 package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.ProductMapper;
-import com.bankengine.catalog.dto.ProductFeatureRequest;
+import com.bankengine.catalog.dto.ProductFeature;
 import com.bankengine.catalog.dto.ProductRequest;
 import com.bankengine.catalog.dto.ProductResponse;
 import com.bankengine.catalog.dto.ProductSearchRequest;
@@ -120,7 +120,7 @@ public class ProductServiceTest {
 
     @Test
     void testLinkFeatureToProduct() {
-        ProductFeatureRequest dto = new ProductFeatureRequest();
+        ProductFeature dto = new ProductFeature();
         dto.setFeatureComponentId(1L);
         dto.setFeatureValue("Test");
 

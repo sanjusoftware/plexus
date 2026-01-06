@@ -79,7 +79,7 @@ public class ProductService {
      * This method handles creation of new links, deletion of missing links, and updates to existing ones.
      */
     @Transactional
-    public ProductResponse syncProductFeatures(Long productId, List<ProductFeatureRequest> syncDtos) {
+    public ProductResponse syncProductFeatures(Long productId, List<ProductFeature> syncDtos) {
         // 1. Validate Product existence and fetch the entity
         Product product = getProductEntityById(productId);
 
@@ -95,7 +95,7 @@ public class ProductService {
 
         // Collect the set of incoming FeatureComponent IDs
         Set<Long> incomingFeatureIds = syncDtos.stream()
-                .map(ProductFeatureRequest::getFeatureComponentId)
+                .map(ProductFeature::getFeatureComponentId)
                 .collect(Collectors.toSet());
 
         // 3. IDENTIFY and DELETE links that are no longer present (Cleanup)
@@ -107,7 +107,7 @@ public class ProductService {
         featureLinkRepository.flush(); // Flush 1: Ensures deletions hit the DB immediately
 
         // 4. IDENTIFY and CREATE/UPDATE links that are incoming
-        for (ProductFeatureRequest dto : syncDtos) {
+        for (ProductFeature dto : syncDtos) {
             Long featureId = dto.getFeatureComponentId();
 
             // Validate FeatureComponent existence once here
@@ -147,7 +147,7 @@ public class ProductService {
      * Synchronization is based on the composite key: (PricingComponentId, Context).
      */
     @Transactional
-    public ProductResponse syncProductPricing(Long productId, List<ProductPricingRequest> syncDtos) {
+    public ProductResponse syncProductPricing(Long productId, List<ProductPricing> syncDtos) {
         Product product = getProductEntityById(productId);
 
         // Define a composite key: ComponentID + Context is unique per product
@@ -172,7 +172,7 @@ public class ProductService {
         pricingLinkRepository.flush(); // Flush deletions to the DB
 
         // 2. IDENTIFY and CREATE links that are incoming
-        for (ProductPricingRequest dto : syncDtos) {
+        for (ProductPricing dto : syncDtos) {
             String compositeKey = dto.getPricingComponentId() + "_" + dto.getContext();
 
             if (!currentLinksMap.containsKey(compositeKey)) {
@@ -235,7 +235,7 @@ public class ProductService {
      * Links a FeatureComponent to a Product with a specific value.
      */
     @Transactional
-    public ProductResponse linkFeatureToProduct(Long productId, ProductFeatureRequest dto) {
+    public ProductResponse linkFeatureToProduct(Long productId, ProductFeature dto) {
         // 1. Validate Product exists
         Product product = getProductEntityById(productId);
 
@@ -374,7 +374,7 @@ public class ProductService {
      * @return The response DTO for the newly created product.
      */
     @Transactional
-    public ProductResponse createNewVersion(Long oldProductId, NewProductVersionRequest requestDto) {
+    public ProductResponse createNewVersion(Long oldProductId, ProductVersionRequest requestDto) {
         Product oldProduct = getProductEntityById(oldProductId);
 
         if (!"ACTIVE".equals(oldProduct.getStatus())) {

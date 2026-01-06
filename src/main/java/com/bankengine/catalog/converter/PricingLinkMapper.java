@@ -1,7 +1,6 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.ProductPricingRequest;
-import com.bankengine.catalog.dto.ProductPricingResponse;
+import com.bankengine.catalog.dto.ProductPricing;
 import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.model.ProductPricingLink;
 import org.mapstruct.Mapper;
@@ -19,9 +18,9 @@ public interface PricingLinkMapper {
      */
     @Mapping(target = "pricingComponentName", source = "link.pricingComponent.name")
     @Mapping(target = "context", source = "link.context")
-    ProductPricingResponse toResponse(ProductPricingLink link);
+    ProductPricing toResponse(ProductPricingLink link);
 
-    List<ProductPricingResponse> toResponseList(List<ProductPricingLink> links);
+    List<ProductPricing> toResponseList(List<ProductPricingLink> links);
 
     /**
      * Used for deep-cloning pricing links during product versioning.
@@ -44,7 +43,7 @@ public interface PricingLinkMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "bankId", ignore = true)
-    ProductPricingLink toEntity(ProductPricingRequest dto);
+    ProductPricingLink toEntity(ProductPricing dto);
 
     /**
      * Updates an existing pricing link from a Request DTO.
@@ -55,5 +54,5 @@ public interface PricingLinkMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "bankId", ignore = true)
-    void updateFromDto(ProductPricingRequest dto, @MappingTarget ProductPricingLink entity);
+    void updateFromDto(ProductPricing dto, @MappingTarget ProductPricingLink entity);
 }

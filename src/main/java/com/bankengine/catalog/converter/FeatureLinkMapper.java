@@ -1,7 +1,6 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.ProductFeatureRequest;
-import com.bankengine.catalog.dto.ProductFeatureResponse;
+import com.bankengine.catalog.dto.ProductFeature;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
@@ -18,9 +17,9 @@ public interface FeatureLinkMapper {
      * Maps the nested FeatureComponent name to the flat featureName field.
      */
     @Mapping(target = "featureName", source = "link.featureComponent.name")
-    ProductFeatureResponse toResponse(ProductFeatureLink link);
+    ProductFeature toResponse(ProductFeatureLink link);
 
-    List<ProductFeatureResponse> toResponseList(List<ProductFeatureLink> links);
+    List<ProductFeature> toResponseList(List<ProductFeatureLink> links);
 
     /**
      * Used for deep-cloning links during the product versioning process.
@@ -42,7 +41,7 @@ public interface FeatureLinkMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "bankId", ignore = true)
-    ProductFeatureLink toEntity(ProductFeatureRequest dto);
+    ProductFeatureLink toEntity(ProductFeature dto);
 
     /**
      * Updates an existing link entity with values from a Request DTO.
@@ -53,5 +52,5 @@ public interface FeatureLinkMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "bankId", ignore = true)
-    void updateFromDto(ProductFeatureRequest dto, @MappingTarget ProductFeatureLink entity);
+    void updateFromDto(ProductFeature dto, @MappingTarget ProductFeatureLink entity);
 }

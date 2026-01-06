@@ -1,7 +1,7 @@
 package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
-import com.bankengine.catalog.dto.ProductPricingRequest;
+import com.bankengine.catalog.dto.ProductPricing;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
@@ -153,8 +153,8 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     // =================================================================
 
     // Helper method to create a DTO for synchronization
-    private ProductPricingRequest createPricingDto(PricingComponent component, String context) {
-        ProductPricingRequest dto = new ProductPricingRequest();
+    private ProductPricing createPricingDto(PricingComponent component, String context) {
+        ProductPricing dto = new ProductPricing();
         dto.setPricingComponentId(component.getId());
         dto.setContext(context);
         return dto;
@@ -176,7 +176,7 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenSyncingPricingWithoutPermission() throws Exception {
-        List<ProductPricingRequest> requests = List.of(createPricingDto(compRate, "RATE"));
+        List<ProductPricing> requests = List.of(createPricingDto(compRate, "RATE"));
 
         mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -190,7 +190,7 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateNewPricingLinksWhenNoneExist() throws Exception {
-        List<ProductPricingRequest> requests = List.of(
+        List<ProductPricing> requests = List.of(
                 createPricingDto(compRate, "CORE_RATE"),
                 createPricingDto(compFee, "MONTHLY_FEE")
         );
@@ -220,7 +220,7 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
         });
 
         // ARRANGE: Target state (compFee is created, compDiscount is deleted)
-        List<ProductPricingRequest> requests = List.of(
+        List<ProductPricing> requests = List.of(
                 createPricingDto(compRate, "CORE_RATE"), // Remains unchanged
                 createPricingDto(compFee, "ANNUAL_FEE") // New fee link created
         );
@@ -265,8 +265,8 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.message", containsString("Product not found")));
 
         // Test 2: Non-existent Pricing Component ID
-        List<ProductPricingRequest> badLinks = List.of(
-                new ProductPricingRequest() {{
+        List<ProductPricing> badLinks = List.of(
+                new ProductPricing() {{
                     setPricingComponentId(99999L); // ID that doesn't exist
                     setContext("BAD_LINK");
                 }}

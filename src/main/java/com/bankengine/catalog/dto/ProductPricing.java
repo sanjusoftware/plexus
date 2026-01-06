@@ -9,11 +9,13 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductPricingRequest {
+public class ProductPricing {
 
     @NotNull(message = "Pricing Component ID is required.")
-    private Long pricingComponentId;
+    private Long pricingComponentId; // Used for Request
+
+    private String pricingComponentName; // Used for Response
 
     @NotBlank(message = "Context (e.g., CORE_RATE, ANNUAL_FEE) is required for the pricing link.")
-    private String context;
+    private String context; // Used for both
 }

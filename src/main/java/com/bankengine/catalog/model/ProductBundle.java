@@ -44,6 +44,16 @@ public class ProductBundle extends AuditableEntity {
     @Column(name = "expiry_date")
     private LocalDate expiryDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private BundleStatus status = BundleStatus.DRAFT;
+
+    public enum BundleStatus {
+        DRAFT,
+        ACTIVE,
+        ARCHIVED
+    }
+
     // OneToMany link to the products contained within this bundle
     // MappedBy field updated to reference 'productBundle' in the link entity
     @OneToMany(mappedBy = "productBundle", cascade = CascadeType.ALL, orphanRemoval = true)
