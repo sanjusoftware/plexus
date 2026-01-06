@@ -147,8 +147,8 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         return pricingComponentRequest;
     }
 
-    // --- Helper Method to create a valid TierValueDto ---
-    private TierValueDto getValidTierValueDto() {
+    // --- Helper Method to create a valid TieredPriceRequest ---
+    private TieredPriceRequest getValidTierValueDto() {
         PricingTierRequest tierDto = new PricingTierRequest();
         tierDto.setTierName("Default Tier");
         // This condition uses "customerSegment", which is now guaranteed to exist via txHelper.
@@ -161,7 +161,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         valueDto.setPriceAmount(new BigDecimal("5.00"));
         valueDto.setValueType("ABSOLUTE");
 
-        TierValueDto requestDto = new TierValueDto();
+        TieredPriceRequest requestDto = new TieredPriceRequest();
         requestDto.setTier(tierDto);
         requestDto.setValue(valueDto);
         return requestDto;
@@ -314,7 +314,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldAddTierAndValueToComponentAndReturn201() throws Exception {
         PricingComponent component = txHelper.createPricingComponentInDb("TieredComponent");
-        TierValueDto requestDto = getValidTierValueDto();
+        TieredPriceRequest requestDto = getValidTierValueDto();
         mockMvc.perform(post("/api/v1/pricing-components/{componentId}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -327,7 +327,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404WhenAddingTierToNonExistentComponent() throws Exception {
-        TierValueDto requestDto = getValidTierValueDto();
+        TieredPriceRequest requestDto = getValidTierValueDto();
         mockMvc.perform(post("/api/v1/pricing-components/99999/tiers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -360,7 +360,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         valueDto.setPriceAmount(new BigDecimal("15.50"));
         valueDto.setValueType("PERCENTAGE");
 
-        UpdateTierValueDto requestDto = new UpdateTierValueDto();
+        TieredPriceRequest requestDto = new TieredPriceRequest();
         requestDto.setTier(tierDto);
         requestDto.setValue(valueDto);
 
@@ -432,7 +432,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         Long existingTierId = existingTier.getId();
         Long nonExistentId = 99999L;
 
-        UpdateTierValueDto updateDto = new UpdateTierValueDto();
+        TieredPriceRequest updateDto = new TieredPriceRequest();
         // Populate DTO with valid data to pass initial validation
         updateDto.setTier(new PricingTierRequest());
         updateDto.setValue(new PriceValueRequest());

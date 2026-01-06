@@ -74,7 +74,7 @@ public class PricingComponentService {
     public ProductPricingCalculationResult.PriceComponentDetail updateTierAndValue(
             Long componentId,
             Long tierId,
-            UpdateTierValueDto dto) {
+            TieredPriceRequest dto) {
 
         getPricingComponentById(componentId);
         PricingTier tier = getPricingTierById(tierId);

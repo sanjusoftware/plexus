@@ -1,8 +1,7 @@
 package com.bankengine.pricing.controller;
 
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
-import com.bankengine.pricing.dto.TierValueDto;
-import com.bankengine.pricing.dto.UpdateTierValueDto;
+import com.bankengine.pricing.dto.TieredPriceRequest;
 import com.bankengine.pricing.service.PricingComponentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,7 +40,7 @@ public class PricingTierController {
     public ResponseEntity<ProductPricingCalculationResult.PriceComponentDetail> addTieredPricing(
             @Parameter(description = "The ID of the existing Pricing Component.", required = true)
             @PathVariable Long componentId,
-            @Valid @RequestBody TierValueDto dto) {
+            @Valid @RequestBody TieredPriceRequest dto) {
 
         // FIX: Return type updated to PriceComponentDetail
         ProductPricingCalculationResult.PriceComponentDetail responseDto = pricingComponentService.addTierAndValue(
@@ -68,7 +67,7 @@ public class PricingTierController {
             @PathVariable Long componentId,
             @Parameter(description = "ID of the existing Pricing Tier.", required = true)
             @PathVariable Long tierId,
-            @Valid @RequestBody UpdateTierValueDto dto) {
+            @Valid @RequestBody TieredPriceRequest dto) {
 
         ProductPricingCalculationResult.PriceComponentDetail responseDto = pricingComponentService.updateTierAndValue(
                 componentId,

@@ -7,13 +7,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO to bundle a PricingTier and its corresponding PriceValue
- * for a single request when creating tiered pricing.
+ * Unified DTO for both creating and updating tiered pricing.
+ * Combines the definition of the tier (e.g., 0-10k) with the price (e.g., $5 fee).
  */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TierValueDto {
+public class TieredPriceRequest {
     @Valid
     @NotNull(message = "Pricing Tier data is required.")
     private PricingTierRequest tier;
