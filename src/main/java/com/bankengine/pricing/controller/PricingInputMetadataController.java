@@ -1,7 +1,6 @@
 package com.bankengine.pricing.controller;
 
-import com.bankengine.pricing.dto.MetadataResponse;
-import com.bankengine.pricing.dto.PricingMetadataRequest;
+import com.bankengine.pricing.dto.PricingMetadataDto;
 import com.bankengine.pricing.service.PricingInputMetadataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,12 +31,12 @@ public class PricingInputMetadataController {
     @Operation(summary = "Create new pricing input metadata",
                description = "Registers a new attribute (key and data type) that can be referenced in pricing tiers.")
     @ApiResponse(responseCode = "201", description = "Metadata successfully created.",
-                 content = @Content(schema = @Schema(implementation = MetadataResponse.class)))
+                 content = @Content(schema = @Schema(implementation = PricingMetadataDto.class)))
     @ApiResponse(responseCode = "400", description = "Validation error (e.g., key already exists or invalid data type).")
     @PostMapping
     @PreAuthorize("hasAuthority('pricing:metadata:create')")
-    public ResponseEntity<MetadataResponse> createMetadata(@Valid @RequestBody PricingMetadataRequest requestDto) {
-        MetadataResponse createdMetadata = metadataService.createMetadata(requestDto);
+    public ResponseEntity<PricingMetadataDto> createMetadata(@Valid @RequestBody PricingMetadataDto requestDto) {
+        PricingMetadataDto createdMetadata = metadataService.createMetadata(requestDto);
         return new ResponseEntity<>(createdMetadata, HttpStatus.CREATED);
     }
 
@@ -47,8 +46,8 @@ public class PricingInputMetadataController {
     @ApiResponse(responseCode = "200", description = "List of metadata successfully retrieved.")
     @GetMapping
     @PreAuthorize("hasAuthority('pricing:metadata:read')")
-    public ResponseEntity<List<MetadataResponse>> getAllMetadata() {
-        List<MetadataResponse> metadataList = metadataService.findAllMetadata();
+    public ResponseEntity<List<PricingMetadataDto>> getAllMetadata() {
+        List<PricingMetadataDto> metadataList = metadataService.findAllMetadata();
         return ResponseEntity.ok(metadataList);
     }
 
@@ -59,10 +58,10 @@ public class PricingInputMetadataController {
     @ApiResponse(responseCode = "404", description = "Metadata key not found.")
     @GetMapping("/{attributeKey}")
     @PreAuthorize("hasAuthority('pricing:metadata:read')")
-    public ResponseEntity<MetadataResponse> getMetadataByKey(
+    public ResponseEntity<PricingMetadataDto> getMetadataByKey(
             @Parameter(description = "Unique attribute key (e.g., 'customerSegment')", required = true)
             @PathVariable String attributeKey) {
-        MetadataResponse responseDto = metadataService.getMetadataByKey(attributeKey);
+        PricingMetadataDto responseDto = metadataService.getMetadataByKey(attributeKey);
         return ResponseEntity.ok(responseDto);
     }
 
@@ -74,11 +73,11 @@ public class PricingInputMetadataController {
     @ApiResponse(responseCode = "404", description = "Metadata key not found.")
     @PutMapping("/{attributeKey}")
     @PreAuthorize("hasAuthority('pricing:metadata:update')")
-    public ResponseEntity<MetadataResponse> updateMetadata(
+    public ResponseEntity<PricingMetadataDto> updateMetadata(
             @Parameter(description = "Unique attribute key (e.g., 'customerSegment')", required = true)
             @PathVariable String attributeKey,
-            @Valid @RequestBody PricingMetadataRequest requestDto) {
-        MetadataResponse updatedMetadata = metadataService.updateMetadata(attributeKey, requestDto);
+            @Valid @RequestBody PricingMetadataDto requestDto) {
+        PricingMetadataDto updatedMetadata = metadataService.updateMetadata(attributeKey, requestDto);
         return new ResponseEntity<>(updatedMetadata, HttpStatus.OK);
     }
 

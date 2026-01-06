@@ -1,7 +1,7 @@
 package com.bankengine.pricing;
 
 import com.bankengine.auth.config.test.WithMockRole;
-import com.bankengine.pricing.dto.PricingMetadataRequest;
+import com.bankengine.pricing.dto.PricingMetadataDto;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
@@ -147,8 +147,10 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldCreateMetadataAndReturn201() throws Exception {
-        PricingMetadataRequest requestDto = new PricingMetadataRequest(
-                "NewAttribute", "New Attribute Display", "DECIMAL");
+        PricingMetadataDto requestDto = PricingMetadataDto.builder()
+                .attributeKey("NewAttribute")
+                .displayName("New Attribute Display")
+                .dataType("DECIMAL").build();
 
         mockMvc.perform(post(API_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -161,8 +163,10 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn409OnDuplicateKeyCreation() throws Exception {
         createTestMetadata("ExistingKey");
-        PricingMetadataRequest requestDto = new PricingMetadataRequest(
-                "ExistingKey", "Duplicate Display", "INTEGER");
+        PricingMetadataDto requestDto = PricingMetadataDto.builder()
+                .attributeKey("ExistingKey")
+                .displayName("Duplicate Display")
+                .dataType("INTEGER").build();
 
         mockMvc.perform(post(API_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -178,8 +182,10 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     void shouldUpdateMetadataAndReturn200() throws Exception {
         createTestMetadata("UpdatableKey");
 
-        PricingMetadataRequest requestDto = new PricingMetadataRequest(
-                "NewAttribute", "Updated Display Name", "BOOLEAN");
+        PricingMetadataDto requestDto = PricingMetadataDto.builder()
+                .attributeKey("NewAttribute")
+                .displayName("Updated Display Name")
+                .dataType("BOOLEAN").build();
 
         mockMvc.perform(put(API_PATH + "/UpdatableKey")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -192,7 +198,10 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn404OnUpdateIfNotFound() throws Exception {
-        PricingMetadataRequest requestDto = new PricingMetadataRequest("NewAttribute", "Test", "STRING");
+        PricingMetadataDto requestDto = PricingMetadataDto.builder()
+                .attributeKey("NewAttribute")
+                .displayName("Test")
+                .dataType("STRING").build();
 
         mockMvc.perform(put(API_PATH + "/NotFoundKey")
                         .contentType(MediaType.APPLICATION_JSON)

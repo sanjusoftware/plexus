@@ -4,13 +4,26 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PricingMetadataRequest {
+@Builder
+public class PricingMetadataDto {
+
+    // --- Response Only Fields ---
+    private Long id;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
+    // --- Shared Fields with Request Validation ---
 
     // AttributeKey: Must be unique, used internally (e.g., in DRLs). Typically snake_case.
     @NotBlank(message = "Attribute key is required.")
