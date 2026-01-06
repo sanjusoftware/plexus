@@ -13,7 +13,7 @@ public class ProductResponse {
     private String bankId;
     private LocalDate effectiveDate;
     private String status;
-    private ProductTypeResponse productType;
+    private ProductTypeDto productType;
     private LocalDate expirationDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

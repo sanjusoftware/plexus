@@ -1,6 +1,6 @@
 package com.bankengine.catalog.controller;
 
-import com.bankengine.catalog.dto.ProductTypeRequest;
+import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.service.ProductTypeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,7 +53,7 @@ public class ProductTypeController {
     @ApiResponse(responseCode = "400", description = "Validation error (e.g., name constraints violated).")
     @PostMapping
     @PreAuthorize("hasAuthority('catalog:product-type:create')")
-    public ResponseEntity<ProductType> createProductType(@Valid @RequestBody ProductTypeRequest requestDto) {
+    public ResponseEntity<ProductType> createProductType(@Valid @RequestBody ProductTypeDto requestDto) {
         ProductType createdType = productTypeService.createProductType(requestDto);
         // Returns 201 Created
         return new ResponseEntity<>(createdType, HttpStatus.CREATED);

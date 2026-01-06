@@ -1,7 +1,6 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.ProductTypeRequest;
-import com.bankengine.catalog.dto.ProductTypeResponse;
+import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -17,12 +16,12 @@ public class ProductTypeMapperTest {
     private final ProductTypeMapper mapper = Mappers.getMapper(ProductTypeMapper.class);
 
     @Test
-    void testToResponseDto() {
+    void testToResponse() {
         ProductType entity = new ProductType();
         entity.setId(1L);
         entity.setName("Test Product Type");
 
-        ProductTypeResponse dto = mapper.toResponseDto(entity);
+        ProductTypeDto dto = mapper.toResponse(entity);
 
         assertNotNull(dto);
         assertEquals(entity.getId(), dto.getId());
@@ -30,12 +29,12 @@ public class ProductTypeMapperTest {
     }
 
     @Test
-    void testToResponseDtoList() {
+    void testToResponseList() {
         ProductType entity = new ProductType();
         entity.setId(1L);
         entity.setName("Test Product Type");
 
-        List<ProductTypeResponse> dtoList = mapper.toResponseDtoList(Collections.singletonList(entity));
+        List<ProductTypeDto> dtoList = mapper.toResponseList(Collections.singletonList(entity));
 
         assertNotNull(dtoList);
         assertEquals(1, dtoList.size());
@@ -45,7 +44,7 @@ public class ProductTypeMapperTest {
 
     @Test
     void testToEntity() {
-        ProductTypeRequest dto = new ProductTypeRequest();
+        ProductTypeDto dto = new ProductTypeDto();
         dto.setName("Test Product Type");
 
         ProductType entity = mapper.toEntity(dto);
