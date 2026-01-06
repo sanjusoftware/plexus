@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final ProductFeatureLinkRepository linkRepository;
+    private final ProductFeatureLinkRepository featureLinkRepository;
     private final FeatureComponentService featureComponentService;
     private final ProductTypeRepository productTypeRepository;
     private final EntityManager entityManager;
@@ -42,10 +42,10 @@ public class ProductService {
     private final PricingComponentService pricingComponentService;
     private final ProductMapper productMapper;
 
-    public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository linkRepository,
+    public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository featureLinkRepository,
                           FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService, ProductMapper productMapper) {
         this.productRepository = productRepository;
-        this.linkRepository = linkRepository;
+        this.featureLinkRepository = featureLinkRepository;
         this.featureComponentService = featureComponentService;
         this.productTypeRepository = productTypeRepository;
         this.entityManager = entityManager;
@@ -58,7 +58,7 @@ public class ProductService {
      * Searches and filters products based on criteria, returning paginated results.
      */
     @Transactional(readOnly = true)
-    public Page<ProductResponseDto> searchProducts(ProductSearchRequestDto criteria) {
+    public Page<ProductResponse> searchProducts(ProductSearchRequestDto criteria) {
 
         // 1. Build the dynamic query specification
         Specification<Product> specification = ProductSpecification.filterBy(criteria);
@@ -71,7 +71,7 @@ public class ProductService {
         Page<Product> productPage = productRepository.findAll(specification, pageable);
 
         // 4. Map the results to a DTO Page
-        return productPage.map(productMapper::toResponseDto);
+        return productPage.map(productMapper::toResponse);
     }
 
     /**
@@ -79,12 +79,12 @@ public class ProductService {
      * This method handles creation of new links, deletion of missing links, and updates to existing ones.
      */
     @Transactional
-    public ProductResponseDto syncProductFeatures(Long productId, List<ProductFeatureDto> syncDtos) {
+    public ProductResponse syncProductFeatures(Long productId, List<ProductFeatureRequest> syncDtos) {
         // 1. Validate Product existence and fetch the entity
         Product product = getProductEntityById(productId);
 
         // 2. Fetch current links and map them by FeatureComponent ID for fast lookup
-        List<ProductFeatureLink> currentLinks = linkRepository.findByProductId(productId);
+        List<ProductFeatureLink> currentLinks = featureLinkRepository.findByProductId(productId);
 
         // Map: { FeatureComponentId -> ProductFeatureLink }
         Map<Long, ProductFeatureLink> currentLinksMap = currentLinks.stream()
@@ -95,7 +95,7 @@ public class ProductService {
 
         // Collect the set of incoming FeatureComponent IDs
         Set<Long> incomingFeatureIds = syncDtos.stream()
-                .map(ProductFeatureDto::getFeatureComponentId)
+                .map(ProductFeatureRequest::getFeatureComponentId)
                 .collect(Collectors.toSet());
 
         // 3. IDENTIFY and DELETE links that are no longer present (Cleanup)
@@ -103,11 +103,11 @@ public class ProductService {
                 .filter(link -> !incomingFeatureIds.contains(link.getFeatureComponent().getId()))
                 .collect(Collectors.toList());
 
-        linkRepository.deleteAll(linksToDelete);
-        linkRepository.flush(); // Flush 1: Ensures deletions hit the DB immediately
+        featureLinkRepository.deleteAll(linksToDelete);
+        featureLinkRepository.flush(); // Flush 1: Ensures deletions hit the DB immediately
 
         // 4. IDENTIFY and CREATE/UPDATE links that are incoming
-        for (ProductFeatureDto dto : syncDtos) {
+        for (ProductFeatureRequest dto : syncDtos) {
             Long featureId = dto.getFeatureComponentId();
 
             // Validate FeatureComponent existence once here
@@ -122,7 +122,7 @@ public class ProductService {
 
                 if (!existingLink.getFeatureValue().equals(dto.getFeatureValue())) {
                     existingLink.setFeatureValue(dto.getFeatureValue());
-                    linkRepository.save(existingLink); // Explicit save for update
+                    featureLinkRepository.save(existingLink); // Explicit save for update
                 }
                 // If value is the same, do nothing.
             } else {
@@ -132,14 +132,14 @@ public class ProductService {
                 newLink.setFeatureComponent(component);
                 newLink.setFeatureValue(dto.getFeatureValue());
                 newLink.setBankId(product.getBankId());
-                linkRepository.save(newLink);
+                featureLinkRepository.save(newLink);
             }
         }
-        linkRepository.flush(); // Flush 2: Ensures creations/updates hit the DB immediately
+        featureLinkRepository.flush(); // Flush 2: Ensures creations/updates hit the DB immediately
         entityManager.clear();
 
         Product updatedProduct = getProductEntityById(productId);
-        return productMapper.toResponseDto(updatedProduct);
+        return productMapper.toResponse(updatedProduct);
     }
 
     /**
@@ -147,7 +147,7 @@ public class ProductService {
      * Synchronization is based on the composite key: (PricingComponentId, Context).
      */
     @Transactional
-    public ProductResponseDto syncProductPricing(Long productId, List<ProductPricingDto> syncDtos) {
+    public ProductResponse syncProductPricing(Long productId, List<ProductPricingRequest> syncDtos) {
         Product product = getProductEntityById(productId);
 
         // Define a composite key: ComponentID + Context is unique per product
@@ -172,7 +172,7 @@ public class ProductService {
         pricingLinkRepository.flush(); // Flush deletions to the DB
 
         // 2. IDENTIFY and CREATE links that are incoming
-        for (ProductPricingDto dto : syncDtos) {
+        for (ProductPricingRequest dto : syncDtos) {
             String compositeKey = dto.getPricingComponentId() + "_" + dto.getContext();
 
             if (!currentLinksMap.containsKey(compositeKey)) {
@@ -190,15 +190,18 @@ public class ProductService {
 
         pricingLinkRepository.flush();
 
-        // Product entity needs to have the @OneToMany mapping defined for pricing links.
-        return getProductResponseById(productId);
+        // RELOAD/REFRESH: Force the product to see the new links in the DB
+        product = getProductEntityById(productId);
+        entityManager.refresh(product);
+
+        return productMapper.toResponse(product);
     }
 
     /**
      * Creates a new Product from a DTO, converting to Entity and performing lookups.
      */
     @Transactional
-    public ProductResponseDto createProduct(ProductRequest requestDto) {
+    public ProductResponse createProduct(ProductRequest requestDto) {
         if (requestDto.getProductTypeId() == null) {
             throw new IllegalArgumentException("Product Type ID is required for creation.");
         }
@@ -216,25 +219,25 @@ public class ProductService {
 
         // 3. Save and convert back to DTO for response
         Product savedProduct = productRepository.save(product);
-        return productMapper.toResponseDto(savedProduct);
+        return productMapper.toResponse(savedProduct);
     }
 
     /**
      * Retrieves Product by ID and converts it to a Response DTO.
      */
     @Transactional
-    public ProductResponseDto getProductResponseById(Long id) {
+    public ProductResponse getProductResponseById(Long id) {
         Product product = getProductEntityById(id);
-        return productMapper.toResponseDto(product);
+        return productMapper.toResponse(product);
     }
 
     /**
      * Links a FeatureComponent to a Product with a specific value.
      */
     @Transactional
-    public ProductResponseDto linkFeatureToProduct(ProductFeatureDto dto) {
+    public ProductResponse linkFeatureToProduct(Long productId, ProductFeatureRequest dto) {
         // 1. Validate Product exists
-        Product product = getProductEntityById(dto.getProductId());
+        Product product = getProductEntityById(productId);
 
         // 2. Validate FeatureComponent exists
         FeatureComponent component = featureComponentService.getFeatureComponentById(dto.getFeatureComponentId());
@@ -248,7 +251,7 @@ public class ProductService {
         link.setFeatureComponent(component);
         link.setFeatureValue(dto.getFeatureValue());
         link.setBankId(product.getBankId());
-        linkRepository.save(link);
+        featureLinkRepository.save(link);
         return getProductResponseById(product.getId());
     }
 
@@ -269,21 +272,11 @@ public class ProductService {
     }
 
     /**
-     * Retrieves all Product entities.
-     */
-    @Transactional(readOnly = true)
-    public List<ProductResponseDto> findAllProducts() {
-        return productRepository.findAll().stream()
-                .map(productMapper::toResponseDto)
-                .collect(Collectors.toList());
-    }
-
-    /**
      * Performs a metadata-only update on an existing Product entity IF it is in DRAFT status.
      * Used for administrative updates before launch.
      */
     @Transactional
-    public ProductResponseDto updateProduct(Long id, ProductRequest dto) {
+    public ProductResponse updateProduct(Long id, ProductRequest dto) {
         Product product = getProductEntityById(id);
 
         // Don't allow update to INACTIVE/ARCHIVED product
@@ -302,14 +295,14 @@ public class ProductService {
         product.setBankId(dto.getBankId());
 
         Product updatedProduct = productRepository.save(product);
-        return productMapper.toResponseDto(updatedProduct);
+        return productMapper.toResponse(updatedProduct);
     }
 
     /**
      * Sets the product status to ACTIVE and updates the effective date if provided.
      */
     @Transactional
-    public ProductResponseDto activateProduct(Long id, LocalDate effectiveDate) {
+    public ProductResponse activateProduct(Long id, LocalDate effectiveDate) {
         Product product = getProductEntityById(id);
 
         if (!"DRAFT".equals(product.getStatus())) {
@@ -323,14 +316,14 @@ public class ProductService {
         }
 
         Product savedProduct = productRepository.save(product);
-        return productMapper.toResponseDto(savedProduct);
+        return productMapper.toResponse(savedProduct);
     }
 
     /**
      * Sets the product status to INACTIVE.
      */
     @Transactional
-    public ProductResponseDto deactivateProduct(Long id) {
+    public ProductResponse deactivateProduct(Long id) {
         Product product = getProductEntityById(id);
 
         if ("INACTIVE".equals(product.getStatus()) || "ARCHIVED".equals(product.getStatus())) {
@@ -342,14 +335,14 @@ public class ProductService {
         product.setExpirationDate(LocalDate.now());
 
         Product savedProduct = productRepository.save(product);
-        return productMapper.toResponseDto(savedProduct);
+        return productMapper.toResponse(savedProduct);
     }
 
     /**
      * Updates only the expiration date (Extending life).
      */
     @Transactional
-    public ProductResponseDto extendProductExpiration(Long id, LocalDate newExpirationDate) {
+    public ProductResponse extendProductExpiration(Long id, LocalDate newExpirationDate) {
         Product product = getProductEntityById(id);
 
         if (newExpirationDate == null) {
@@ -369,54 +362,43 @@ public class ProductService {
         product.setExpirationDate(newExpirationDate);
 
         Product savedProduct = productRepository.save(product);
-        return productMapper.toResponseDto(savedProduct);
+        return productMapper.toResponse(savedProduct);
     }
 
     /**
      * Creates a new version of a product. This involves archiving the old version
      * and creating a new entity that inherits all previous features and pricing links.
+     *
      * @param oldProductId The ID of the product version to be replaced.
-     * @param requestDto The metadata for the new version.
+     * @param requestDto   The metadata for the new version.
      * @return The response DTO for the newly created product.
      */
     @Transactional
-    public ProductResponseDto createNewVersion(Long oldProductId, CreateNewVersionRequestDto requestDto) {
-
-        // 1. Validate and Retrieve the Old Product
+    public ProductResponse createNewVersion(Long oldProductId, NewProductVersionRequest requestDto) {
         Product oldProduct = getProductEntityById(oldProductId);
 
-        // Enforce business rule: Only ACTIVE products can be versioned (copied).
         if (!"ACTIVE".equals(oldProduct.getStatus())) {
             throw new IllegalStateException("Only ACTIVE products can be used as a base for a new version.");
         }
 
-        // Retrieve the bank ID once for the entire cloning process
         String bankId = oldProduct.getBankId();
 
-        // 2. Archive the Old Product
+        // 1. Archive Old
         oldProduct.setStatus("ARCHIVED");
-        // Set the expiration date to the day *before* the new version becomes effective
         oldProduct.setExpirationDate(requestDto.getNewEffectiveDate().minusDays(1));
         productRepository.save(oldProduct);
 
-        // 3. Create the New Product Entity (Inherits most data)
+        // 2. Create New Base
         Product newProduct = new Product();
-
-        // Inherited configuration fields
         newProduct.setProductType(oldProduct.getProductType());
         newProduct.setBankId(bankId);
-
-        // New version metadata
         newProduct.setName(requestDto.getNewName());
         newProduct.setEffectiveDate(requestDto.getNewEffectiveDate());
-        newProduct.setStatus("DRAFT"); // New versions start as DRAFT for review/modification
+        newProduct.setStatus("DRAFT");
 
-        // Save the new product to generate the ID
         Product savedNewProduct = productRepository.save(newProduct);
 
-        // 4. Copy Links (Features and Pricing)
-
-        // 4a. Copy ProductFeatureLink
+        // 3. Clone Features
         List<ProductFeatureLink> newFeatureLinks = oldProduct.getProductFeatureLinks().stream()
                 .map(oldLink -> {
                     ProductFeatureLink newLink = new ProductFeatureLink();
@@ -425,32 +407,31 @@ public class ProductService {
                     newLink.setFeatureValue(oldLink.getFeatureValue());
                     newLink.setBankId(bankId);
                     return newLink;
-                })
-                .collect(Collectors.toList());
+                }).toList();
+        featureLinkRepository.saveAll(newFeatureLinks);
 
-        linkRepository.saveAll(newFeatureLinks);
-
-        // 4b. Copy ProductPricingLink (Requires fetching the links from the repo if not EAGER)
+        // 4. Clone Pricing (Ensuring values are copied)
         List<ProductPricingLink> oldPricingLinks = pricingLinkRepository.findByProductId(oldProductId);
-
         List<ProductPricingLink> newPricingLinks = oldPricingLinks.stream()
                 .map(oldLink -> {
                     ProductPricingLink newLink = new ProductPricingLink();
                     newLink.setProduct(savedNewProduct);
                     newLink.setPricingComponent(oldLink.getPricingComponent());
                     newLink.setContext(oldLink.getContext());
+                    newLink.setFixedValue(oldLink.getFixedValue());
+                    newLink.setUseRulesEngine(oldLink.isUseRulesEngine());
                     newLink.setBankId(bankId);
                     return newLink;
-                })
-                .collect(Collectors.toList());
-
+                }).toList();
         pricingLinkRepository.saveAll(newPricingLinks);
 
-        // 5. Ensure new collections are loaded for DTO conversion
-        entityManager.clear();
-        Product finalNewProduct = getProductEntityById(savedNewProduct.getId());
+        // 5. Sync and Refresh
+        productRepository.flush();
+        featureLinkRepository.flush();
+        pricingLinkRepository.flush();
 
-        return productMapper.toResponseDto(finalNewProduct);
+        entityManager.refresh(savedNewProduct);
+        return productMapper.toResponse(savedNewProduct);
     }
 
     /**

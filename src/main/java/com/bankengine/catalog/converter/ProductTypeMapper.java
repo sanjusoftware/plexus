@@ -1,6 +1,6 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
+import com.bankengine.catalog.dto.ProductTypeRequest;
 import com.bankengine.catalog.dto.ProductTypeResponseDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.config.MapStructConfig;
@@ -18,5 +18,5 @@ public interface ProductTypeMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    ProductType toEntity(CreateProductTypeRequestDto dto);
+    ProductType toEntity(ProductTypeRequest dto);
 }

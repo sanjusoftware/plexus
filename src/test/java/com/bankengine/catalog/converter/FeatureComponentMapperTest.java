@@ -1,8 +1,7 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
+import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponseDto;
-import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
 import com.bankengine.catalog.model.FeatureComponent;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -16,7 +15,7 @@ public class FeatureComponentMapperTest {
 
     @Test
     void testToEntity() {
-        CreateFeatureComponentRequestDto dto = new CreateFeatureComponentRequestDto();
+        FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Test Feature");
 
         FeatureComponent entity = mapper.toEntity(dto);
@@ -40,7 +39,7 @@ public class FeatureComponentMapperTest {
 
     @Test
     void testUpdateFromDto() {
-        UpdateFeatureComponentRequestDto dto = new UpdateFeatureComponentRequestDto();
+        FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Updated Feature");
 
         FeatureComponent entity = new FeatureComponent();

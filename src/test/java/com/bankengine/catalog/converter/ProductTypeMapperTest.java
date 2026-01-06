@@ -1,6 +1,6 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
+import com.bankengine.catalog.dto.ProductTypeRequest;
 import com.bankengine.catalog.dto.ProductTypeResponseDto;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,7 @@ public class ProductTypeMapperTest {
 
     @Test
     void testToEntity() {
-        CreateProductTypeRequestDto dto = new CreateProductTypeRequestDto();
+        ProductTypeRequest dto = new ProductTypeRequest();
         dto.setName("Test Product Type");
 
         ProductType entity = mapper.toEntity(dto);

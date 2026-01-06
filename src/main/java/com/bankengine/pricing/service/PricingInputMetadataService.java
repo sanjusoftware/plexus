@@ -1,9 +1,8 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.pricing.converter.PricingInputMetadataMapper;
-import com.bankengine.pricing.dto.CreateMetadataRequestDto;
 import com.bankengine.pricing.dto.MetadataResponseDto;
-import com.bankengine.pricing.dto.UpdateMetadataRequestDto;
+import com.bankengine.pricing.dto.PricingMetadataRequest;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.TierConditionRepository;
@@ -81,7 +80,7 @@ public class PricingInputMetadataService {
     }
 
     @Transactional
-    public MetadataResponseDto createMetadata(CreateMetadataRequestDto dto) {
+    public MetadataResponseDto createMetadata(PricingMetadataRequest dto) {
         // Business Rule: Key must be unique. Check before attempting save.
         if (pricingInputMetadataRepository.findByAttributeKey(dto.getAttributeKey()).isPresent()) {
             throw new DependencyViolationException(
@@ -99,7 +98,7 @@ public class PricingInputMetadataService {
     }
 
     @Transactional
-    public MetadataResponseDto updateMetadata(String attributeKey, UpdateMetadataRequestDto dto) {
+    public MetadataResponseDto updateMetadata(String attributeKey, PricingMetadataRequest dto) {
         PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 

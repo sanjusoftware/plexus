@@ -1,7 +1,7 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.ProductFeatureDto;
-import com.bankengine.catalog.dto.ProductFeatureLinkDto;
+import com.bankengine.catalog.dto.ProductFeatureRequest;
+import com.bankengine.catalog.dto.ProductFeatureResponse;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
@@ -13,28 +13,45 @@ import java.util.List;
 @Mapper(config = MapStructConfig.class)
 public interface FeatureLinkMapper {
 
+    /**
+     * Converts an entity to a Response DTO for API output.
+     * Maps the nested FeatureComponent name to the flat featureName field.
+     */
     @Mapping(target = "featureName", source = "link.featureComponent.name")
-    ProductFeatureLinkDto toFeatureLinkDto(ProductFeatureLink link);
+    ProductFeatureResponse toResponse(ProductFeatureLink link);
 
-    List<ProductFeatureLinkDto> toFeatureLinkDtoList(List<ProductFeatureLink> links);
+    List<ProductFeatureResponse> toResponseList(List<ProductFeatureLink> links);
 
+    /**
+     * Used for deep-cloning links during the product versioning process.
+     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "bankId", source = "oldLink.bankId")
     ProductFeatureLink clone(ProductFeatureLink oldLink);
 
+    /**
+     * Converts a Request DTO to a new Entity.
+     * Ignores relational and audit fields which are handled by the Service/JPA.
+     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "featureComponent", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    ProductFeatureLink toEntity(ProductFeatureDto dto);
+    @Mapping(target = "bankId", ignore = true)
+    ProductFeatureLink toEntity(ProductFeatureRequest dto);
 
+    /**
+     * Updates an existing link entity with values from a Request DTO.
+     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "featureComponent", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    void updateFromDto(ProductFeatureDto dto, @MappingTarget ProductFeatureLink entity);
+    @Mapping(target = "bankId", ignore = true)
+    void updateFromDto(ProductFeatureRequest dto, @MappingTarget ProductFeatureLink entity);
 }

@@ -1,9 +1,9 @@
 package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.ProductMapper;
-import com.bankengine.catalog.dto.ProductFeatureDto;
+import com.bankengine.catalog.dto.ProductFeatureRequest;
 import com.bankengine.catalog.dto.ProductRequest;
-import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.ProductResponse;
 import com.bankengine.catalog.dto.ProductSearchRequestDto;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
@@ -56,9 +56,9 @@ public class ProductServiceTest {
         ProductSearchRequestDto criteria = new ProductSearchRequestDto();
         Page<Product> productPage = new PageImpl<>(Collections.singletonList(new Product()));
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(productPage);
-        when(productMapper.toResponseDto(any(Product.class))).thenReturn(new ProductResponseDto());
+        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
 
-        Page<ProductResponseDto> result = productService.searchProducts(criteria);
+        Page<ProductResponse> result = productService.searchProducts(criteria);
 
         assertEquals(1, result.getTotalElements());
         verify(productRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
@@ -70,9 +70,9 @@ public class ProductServiceTest {
         dto.setProductTypeId(1L);
         when(productTypeRepository.findById(1L)).thenReturn(Optional.of(new ProductType()));
         when(productRepository.save(any(Product.class))).thenReturn(new Product());
-        when(productMapper.toResponseDto(any(Product.class))).thenReturn(new ProductResponseDto());
+        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
 
-        ProductResponseDto response = productService.createProduct(dto);
+        ProductResponse response = productService.createProduct(dto);
 
         assertNotNull(response);
         verify(productRepository, times(1)).save(any(Product.class));
@@ -98,7 +98,7 @@ public class ProductServiceTest {
         product.setStatus("DRAFT");
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(productMapper.toResponseDto(any(Product.class))).thenReturn(new ProductResponseDto());
+        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
 
         productService.activateProduct(1L, LocalDate.now());
 
@@ -111,7 +111,7 @@ public class ProductServiceTest {
         product.setStatus("ACTIVE");
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(productMapper.toResponseDto(any(Product.class))).thenReturn(new ProductResponseDto());
+        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
 
         productService.deactivateProduct(1L);
 
@@ -120,8 +120,7 @@ public class ProductServiceTest {
 
     @Test
     void testLinkFeatureToProduct() {
-        ProductFeatureDto dto = new ProductFeatureDto();
-        dto.setProductId(1L);
+        ProductFeatureRequest dto = new ProductFeatureRequest();
         dto.setFeatureComponentId(1L);
         dto.setFeatureValue("Test");
 
@@ -132,9 +131,9 @@ public class ProductServiceTest {
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(featureComponentService.getFeatureComponentById(1L)).thenReturn(component);
-        when(productMapper.toResponseDto(any(Product.class))).thenReturn(new ProductResponseDto());
+        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
 
-        productService.linkFeatureToProduct(dto);
+        productService.linkFeatureToProduct(1L, dto);
 
         verify(linkRepository, times(1)).save(any(ProductFeatureLink.class));
     }

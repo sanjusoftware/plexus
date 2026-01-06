@@ -1,8 +1,8 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
+import com.bankengine.catalog.dto.NewProductVersionRequest;
 import com.bankengine.catalog.dto.ProductRequest;
-import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.ProductResponse;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.config.MapStructConfig;
@@ -19,9 +19,9 @@ public interface ProductMapper {
     @Mapping(target = "productType", source = "product.productType")
     @Mapping(target = "features", source = "product.productFeatureLinks")
     @Mapping(target = "pricing", source = "product.productPricingLinks")
-    ProductResponseDto toResponseDto(Product product);
+    ProductResponse toResponse(Product product);
 
-    List<ProductResponseDto> toResponseDtoList(List<Product> entities);
+    List<ProductResponse> toResponseList(List<Product> entities);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "productType", source = "productType")
@@ -60,5 +60,5 @@ public interface ProductMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "expirationDate", ignore = true)
-    Product createNewVersionFrom(Product oldProduct, CreateNewVersionRequestDto requestDto);
+    Product createNewVersionFrom(Product oldProduct, NewProductVersionRequest requestDto);
 }

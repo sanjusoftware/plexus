@@ -2,8 +2,7 @@ package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.auth.security.BankContextHolder;
-import com.bankengine.catalog.dto.ProductFeatureDto;
-import com.bankengine.catalog.dto.ProductFeatureSyncDto;
+import com.bankengine.catalog.dto.ProductFeatureRequest;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -154,10 +153,8 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     // =================================================================
 
     // Helper method to create DTOs
-    private ProductFeatureDto createFeatureDto(FeatureComponent component, String value) {
-        ProductFeatureDto dto = new ProductFeatureDto();
-        // Use the statically initialized product
-        dto.setProductId(product.getId());
+    private ProductFeatureRequest createFeatureDto(FeatureComponent component, String value) {
+        ProductFeatureRequest dto = new ProductFeatureRequest();
         dto.setFeatureComponentId(component.getId());
         dto.setFeatureValue(value);
         return dto;
@@ -180,12 +177,11 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE}) // <-- User has read permission, lacks update
     void shouldReturn403WhenSyncingFeaturesWithoutPermission() throws Exception {
-        ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
-        syncDto.setFeatures(List.of(createFeatureDto(componentA, "20")));
+        List<ProductFeatureRequest> features = List.of(createFeatureDto(componentA, "20"));
 
         mockMvc.perform(put("/api/v1/products/{id}/features", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(syncDto)))
+                        .content(objectMapper.writeValueAsString(features)))
                 .andExpect(status().isForbidden());
     }
 
@@ -196,17 +192,15 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateNewFeaturesWhenNoLinksExist() throws Exception {
-        // ARRANGE: Cleanup in @BeforeEach ensures no links exist here.
-        ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
-        syncDto.setFeatures(List.of(
+        List<ProductFeatureRequest> features = List.of(
                 createFeatureDto(componentA, "20"), // New link A
                 createFeatureDto(componentB, "false") // New link B
-        ));
+        );
 
         // ACT: Synchronize
         mockMvc.perform(put("/api/v1/products/{id}/features", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(syncDto)))
+                        .content(objectMapper.writeValueAsString(features)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.features.length()", is(2)));
 
@@ -229,17 +223,16 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
         });
 
         // ARRANGE: Target state (B is created, A is updated, C is deleted)
-        ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
-        syncDto.setFeatures(List.of(
+        List<ProductFeatureRequest> features = List.of(
                 createFeatureDto(componentA, "50"), // A is updated (10 -> 50)
                 createFeatureDto(componentB, "true") // B is created
-        ));
+        );
         // Note: Component C (3.0) is missing from the list, so it should be deleted.
 
         // ACT: Synchronize
         mockMvc.perform(put("/api/v1/products/{id}/features", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(syncDto)))
+                        .content(objectMapper.writeValueAsString(features)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.features.length()", is(2)));
 
@@ -267,29 +260,27 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     void shouldReturn400OnSyncWithInvalidFeatureValueType() throws Exception {
         // ARRANGE: Attempt to set a STRING value on a BOOLEAN feature (B)
-        ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
-        syncDto.setFeatures(List.of(
+        List<ProductFeatureRequest> features = List.of(
                 createFeatureDto(componentB, "Not a boolean value")
-        ));
+        );
 
         // ACT & ASSERT: Expect 400 Bad Request due to validation failure
         mockMvc.perform(put("/api/v1/products/{id}/features", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(syncDto)))
+                        .content(objectMapper.writeValueAsString(features)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("must be 'true' or 'false' for BOOLEAN")));
     }
 
     @Test
     void shouldReturn404OnSyncWithNonExistentProduct() throws Exception {
-        ProductFeatureSyncDto syncDto = new ProductFeatureSyncDto();
         // Use an existing FeatureComponent ID for a valid DTO structure
-        syncDto.setFeatures(List.of(createFeatureDto(componentA, "1")));
+        List<ProductFeatureRequest> features = List.of(createFeatureDto(componentA, "1"));
 
         // ACT & ASSERT: Use a non-existent Product ID (99999)
         mockMvc.perform(put("/api/v1/products/99999/features")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(syncDto)))
+                        .content(objectMapper.writeValueAsString(features)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("Product not found")));
     }

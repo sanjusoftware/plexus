@@ -1,8 +1,7 @@
 package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
-import com.bankengine.catalog.dto.ProductPricingDto;
-import com.bankengine.catalog.dto.ProductPricingSyncDto;
+import com.bankengine.catalog.dto.ProductPricingRequest;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
@@ -154,8 +153,8 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     // =================================================================
 
     // Helper method to create a DTO for synchronization
-    private ProductPricingDto createPricingDto(PricingComponent component, String context) {
-        ProductPricingDto dto = new ProductPricingDto();
+    private ProductPricingRequest createPricingDto(PricingComponent component, String context) {
+        ProductPricingRequest dto = new ProductPricingRequest();
         dto.setPricingComponentId(component.getId());
         dto.setContext(context);
         return dto;
@@ -177,12 +176,11 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenSyncingPricingWithoutPermission() throws Exception {
-        ProductPricingSyncDto syncDto = new ProductPricingSyncDto();
-        syncDto.setPricingComponents(List.of(createPricingDto(compRate, "RATE")));
+        List<ProductPricingRequest> requests = List.of(createPricingDto(compRate, "RATE"));
 
         mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(syncDto)))
+                        .content(objectMapper.writeValueAsString(requests)))
                 .andExpect(status().isForbidden());
     }
 
@@ -192,17 +190,15 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateNewPricingLinksWhenNoneExist() throws Exception {
-        // ARRANGE: @BeforeEach ensures no links exist.
-        ProductPricingSyncDto syncDto = new ProductPricingSyncDto();
-        syncDto.setPricingComponents(List.of(
+        List<ProductPricingRequest> requests = List.of(
                 createPricingDto(compRate, "CORE_RATE"),
                 createPricingDto(compFee, "MONTHLY_FEE")
-        ));
+        );
 
         // ACT: Synchronize
         mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(syncDto)))
+                        .content(objectMapper.writeValueAsString(requests)))
                 .andExpect(status().isOk());
 
         // VERIFY: Check DB count (requires dedicated transaction since MockMvc commits)
@@ -224,17 +220,16 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
         });
 
         // ARRANGE: Target state (compFee is created, compDiscount is deleted)
-        ProductPricingSyncDto syncDto = new ProductPricingSyncDto();
-        syncDto.setPricingComponents(List.of(
+        List<ProductPricingRequest> requests = List.of(
                 createPricingDto(compRate, "CORE_RATE"), // Remains unchanged
                 createPricingDto(compFee, "ANNUAL_FEE") // New fee link created
-        ));
+        );
         // compDiscount link is missing, so the API should delete it.
 
         // ACT: Synchronize
         mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(syncDto)))
+                        .content(objectMapper.writeValueAsString(requests)))
                 .andExpect(status().isOk());
 
         // VERIFY 1: Check DB final state
@@ -262,29 +257,24 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
         // Use the committed Product ID
         Long existingProductId = product.getId();
 
-        // A DTO linking to a valid component
-        ProductPricingSyncDto validLinkDto = new ProductPricingSyncDto();
-        validLinkDto.setPricingComponents(List.of(createPricingDto(compRate, "RATE")));
-
         // Test 1: Non-existent Product ID
         mockMvc.perform(put("/api/v1/products/99999/pricing")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(validLinkDto)))
+                        .content(objectMapper.writeValueAsString(List.of(createPricingDto(compRate, "RATE")))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("Product not found")));
 
         // Test 2: Non-existent Pricing Component ID
-        ProductPricingSyncDto badSyncDto = new ProductPricingSyncDto();
-        badSyncDto.setPricingComponents(List.of(
-                new ProductPricingDto() {{
+        List<ProductPricingRequest> badLinks = List.of(
+                new ProductPricingRequest() {{
                     setPricingComponentId(99999L); // ID that doesn't exist
                     setContext("BAD_LINK");
                 }}
-        ));
+        );
 
         mockMvc.perform(put("/api/v1/products/{id}/pricing", existingProductId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(badSyncDto)))
+                        .content(objectMapper.writeValueAsString(badLinks)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("Pricing Component not found")));
     }

@@ -1,17 +1,16 @@
 package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.FeatureComponentMapper;
-import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
+import com.bankengine.catalog.dto.FeatureComponentRequest;
+import com.bankengine.catalog.dto.FeatureComponentResponseDto;
 import com.bankengine.catalog.model.FeatureComponent;
+import com.bankengine.catalog.model.FeatureComponent.DataType;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
-import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
-import com.bankengine.catalog.dto.FeatureComponentResponseDto;
-import com.bankengine.catalog.model.FeatureComponent.DataType;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,7 +31,7 @@ public class FeatureComponentService {
     /**
      * Creates a new reusable Feature Component definition from a DTO.
      */
-    public FeatureComponentResponseDto createFeature(CreateFeatureComponentRequestDto requestDto) {
+    public FeatureComponentResponseDto createFeature(FeatureComponentRequest requestDto) {
         // 1. Validation (Unique name check)
         if (componentRepository.existsByName(requestDto.getName())) {
             throw new IllegalArgumentException("Feature Component name must be unique.");
@@ -86,7 +85,7 @@ public class FeatureComponentService {
      * Updates an existing Feature Component.
      */
     @Transactional
-    public FeatureComponentResponseDto updateFeature(Long id, UpdateFeatureComponentRequestDto requestDto) {
+    public FeatureComponentResponseDto updateFeature(Long id, FeatureComponentRequest requestDto) {
         // 1. Validate component exists (handles 404)
         FeatureComponent component = getFeatureComponentById(id);
 

@@ -2,10 +2,7 @@ package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.auth.security.BankContextHolder;
-import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
-import com.bankengine.catalog.dto.ProductExpirationDto;
-import com.bankengine.catalog.dto.ProductRequest;
-import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -31,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -40,16 +38,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 public class ProductIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-    @Autowired private ProductRepository productRepository;
-    @Autowired private ProductTypeRepository productTypeRepository;
-    @Autowired private FeatureComponentRepository featureComponentRepository;
-    @Autowired private PricingComponentRepository pricingComponentRepository;
-    @Autowired private ProductFeatureLinkRepository featureLinkRepository;
-    @Autowired private ProductPricingLinkRepository pricingLinkRepository;
-    @Autowired private EntityManager entityManager;
-    @Autowired private TestTransactionHelper txHelper;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ProductTypeRepository productTypeRepository;
+    @Autowired
+    private FeatureComponentRepository featureComponentRepository;
+    @Autowired
+    private PricingComponentRepository pricingComponentRepository;
+    @Autowired
+    private ProductFeatureLinkRepository featureLinkRepository;
+    @Autowired
+    private ProductPricingLinkRepository pricingLinkRepository;
+    @Autowired
+    private EntityManager entityManager;
+    @Autowired
+    private TestTransactionHelper txHelper;
 
     private static Long EXISTING_PRODUCT_TYPE_ID;
     private final String PRODUCT_API_BASE = "/api/v1/products";
@@ -280,12 +288,12 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     void shouldActivateDraftProductAndSetStatusToActive() throws Exception {
         Long productId = createProductViaApi("DRAFT");
         LocalDate actDate = LocalDate.now().plusDays(5);
-        String json = "{\"effectiveDate\":\"" + actDate + "\"}";
 
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/activate", productId)
-                .contentType(MediaType.APPLICATION_JSON).content(json))
+                        .param("effectiveDate", actDate.toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACTIVE"));
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.effectiveDate").value(actDate.toString()));
     }
 
     @Test
@@ -306,9 +314,56 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         dto.setExpirationDate(newExp);
 
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/expiration", productId)
-                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.expirationDate").value(newExp.toString()));
+    }
+
+    // =================================================================
+    // FEATURES & PRICING SYNC TESTS
+    // =================================================================
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldSyncProductFeatures() throws Exception {
+        Long productId = createProductViaApi("DRAFT");
+
+        FeatureComponent feature = new FeatureComponent("Feature 1", FeatureComponent.DataType.STRING);
+        feature.setBankId(TEST_BANK_ID);
+        feature = featureComponentRepository.save(feature);
+
+        ProductFeatureRequest featureReq = ProductFeatureRequest.builder()
+                .featureComponentId(feature.getId())
+                .featureValue("Value 1")
+                .build();
+
+        mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/features", productId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(featureReq))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.features[0].featureName").value("Feature 1"));
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldSyncProductPricing() throws Exception {
+        Long productId = createProductViaApi("DRAFT");
+
+        PricingComponent pricing = new PricingComponent("Pricing 1", PricingComponent.ComponentType.FEE);
+        pricing.setBankId(TEST_BANK_ID);
+        pricing = pricingComponentRepository.save(pricing);
+
+        ProductPricingRequest pricingReq = ProductPricingRequest.builder()
+                .pricingComponentId(pricing.getId())
+                .context("DEFAULT")
+                .build();
+
+        mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/pricing", productId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(pricingReq))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pricing.length()").value(1))
+                .andExpect(jsonPath("$.pricing[0].pricingComponentName").value("Pricing 1"));
     }
 
     // =================================================================
@@ -318,12 +373,10 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldCloneFeaturesAndPricingWhenCreatingNewVersion() throws Exception {
-        // 1. ARRANGE: Create an ACTIVE product via API
         Long oldProductId = createProductViaApi("ACTIVE");
         Product oldProduct = productRepository.findById(oldProductId).orElseThrow();
 
-        // 2. ARRANGE: Manually link a Feature and a Pricing component to the old product
-        // We use the repositories directly here to set up the state
+        // 1. Setup Feature
         FeatureComponent feature = new FeatureComponent("Premium Support", FeatureComponent.DataType.STRING);
         feature.setBankId(TEST_BANK_ID);
         feature = featureComponentRepository.save(feature);
@@ -332,21 +385,27 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         featureLink.setBankId(TEST_BANK_ID);
         featureLinkRepository.save(featureLink);
 
+        // 2. Setup Pricing (THIS WAS MISSING THE LINK)
         PricingComponent pricing = new PricingComponent("Monthly Fee", PricingComponent.ComponentType.FEE);
         pricing.setBankId(TEST_BANK_ID);
         pricing = pricingComponentRepository.save(pricing);
 
-        ProductPricingLink pricingLink = new ProductPricingLink(oldProduct, pricing, "Retail", null, true);
+        // Create the link for the old product so the service has something to clone
+        ProductPricingLink pricingLink = new ProductPricingLink();
+        pricingLink.setProduct(oldProduct);
+        pricingLink.setPricingComponent(pricing);
+        pricingLink.setContext("Retail");
         pricingLink.setBankId(TEST_BANK_ID);
+        pricingLink.setUseRulesEngine(false);
         pricingLinkRepository.save(pricingLink);
 
-        // Sync with DB to ensure the service can see the new links
+        // Sync to DB
         entityManager.flush();
         entityManager.clear();
 
-        // 3. ACT: Call the New Version API
+        // 3. Execute Versioning
         LocalDate newEffectiveDate = LocalDate.now().plusMonths(3);
-        CreateNewVersionRequestDto versionDto = new CreateNewVersionRequestDto("Checking Account V2", newEffectiveDate);
+        NewProductVersionRequest versionDto = new NewProductVersionRequest("Checking Account V2", newEffectiveDate);
 
         String responseJson = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProductId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -354,19 +413,19 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
-        Long newProductId = objectMapper.readValue(responseJson, ProductResponseDto.class).getId();
+        Long newProductId = objectMapper.readValue(responseJson, ProductResponse.class).getId();
 
-        // 4. ASSERT: Verify the new product has cloned the links
+        // 4. Assertions
         mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", newProductId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.features.length()").value(1))
+                .andExpect(jsonPath("$.pricing.length()").value(1))
                 .andExpect(jsonPath("$.features[0].featureName").value("Premium Support"))
                 .andExpect(jsonPath("$.features[0].featureValue").value("Included"))
-                .andExpect(jsonPath("$.pricing.length()").value(1))
                 .andExpect(jsonPath("$.pricing[0].pricingComponentName").value("Monthly Fee"))
                 .andExpect(jsonPath("$.pricing[0].context").value("Retail"));
 
-        // 5. ASSERT: Verify the old product is now archived
+        // 5. Verify Archival
         mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProductId))
                 .andExpect(jsonPath("$.status").value("ARCHIVED"))
                 .andExpect(jsonPath("$.expirationDate").value(newEffectiveDate.minusDays(1).toString()));
@@ -376,10 +435,10 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldCreateNewVersionWhenActiveProductIsVersioned() throws Exception {
         Long oldId = createProductViaApi("ACTIVE");
-        CreateNewVersionRequestDto dto = new CreateNewVersionRequestDto("V2", LocalDate.now().plusMonths(1));
+        NewProductVersionRequest dto = new NewProductVersionRequest("V2", LocalDate.now().plusMonths(1));
 
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldId)
-                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldId))
@@ -390,14 +449,14 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn400WhenVersioningDraftProduct() throws Exception {
         Long productId = createProductViaApi("DRAFT");
-        CreateNewVersionRequestDto dto = new CreateNewVersionRequestDto("Fail", LocalDate.now());
+        NewProductVersionRequest dto = new NewProductVersionRequest("Fail", LocalDate.now());
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", productId)
-                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
 
     // =================================================================
-    // SEARCH & FILTERING (JPA SPECIFICATIONS) TESTS
+    // SEARCH & FILTERING TESTS
     // =================================================================
 
     @Test

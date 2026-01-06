@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateMetadataRequestDto {
+public class PricingMetadataRequest {
 
     // AttributeKey: Must be unique, used internally (e.g., in DRLs). Typically snake_case.
     @NotBlank(message = "Attribute key is required.")

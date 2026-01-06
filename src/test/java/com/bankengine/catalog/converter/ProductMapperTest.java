@@ -1,8 +1,8 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.CreateNewVersionRequestDto;
+import com.bankengine.catalog.dto.NewProductVersionRequest;
 import com.bankengine.catalog.dto.ProductRequest;
-import com.bankengine.catalog.dto.ProductResponseDto;
+import com.bankengine.catalog.dto.ProductResponse;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ public class ProductMapperTest {
         oldProduct.setProductType(productType);
         oldProduct.setBankId("BANK-001");
 
-        CreateNewVersionRequestDto requestDto = new CreateNewVersionRequestDto();
+        NewProductVersionRequest requestDto = new NewProductVersionRequest();
         requestDto.setNewName("New Product Name");
         requestDto.setNewEffectiveDate(LocalDate.now().plusDays(1));
 
@@ -57,13 +57,13 @@ public class ProductMapperTest {
     }
 
     @Test
-    void testToResponseDto() {
+    void testToResponse() {
         Product entity = new Product();
         entity.setId(1L);
         entity.setName("Test Product");
         entity.setBankId("BANK-001");
 
-        ProductResponseDto dto = mapper.toResponseDto(entity);
+        ProductResponse dto = mapper.toResponse(entity);
 
         assertNotNull(dto);
         assertEquals(entity.getId(), dto.getId());
@@ -72,13 +72,13 @@ public class ProductMapperTest {
     }
 
     @Test
-    void testToResponseDtoList() {
+    void testToResponseList() {
         Product entity = new Product();
         entity.setId(1L);
         entity.setName("Test Product");
         entity.setBankId("BANK-001");
 
-        List<ProductResponseDto> dtoList = mapper.toResponseDtoList(Collections.singletonList(entity));
+        List<ProductResponse> dtoList = mapper.toResponseList(Collections.singletonList(entity));
 
         assertNotNull(dtoList);
         assertEquals(1, dtoList.size());

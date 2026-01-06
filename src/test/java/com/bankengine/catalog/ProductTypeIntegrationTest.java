@@ -2,7 +2,7 @@ package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.auth.security.BankContextHolder;
-import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
+import com.bankengine.catalog.dto.ProductTypeRequest;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
@@ -155,7 +155,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn201AndCreateProductTypeSuccessfully() throws Exception {
         // Arrange
-        CreateProductTypeRequestDto requestDto = new CreateProductTypeRequestDto();
+        ProductTypeRequest requestDto = new ProductTypeRequest();
         requestDto.setName("Fixed Deposit");
 
         // Act & Assert
@@ -170,7 +170,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenCreatingWithoutPermission() throws Exception {
-        CreateProductTypeRequestDto requestDto = new CreateProductTypeRequestDto();
+        ProductTypeRequest requestDto = new ProductTypeRequest();
         requestDto.setName("Forbidden Type");
 
         mockMvc.perform(post(API_URL)
@@ -183,7 +183,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn400WhenNameIsMissing() throws Exception {
         // Arrange
-        CreateProductTypeRequestDto requestDto = new CreateProductTypeRequestDto();
+        ProductTypeRequest requestDto = new ProductTypeRequest();
         requestDto.setName(null); // Invalid: @NotBlank
 
         // Act & Assert
@@ -198,7 +198,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn400WhenNameIsTooShort() throws Exception {
         // Arrange
-        CreateProductTypeRequestDto requestDto = new CreateProductTypeRequestDto();
+        ProductTypeRequest requestDto = new ProductTypeRequest();
         requestDto.setName("A"); // Invalid: @Size min=3
 
         // Act & Assert
@@ -216,7 +216,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         createAndSaveProductType("Checking Account");
 
         // Arrange: Prepare the same request DTO again
-        CreateProductTypeRequestDto requestDto = new CreateProductTypeRequestDto();
+        ProductTypeRequest requestDto = new ProductTypeRequest();
         requestDto.setName("Checking Account");
 
         // Act & Assert: Attempt to create it a second time (API call commits)

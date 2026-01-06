@@ -1,9 +1,8 @@
 package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.FeatureComponentMapper;
-import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
+import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponseDto;
-import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
@@ -39,7 +38,7 @@ public class FeatureComponentServiceTest {
 
     @Test
     void testCreateFeature() {
-        CreateFeatureComponentRequestDto dto = new CreateFeatureComponentRequestDto();
+        FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Test Feature");
         dto.setDataType("STRING");
 
@@ -56,7 +55,7 @@ public class FeatureComponentServiceTest {
 
     @Test
     void testCreateFeature_withExistingName() {
-        CreateFeatureComponentRequestDto dto = new CreateFeatureComponentRequestDto();
+        FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Test Feature");
         dto.setDataType("STRING");
 
@@ -91,7 +90,7 @@ public class FeatureComponentServiceTest {
 
     @Test
     void testUpdateFeature() {
-        UpdateFeatureComponentRequestDto dto = new UpdateFeatureComponentRequestDto();
+        FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Updated Feature");
         dto.setDataType("STRING");
 

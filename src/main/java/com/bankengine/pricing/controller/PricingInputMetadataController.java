@@ -1,8 +1,7 @@
 package com.bankengine.pricing.controller;
 
-import com.bankengine.pricing.dto.CreateMetadataRequestDto;
 import com.bankengine.pricing.dto.MetadataResponseDto;
-import com.bankengine.pricing.dto.UpdateMetadataRequestDto;
+import com.bankengine.pricing.dto.PricingMetadataRequest;
 import com.bankengine.pricing.service.PricingInputMetadataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,7 +36,7 @@ public class PricingInputMetadataController {
     @ApiResponse(responseCode = "400", description = "Validation error (e.g., key already exists or invalid data type).")
     @PostMapping
     @PreAuthorize("hasAuthority('pricing:metadata:create')")
-    public ResponseEntity<MetadataResponseDto> createMetadata(@Valid @RequestBody CreateMetadataRequestDto requestDto) {
+    public ResponseEntity<MetadataResponseDto> createMetadata(@Valid @RequestBody PricingMetadataRequest requestDto) {
         MetadataResponseDto createdMetadata = metadataService.createMetadata(requestDto);
         return new ResponseEntity<>(createdMetadata, HttpStatus.CREATED);
     }
@@ -78,7 +77,7 @@ public class PricingInputMetadataController {
     public ResponseEntity<MetadataResponseDto> updateMetadata(
             @Parameter(description = "Unique attribute key (e.g., 'customerSegment')", required = true)
             @PathVariable String attributeKey,
-            @Valid @RequestBody UpdateMetadataRequestDto requestDto) {
+            @Valid @RequestBody PricingMetadataRequest requestDto) {
         MetadataResponseDto updatedMetadata = metadataService.updateMetadata(attributeKey, requestDto);
         return new ResponseEntity<>(updatedMetadata, HttpStatus.OK);
     }

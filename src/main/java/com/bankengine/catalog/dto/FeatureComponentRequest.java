@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UpdateFeatureComponentRequestDto {
+public class FeatureComponentRequest {
 
     @NotBlank(message = "Feature name is required.")
     private String name;

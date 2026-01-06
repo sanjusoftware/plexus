@@ -1,12 +1,13 @@
 package com.bankengine.catalog.dto;
 
 import lombok.Data;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class ProductResponseDto {
+public class ProductResponse {
     private Long id;
     private String name;
     private String bankId;
@@ -16,6 +17,6 @@ public class ProductResponseDto {
     private LocalDate expirationDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<ProductFeatureLinkDto> features;
-    private List<ProductPricingLinkDto> pricing;
+    private List<ProductFeatureResponse> features;
+    private List<ProductPricingResponse> pricing;
 }

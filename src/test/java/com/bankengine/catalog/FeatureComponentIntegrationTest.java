@@ -2,8 +2,7 @@ package com.bankengine.catalog;
 
 import com.bankengine.auth.config.test.WithMockRole;
 import com.bankengine.auth.security.BankContextHolder;
-import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
-import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
+import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -158,8 +157,8 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     // =================================================================
 
     // Helper method to create a valid DTO for POST/PUT requests
-    private CreateFeatureComponentRequestDto getCreateDto(String name) {
-        CreateFeatureComponentRequestDto dto = new CreateFeatureComponentRequestDto();
+    private FeatureComponentRequest getCreateDto(String name) {
+        FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName(name);
         dto.setDataType("STRING");
         return dto;
@@ -207,7 +206,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn400OnCreateWithInvalidDataType() throws Exception {
-        CreateFeatureComponentRequestDto dto = getCreateDto("BadTypeFeature");
+        FeatureComponentRequest dto = getCreateDto("BadTypeFeature");
         dto.setDataType("XYZ"); // Invalid data type
 
         mockMvc.perform(post("/api/v1/features")
@@ -257,7 +256,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {READER_ROLE}) // <-- Lacks 'update' permission
     void shouldReturn403WhenUpdatingFeatureWithoutPermission() throws Exception {
         FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
-        UpdateFeatureComponentRequestDto updateDto = new UpdateFeatureComponentRequestDto();
+        FeatureComponentRequest updateDto = new FeatureComponentRequest();
         updateDto.setName("NewName");
         updateDto.setDataType("BOOLEAN");
 
@@ -271,7 +270,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldUpdateFeatureAndReturn200() throws Exception {
         FeatureComponent savedComponent = createFeatureComponentInDb("OldName");
-        UpdateFeatureComponentRequestDto updateDto = new UpdateFeatureComponentRequestDto();
+        FeatureComponentRequest updateDto = new FeatureComponentRequest();
         updateDto.setName("NewName");
         updateDto.setDataType("BOOLEAN");
 
@@ -287,7 +286,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404OnUpdateNonExistentFeature() throws Exception {
-        UpdateFeatureComponentRequestDto updateDto = new UpdateFeatureComponentRequestDto();
+        FeatureComponentRequest updateDto = new FeatureComponentRequest();
         updateDto.setName("Test");
         updateDto.setDataType("STRING");
 

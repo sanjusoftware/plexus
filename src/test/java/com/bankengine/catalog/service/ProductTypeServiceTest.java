@@ -2,7 +2,7 @@ package com.bankengine.catalog.service;
 
 import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.converter.ProductTypeMapper;
-import com.bankengine.catalog.dto.CreateProductTypeRequestDto;
+import com.bankengine.catalog.dto.ProductTypeRequest;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import org.junit.jupiter.api.Test;
@@ -47,7 +47,7 @@ public class ProductTypeServiceTest {
         BankContextHolder.setBankId(TEST_BANK_ID);
 
         try {
-            CreateProductTypeRequestDto dto = new CreateProductTypeRequestDto();
+            ProductTypeRequest dto = new ProductTypeRequest();
             when(productTypeMapper.toEntity(dto)).thenReturn(new ProductType());
             when(productTypeRepository.save(any(ProductType.class))).thenReturn(new ProductType());
 

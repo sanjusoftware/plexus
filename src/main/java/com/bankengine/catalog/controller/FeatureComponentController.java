@@ -1,8 +1,7 @@
 package com.bankengine.catalog.controller;
 
-import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
+import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponseDto;
-import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
 import com.bankengine.catalog.service.FeatureComponentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -40,7 +39,7 @@ public class FeatureComponentController {
     @ApiResponse(responseCode = "400", description = "Validation or business logic error (e.g., duplicate name).")
     @PostMapping
     @PreAuthorize("hasAuthority('catalog:feature:create')")
-    public ResponseEntity<FeatureComponentResponseDto> createFeature(@Valid @RequestBody CreateFeatureComponentRequestDto requestDto) {
+    public ResponseEntity<FeatureComponentResponseDto> createFeature(@Valid @RequestBody FeatureComponentRequest requestDto) {
         FeatureComponentResponseDto createdComponent = featureComponentService.createFeature(requestDto);
         return new ResponseEntity<>(createdComponent, HttpStatus.CREATED);
     }
@@ -85,7 +84,7 @@ public class FeatureComponentController {
     public ResponseEntity<FeatureComponentResponseDto> updateFeature(
             @Parameter(description = "ID of the feature component to update", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody UpdateFeatureComponentRequestDto requestDto) {
+            @Valid @RequestBody FeatureComponentRequest requestDto) {
 
         FeatureComponentResponseDto updatedComponent = featureComponentService.updateFeature(id, requestDto);
         return new ResponseEntity<>(updatedComponent, HttpStatus.OK);

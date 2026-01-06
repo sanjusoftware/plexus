@@ -1,8 +1,7 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.CreateFeatureComponentRequestDto;
+import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponseDto;
-import com.bankengine.catalog.dto.UpdateFeatureComponentRequestDto;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
@@ -16,7 +15,7 @@ public interface FeatureComponentMapper {
     @Mapping(target = "dataType", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    FeatureComponent toEntity(CreateFeatureComponentRequestDto dto);
+    FeatureComponent toEntity(FeatureComponentRequest dto);
 
     FeatureComponentResponseDto toResponseDto(FeatureComponent entity);
 
@@ -24,5 +23,5 @@ public interface FeatureComponentMapper {
     @Mapping(target = "dataType", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    void updateFromDto(UpdateFeatureComponentRequestDto dto, @MappingTarget FeatureComponent entity);
+    void updateFromDto(FeatureComponentRequest dto, @MappingTarget FeatureComponent entity);
 }

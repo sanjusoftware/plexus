@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateNewVersionRequestDto {
+public class NewProductVersionRequest {
 
     @NotBlank(message = "New product name is required.")
     private String newName;

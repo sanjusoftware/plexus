@@ -3,7 +3,7 @@ package com.bankengine.catalog.dto;
 import lombok.Data;
 
 @Data
-public class ProductFeatureLinkDto {
+public class ProductFeatureResponse {
     private String featureName;
     private String featureValue;
 }

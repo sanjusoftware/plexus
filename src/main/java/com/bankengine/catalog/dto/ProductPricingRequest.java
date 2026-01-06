@@ -2,12 +2,14 @@ package com.bankengine.catalog.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
-public class ProductPricingDto {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProductPricingRequest {
 
     @NotNull(message = "Pricing Component ID is required.")
     private Long pricingComponentId;
