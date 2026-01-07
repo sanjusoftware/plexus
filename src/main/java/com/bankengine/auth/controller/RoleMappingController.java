@@ -105,13 +105,13 @@ public class RoleMappingController {
                 responseCode = "200",
                 description = "Successfully retrieved all discoverable authorities.",
                 content = @Content(mediaType = "application/json",
-                                   schema = @Schema(implementation = String.class)) // The schema is Set<String>
+                                   schema = @Schema(implementation = String.class))
             ),
             @ApiResponse(responseCode = "403", description = "Forbidden. Missing 'auth:role:read' authority.")
         }
     )
     @GetMapping("/system-authorities")
-    @PreAuthorize("hasAuthority('auth:role:read')") // Can be granted to a lower-level reader
+    @PreAuthorize("hasAuthority('auth:role:read')")
     public ResponseEntity<Set<String>> getSystemAuthorities() {
         Set<String> authorities = authorityDiscoveryService.discoverAllAuthorities();
         return ResponseEntity.ok(authorities);

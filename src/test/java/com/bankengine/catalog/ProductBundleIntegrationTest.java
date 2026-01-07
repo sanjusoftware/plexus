@@ -1,10 +1,9 @@
 package com.bankengine.catalog;
 
+import com.bankengine.auth.config.test.WithMockRole;
+import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.dto.ProductBundleRequest;
-import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
-import com.bankengine.catalog.repository.ProductRepository;
-import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.config.repository.BankConfigurationRepository;
@@ -12,82 +11,84 @@ import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Transactional
 class ProductBundleIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private TestTransactionHelper txHelper;
     @Autowired private BankConfigurationRepository bankConfigRepository;
-    @Autowired private ProductTypeRepository productTypeRepository;
-    @Autowired private ProductRepository productRepository;
-
 
     private Long retailProductId;
     private Long wealthProductId;
 
+    private static final String BUNDLE_ADMIN = "BUNDLE_TEST_ADMIN";
+
+    @BeforeAll
+    static void initSecurity(@Autowired TestTransactionHelper tx) {
+        BankContextHolder.setBankId(TEST_BANK_ID);
+        tx.createRoleInDb(BUNDLE_ADMIN, Set.of("catalog:bundle:create"));
+        tx.flushAndClear();
+        BankContextHolder.clear();
+    }
+
     @BeforeEach
     void setupData() {
-        // 1. Setup real Conflict Rules in the DB
-        BankConfiguration config = new BankConfiguration();
-        config.setBankId(TEST_BANK_ID);
-        config.setCategoryConflictRules(List.of(new CategoryConflictRule("RETAIL", "WEALTH")));
-        bankConfigRepository.save(config);
-
-        // 2. Setup real Products
-        Long typeId = txHelper.doInTransaction(() -> {
-            return productTypeRepository.findByName("Integration Test Type")
-                    .map(ProductType::getId)
-                    .orElseGet(() -> {
-                        ProductType pt = new ProductType();
-                        pt.setName("Integration Test Type");
-                        pt.setBankId(TEST_BANK_ID);
-                        return productTypeRepository.save(pt).getId();
-                    });
+        txHelper.doInTransaction(() -> {
+            bankConfigRepository.findByBankId(TEST_BANK_ID)
+                    .ifPresentOrElse(
+                            existing -> {
+                                existing.setCategoryConflictRules(new ArrayList<>(List.of(
+                                        new CategoryConflictRule("RETAIL", "WEALTH")
+                                )));
+                                bankConfigRepository.save(existing);
+                            },
+                            () -> {
+                                BankConfiguration config = new BankConfiguration();
+                                config.setBankId(TEST_BANK_ID);
+                                config.setCategoryConflictRules(new ArrayList<>(List.of(
+                                        new CategoryConflictRule("RETAIL", "WEALTH")
+                                )));
+                                bankConfigRepository.save(config);
+                            }
+                    );
         });
 
-        // 3. Setup real Products (Find or Create to prevent further constraint violations)
-        retailProductId = txHelper.doInTransaction(() ->
-            productRepository.findByName("Retail Savings") // Assuming productRepository has findByName
-                .map(Product::getId)
-                .orElseGet(() -> txHelper.createProductInDb("Retail Savings", typeId, "RETAIL"))
-        );
+        // 2. Use the new DRY DSL from TestTransactionHelper
+        ProductType type = txHelper.getOrCreateProductType("Integration Test Type");
 
-        wealthProductId = txHelper.doInTransaction(() ->
-            productRepository.findByName("Wealth Investment")
-                .map(Product::getId)
-                .orElseGet(() -> txHelper.createProductInDb("Wealth Investment", typeId, "WEALTH"))
-        );
+        retailProductId = txHelper.getOrCreateProduct("Retail Savings", type, "RETAIL").getId();
+        wealthProductId = txHelper.getOrCreateProduct("Wealth Investment", type, "WEALTH").getId();
+
+        txHelper.flushAndClear();
     }
 
     @Test
-    @WithMockUser(authorities = "catalog:bundle:create")
+    @WithMockRole(roles = BUNDLE_ADMIN)
     @DisplayName("Should reject bundle creation when products have conflicting categories")
     void createBundle_ShouldFail_OnCategoryConflict() throws Exception {
-        // Arrange
         ProductBundleRequest request = createBaseRequest("B-CONFLICT", "Conflict Bundle");
         request.setItems(List.of(
-            createItem(retailProductId, true),
-            createItem(wealthProductId, false)
+                createItem(retailProductId, true),
+                createItem(wealthProductId, false)
         ));
 
-        // Act & Assert
         mockMvc.perform(post("/api/v1/bundles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -96,21 +97,19 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = "catalog:bundle:create")
+    @WithMockRole(roles = BUNDLE_ADMIN)
     @DisplayName("Should reject bundle creation when multiple products are marked as main")
     void createBundle_ShouldFail_WhenMultipleMainProductsExist() throws Exception {
-        // Arrange
         ProductBundleRequest request = createBaseRequest("B-MULTI-MAIN", "Invalid Multi Main Bundle");
         request.setItems(List.of(
-            createItem(retailProductId, true),  // First Main
-            createItem(wealthProductId, true)   // Second Main (Conflict!)
+                createItem(retailProductId, true),
+                createItem(wealthProductId, true)
         ));
 
-        // Act & Assert
         mockMvc.perform(post("/api/v1/bundles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest()) // IllegalArgumentException maps to 400
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(Matchers.containsString("Main Account")));
     }
 

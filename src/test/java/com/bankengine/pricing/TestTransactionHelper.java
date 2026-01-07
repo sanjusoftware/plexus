@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -24,51 +23,138 @@ import java.util.Set;
 @Component
 public class TestTransactionHelper {
 
-    @Autowired
-    private PricingComponentRepository componentRepository;
-    @Autowired
-    private PricingTierRepository tierRepository;
-    @Autowired
-    private PriceValueRepository valueRepository;
-    @Autowired
-    private PricingInputMetadataRepository metadataRepository;
-    @Autowired
-    private TierConditionRepository tierConditionRepository;
-    @Autowired
-    private EntityManager entityManager;
-    @Autowired
-    private RoleRepository roleRepository;
-    @Autowired
-    private ProductRepository productRepository;
-    @Autowired
-    private ProductTypeRepository productTypeRepository;
+    @Autowired private PricingComponentRepository componentRepository;
+    @Autowired private PricingTierRepository tierRepository;
+    @Autowired private PriceValueRepository valueRepository;
+    @Autowired private PricingInputMetadataRepository metadataRepository;
+    @Autowired private TierConditionRepository tierConditionRepository;
+    @Autowired private EntityManager entityManager;
+    @Autowired private RoleRepository roleRepository;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private ProductTypeRepository productTypeRepository;
 
     // =================================================================
-    // Pricing Metadata Helpers
+    // Find-or-Create DSL for Catalog Entities (DRY)
+    // =================================================================
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void cleanupCommittedMetadata() {
+        metadataRepository.findByAttributeKey("customerSegment")
+                .ifPresent(metadataRepository::delete);
+        metadataRepository.findByAttributeKey("transactionAmount")
+                .ifPresent(metadataRepository::delete);
+        flushAndClear();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PricingComponent createPricingComponentInDb(String name) {
+        PricingComponent component = new PricingComponent();
+        component.setName(name);
+        component.setType(PricingComponent.ComponentType.RATE);
+        // Bank ID is usually handled by your AuditorAware automatically
+        return componentRepository.save(component);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PricingTier createCommittedTierDependency(Long componentId, String tierName) {
+        PricingComponent component = componentRepository.findById(componentId)
+                .orElseThrow(() -> new RuntimeException("Component not found"));
+
+        PricingTier tier = new PricingTier();
+        tier.setPricingComponent(component);
+        tier.setTierName(tierName);
+        tier.setMinThreshold(BigDecimal.ZERO);
+
+        TierCondition condition = new TierCondition();
+        condition.setPricingTier(tier);
+        condition.setAttributeName("customerSegment");
+        condition.setOperator(TierCondition.Operator.EQ);
+        condition.setAttributeValue("DEFAULT_SEGMENT");
+        tier.setConditions(new HashSet<>(Set.of(condition)));
+
+        return tierRepository.save(tier);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Long createLinkedTierAndValue(String componentName, String tierName) {
+        PricingComponent component = createPricingComponentInDb(componentName);
+        PricingTier tier = createCommittedTierDependency(component.getId(), tierName);
+
+        PriceValue value = new PriceValue();
+        value.setPricingTier(tier);
+        value.setPriceAmount(new BigDecimal("10.00"));
+        value.setValueType(PriceValue.ValueType.ABSOLUTE);
+        valueRepository.save(value);
+
+        return component.getId();
+    }
+
+    /**
+     * Idempotently retrieves or creates a ProductType by name within the current bank context.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ProductType getOrCreateProductType(String name) {
+        return productTypeRepository.findByName(name)
+                .orElseGet(() -> {
+                    ProductType pt = new ProductType();
+                    pt.setName(name);
+                    // bank_id is handled by AuditableEntity filter/auditor
+                    return productTypeRepository.save(pt);
+                });
+    }
+
+    /**
+     * Idempotently retrieves or creates a Product.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Product getOrCreateProduct(String name, ProductType type, String category) {
+        return productRepository.findByName(name)
+                .orElseGet(() -> {
+                    Product p = new Product();
+                    p.setName(name);
+                    p.setProductType(type);
+                    p.setCategory(category);
+                    p.setStatus("ACTIVE");
+                    p.setEffectiveDate(LocalDate.now().minusDays(1));
+                    return productRepository.save(p);
+                });
+    }
+
+    // =================================================================
+    // Authentication/Role Helpers
+    // =================================================================
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Role createRoleInDb(String roleName, Set<String> authorities) {
+        return roleRepository.findByName(roleName)
+                .map(existingRole -> {
+                    Set<String> currentAuthorities = existingRole.getAuthorities();
+                    Set<String> combinedAuthorities = new HashSet<>(currentAuthorities);
+                    combinedAuthorities.addAll(authorities);
+
+                    if (combinedAuthorities.size() > currentAuthorities.size()) {
+                        existingRole.setAuthorities(combinedAuthorities);
+                        return roleRepository.save(existingRole);
+                    }
+                    return existingRole;
+                })
+                .orElseGet(() -> {
+                    Role newRole = new Role();
+                    newRole.setName(roleName);
+                    newRole.setAuthorities(authorities);
+                    return roleRepository.save(newRole);
+                });
+    }
+
+    // =================================================================
+    // Pricing Metadata & Graph Helpers
     // =================================================================
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void setupCommittedMetadata() {
         createAndSaveMetadata("customerSegment", "STRING");
         createAndSaveMetadata("transactionAmount", "DECIMAL");
-        entityManager.flush();
-        entityManager.clear();
-    }
-
-    /**
-     * Finds and deletes the specific metadata entities created during setup.
-     * This resolves the compile error in PricingComponentIntegrationTest.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void cleanupCommittedMetadata() {
-        metadataRepository.findByAttributeKey("customerSegment")
-                .ifPresent(metadataRepository::delete);
-
-        metadataRepository.findByAttributeKey("transactionAmount")
-                .ifPresent(metadataRepository::delete);
-
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -82,178 +168,22 @@ public class TestTransactionHelper {
         });
     }
 
-    // =================================================================
-    // Pricing Component/Tier Helpers
-    // =================================================================
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public PricingComponent createPricingComponentInDb(String name) {
-        PricingComponent component = new PricingComponent();
-        component.setName(name);
-        component.setType(PricingComponent.ComponentType.RATE);
-
-        return componentRepository.save(component);
-    }
-
-    /**
-     * Deletes a Pricing Component and all related children (Tier, Value, Condition)
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteComponentGraphById(Long componentId) {
         componentRepository.findById(componentId).ifPresent(component -> {
-
-            // 1. Collect IDs of children
-            List<Long> tierIds = component.getPricingTiers().stream()
-                    .map(PricingTier::getId)
-                    .toList();
-
-            // 2. Delete Grandchildren (TierConditions)
+            List<Long> tierIds = component.getPricingTiers().stream().map(PricingTier::getId).toList();
             tierConditionRepository.deleteByPricingTierIdIn(tierIds);
-
-            // 3. Delete Grandchildren (PriceValues)
             valueRepository.deleteByPricingTierIdIn(tierIds);
-
-            // 4. Delete Children (PricingTiers)
             tierRepository.deleteAllById(tierIds);
-
-            // 5. Delete Parent (PricingComponent)
             componentRepository.delete(component);
-
-            // Ensure transaction flush completes the deletion
             entityManager.flush();
         });
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Long createLinkedTierAndValue(String componentName, String tierName) {
-        // 1. Create Component
-        PricingComponent component = new PricingComponent();
-        component.setName(componentName);
-        component.setType(PricingComponent.ComponentType.RATE);
-        PricingComponent savedComponent = componentRepository.save(component);
-
-        // 2. Create Tier
-        PricingTier tier = new PricingTier();
-        tier.setPricingComponent(savedComponent);
-        tier.setTierName(tierName);
-        tier.setMinThreshold(new BigDecimal("0.00"));
-
-        // Add a Condition
-        TierCondition condition = new TierCondition();
-        condition.setPricingTier(tier);
-        condition.setAttributeName("customerSegment");
-        condition.setOperator(TierCondition.Operator.EQ);
-        condition.setAttributeValue("DEFAULT_SEGMENT");
-
-        tier.setConditions(new HashSet<>(Set.of(condition)));
-
-        PricingTier savedTier = tierRepository.save(tier);
-
-        // 3. Create Value
-        PriceValue value = new PriceValue();
-        value.setPricingTier(savedTier);
-        value.setPriceAmount(new BigDecimal("10.00"));
-        value.setValueType(PriceValue.ValueType.ABSOLUTE);
-        valueRepository.save(value);
-
-        savedComponent.setPricingTiers(new ArrayList<>(List.of(savedTier)));
-        componentRepository.save(savedComponent);
-
-        return savedComponent.getId();
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public PricingTier createCommittedTierDependency(Long componentId, String tierName) {
-        // Fetch the committed component
-        PricingComponent component = componentRepository.findById(componentId)
-                .orElseThrow(() -> new RuntimeException("Component not found for tier setup!"));
-
-        PricingTier tier = new PricingTier();
-        tier.setPricingComponent(component);
-        tier.setTierName(tierName);
-        tier.setMinThreshold(new BigDecimal("0.00"));
-
-        // Add a condition
-        TierCondition condition = new TierCondition();
-        condition.setPricingTier(tier);
-        condition.setAttributeName("customerSegment");
-        condition.setOperator(TierCondition.Operator.EQ);
-        condition.setAttributeValue("DEFAULT_SEGMENT");
-
-        tier.setConditions(new HashSet<>(Set.of(condition)));
-
-        return tierRepository.save(tier);
-    }
-
     // =================================================================
-    // Authentication/Role Helpers
+    // Transactional Utilities
     // =================================================================
 
-    /**
-     * Creates and saves a Role entity with the specified authorities in a new transaction.
-     * Uses the find-or-create pattern to ensure idempotence and avoid unique constraint violations
-     * when run across multiple test classes.
-     *
-     * @param roleName The name of the role (e.g., "ADMIN").
-     * @param authorities The set of permissions assigned to this role.
-     * @return The persisted Role entity.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Role createRoleInDb(String roleName, Set<String> authorities) {
-
-        // 1. Find or Create the Role
-        return roleRepository.findByName(roleName)
-                .map(existingRole -> {
-                    // Role FOUND (This is the scenario causing problems across the suite)
-
-                    // 1. Get the current authorities
-                    Set<String> currentAuthorities = existingRole.getAuthorities();
-
-                    // 2. Combine the current authorities with the new ones needed for this test class
-                    Set<String> combinedAuthorities = new java.util.HashSet<>(currentAuthorities);
-                    combinedAuthorities.addAll(authorities); // Ensures the union
-
-                    // 3. Update and save the role only if the authority set has actually changed
-                    if (combinedAuthorities.size() > currentAuthorities.size()) {
-                        existingRole.setAuthorities(combinedAuthorities);
-                        return roleRepository.save(existingRole);
-                    }
-                    return existingRole;
-                })
-                .orElseGet(() -> {
-                    // Role NOT FOUND (Initial creation)
-                    Role newRole = new Role();
-                    newRole.setName(roleName);
-                    newRole.setAuthorities(authorities);
-                    // ... set other fields (bankId, etc.)
-                    return roleRepository.save(newRole);
-                });
-    }
-
-    /**
-     * Creates a Product entity directly in the database, bypassing API security,
-     * to facilitate setup for integration tests.
-     */
-    public Long createProductInDb(String name, Long productTypeId, String category) {
-        Product product = new Product();
-        product.setName(name);
-        product.setBankId("DB-SETUP");
-        product.setStatus("DRAFT");
-        product.setCategory(category);
-        product.setEffectiveDate(LocalDate.now().plusDays(1));
-
-        // Fetch the ProductType within the transaction boundary
-        ProductType productType = productTypeRepository.findById(productTypeId)
-                .orElseThrow(() -> new IllegalStateException("ProductType ID " + productTypeId + " not found during setup."));
-
-        product.setProductType(productType);
-        return productRepository.save(product).getId();
-    }
-
-    /**
-     * Executes a lambda within a new transaction context.
-     * Useful for verifying data committed by other transactional methods.
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public <T> T doInTransaction(java.util.function.Supplier<T> action) {
         return action.get();
@@ -264,14 +194,20 @@ public class TestTransactionHelper {
         action.run();
     }
 
-    /**
-     * Forces all pending changes to the database and clears the Hibernate/JPA session cache.
-     * This is crucial for @BeforeAll setups to ensure subsequent security context loading
-     * (e.g., @WithMockRole) sees the freshly committed data.
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void flushAndClear() {
         entityManager.flush();
         entityManager.clear();
+    }
+
+    /**
+     * Legacy helper kept for backward compatibility with older tests,
+     * but updated to use internal find-or-create logic.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Long createProductInDb(String name, Long productTypeId, String category) {
+        ProductType type = productTypeRepository.findById(productTypeId)
+                .orElseThrow(() -> new IllegalStateException("Type not found"));
+        return getOrCreateProduct(name, type, category).getId();
     }
 }
