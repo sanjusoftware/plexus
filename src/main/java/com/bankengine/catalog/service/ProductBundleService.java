@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,7 +29,6 @@ public class ProductBundleService {
     @Transactional
     public Long createBundle(ProductBundleRequest dto) {
         String bankId = BankContextHolder.getBankId();
-        // New bundles start as DRAFT for review
         return saveBundleWithLinks(dto, bankId, ProductBundle.BundleStatus.DRAFT).getId();
     }
 
@@ -138,7 +138,7 @@ public class ProductBundleService {
     }
 
     private ProductBundle saveBundleWithLinks(ProductBundleRequest dto, String bankId, ProductBundle.BundleStatus status) {
-        // VALIDATION: Check Main Account constraint
+        // 1. Structural Validation: Check Main Account constraint
         if (dto.getItems() != null) {
             long mainCount = dto.getItems().stream()
                     .filter(ProductBundleRequest.BundleItemRequest::isMainAccount)
@@ -148,6 +148,7 @@ public class ProductBundleService {
             }
         }
 
+        // 2. Initialize Bundle
         ProductBundle bundle = new ProductBundle();
         bundle.setBankId(bankId);
         bundle.setCode(dto.getCode());
@@ -160,15 +161,28 @@ public class ProductBundleService {
 
         ProductBundle savedBundle = productBundleRepository.save(bundle);
 
+        // 3. Process Items and Enforce Constraints
         if (dto.getItems() != null) {
+            // We use a list to track already-processed products for cross-compatibility checks
+            List<Product> processedProducts = new ArrayList<>();
+
             dto.getItems().forEach(item -> {
+                // Constraint A: Check if product is already in another bundle (if strict mode active)
                 constraintService.validateProductCanBeBundled(item.getProductId());
+
                 Product product = productRepository.findById(item.getProductId())
                         .orElseThrow(() -> new NotFoundException("Product not found: " + item.getProductId()));
 
+                // Constraint B: Check if this product is commercially compatible with others in this bundle
+                constraintService.validateCategoryCompatibility(product, List.copyOf(processedProducts));
+
+                // Create Link
                 BundleProductLink link = new BundleProductLink(savedBundle, product, item.isMainAccount(), item.isMandatory());
                 link.setBankId(bankId);
                 bundleProductLinkRepository.save(link);
+
+                // Add to processed list for the next iteration's compatibility check
+                processedProducts.add(product);
             });
         }
         return savedBundle;

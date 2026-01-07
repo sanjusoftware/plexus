@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "bank_configuration")
 @Getter
@@ -27,5 +30,7 @@ public class BankConfiguration extends AuditableEntity {
     @Column(name = "allow_multi_bundle_product", nullable = false)
     private boolean allowProductInMultipleBundles = false;
 
-    // ... other bank-specific configuration flags will go here ...
+    @ElementCollection
+    @CollectionTable(name = "bank_category_conflicts", joinColumns = @JoinColumn(name = "config_id"))
+    private List<CategoryConflictRule> categoryConflictRules = new ArrayList<>();
 }

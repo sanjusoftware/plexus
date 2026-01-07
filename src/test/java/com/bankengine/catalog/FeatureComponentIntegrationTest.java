@@ -127,6 +127,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                             product.setName("Link Test Product");
                             product.setStatus("ACTIVE");
                             product.setProductType(sharedProductType);
+                            product.setCategory("RETAIL");
                             // bank_id is injected here by AuditorAware
                             return productRepoStatic.save(product);
                         });
@@ -253,7 +254,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     // =================================================================
 
     @Test
-    @WithMockRole(roles = {READER_ROLE}) // <-- Lacks 'update' permission
+    @WithMockRole(roles = {READER_ROLE})
     void shouldReturn403WhenUpdatingFeatureWithoutPermission() throws Exception {
         FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
         FeatureComponentRequest updateDto = new FeatureComponentRequest();

@@ -216,6 +216,7 @@ public class ProductService {
         product.setExpirationDate(requestDto.getExpirationDate());
         product.setStatus(requestDto.getStatus());
         product.setProductType(productType);
+        product.setCategory(requestDto.getCategory());
 
         // 3. Save and convert back to DTO for response
         Product savedProduct = productRepository.save(product);
@@ -394,6 +395,7 @@ public class ProductService {
         newProduct.setBankId(bankId);
         newProduct.setName(requestDto.getNewName());
         newProduct.setEffectiveDate(requestDto.getNewEffectiveDate());
+        newProduct.setCategory(oldProduct.getCategory());
         newProduct.setStatus("DRAFT");
 
         Product savedNewProduct = productRepository.save(newProduct);

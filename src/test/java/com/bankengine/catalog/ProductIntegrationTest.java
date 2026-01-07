@@ -119,6 +119,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
                 .bankId(TEST_BANK_ID)
                 .productTypeId(EXISTING_PRODUCT_TYPE_ID)
                 .effectiveDate(LocalDate.now().plusDays(1))
+                .category("RETAIL")
                 .status("DRAFT");
     }
 
@@ -173,7 +174,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200WhenAccessingSecureEndpointWithToken() throws Exception {
-        txHelper.createProductInDb("Security Test", EXISTING_PRODUCT_TYPE_ID);
+        txHelper.createProductInDb("Security Test", EXISTING_PRODUCT_TYPE_ID, "RETAIL");
         mockMvc.perform(get(PRODUCT_API_BASE)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
     }
@@ -253,20 +254,20 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn400WhenUpdatingMetadataForActiveProduct() throws Exception {
+    void shouldReturn409WhenUpdatingMetadataForActiveProduct() throws Exception {
         Long productId = createProductViaApi("ACTIVE");
         ProductRequest updateDto = defaultRequestBuilder().status("ACTIVE").build();
 
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenUpdatingProductWithoutPermission() throws Exception {
-        Long productId = txHelper.createProductInDb("Secured", EXISTING_PRODUCT_TYPE_ID);
+        Long productId = txHelper.createProductInDb("Secured", EXISTING_PRODUCT_TYPE_ID, "RETAIL");
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(defaultRequestBuilder().build())))
@@ -280,7 +281,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenActivatingProductWithoutPermission() throws Exception {
-        Long productId = txHelper.createProductInDb("Test", EXISTING_PRODUCT_TYPE_ID);
+        Long productId = txHelper.createProductInDb("Test", EXISTING_PRODUCT_TYPE_ID, "RETAIL");
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/activate", productId)).andExpect(status().isForbidden());
     }
 
@@ -447,12 +448,12 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn400WhenVersioningDraftProduct() throws Exception {
+    void shouldReturn409WhenVersioningDraftProduct() throws Exception {
         Long productId = createProductViaApi("DRAFT");
         ProductVersionRequest dto = new ProductVersionRequest("Fail", LocalDate.now());
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", productId)
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     // =================================================================

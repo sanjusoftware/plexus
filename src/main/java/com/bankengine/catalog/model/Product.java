@@ -3,6 +3,7 @@ package com.bankengine.catalog.model;
 import com.bankengine.common.model.AuditableEntity;
 import com.bankengine.pricing.model.ProductPricingLink;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,6 +33,13 @@ public class Product extends AuditableEntity {
     @Column(name = "expiration_date")
     private LocalDate expirationDate;
 
+    private LocalDate effectiveDate;
+    private String status; // e.g., "ACTIVE", "DRAFT", "INACTIVE"
+
+    @Column(name = "category", nullable = false)
+    @NotBlank(message = "Product category is mandatory for compatibility validation.")
+    private String category; // e.g., "RETAIL", "WEALTH", "ISLAMIC"
+
     @ManyToOne // Many Products belong to one ProductType
     @JoinColumn(name = "product_type_id", nullable = false)
     private ProductType productType;
@@ -45,6 +53,4 @@ public class Product extends AuditableEntity {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<BundleProductLink> bundleLinks = new ArrayList<>();
 
-    private LocalDate effectiveDate;
-    private String status; // e.g., "ACTIVE", "DRAFT", "INACTIVE"
 }

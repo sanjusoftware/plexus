@@ -33,4 +33,7 @@ public class ProductRequest {
     private String status;
 
     private LocalDate expirationDate;
+
+    @NotBlank(message = "Product category is required (e.g., RETAIL, WEALTH, CORPORATE).")
+    private String category;
 }

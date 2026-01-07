@@ -101,6 +101,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             Product product = new Product();
             product.setName("Test Loan");
             product.setProductType(persistedProductType);
+            product.setCategory("RETAIL");
             persistedProduct = productRepository.save(product);
 
             // 3. Setup Pricing Component Graph: A simple Annual Fee (10.00) if segment is RETAIL

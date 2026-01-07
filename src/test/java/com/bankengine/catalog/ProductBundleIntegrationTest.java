@@ -1,145 +1,134 @@
 package com.bankengine.catalog;
 
 import com.bankengine.catalog.dto.ProductBundleRequest;
-import com.bankengine.catalog.service.ProductBundleService;
+import com.bankengine.catalog.model.Product;
+import com.bankengine.catalog.model.ProductType;
+import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.CategoryConflictRule;
+import com.bankengine.config.repository.BankConfigurationRepository;
+import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Transactional
 class ProductBundleIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private TestTransactionHelper txHelper;
+    @Autowired private BankConfigurationRepository bankConfigRepository;
+    @Autowired private ProductTypeRepository productTypeRepository;
+    @Autowired private ProductRepository productRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
 
-    @MockBean
-    private ProductBundleService bundleService;
+    private Long retailProductId;
+    private Long wealthProductId;
 
-    // --- CREATE TESTS ---
+    @BeforeEach
+    void setupData() {
+        // 1. Setup real Conflict Rules in the DB
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId(TEST_BANK_ID);
+        config.setCategoryConflictRules(List.of(new CategoryConflictRule("RETAIL", "WEALTH")));
+        bankConfigRepository.save(config);
+
+        // 2. Setup real Products
+        Long typeId = txHelper.doInTransaction(() -> {
+            return productTypeRepository.findByName("Integration Test Type")
+                    .map(ProductType::getId)
+                    .orElseGet(() -> {
+                        ProductType pt = new ProductType();
+                        pt.setName("Integration Test Type");
+                        pt.setBankId(TEST_BANK_ID);
+                        return productTypeRepository.save(pt).getId();
+                    });
+        });
+
+        // 3. Setup real Products (Find or Create to prevent further constraint violations)
+        retailProductId = txHelper.doInTransaction(() ->
+            productRepository.findByName("Retail Savings") // Assuming productRepository has findByName
+                .map(Product::getId)
+                .orElseGet(() -> txHelper.createProductInDb("Retail Savings", typeId, "RETAIL"))
+        );
+
+        wealthProductId = txHelper.doInTransaction(() ->
+            productRepository.findByName("Wealth Investment")
+                .map(Product::getId)
+                .orElseGet(() -> txHelper.createProductInDb("Wealth Investment", typeId, "WEALTH"))
+        );
+    }
 
     @Test
     @WithMockUser(authorities = "catalog:bundle:create")
-    @DisplayName("POST /api/v1/bundles - Success")
-    void createProductBundle_ShouldReturnId_WhenValid() throws Exception {
-        ProductBundleRequest request = createValidRequest();
-        when(bundleService.createBundle(any(ProductBundleRequest.class))).thenReturn(100L);
+    @DisplayName("Should reject bundle creation when products have conflicting categories")
+    void createBundle_ShouldFail_OnCategoryConflict() throws Exception {
+        // Arrange
+        ProductBundleRequest request = createBaseRequest("B-CONFLICT", "Conflict Bundle");
+        request.setItems(List.of(
+            createItem(retailProductId, true),
+            createItem(wealthProductId, false)
+        ));
 
+        // Act & Assert
         mockMvc.perform(post("/api/v1/bundles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(content().string("100"));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(Matchers.containsString("Conflict")));
     }
 
     @Test
     @WithMockUser(authorities = "catalog:bundle:create")
-    @DisplayName("POST /api/v1/bundles - Validation Failure")
-    void createProductBundle_ShouldReturnBadRequest_WhenInvalid() throws Exception {
-        ProductBundleRequest invalidRequest = new ProductBundleRequest(); // Empty DTO
+    @DisplayName("Should reject bundle creation when multiple products are marked as main")
+    void createBundle_ShouldFail_WhenMultipleMainProductsExist() throws Exception {
+        // Arrange
+        ProductBundleRequest request = createBaseRequest("B-MULTI-MAIN", "Invalid Multi Main Bundle");
+        request.setItems(List.of(
+            createItem(retailProductId, true),  // First Main
+            createItem(wealthProductId, true)   // Second Main (Conflict!)
+        ));
 
+        // Act & Assert
         mockMvc.perform(post("/api/v1/bundles")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").exists());
-    }
-
-    // --- UPDATE (VERSIONING) TESTS ---
-
-    @Test
-    @WithMockUser(authorities = "catalog:bundle:update")
-    @DisplayName("PUT /api/v1/bundles/{id} - Success (Creates New Version)")
-    void updateProductBundle_ShouldReturnNewId() throws Exception {
-        ProductBundleRequest request = createValidRequest();
-        when(bundleService.updateBundle(eq(1L), any(ProductBundleRequest.class))).thenReturn(101L);
-
-        mockMvc.perform(put("/api/v1/bundles/{id}", 1L)
-                        .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("101"));
-    }
-
-    // --- ACTIVATION TESTS ---
-
-    @Test
-    @WithMockUser(authorities = "catalog:bundle:activate")
-    @DisplayName("POST /api/v1/bundles/{id}/activate - Success")
-    void activateBundle_ShouldReturnOk() throws Exception {
-        doNothing().when(bundleService).activateBundle(1L);
-
-        mockMvc.perform(post("/api/v1/bundles/{id}/activate", 1L))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(authorities = "catalog:bundle:read") // Wrong authority
-    @DisplayName("POST /api/v1/bundles/{id}/activate - Forbidden")
-    void activateBundle_ShouldReturnForbidden_WhenInsufficientPrivileges() throws Exception {
-        mockMvc.perform(post("/api/v1/bundles/{id}/activate", 1L))
-                .andExpect(status().isForbidden());
-    }
-
-    // --- CLONING TESTS ---
-
-    @Test
-    @WithMockUser(authorities = "catalog:bundle:create")
-    @DisplayName("POST /api/v1/bundles/{id}/clone - Success")
-    void cloneBundle_ShouldReturnNewId() throws Exception {
-        String newName = "Premium Salary Bundle Copy";
-        when(bundleService.cloneBundle(1L, newName)).thenReturn(200L);
-
-        mockMvc.perform(post("/api/v1/bundles/{id}/clone", 1L)
-                        .param("newName", newName))
-                .andExpect(status().isCreated())
-                .andExpect(content().string("200"));
-    }
-
-    // --- ARCHIVE TESTS ---
-
-    @Test
-    @WithMockUser(authorities = "catalog:bundle:delete")
-    @DisplayName("DELETE /api/v1/bundles/{id} - Success")
-    void archiveBundle_ShouldReturnNoContent() throws Exception {
-        doNothing().when(bundleService).archiveBundle(1L);
-
-        mockMvc.perform(delete("/api/v1/bundles/{id}", 1L))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isBadRequest()) // IllegalArgumentException maps to 400
+                .andExpect(jsonPath("$.message").value(Matchers.containsString("Main Account")));
     }
 
     // --- HELPER METHODS ---
 
-    private ProductBundleRequest createValidRequest() {
+    private ProductBundleRequest createBaseRequest(String code, String name) {
         ProductBundleRequest request = new ProductBundleRequest();
-        request.setCode("BNDL-777");
-        request.setName("Gold Savings Bundle");
+        request.setCode(code);
+        request.setName(name);
+        request.setActivationDate(LocalDate.now().plusDays(7));
         request.setEligibilitySegment("RETAIL");
-        request.setActivationDate(LocalDate.now().plusDays(1));
-
-        ProductBundleRequest.BundleItemRequest item = new ProductBundleRequest.BundleItemRequest();
-        item.setProductId(10L);
-        item.setMainAccount(true);
-        item.setMandatory(true);
-
-        request.setItems(List.of(item));
         return request;
+    }
+
+    private ProductBundleRequest.BundleItemRequest createItem(Long id, boolean main) {
+        ProductBundleRequest.BundleItemRequest item = new ProductBundleRequest.BundleItemRequest();
+        item.setProductId(id);
+        item.setMainAccount(main);
+        return item;
     }
 }

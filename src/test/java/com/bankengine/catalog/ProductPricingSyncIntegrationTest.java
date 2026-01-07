@@ -96,6 +96,7 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
                         p.setName("Pricing Sync Product");
                         p.setProductType(type);
                         p.setBankId(TEST_BANK_ID);
+                        p.setCategory("RETAIL");
                         return productRepoStatic.save(p);
                     });
 

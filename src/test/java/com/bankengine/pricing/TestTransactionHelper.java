@@ -185,23 +185,6 @@ public class TestTransactionHelper {
         return tierRepository.save(tier);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void createTierCondition(String attributeName) {
-        PricingComponent component = createPricingComponentInDb("test-component");
-        PricingTier tier = new PricingTier();
-        tier.setPricingComponent(component);
-        tier.setTierName("test-tier");
-        tier.setMinThreshold(BigDecimal.ZERO);
-        PricingTier savedTier = tierRepository.save(tier);
-
-        TierCondition condition = new TierCondition();
-        condition.setPricingTier(savedTier);
-        condition.setAttributeName(attributeName);
-        condition.setOperator(TierCondition.Operator.EQ);
-        condition.setAttributeValue("someValue");
-        tierConditionRepository.save(condition);
-    }
-
     // =================================================================
     // Authentication/Role Helpers
     // =================================================================
@@ -251,11 +234,12 @@ public class TestTransactionHelper {
      * Creates a Product entity directly in the database, bypassing API security,
      * to facilitate setup for integration tests.
      */
-    public Long createProductInDb(String name, Long productTypeId) {
+    public Long createProductInDb(String name, Long productTypeId, String category) {
         Product product = new Product();
         product.setName(name);
         product.setBankId("DB-SETUP");
         product.setStatus("DRAFT");
+        product.setCategory(category);
         product.setEffectiveDate(LocalDate.now().plusDays(1));
 
         // Fetch the ProductType within the transaction boundary

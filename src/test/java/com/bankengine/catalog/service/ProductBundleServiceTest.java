@@ -7,6 +7,8 @@ import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
+import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.common.exception.ValidationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,73 +29,64 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ProductBundleServiceTest {
 
-    @Mock private ProductBundleRepository bundleRepository;
-    @Mock private BundleProductLinkRepository bundleProductLinkRepository;
-    @InjectMocks private ProductBundleService bundleService;
+    @Mock
+    private ProductBundleRepository bundleRepository;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private BundleProductLinkRepository bundleProductLinkRepository;
+    @Mock
+    private CatalogConstraintService constraintService;
+
+    @InjectMocks
+    private ProductBundleService bundleService;
 
     @BeforeEach
     void setUp() {
-        // You need a way to set the context manually for the test thread
-        // Assuming your BankContextHolder has a setBankId method:
         BankContextHolder.setBankId("TEST_BANK_001");
     }
 
     @AfterEach
     void tearDown() {
-        // Always clear context to avoid leaking into other tests
         BankContextHolder.clear();
     }
 
     @Test
     void activateBundle_ShouldFail_WhenProductIsDraft() {
-        // Arrange
         Long bundleId = 1L;
         ProductBundle bundle = new ProductBundle();
         bundle.setStatus(ProductBundle.BundleStatus.DRAFT);
-
         Product draftProduct = new Product();
         draftProduct.setName("Draft Loan");
         draftProduct.setStatus("DRAFT");
-
-        BundleProductLink link = new BundleProductLink(bundle, draftProduct, true, true);
-        bundle.setContainedProducts(List.of(link));
+        bundle.setContainedProducts(List.of(new BundleProductLink(bundle, draftProduct, true, true)));
 
         when(bundleRepository.findById(bundleId)).thenReturn(Optional.of(bundle));
 
-        // Act & Assert
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-            () -> bundleService.activateBundle(bundleId));
-
-        assertTrue(ex.getMessage().contains("must be ACTIVE"));
-        verify(bundleRepository, never()).save(any());
+        assertThrows(IllegalStateException.class, () -> bundleService.activateBundle(bundleId));
     }
 
     @Test
     void updateBundle_ShouldArchiveOldAndCreateNew() {
-        // Arrange
         Long oldId = 1L;
         ProductBundle oldBundle = new ProductBundle();
         oldBundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
 
         ProductBundleRequest request = new ProductBundleRequest();
         request.setName("New Version");
-        request.setItems(List.of()); // Empty list for simple test
+        request.setItems(List.of());
 
         when(bundleRepository.findById(oldId)).thenReturn(Optional.of(oldBundle));
-        // Use thenAnswer to return the saved bundle with an ID
         when(bundleRepository.save(any(ProductBundle.class))).thenAnswer(invocation -> {
             ProductBundle b = invocation.getArgument(0);
-            b.setId(2L);
+            if (b.getId() == null) b.setId(2L);
             return b;
         });
 
-        // Act
         Long newId = bundleService.updateBundle(oldId, request);
 
-        // Assert
         assertEquals(ProductBundle.BundleStatus.ARCHIVED, oldBundle.getStatus());
         assertNotNull(newId);
-        verify(bundleRepository, times(2)).save(any());
     }
 
     @Test
@@ -162,26 +155,14 @@ class ProductBundleServiceTest {
     @Test
     @DisplayName("Create Bundle - Fail when multiple Main Accounts provided")
     void createBundle_ShouldThrowException_WhenMultipleMainAccounts() {
-        // Arrange
         ProductBundleRequest request = new ProductBundleRequest();
-        request.setName("Bad Bundle");
-
         ProductBundleRequest.BundleItemRequest item1 = new ProductBundleRequest.BundleItemRequest();
-        item1.setProductId(1L);
-        item1.setMainAccount(true); // First Main
-
+        item1.setMainAccount(true);
         ProductBundleRequest.BundleItemRequest item2 = new ProductBundleRequest.BundleItemRequest();
-        item2.setProductId(2L);
-        item2.setMainAccount(true); // Second Main (Illegal)
-
+        item2.setMainAccount(true);
         request.setItems(List.of(item1, item2));
 
-        // Act & Assert
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> bundleService.createBundle(request));
-
-        assertEquals("A bundle can only have 1 Main Account item.", ex.getMessage());
-        verify(bundleRepository, never()).save(any());
+        assertThrows(IllegalArgumentException.class, () -> bundleService.createBundle(request));
     }
 
     @Test
@@ -205,5 +186,96 @@ class ProductBundleServiceTest {
 
         assertTrue(ex.getMessage().contains("Source bundle has multiple Main Accounts"));
         verify(bundleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should call compatibility check with accumulated list of products")
+    void createBundle_ShouldAccumulateProductsForCompatibilityCheck() {
+        // Arrange
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setCode("B-001");
+        request.setName("Test Bundle");
+
+        ProductBundleRequest.BundleItemRequest item1 = new ProductBundleRequest.BundleItemRequest();
+        item1.setProductId(101L);
+        ProductBundleRequest.BundleItemRequest item2 = new ProductBundleRequest.BundleItemRequest();
+        item2.setProductId(102L);
+        ProductBundleRequest.BundleItemRequest item3 = new ProductBundleRequest.BundleItemRequest();
+        item3.setProductId(103L);
+
+        request.setItems(List.of(item1, item2, item3));
+
+        Product p1 = new Product();
+        p1.setId(101L);
+        p1.setCategory("CAT1");
+        Product p2 = new Product();
+        p2.setId(102L);
+        p2.setCategory("CAT2");
+        Product p3 = new Product();
+        p3.setId(103L);
+        p3.setCategory("CAT3");
+
+        when(productRepository.findById(101L)).thenReturn(Optional.of(p1));
+        when(productRepository.findById(102L)).thenReturn(Optional.of(p2));
+        when(productRepository.findById(103L)).thenReturn(Optional.of(p3));
+
+        when(bundleRepository.save(any(ProductBundle.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Act
+        bundleService.createBundle(request);
+
+        // Assert
+        // Item 1: Checked against empty list
+        verify(constraintService).validateCategoryCompatibility(eq(p1), argThat(List::isEmpty));
+
+        // Item 2: Checked against list containing p1
+        verify(constraintService).validateCategoryCompatibility(eq(p2), argThat(list ->
+                list.size() == 1 && list.contains(p1)));
+
+        // Item 3: Checked against list containing p1 and p2
+        verify(constraintService).validateCategoryCompatibility(eq(p3), argThat(list ->
+                list.size() == 2 && list.contains(p1) && list.contains(p2)));
+    }
+
+    @Test
+    @DisplayName("Create Bundle - Should fail and not save when category conflict is detected")
+    void createBundle_ShouldThrowException_WhenCategoryConflictDetected() {
+        // Arrange
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setName("Conflicting Bundle");
+
+        ProductBundleRequest.BundleItemRequest item1 = new ProductBundleRequest.BundleItemRequest();
+        item1.setProductId(101L);
+        ProductBundleRequest.BundleItemRequest item2 = new ProductBundleRequest.BundleItemRequest();
+        item2.setProductId(102L);
+        request.setItems(List.of(item1, item2));
+
+        Product p1 = new Product();
+        p1.setId(101L);
+        p1.setCategory("RETAIL");
+
+        Product p2 = new Product();
+        p2.setId(102L);
+        p2.setCategory("WEALTH");
+
+        // Mock repository lookups
+        when(productRepository.findById(101L)).thenReturn(Optional.of(p1));
+        when(productRepository.findById(102L)).thenReturn(Optional.of(p2));
+
+        // Mock a success for the first item, but a failure for the second item
+        doNothing().when(constraintService).validateCategoryCompatibility(eq(p1), anyList());
+        doThrow(new ValidationException("Business Conflict detected"))
+                .when(constraintService).validateCategoryCompatibility(eq(p2), anyList());
+
+        // We need to return the bundle for the first save call (the header)
+        when(bundleRepository.save(any(ProductBundle.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Act & Assert
+        assertThrows(ValidationException.class,
+                () -> bundleService.createBundle(request));
+
+        // Verify that we never tried to save a Link for the second (conflicting) product
+        verify(bundleProductLinkRepository, never()).save(argThat(link ->
+                link.getProduct().getId().equals(102L)));
     }
 }

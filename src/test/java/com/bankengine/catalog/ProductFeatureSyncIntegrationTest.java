@@ -122,6 +122,7 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
                         Product p = new Product();
                         p.setName("Sync Test Product");
                         p.setProductType(type);
+                        p.setCategory("RETAIL");
                         return productRepoStatic.save(p);
                     });
 

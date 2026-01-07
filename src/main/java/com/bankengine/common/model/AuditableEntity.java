@@ -31,10 +31,6 @@ public abstract class AuditableEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    /**
-     * Identifies the tenant (Bank) this entity belongs to.
-     * CRITICAL for data isolation in the multi-tenant trial environment.
-     */
     @CreatedBy
     @Column(name = "bank_id", nullable = false, updatable = false, length = 50)
     protected String bankId;
