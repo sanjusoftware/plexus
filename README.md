@@ -59,6 +59,7 @@ For a token to be accepted and successfully authorize a user (e.g., a `SUPER_ADM
 ```json
 {
   "sub": "dev_user_identifier",
+  "bank_id": "GLOBAL-BANK-001",        // Tenenat bank id
   "roles": ["SUPER_ADMIN", "ANALYST"], // MUST be a JSON array of role names
   "iss": "http://localhost:8080",      // Must match security.jwt.issuer-uri
   "aud": "bank-engine-api",            // Must match security.jwt.audience

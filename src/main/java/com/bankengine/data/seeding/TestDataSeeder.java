@@ -3,6 +3,7 @@ package com.bankengine.data.seeding;
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.catalog.model.*;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
 import com.bankengine.catalog.repository.*;
@@ -47,6 +48,7 @@ public class TestDataSeeder implements CommandLineRunner {
     private final ProductBundleRepository productBundleRepository;
     private final ApplicationContext applicationContext;
     private final CoreMetadataSeeder coreMetadataSeeder;
+    private final AuthorityDiscoveryService authorityDiscoveryService;
 
     public TestDataSeeder(
             ProductTypeRepository productTypeRepository,
@@ -61,7 +63,8 @@ public class TestDataSeeder implements CommandLineRunner {
             RoleRepository roleRepository,
             BankConfigurationRepository bankConfigurationRepository,
             ProductBundleRepository productBundleRepository,
-            ApplicationContext applicationContext, CoreMetadataSeeder coreMetadataSeeder) {
+            ApplicationContext applicationContext, CoreMetadataSeeder coreMetadataSeeder,
+            AuthorityDiscoveryService authorityDiscoveryService) {
         this.productTypeRepository = productTypeRepository;
         this.featureComponentRepository = featureComponentRepository;
         this.productRepository = productRepository;
@@ -76,6 +79,7 @@ public class TestDataSeeder implements CommandLineRunner {
         this.productBundleRepository = productBundleRepository;
         this.applicationContext = applicationContext;
         this.coreMetadataSeeder = coreMetadataSeeder;
+        this.authorityDiscoveryService = authorityDiscoveryService;
     }
 
     @Override
@@ -118,14 +122,26 @@ public class TestDataSeeder implements CommandLineRunner {
 
     @Transactional
     public void seedTestRoles(String bankId) {
-        if (roleRepository.findByName("SUPER_ADMIN").isEmpty()) {
-            Role admin = new Role();
-            admin.setName("SUPER_ADMIN");
-            admin.setAuthorities(new HashSet<>(Set.of("catalog:product:read", "pricing:calculate")));
-            admin.setBankId(bankId);
-            roleRepository.save(admin);
-            System.out.println("Seeded Roles for " + bankId);
-        }
+        // 1. Discover all authorities from the code using reflection
+        Set<String> allSystemAuthorities = authorityDiscoveryService.discoverAllAuthorities();
+
+        // 2. Check if the SUPER_ADMIN role exists for this bank
+        roleRepository.findByName("SUPER_ADMIN").ifPresentOrElse(
+                existingRole -> {
+                    // For dev mode, we update the existing role to ensure it gets NEWLY created permissions
+                    existingRole.setAuthorities(new HashSet<>(allSystemAuthorities));
+                    roleRepository.save(existingRole);
+                    System.out.println("Updated SUPER_ADMIN for " + bankId + " with " + allSystemAuthorities.size() + " permissions.");
+                },
+                () -> {
+                    Role admin = new Role();
+                    admin.setName("SUPER_ADMIN");
+                    admin.setAuthorities(new HashSet<>(allSystemAuthorities));
+                    admin.setBankId(bankId);
+                    roleRepository.save(admin);
+                    System.out.println("Seeded new SUPER_ADMIN for " + bankId + " with " + allSystemAuthorities.size() + " permissions.");
+                }
+        );
     }
 
     @Transactional

@@ -1,8 +1,11 @@
 package com.bankengine.auth.model;
 
+import com.bankengine.common.annotation.TenantEntity;
+import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.util.Set;
@@ -14,7 +17,9 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Role {
+@TenantEntity
+@EqualsAndHashCode(callSuper = true)
+public class Role extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

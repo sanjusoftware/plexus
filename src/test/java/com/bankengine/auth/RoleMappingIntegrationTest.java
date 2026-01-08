@@ -30,16 +30,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 public class RoleMappingIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
-    private RoleRepository roleRepository;
-    @Autowired
-    private TestTransactionHelper txHelper;
-    @Autowired
-    private CacheManager cacheManager; // Use to clear cache between tests
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private RoleRepository roleRepository;
+    @Autowired private TestTransactionHelper txHelper;
+    @Autowired private CacheManager cacheManager;
 
     private static final String ROLE_API = "/api/v1/roles";
     private static final String WRITE_AUTH = "auth:role:write";
