@@ -88,6 +88,7 @@ public class TestDataSeeder implements CommandLineRunner {
         TestDataSeeder proxy = applicationContext.getBean(TestDataSeeder.class);
 
         for (String bankId : List.of(BANK_A, BANK_B)) {
+            BankContextHolder.setSystemMode(true);
             System.out.println("\n--- Seeding Tenant: " + bankId + " ---");
             BankContextHolder.setBankId(bankId);
 

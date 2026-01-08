@@ -36,6 +36,7 @@ public class Role extends AuditableEntity {
             name = "role_authority",
             joinColumns = @JoinColumn(name = "role_id")
     )
+
     @Column(name = "authority_name", nullable = false, length = 100)
     private Set<String> authorities;
 }

@@ -25,6 +25,10 @@ public class BankContextHolder {
         SYSTEM_MODE.set(isSystem);
     }
 
+    public static boolean isSystemMode() {
+        return SYSTEM_MODE.get();
+    }
+
     public static void clear() {
         CONTEXT.remove();
         SYSTEM_MODE.remove();
