@@ -1,5 +1,6 @@
 package com.bankengine.config;
 
+import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.config.drools.DroolsKieModuleBuilder;
 import com.bankengine.pricing.service.BundleRuleBuilderService;
 import com.bankengine.pricing.service.ProductRuleBuilderService;
@@ -17,37 +18,45 @@ import java.util.Map;
 public class DroolsConfig {
 
     @Autowired
+    @Lazy
     private ProductRuleBuilderService ruleBuilderService;
 
     @Autowired
+    @Lazy
     private BundleRuleBuilderService bundleRuleBuilderService;
 
     @Autowired
     private DroolsKieModuleBuilder moduleBuilder;
-
-    public static final String KBASE_NAME = DroolsKieModuleBuilder.KBASE_NAME;
-    public static final String KSESSION_NAME = DroolsKieModuleBuilder.KSESSION_NAME;
-
 
     @Bean
     @Lazy
     public KieContainer kieContainer() {
         KieServices kieServices = KieServices.Factory.get();
 
-        // 1. Fetch DRL content from services
-        String productRuleContent = ruleBuilderService.buildAllRulesForCompilation();
-        String bundleRuleContent = bundleRuleBuilderService.buildAllRulesForCompilation();
+        try {
+            // 1. Elevate to System Mode to bypass the bankId requirement during startup
+            BankContextHolder.setSystemMode(true);
 
-        // 2. Prepare content map
-        Map<String, String> drlContent = Map.of(
-                DroolsKieModuleBuilder.PRODUCT_RULES_PATH, productRuleContent,
-                DroolsKieModuleBuilder.BUNDLE_RULES_PATH, bundleRuleContent
-        );
+            // 2. Fetch DRL content (Aspect will now see null bankId but permit it)
+            String productRuleContent = ruleBuilderService.buildAllRulesForCompilation();
+            String bundleRuleContent = bundleRuleBuilderService.buildAllRulesForCompilation();
 
-        // 3. Build
-        ReleaseId releaseId = moduleBuilder.buildAndInstallKieModule(drlContent);
+            // 3. Prepare content map
+            Map<String, String> drlContent = Map.of(
+                    DroolsKieModuleBuilder.PRODUCT_RULES_PATH, productRuleContent,
+                    DroolsKieModuleBuilder.BUNDLE_RULES_PATH, bundleRuleContent
+            );
 
-        // 4. Return the KieContainer associated with the new ReleaseId
-        return kieServices.newKieContainer(releaseId);
+            // 4. Build the KieModule
+            ReleaseId releaseId = moduleBuilder.buildAndInstallKieModule(drlContent);
+
+            // 5. Return the KieContainer associated with the new ReleaseId
+            return kieServices.newKieContainer(releaseId);
+
+        } finally {
+            // 6. CRITICAL: Always clear system mode and context to prevent leaks
+            // to subsequent threads or logic
+            BankContextHolder.clear();
+        }
     }
 }

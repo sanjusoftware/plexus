@@ -1,5 +1,6 @@
 package com.bankengine.pricing.model;
 
+import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -16,6 +17,7 @@ import java.util.Set;
 @Getter
 @Setter
 @NoArgsConstructor
+@TenantEntity
 public class PricingTier extends AuditableEntity {
 
     @Id

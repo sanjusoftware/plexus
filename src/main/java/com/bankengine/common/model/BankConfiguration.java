@@ -1,5 +1,6 @@
 package com.bankengine.common.model;
 
+import com.bankengine.common.annotation.TenantEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,6 +22,7 @@ import java.util.List;
                 column = @Column(name = "bank_id", unique = true)
         )
 })
+@TenantEntity
 public class BankConfiguration extends AuditableEntity {
 
     @Id

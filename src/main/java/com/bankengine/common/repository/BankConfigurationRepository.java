@@ -1,4 +1,4 @@
-package com.bankengine.config.repository;
+package com.bankengine.common.repository;
 
 import com.bankengine.common.model.BankConfiguration;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,5 +1,6 @@
 package com.bankengine.catalog.model;
 
+import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,6 +14,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @RequiredArgsConstructor
+@TenantEntity
 public class FeatureComponent extends AuditableEntity {
 
     @Id

@@ -6,7 +6,7 @@ import com.bankengine.catalog.dto.ProductBundleRequest;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.CategoryConflictRule;
-import com.bankengine.config.repository.BankConfigurationRepository;
+import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;

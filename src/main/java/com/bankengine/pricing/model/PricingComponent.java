@@ -1,5 +1,6 @@
 package com.bankengine.pricing.model;
 
+import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -33,6 +34,7 @@ import java.util.List;
                 )
         }
 )
+@TenantEntity
 public class PricingComponent extends AuditableEntity {
 
     @Id

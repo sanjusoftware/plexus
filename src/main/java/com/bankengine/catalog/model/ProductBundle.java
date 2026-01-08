@@ -1,5 +1,6 @@
 package com.bankengine.catalog.model;
 
+import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import com.bankengine.pricing.model.BundlePricingLink;
 import jakarta.persistence.*;
@@ -20,6 +21,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@TenantEntity
 public class ProductBundle extends AuditableEntity {
 
     @Id

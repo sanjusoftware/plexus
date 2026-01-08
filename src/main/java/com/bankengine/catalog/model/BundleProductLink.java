@@ -1,5 +1,6 @@
 package com.bankengine.catalog.model;
 
+import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -17,6 +18,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@TenantEntity
 public class BundleProductLink extends AuditableEntity {
 
     @Id

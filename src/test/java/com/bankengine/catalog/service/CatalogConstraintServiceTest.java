@@ -6,7 +6,7 @@ import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.common.exception.ValidationException;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.CategoryConflictRule;
-import com.bankengine.config.repository.BankConfigurationRepository;
+import com.bankengine.common.repository.BankConfigurationRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

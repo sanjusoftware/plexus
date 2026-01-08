@@ -16,26 +16,28 @@ public class CoreMetadataSeeder {
         this.pricingInputMetadataRepository = pricingInputMetadataRepository;
     }
 
-    private PricingInputMetadata createMetadata(String key, String displayName, String dataType) {
+    private PricingInputMetadata createMetadata(String key, String displayName, String dataType, String bankId) {
         PricingInputMetadata metadata = new PricingInputMetadata();
         metadata.setAttributeKey(key);
         metadata.setDisplayName(displayName);
         metadata.setDataType(dataType);
+        metadata.setBankId(bankId);
         return metadata;
     }
 
     /**
-     * Seeds the minimum required core input metadata for DRL compilation.
+     * Seeds the minimum required core input metadata for DRL compilation for a specific bank.
+     * @param bankId the tenant identifier
      */
     @Transactional
-    public void seedCorePricingInputMetadata() {
+    public void seedCorePricingInputMetadata(String bankId) {
         if (pricingInputMetadataRepository.count() == 0) {
-            System.out.println("Seeding Core Pricing Input Metadata...");
+            System.out.println("Seeding Core Pricing Input Metadata for bank: " + bankId);
             pricingInputMetadataRepository.saveAll(List.of(
-                    createMetadata("customerSegment", "Client Segment", "STRING"),
-                    createMetadata("transactionAmount", "Transaction Amount", "DECIMAL"),
-                    createMetadata("productId", "Product ID", "LONG"),
-                    createMetadata("bankId", "Bank ID", "STRING")
+                    createMetadata("customerSegment", "Client Segment", "STRING", bankId),
+                    createMetadata("transactionAmount", "Transaction Amount", "DECIMAL", bankId),
+                    createMetadata("productId", "Product ID", "LONG", bankId),
+                    createMetadata("bankId", "Bank ID", "STRING", bankId)
             ));
         }
     }

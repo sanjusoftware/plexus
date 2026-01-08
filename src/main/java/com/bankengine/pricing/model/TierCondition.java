@@ -1,5 +1,6 @@
 package com.bankengine.pricing.model;
 
+import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -13,6 +14,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@TenantEntity
 public class TierCondition extends AuditableEntity {
 
     @Id

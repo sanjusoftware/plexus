@@ -1,5 +1,6 @@
 package com.bankengine.pricing.model;
 
+import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -13,6 +14,7 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @NoArgsConstructor
+@TenantEntity
 public class PriceValue extends AuditableEntity {
 
     @Id
