@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,7 +26,7 @@ import java.util.Set;
 @Component
 public class TestTransactionHelper {
 
-    @Autowired private PricingComponentRepository componentRepository;
+    @Autowired private PricingComponentRepository pricingComponentRepository;
     @Autowired private PricingTierRepository tierRepository;
     @Autowired private PriceValueRepository valueRepository;
     @Autowired private PricingInputMetadataRepository metadataRepository;
@@ -36,7 +37,7 @@ public class TestTransactionHelper {
     @Autowired private ProductTypeRepository productTypeRepository;
     @Autowired private ProductBundleRepository productBundleRepository;
     @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
-
+    @Autowired private BundlePricingLinkRepository bundlePricingLinkRepository;
 
     // =================================================================
     // Find-or-Create DSL for Catalog Entities (DRY)
@@ -53,17 +54,20 @@ public class TestTransactionHelper {
 
     @Transactional
     public PricingComponent createPricingComponentInDb(String name) {
-        PricingComponent component = new PricingComponent();
-        component.setName(name);
-        component.setType(PricingComponent.ComponentType.RATE);
-        return componentRepository.save(component);
+        return pricingComponentRepository.findByName(name)
+                .orElseGet(() -> {
+                    PricingComponent component = new PricingComponent();
+                    component.setName(name);
+                    component.setType(PricingComponent.ComponentType.FEE); // or set a default
+                    return pricingComponentRepository.save(component);
+                });
     }
 
     @Transactional
     public void linkProductToPricingComponent(Long productId, Long componentId, BigDecimal fixedValue) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
-        PricingComponent component = componentRepository.findById(componentId)
+        PricingComponent component = pricingComponentRepository.findById(componentId)
                 .orElseThrow(() -> new IllegalStateException("Pricing Component not found"));
 
         ProductPricingLink link = new ProductPricingLink();
@@ -77,8 +81,29 @@ public class TestTransactionHelper {
     }
 
     @Transactional
+    public void linkBundleToPricingComponent(Long bundleId, Long componentId, BigDecimal fixedValue) {
+        ProductBundle bundle = productBundleRepository.findById(bundleId)
+                .orElseThrow(() -> new IllegalStateException("Bundle not found"));
+        PricingComponent component = pricingComponentRepository.findById(componentId)
+                .orElseThrow(() -> new IllegalStateException("Pricing Component not found"));
+
+        BundlePricingLink link = new BundlePricingLink();
+        link.setProductBundle(bundle);
+        link.setPricingComponent(component);
+        link.setFixedValue(fixedValue);
+        link.setUseRulesEngine(false);
+        link.setBankId(bundle.getBankId());
+
+        if (bundle.getBundlePricingLinks() == null) {
+            bundle.setBundlePricingLinks(new ArrayList<>());
+        }
+        bundle.getBundlePricingLinks().add(link);
+        bundlePricingLinkRepository.save(link);
+    }
+
+    @Transactional
     public PricingTier createCommittedTierDependency(Long componentId, String tierName) {
-        PricingComponent component = componentRepository.findById(componentId)
+        PricingComponent component = pricingComponentRepository.findById(componentId)
                 .orElseThrow(() -> new RuntimeException("Component not found"));
 
         PricingTier tier = new PricingTier();
@@ -119,7 +144,6 @@ public class TestTransactionHelper {
                 .orElseGet(() -> {
                     ProductType pt = new ProductType();
                     pt.setName(name);
-                    // bank_id is handled by AuditableEntity filter/auditor
                     return productTypeRepository.save(pt);
                 });
     }
@@ -141,12 +165,8 @@ public class TestTransactionHelper {
                 });
     }
 
-    // =================================================================
-    // Authentication/Role Helpers
-    // =================================================================
-
     @Transactional
-    public Role createRoleInDb(String roleName, Set<String> authorities) {
+    public Role getOrCreateRoleInDb(String roleName, Set<String> authorities) {
         return roleRepository.findByName(roleName)
                 .map(existingRole -> {
                     Set<String> currentAuthorities = existingRole.getAuthorities();
@@ -166,10 +186,6 @@ public class TestTransactionHelper {
                     return roleRepository.save(newRole);
                 });
     }
-
-    // =================================================================
-    // Pricing Metadata & Graph Helpers
-    // =================================================================
 
     @Transactional
     public void setupCommittedMetadata() {
@@ -191,19 +207,15 @@ public class TestTransactionHelper {
 
     @Transactional
     public void deleteComponentGraphById(Long componentId) {
-        componentRepository.findById(componentId).ifPresent(component -> {
+        pricingComponentRepository.findById(componentId).ifPresent(component -> {
             List<Long> tierIds = component.getPricingTiers().stream().map(PricingTier::getId).toList();
             tierConditionRepository.deleteByPricingTierIdIn(tierIds);
             valueRepository.deleteByPricingTierIdIn(tierIds);
             tierRepository.deleteAllById(tierIds);
-            componentRepository.delete(component);
+            pricingComponentRepository.delete(component);
             entityManager.flush();
         });
     }
-
-    // =================================================================
-    // Transactional Utilities
-    // =================================================================
 
     @Transactional
     public <T> T doInTransaction(java.util.function.Supplier<T> action) {
@@ -221,10 +233,6 @@ public class TestTransactionHelper {
         entityManager.clear();
     }
 
-    /**
-     * Legacy helper kept for backward compatibility with older tests,
-     * but updated to use internal find-or-create logic.
-     */
     @Transactional
     public Long createProductInDb(String name, Long productTypeId, String category) {
         ProductType type = productTypeRepository.findById(productTypeId)
@@ -236,7 +244,6 @@ public class TestTransactionHelper {
     public ProductBundle createBundleInDb(String name) {
         ProductBundle bundle = new ProductBundle();
         bundle.setName(name);
-        // Code must be unique per bank_id; using a timestamp or UUID prevents collisions
         bundle.setCode("BNDL_" + System.currentTimeMillis());
         bundle.setEligibilitySegment("RETAIL");
         bundle.setActivationDate(LocalDate.now());

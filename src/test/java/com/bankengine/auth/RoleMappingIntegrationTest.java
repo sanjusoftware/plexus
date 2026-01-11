@@ -88,7 +88,7 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
         // Manual seed for specific test scenario
         txHelper.doInTransaction(() -> {
             TenantContextHolder.setBankId(TEST_BANK_ID);
-            txHelper.createRoleInDb(roleName, initialAuths);
+            txHelper.getOrCreateRoleInDb(roleName, initialAuths);
         });
 
         Set<String> newAuths = Set.of("pricing:component:create", "pricing:tier:delete");

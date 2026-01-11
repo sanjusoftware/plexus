@@ -58,9 +58,4 @@ public class PricingComponent extends AuditableEntity {
         this.name = name;
         this.type = type;
     }
-
-    public boolean containsTierId(Long tierId) {
-        return this.pricingTiers.stream()
-                .anyMatch(tier -> tier.getId().equals(tierId));
-    }
 }

@@ -139,6 +139,53 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {PRICING_READER_ROLE})
+    void calculateBundlePrice_ShouldApplyBundleAdjustments_WhenAdjustmentExists() throws Exception {
+        // 1. ARRANGE: Create products (summing to 15.00) and a bundle discount (-2.00)
+        Map<String, Long> ids = txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+
+            ProductType type = new ProductType();
+            type.setName("Adjustment Test Type");
+            type.setBankId(TEST_BANK_ID);
+            productTypeRepository.save(type);
+
+            Long p1Id = txHelper.createProductInDb("Product A", type.getId(), "RETAIL");
+            Long p2Id = txHelper.createProductInDb("Product B", type.getId(), "RETAIL");
+
+            PricingComponent feeComp = txHelper.createPricingComponentInDb("Standard Fee");
+            txHelper.linkProductToPricingComponent(p1Id, feeComp.getId(), new BigDecimal("10.00"));
+            txHelper.linkProductToPricingComponent(p2Id, feeComp.getId(), new BigDecimal("5.00"));
+
+            // Create Bundle and apply a -2.00 Discount
+            ProductBundle bundle = txHelper.createBundleInDb("Discounted Bundle");
+            PricingComponent discountComp = txHelper.createPricingComponentInDb("Bundle Discount");
+            txHelper.linkBundleToPricingComponent(bundle.getId(), discountComp.getId(), new BigDecimal("-2.00"));
+
+            return Map.of("p1", p1Id, "p2", p2Id, "bundle", bundle.getId());
+        });
+
+        BundlePriceRequest request = new BundlePriceRequest();
+        request.setProductBundleId(ids.get("bundle"));
+        request.setCustomerSegment("RETAIL");
+        request.setProducts(List.of(
+                new BundlePriceRequest.ProductRequest(ids.get("p1"), BigDecimal.valueOf(1000)),
+                new BundlePriceRequest.ProductRequest(ids.get("p2"), BigDecimal.valueOf(1000))
+        ));
+
+        // 2. ACT & ASSERT
+        mockMvc.perform(post(BASE_URL + "/calculate/bundle")
+                        .header("X-Bank-Id", TEST_BANK_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.grossTotalAmount").value(15.00)) // 10.00 + 5.00
+                .andExpect(jsonPath("$.netTotalAmount").value(13.00))   // 15.00 - 2.00
+                .andExpect(jsonPath("$.bundleAdjustments[0].componentCode").value("Bundle Discount"))
+                .andExpect(jsonPath("$.bundleAdjustments[0].amount").value(-2.00));
+    }
+
+    @Test
+    @WithMockRole(roles = {PRICING_READER_ROLE})
     void calculateProductPrice_ShouldReturn400_WhenValidationFails() throws Exception {
         PricingRequest request = new PricingRequest();
 

@@ -1,7 +1,9 @@
 package com.bankengine.pricing.dto;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,6 +25,8 @@ public class BundlePriceRequest {
     private LocalDate effectiveDate = LocalDate.now();
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ProductRequest {
         @NotNull
         private Long productId;

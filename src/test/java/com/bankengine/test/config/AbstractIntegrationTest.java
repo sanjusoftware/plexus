@@ -37,7 +37,7 @@ public abstract class AbstractIntegrationTest {
     protected static void seedBaseRoles(TestTransactionHelper txHelper, Map<String, Set<String>> roleMappings) {
         try {
             TenantContextHolder.setBankId(TEST_BANK_ID);
-            roleMappings.forEach(txHelper::createRoleInDb);
+            roleMappings.forEach(txHelper::getOrCreateRoleInDb);
             txHelper.flushAndClear();
         } finally {
             TenantContextHolder.clear();
