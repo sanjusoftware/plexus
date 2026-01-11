@@ -26,7 +26,6 @@ public interface ProductMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "productType", source = "productType")
     @Mapping(target = "name", source = "dto.name")
-    @Mapping(target = "bankId", source = "dto.bankId")
     @Mapping(target = "effectiveDate", source = "dto.effectiveDate")
     @Mapping(target = "expirationDate", source = "dto.expirationDate")
     @Mapping(target = "status", source = "dto.status")

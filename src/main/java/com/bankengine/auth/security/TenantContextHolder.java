@@ -4,9 +4,9 @@ package com.bankengine.auth.security;
  * ThreadLocal holder for the Bank ID of the current request.
  * Enforces security by distinguishing between User and System contexts.
  */
-public class BankContextHolder {
-    private static final ThreadLocal<String> CONTEXT = new ThreadLocal<>();
-    private static final ThreadLocal<Boolean> SYSTEM_MODE = ThreadLocal.withInitial(() -> false);
+public class TenantContextHolder {
+    private static final ThreadLocal<String> CONTEXT = new InheritableThreadLocal<>();
+    private static final ThreadLocal<Boolean> SYSTEM_MODE = InheritableThreadLocal.withInitial(() -> false);
 
     public static void setBankId(String bankId) {
         CONTEXT.set(bankId);
@@ -14,7 +14,6 @@ public class BankContextHolder {
 
     public static String getBankId() {
         String bankId = CONTEXT.get();
-        // Strict Enforcement: Block access if context is missing and not in system mode.
         if (bankId == null && !SYSTEM_MODE.get()) {
             throw new IllegalStateException("Bank ID is not set in the context. Access Denied.");
         }

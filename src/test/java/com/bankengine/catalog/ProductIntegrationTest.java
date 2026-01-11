@@ -1,7 +1,6 @@
 package com.bankengine.catalog;
 
-import com.bankengine.auth.config.test.WithMockRole;
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
@@ -17,6 +16,7 @@ import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.test.config.AbstractIntegrationTest;
+import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
@@ -25,40 +25,29 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Transactional
 public class ProductIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
-    private ProductRepository productRepository;
-    @Autowired
-    private ProductTypeRepository productTypeRepository;
-    @Autowired
-    private FeatureComponentRepository featureComponentRepository;
-    @Autowired
-    private PricingComponentRepository pricingComponentRepository;
-    @Autowired
-    private ProductFeatureLinkRepository featureLinkRepository;
-    @Autowired
-    private ProductPricingLinkRepository pricingLinkRepository;
-    @Autowired
-    private EntityManager entityManager;
-    @Autowired
-    private TestTransactionHelper txHelper;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private ProductTypeRepository productTypeRepository;
+    @Autowired private FeatureComponentRepository featureComponentRepository;
+    @Autowired private PricingComponentRepository pricingComponentRepository;
+    @Autowired private ProductFeatureLinkRepository featureLinkRepository;
+    @Autowired private ProductPricingLinkRepository pricingLinkRepository;
+    @Autowired private EntityManager entityManager;
+    @Autowired private TestTransactionHelper txHelper;
 
     private static Long EXISTING_PRODUCT_TYPE_ID;
     private final String PRODUCT_API_BASE = "/api/v1/products";
@@ -75,33 +64,33 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
                            @Autowired ProductFeatureLinkRepository featureLinkRepoStatic,
                            @Autowired ProductPricingLinkRepository pricingLinkRepoStatic) {
 
-        BankContextHolder.setBankId(TEST_BANK_ID);
+        seedBaseRoles(txHelperStatic, Map.of(
+            ADMIN_ROLE, Set.of("catalog:product:create", "catalog:product:read", "catalog:product:update", "catalog:product:activate", "catalog:product:deactivate"),
+            READER_ROLE, Set.of("catalog:product:read"),
+            UNAUTHORIZED_ROLE, Set.of("some:other:permission")
+        ));
+
         try {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelperStatic.doInTransaction(() -> {
                 featureLinkRepoStatic.deleteAllInBatch();
                 pricingLinkRepoStatic.deleteAllInBatch();
                 productRepoStatic.deleteAllInBatch();
                 productTypeRepoStatic.deleteAllInBatch();
-            });
 
-            txHelperStatic.createRoleInDb(ADMIN_ROLE, Set.of("catalog:product:create", "catalog:product:read", "catalog:product:update", "catalog:product:activate", "catalog:product:deactivate"));
-            txHelperStatic.createRoleInDb(READER_ROLE, Set.of("catalog:product:read"));
-            txHelperStatic.createRoleInDb(UNAUTHORIZED_ROLE, Set.of("some:other:permission"));
-
-            txHelperStatic.doInTransaction(() -> {
                 ProductType pt = new ProductType();
                 pt.setName("Base Checking Type");
-                pt.setBankId(TEST_BANK_ID);
                 EXISTING_PRODUCT_TYPE_ID = productTypeRepoStatic.save(pt).getId();
             });
         } finally {
-            BankContextHolder.clear();
+            TenantContextHolder.clear();
         }
     }
 
     @AfterEach
     void tearDown() {
         txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
             featureLinkRepository.deleteAllInBatch();
             pricingLinkRepository.deleteAllInBatch();
             productRepository.deleteAllInBatch();
@@ -109,14 +98,11 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         entityManager.clear();
     }
 
-    // =================================================================
-    // HELPER METHODS
-    // =================================================================
+    // --- Helpers ---
 
     private ProductRequest.ProductRequestBuilder defaultRequestBuilder() {
         return ProductRequest.builder()
                 .name("Standard Product Name")
-                .bankId(TEST_BANK_ID)
                 .productTypeId(EXISTING_PRODUCT_TYPE_ID)
                 .effectiveDate(LocalDate.now().plusDays(1))
                 .category("RETAIL")
@@ -137,33 +123,48 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         return createProductViaApi(defaultRequestBuilder().status(status).name(status + " Product").effectiveDate(date).build());
     }
 
-    private Long createProductType(String name) {
-        ProductType pt = new ProductType();
-        pt.setName(name);
-        pt.setBankId(TEST_BANK_ID);
-        return productTypeRepository.save(pt).getId();
-    }
-
     private void setupMultipleProductsForSearch() throws Exception {
+        // 1. Create standard products via API
         createProductViaApi(defaultRequestBuilder().status("DRAFT").name("Draft Product A").build());
         createProductViaApi(defaultRequestBuilder().status("ACTIVE").name("Active Checking").effectiveDate(LocalDate.now().minusDays(1)).build());
 
-        Long typeBId = createProductType("Type B");
-        createProductViaApi(defaultRequestBuilder().status("INACTIVE").name("Inactive Savings").productTypeId(typeBId).build());
-        createProductViaApi(defaultRequestBuilder().status("ACTIVE").name("Premium Card").build());
+        // 2. Setup "Type B" using find-or-create to avoid Unique Constraint violations
+        Long typeBId = txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            return productTypeRepository.findByName("Type B")
+                    .map(ProductType::getId)
+                    .orElseGet(() -> {
+                        ProductType ptB = new ProductType();
+                        ptB.setName("Type B");
+                        return productTypeRepository.save(ptB).getId();
+                    });
+        });
 
-        BankContextHolder.setBankId(OTHER_BANK_ID);
-        try {
-            Long foreignTypeId = createProductType("Foreign Type X");
-            createProductViaApi(defaultRequestBuilder().bankId(OTHER_BANK_ID).name("Foreign Product 1").productTypeId(foreignTypeId).status("ACTIVE").build());
-            createProductViaApi(defaultRequestBuilder().bankId(OTHER_BANK_ID).name("Foreign Product 2").productTypeId(foreignTypeId).status("DRAFT").build());
-        } finally {
-            BankContextHolder.clear();
-        }
+        // 3. Create products for Type B
+        createProductViaApi(defaultRequestBuilder()
+                .status("INACTIVE")
+                .name("Inactive Savings")
+                .productTypeId(typeBId)
+                .build());
+
+        createProductViaApi(defaultRequestBuilder()
+                .status("ACTIVE")
+                .name("Premium Card")
+                .build());
+
+        // 4. Setup Foreign Bank Data (Find or Create)
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(OTHER_BANK_ID);
+            if (productTypeRepository.findByName("Foreign Type X").isEmpty()) {
+                ProductType ptForeign = new ProductType();
+                ptForeign.setName("Foreign Type X");
+                productTypeRepository.save(ptForeign);
+            }
+        });
     }
 
     // =================================================================
-    // SECURITY & AUTHENTICATION TESTS
+    // 1. SECURITY & AUTHENTICATION
     // =================================================================
 
     @Test
@@ -186,7 +187,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     }
 
     // =================================================================
-    // CREATE (POST) & READ (GET) TESTS
+    // 2. CREATE (POST) & READ (GET)
     // =================================================================
 
     @Test
@@ -236,16 +237,16 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     }
 
     // =================================================================
-    // METADATA UPDATE (PUT) TESTS
+    // 3. METADATA UPDATE (PUT)
     // =================================================================
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldUpdateMetadataWhenProductIsDraft() throws Exception {
         Long productId = createProductViaApi("DRAFT");
-        ProductRequest updateDto = defaultRequestBuilder().name("Updated Name").bankId("BC-002").build();
+        ProductRequest updateDto = defaultRequestBuilder().name("Updated Name").build();
 
-        mockMvc.perform(put(PRODUCT_API_BASE + "/{id}", productId)
+        mockMvc.perform(put(PRODUCT_API_BASE + "/{productId}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -275,7 +276,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     }
 
     // =================================================================
-    // LIFECYCLE ACTIONS (ACTIVATE/DEACTIVATE/EXTEND)
+    // 4. LIFECYCLE ACTIONS
     // =================================================================
 
     @Test
@@ -321,26 +322,25 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     }
 
     // =================================================================
-    // FEATURES & PRICING SYNC TESTS
+    // 5. FEATURES & PRICING SYNC
     // =================================================================
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldSyncProductFeatures() throws Exception {
         Long productId = createProductViaApi("DRAFT");
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            FeatureComponent feature = new FeatureComponent("Feature 1", FeatureComponent.DataType.STRING);
+            featureComponentRepository.save(feature);
+        });
 
-        FeatureComponent feature = new FeatureComponent("Feature 1", FeatureComponent.DataType.STRING);
-        feature.setBankId(TEST_BANK_ID);
-        feature = featureComponentRepository.save(feature);
-
-        ProductFeature featureReq = ProductFeature.builder()
-                .featureComponentId(feature.getId())
-                .featureValue("Value 1")
-                .build();
+        FeatureComponent fc = txHelper.doInTransaction(() -> featureComponentRepository.findByName("Feature 1").get());
+        ProductFeature req = ProductFeature.builder().featureComponentId(fc.getId()).featureValue("Value 1").build();
 
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/features", productId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(featureReq))))
+                        .content(objectMapper.writeValueAsString(List.of(req))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.features[0].featureName").value("Feature 1"));
     }
@@ -349,75 +349,55 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldSyncProductPricing() throws Exception {
         Long productId = createProductViaApi("DRAFT");
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            PricingComponent pricing = new PricingComponent("Pricing 1", PricingComponent.ComponentType.FEE);
+            pricingComponentRepository.save(pricing);
+        });
 
-        PricingComponent pricing = new PricingComponent("Pricing 1", PricingComponent.ComponentType.FEE);
-        pricing.setBankId(TEST_BANK_ID);
-        pricing = pricingComponentRepository.save(pricing);
-
-        ProductPricing pricingReq = ProductPricing.builder()
-                .pricingComponentId(pricing.getId())
-                .context("DEFAULT")
-                .build();
+        PricingComponent pc = txHelper.doInTransaction(() -> pricingComponentRepository.findByName("Pricing 1").get());
+        ProductPricing req = ProductPricing.builder().pricingComponentId(pc.getId()).context("DEFAULT").build();
 
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/pricing", productId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(pricingReq))))
+                        .content(objectMapper.writeValueAsString(List.of(req))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pricing.length()").value(1))
                 .andExpect(jsonPath("$.pricing[0].pricingComponentName").value("Pricing 1"));
     }
 
     // =================================================================
-    // VERSIONING TESTS
+    // 6. VERSIONING
     // =================================================================
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldCloneFeaturesAndPricingWhenCreatingNewVersion() throws Exception {
         Long oldProductId = createProductViaApi("ACTIVE");
-        Product oldProduct = productRepository.findById(oldProductId).orElseThrow();
 
-        // 1. Setup Feature
-        FeatureComponent feature = new FeatureComponent("Premium Support", FeatureComponent.DataType.STRING);
-        feature.setBankId(TEST_BANK_ID);
-        feature = featureComponentRepository.save(feature);
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            Product oldProduct = productRepository.findById(oldProductId).orElseThrow();
 
-        ProductFeatureLink featureLink = new ProductFeatureLink(oldProduct, feature, "Included");
-        featureLink.setBankId(TEST_BANK_ID);
-        featureLinkRepository.save(featureLink);
+            FeatureComponent fc = featureComponentRepository.save(new FeatureComponent("Premium Support", FeatureComponent.DataType.STRING));
+            featureLinkRepository.save(new ProductFeatureLink(oldProduct, fc, "Included"));
 
-        // 2. Setup Pricing (THIS WAS MISSING THE LINK)
-        PricingComponent pricing = new PricingComponent("Monthly Fee", PricingComponent.ComponentType.FEE);
-        pricing.setBankId(TEST_BANK_ID);
-        pricing = pricingComponentRepository.save(pricing);
+            PricingComponent pc = pricingComponentRepository.save(new PricingComponent("Monthly Fee", PricingComponent.ComponentType.FEE));
+            ProductPricingLink pLink = new ProductPricingLink();
+            pLink.setProduct(oldProduct); pLink.setPricingComponent(pc); pLink.setContext("Retail"); pLink.setUseRulesEngine(false);
+            pricingLinkRepository.save(pLink);
+        });
 
-        // Create the link for the old product so the service has something to clone
-        ProductPricingLink pricingLink = new ProductPricingLink();
-        pricingLink.setProduct(oldProduct);
-        pricingLink.setPricingComponent(pricing);
-        pricingLink.setContext("Retail");
-        pricingLink.setBankId(TEST_BANK_ID);
-        pricingLink.setUseRulesEngine(false);
-        pricingLinkRepository.save(pricingLink);
+        LocalDate newDate = LocalDate.now().plusMonths(3);
+        ProductVersionRequest versionDto = new ProductVersionRequest("Checking Account V2", newDate);
 
-        // Sync to DB
-        entityManager.flush();
-        entityManager.clear();
+        String response = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProductId)
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(versionDto)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
 
-        // 3. Execute Versioning
-        LocalDate newEffectiveDate = LocalDate.now().plusMonths(3);
-        ProductVersionRequest versionDto = new ProductVersionRequest("Checking Account V2", newEffectiveDate);
+        Long newId = objectMapper.readValue(response, ProductResponse.class).getId();
 
-        String responseJson = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldProductId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(versionDto)))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-
-        Long newProductId = objectMapper.readValue(responseJson, ProductResponse.class).getId();
-
-        // 4. Assertions
-        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", newProductId))
+        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", newId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.features.length()").value(1))
                 .andExpect(jsonPath("$.pricing.length()").value(1))
@@ -429,7 +409,14 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         // 5. Verify Archival
         mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProductId))
                 .andExpect(jsonPath("$.status").value("ARCHIVED"))
-                .andExpect(jsonPath("$.expirationDate").value(newEffectiveDate.minusDays(1).toString()));
+                .andExpect(jsonPath("$.expirationDate").value(newDate.minusDays(1).toString()));
+        // Verify Archival of old
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            Product old = productRepository.findById(oldProductId).orElseThrow();
+            assertThat(old.getStatus()).isEqualTo("ARCHIVED");
+        });
+
     }
 
     @Test
@@ -437,27 +424,25 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     void shouldCreateNewVersionWhenActiveProductIsVersioned() throws Exception {
         Long oldId = createProductViaApi("ACTIVE");
         ProductVersionRequest dto = new ProductVersionRequest("V2", LocalDate.now().plusMonths(1));
-
         mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", oldId)
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
+                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldId))
-                .andExpect(jsonPath("$.status").value("ARCHIVED"));
+        mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldId)).andExpect(jsonPath("$.status").value("ARCHIVED"));
     }
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn409WhenVersioningDraftProduct() throws Exception {
-        Long productId = createProductViaApi("DRAFT");
+        Long id = createProductViaApi("DRAFT");
         ProductVersionRequest dto = new ProductVersionRequest("Fail", LocalDate.now());
-        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", productId)
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
+        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/new-version", id)
+                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isConflict());
     }
 
     // =================================================================
-    // SEARCH & FILTERING TESTS
+    // 7. SEARCH & FILTERING
     // =================================================================
 
     @Test
@@ -479,7 +464,11 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldFilterProductsByBankIdAndProductType() throws Exception {
-        Long typeCId = createProductType("Type C");
+        Long typeCId = txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            ProductType pt = new ProductType(); pt.setName("Type C");
+            return productTypeRepository.save(pt).getId();
+        });
         createProductViaApi(defaultRequestBuilder().name("Target").productTypeId(typeCId).build());
 
         mockMvc.perform(get(PRODUCT_API_BASE).param("bankId", TEST_BANK_ID).param("productTypeId", typeCId.toString()))

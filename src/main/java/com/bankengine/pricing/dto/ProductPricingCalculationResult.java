@@ -10,11 +10,7 @@ import java.util.List;
 @Data
 @Builder
 public class ProductPricingCalculationResult {
-
-    // The final number for the caller to apply
     private BigDecimal finalChargeablePrice;
-
-    // Breakdown for customers and debugging
     private List<PriceComponentDetail> componentBreakdown;
 
     @Data

@@ -35,7 +35,7 @@ public class ProductTypeController {
             description = "Returns a list of all high-level product categories used in the bank's catalog. Useful for populating dropdowns.")
     @ApiResponse(responseCode = "200", description = "List of product types successfully retrieved.",
             content = @Content(mediaType = "application/json",
-                    schema = @Schema(implementation = ProductType.class))) // NOTE: Using the Entity class as the response schema
+                    schema = @Schema(implementation = ProductType.class)))
     @GetMapping
     @PreAuthorize("hasAuthority('catalog:product-type:read')")
     public ResponseEntity<List<ProductType>> getAllProductTypes() {
@@ -44,18 +44,16 @@ public class ProductTypeController {
         return ResponseEntity.ok(productTypes);
     }
 
-    // --- POST /api/v1/product-types (New Method) ---
     @Operation(summary = "Create a new product type",
             description = "Adds a new high-level product category to the catalog.")
     @ApiResponse(responseCode = "201", description = "Product Type successfully created.",
             content = @Content(mediaType = "application/json",
-                    schema = @Schema(implementation = ProductType.class)))
-    @ApiResponse(responseCode = "400", description = "Validation error (e.g., name constraints violated).")
+                    schema = @Schema(implementation = ProductTypeDto.class)))
+    @ApiResponse(responseCode = "400", description = "Validation error.")
     @PostMapping
     @PreAuthorize("hasAuthority('catalog:product-type:create')")
     public ResponseEntity<ProductType> createProductType(@Valid @RequestBody ProductTypeDto requestDto) {
         ProductType createdType = productTypeService.createProductType(requestDto);
-        // Returns 201 Created
         return new ResponseEntity<>(createdType, HttpStatus.CREATED);
     }
 }

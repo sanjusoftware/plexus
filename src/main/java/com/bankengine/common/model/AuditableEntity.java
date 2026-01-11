@@ -1,6 +1,6 @@
 package com.bankengine.common.model;
 
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
@@ -52,7 +52,7 @@ public abstract class AuditableEntity {
     @PrePersist
     public void prePersist() {
         if (this.bankId == null) {
-            this.bankId = BankContextHolder.getBankId();
+            this.bankId = TenantContextHolder.getBankId();
         }
     }
 }

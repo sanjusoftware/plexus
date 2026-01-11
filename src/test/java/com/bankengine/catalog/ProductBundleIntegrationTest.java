@@ -1,7 +1,6 @@
 package com.bankengine.catalog;
 
-import com.bankengine.auth.config.test.WithMockRole;
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.dto.ProductBundleRequest;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.common.model.BankConfiguration;
@@ -9,6 +8,7 @@ import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
+import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -42,15 +43,18 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeAll
     static void initSecurity(@Autowired TestTransactionHelper tx) {
-        BankContextHolder.setBankId(TEST_BANK_ID);
-        tx.createRoleInDb(BUNDLE_ADMIN, Set.of("catalog:bundle:create"));
-        tx.flushAndClear();
-        BankContextHolder.clear();
+        seedBaseRoles(tx, Map.of(
+            BUNDLE_ADMIN, Set.of("catalog:bundle:create")
+        ));
     }
 
     @BeforeEach
     void setupData() {
         txHelper.doInTransaction(() -> {
+            // Re-assert context for the transaction thread
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+
+            // 1. Setup Bank Configuration with Conflict Rules
             bankConfigRepository.findByBankId(TEST_BANK_ID)
                     .ifPresentOrElse(
                             existing -> {
@@ -68,13 +72,12 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
                                 bankConfigRepository.save(config);
                             }
                     );
+
+            // 2. Setup Products
+            ProductType type = txHelper.getOrCreateProductType("Integration Test Type");
+            retailProductId = txHelper.getOrCreateProduct("Retail Savings", type, "RETAIL").getId();
+            wealthProductId = txHelper.getOrCreateProduct("Wealth Investment", type, "WEALTH").getId();
         });
-
-        // 2. Use the new DRY DSL from TestTransactionHelper
-        ProductType type = txHelper.getOrCreateProductType("Integration Test Type");
-
-        retailProductId = txHelper.getOrCreateProduct("Retail Savings", type, "RETAIL").getId();
-        wealthProductId = txHelper.getOrCreateProduct("Wealth Investment", type, "WEALTH").getId();
 
         txHelper.flushAndClear();
     }

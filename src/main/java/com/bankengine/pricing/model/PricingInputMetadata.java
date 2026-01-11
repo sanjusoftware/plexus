@@ -40,10 +40,10 @@ public class PricingInputMetadata extends AuditableEntity {
     public String getFqnType() {
         return switch (dataType.toUpperCase()) {
             case "DECIMAL" -> "java.math.BigDecimal";
-            case "INTEGER" -> "java.lang.Long"; // Use Long for integer types in the map
+            case "INTEGER" -> "java.lang.Long";
             case "BOOLEAN" -> "java.lang.Boolean";
             case "DATE"    -> "java.time.LocalDate";
-            default -> "java.lang.String"; // Default to String (no casting needed for Map.get)
+            default -> "java.lang.String";
         };
     }
 }

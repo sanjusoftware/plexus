@@ -27,13 +27,7 @@ public class RuleManagementController {
             description = "Fetches the latest PricingComponent configuration from the database, generates the DRL, compiles the new KieContainer, and swaps it into the running application. Use this after configuration changes.")
     @PostMapping("/reload")
     public ResponseEntity<String> reloadRules() {
-        boolean success = reloadService.reloadKieContainer();
-
-        if (success) {
-            return ResponseEntity.ok("✅ Drools KieContainer reloaded successfully with latest database rules.");
-        } else {
-            // The reloadService logs the exact compilation error
-            return ResponseEntity.status(500).body("❌ Rule reload failed. Check server logs for DRL compilation errors.");
-        }
+        reloadService.reloadKieContainer();
+        return ResponseEntity.ok("✅ Drools KieContainer reloaded successfully with latest database rules.");
     }
 }

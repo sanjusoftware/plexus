@@ -1,6 +1,5 @@
 package com.bankengine.catalog.service;
 
-import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
@@ -8,6 +7,7 @@ import com.bankengine.common.exception.ValidationException;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.repository.BankConfigurationRepository;
+import com.bankengine.common.service.BaseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,22 +16,21 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class CatalogConstraintService {
+public class CatalogConstraintService extends BaseService {
 
     private final BankConfigurationRepository bankConfigurationRepository;
     private final BundleProductLinkRepository bundleProductLinkRepository;
 
     /**
-     * Checks if a Product is already in a bundle, using the Bank ID from the Context Holder.
+     * Checks if a Product is already in a bundle.
      */
     public void validateProductCanBeBundled(Long productId) {
-
-        String currentBankId = BankContextHolder.getBankId();
+        String currentBankId = getCurrentBankId();
 
         // 1. Check Bank Configuration (Dynamic Flag)
         boolean allowMultiBundle = bankConfigurationRepository.findByBankId(currentBankId)
-                .map(config -> config.isAllowProductInMultipleBundles())
-                .orElse(false); // Default to strict (false) if config is missing
+                .map(BankConfiguration::isAllowProductInMultipleBundles)
+                .orElse(false);
 
         if (allowMultiBundle) {
             return;
@@ -44,18 +43,17 @@ public class CatalogConstraintService {
             String existingBundleCode = existingLink.get().getProductBundle().getCode();
 
             throw new ValidationException(
-                    String.format("Product ID %d is already assigned to Bundle %s. Bank configuration (%s) prevents a product from being included in multiple bundles.",
+                    String.format("Product ID %d is already assigned to Bundle %s. Configuration for bank %s prevents multi-bundling.",
                             productId, existingBundleCode, currentBankId)
             );
         }
     }
 
     /**
-     * Ensures the product being added doesn't conflict with existing products
-     * based on Bank-specific category rules.
+     * Ensures the product being added doesn't conflict with existing products.
      */
     public void validateCategoryCompatibility(Product newProduct, List<Product> existingProducts) {
-        String currentBankId = BankContextHolder.getBankId();
+        String currentBankId = getCurrentBankId();
         String newCategory = newProduct.getCategory();
 
         // Fetch the specific bank's conflict rules
@@ -72,8 +70,8 @@ public class CatalogConstraintService {
 
             if (isConflicting) {
                 throw new ValidationException(String.format(
-                        "Conflict: Category '%s' cannot be bundled with category '%s' for this bank.",
-                        newCategory, existingCategory));
+                        "Conflict: Category '%s' cannot be bundled with category '%s' for bank %s.",
+                        newCategory, existingCategory, currentBankId));
             }
         }
     }

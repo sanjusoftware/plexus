@@ -1,7 +1,7 @@
 package com.bankengine.pricing.repository;
 
+import com.bankengine.common.repository.TenantRepository;
 import com.bankengine.pricing.model.PricingInputMetadata;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Repository
-public interface PricingInputMetadataRepository extends JpaRepository<PricingInputMetadata, Long> {
+public interface PricingInputMetadataRepository extends TenantRepository<PricingInputMetadata, Long> {
 
     /**
      * Finds a single metadata record based on the unique attribute key (e.g., "customerSegment").

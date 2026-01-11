@@ -1,6 +1,6 @@
 package com.bankengine.pricing.service;
 
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.PriceRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class PricingCalculationService {
+public class PricingCalculationService extends BaseService {
 
     private final KieContainerReloadService kieContainerReloadService;
     private final ProductPricingLinkRepository productPricingLinkRepository;
@@ -34,7 +34,6 @@ public class PricingCalculationService {
 
     @Transactional(readOnly = true)
     public ProductPricingCalculationResult getProductPricing(PriceRequest request) {
-        String bankId = BankContextHolder.getBankId();
         List<ProductPricingLink> links = productPricingLinkRepository.findByProductId(request.getProductId());
 
         if (links.isEmpty()) {
@@ -54,7 +53,7 @@ public class PricingCalculationService {
         // 2. Collect Rules Engine Pricing
         boolean hasRules = links.stream().anyMatch(ProductPricingLink::isUseRulesEngine);
         if (hasRules) {
-            Collection<PriceValue> ruleFacts = determinePriceWithDrools(request, bankId);
+            Collection<PriceValue> ruleFacts = determinePriceWithDrools(request);
             ruleFacts.stream()
                     .map(this::mapFactToDetail)
                     .forEach(allComponents::add);
@@ -69,15 +68,15 @@ public class PricingCalculationService {
                 .build();
     }
 
-    private Collection<PriceValue> determinePriceWithDrools(PriceRequest request, String bankId) {
+    private Collection<PriceValue> determinePriceWithDrools(PriceRequest request) {
         KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
 
         PricingInput input = new PricingInput();
+        input.setBankId(getCurrentBankId());
         input.setCustomAttributes(new HashMap<>());
         input.getCustomAttributes().put(PRODUCT_ID_KEY, request.getProductId());
         input.getCustomAttributes().put(CUSTOMER_SEGMENT_KEY, request.getCustomerSegment());
         input.getCustomAttributes().put(TRANSACTION_AMOUNT_KEY, request.getAmount());
-        input.getCustomAttributes().put(BANK_ID_KEY, bankId);
 
         if (request.getCustomAttributes() != null) {
             input.getCustomAttributes().putAll(request.getCustomAttributes());
@@ -87,7 +86,6 @@ public class PricingCalculationService {
             kieSession.insert(input);
             kieSession.fireAllRules();
 
-            // The "Safe Copy" fix we implemented earlier
             return kieSession.getObjects(new org.kie.api.runtime.ClassObjectFilter(PriceValue.class))
                     .stream()
                     .filter(PriceValue.class::isInstance)

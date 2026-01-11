@@ -2,7 +2,7 @@ package com.bankengine.data.seeding;
 
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.catalog.model.*;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
@@ -88,9 +88,9 @@ public class TestDataSeeder implements CommandLineRunner {
         TestDataSeeder proxy = applicationContext.getBean(TestDataSeeder.class);
 
         for (String bankId : List.of(BANK_A, BANK_B)) {
-            BankContextHolder.setSystemMode(true);
+            TenantContextHolder.setSystemMode(true);
             System.out.println("\n--- Seeding Tenant: " + bankId + " ---");
-            BankContextHolder.setBankId(bankId);
+            TenantContextHolder.setBankId(bankId);
 
             proxy.seedBankConfiguration(bankId);
             proxy.seedTestRoles(bankId);
@@ -100,7 +100,7 @@ public class TestDataSeeder implements CommandLineRunner {
             proxy.seedPricingComponentsAndLinks(bankId);
             proxy.seedBundles(bankId);
 
-            BankContextHolder.clear();
+            TenantContextHolder.clear();
         }
         System.out.println("\n--- Seeding Complete ---");
     }

@@ -11,8 +11,8 @@ public class ProductSearchRequest {
 
     // Metadata Filters
     private String name; // Partial match (like %name%)
-    private String bankId;
     private Long productTypeId;
+    private String category;
 
     // Status Filter
     private String status; // e.g., "ACTIVE", "DRAFT", "INACTIVE", "ARCHIVED"

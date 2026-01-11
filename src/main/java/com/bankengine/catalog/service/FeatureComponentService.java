@@ -7,8 +7,8 @@ import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
+import com.bankengine.common.service.BaseService;
 import com.bankengine.web.exception.DependencyViolationException;
-import com.bankengine.web.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class FeatureComponentService {
+public class FeatureComponentService extends BaseService {
 
     private final FeatureComponentRepository componentRepository;
     private final ProductFeatureLinkRepository linkRepository;
@@ -41,6 +41,7 @@ public class FeatureComponentService {
         FeatureComponent component = featureComponentMapper.toEntity(requestDto);
 
         try {
+            component.setBankId(getCurrentBankId());
             component.setDataType(DataType.valueOf(requestDto.getDataType().toUpperCase()));
         } catch (IllegalArgumentException e) {
             // This is still a client error (bad data type string) -> 400 Bad Request
@@ -56,8 +57,7 @@ public class FeatureComponentService {
      * Retrieves a Feature Component by its ID, throwing NotFoundException if absent.
      */
     public FeatureComponent getFeatureComponentById(Long id) {
-        return componentRepository.findById(id)
-            .orElseThrow(() -> new NotFoundException("Feature Component not found with ID: " + id));
+        return getByIdSecurely(componentRepository, id, "Feature Component");
     }
 
     /**
@@ -65,9 +65,7 @@ public class FeatureComponentService {
      */
     @Transactional(readOnly = true)
     public List<FeatureComponentResponse> getAllFeatures() {
-        List<FeatureComponent> components = componentRepository.findAll();
-
-        return components.stream()
+        return componentRepository.findAll().stream()
                 .map(featureComponentMapper::toResponseDto)
                 .collect(Collectors.toList());
     }
@@ -77,8 +75,7 @@ public class FeatureComponentService {
      */
     @Transactional(readOnly = true)
     public FeatureComponentResponse getFeatureResponseById(Long id) {
-        FeatureComponent component = getFeatureComponentById(id);
-        return featureComponentMapper.toResponseDto(component);
+        return featureComponentMapper.toResponseDto(getFeatureComponentById(id));
     }
 
     /**
@@ -104,8 +101,7 @@ public class FeatureComponentService {
         }
 
         // 4. Save and convert
-        FeatureComponent updatedComponent = componentRepository.save(component);
-        return featureComponentMapper.toResponseDto(updatedComponent);
+        return featureComponentMapper.toResponseDto(componentRepository.save(component));
     }
 
     /**

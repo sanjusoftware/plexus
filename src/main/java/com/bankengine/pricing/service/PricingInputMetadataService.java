@@ -1,5 +1,6 @@
 package com.bankengine.pricing.service;
 
+import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.converter.PricingInputMetadataMapper;
 import com.bankengine.pricing.dto.PricingMetadataDto;
 import com.bankengine.pricing.model.PricingInputMetadata;
@@ -19,7 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class PricingInputMetadataService {
+public class PricingInputMetadataService extends BaseService {
 
     private final PricingInputMetadataRepository pricingInputMetadataRepository;
     private final TierConditionRepository tierConditionRepository;

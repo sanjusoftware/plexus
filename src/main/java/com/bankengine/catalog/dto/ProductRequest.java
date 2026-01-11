@@ -20,9 +20,6 @@ public class ProductRequest {
     @Size(min = 3, max = 100, message = "Name must be between 3 and 100 characters.")
     private String name;
 
-    @NotBlank(message = "Bank ID is required.")
-    private String bankId;
-
     @NotNull(message = "Product Type ID is required.")
     private Long productTypeId;
 

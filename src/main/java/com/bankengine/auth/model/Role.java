@@ -28,15 +28,11 @@ public class Role extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    @Column(name = "bank_id", nullable = true)
-    private String bankId;
-
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "role_authority",
             joinColumns = @JoinColumn(name = "role_id")
     )
-
     @Column(name = "authority_name", nullable = false, length = 100)
     private Set<String> authorities;
 }

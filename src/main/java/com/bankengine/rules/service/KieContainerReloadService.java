@@ -1,6 +1,6 @@
 package com.bankengine.rules.service;
 
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.config.drools.DroolsKieModuleBuilder;
 import com.bankengine.pricing.service.BundleRuleBuilderService;
 import com.bankengine.pricing.service.ProductRuleBuilderService;
@@ -39,87 +39,58 @@ public class KieContainerReloadService {
         this.moduleBuilder = moduleBuilder;
     }
 
-    /**
-     * Retrieves the currently active KieContainer.
-     * @return The active KieContainer.
-     */
     public KieContainer getKieContainer() {
         return activeKieContainer.get();
     }
 
-    // -------------------------------------------------------------------------
-    // Worker Method (Relies on existing BankContextHolder for filtering)
-    // -------------------------------------------------------------------------
-
     /**
      * Fetches rules from the DB, compiles the DRL, and swaps the active KieContainer.
-     * This method relies on the current thread having the correct bankId set
-     * in the BankContextHolder.
-     * @return true if compilation was successful, false otherwise.
+     * Throws RuntimeException if compilation fails.
      */
     @Transactional(readOnly = true)
-    public boolean reloadKieContainer() {
+    public void reloadKieContainer() {
         KieServices kieServices = KieServices.Factory.get();
 
         try {
-            // 1. Fetch DRL content from the database. The @Transactional proxy now
-            //    runs, starting a transaction and enabling the Hibernate filter.
             String productRuleContent = productRuleBuilderService.buildAllRulesForCompilation();
             String bundleRuleContent = bundleRuleBuilderService.buildAllRulesForCompilation();
 
-            // 2. Prepare content map
             Map<String, String> drlContent = Map.of(
                     DroolsKieModuleBuilder.PRODUCT_RULES_PATH, productRuleContent,
                     DroolsKieModuleBuilder.BUNDLE_RULES_PATH, bundleRuleContent
             );
 
-            // 3. Delegate the build, installation, and error checking
             ReleaseId releaseId = moduleBuilder.buildAndInstallKieModule(drlContent);
-
-            // 4. Create the new container and swap the reference (thread-safe update)
             KieContainer newContainer = kieServices.newKieContainer(releaseId);
             activeKieContainer.set(newContainer);
 
-            System.out.println("✅ Drools KieContainer successfully reloaded with new rules.");
-            return true;
+            System.out.println("✅ Drools KieContainer successfully reloaded.");
 
         } catch (RuntimeException e) {
             System.err.println("❌ DROOLS COMPILATION ERROR during reload!");
-            System.err.println(e.getMessage());
-            return false;
+            throw e; // Rethrow to trigger rollback and notify caller
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Overloaded Method (For Test/Manual Context Override)
-    // -------------------------------------------------------------------------
-
     /**
      * Overload to execute rule reload within a specific bank context.
-     * This is intended for integration tests or maintenance calls where the
-     * BankContextHolder may not be correctly set by the request flow.
+     * Changed return type to void to match the worker method.
      *
      * @param bankId The bankId to use for the rule compilation database read.
-     * @return true if compilation was successful, false otherwise.
      */
-    public boolean reloadKieContainer(String bankId) {
+    public void reloadKieContainer(String bankId) {
         if (bankId == null) {
-            // Use 'self' to call the transactional method
-            return self.reloadKieContainer();
+            self.reloadKieContainer();
+            return;
         }
 
-        // 1. SAVE the current context (CRITICAL for thread safety)
-        String previousBankId = BankContextHolder.getBankId();
+        String previousBankId = TenantContextHolder.getBankId();
         try {
-            // 2. SET the required bankId for the DB read
-            BankContextHolder.setBankId(bankId);
-
-            // 3. Delegate to the worker method using the proxy
-            return self.reloadKieContainer(); // <-- Use 'self' here
-
+            TenantContextHolder.setBankId(bankId);
+            // Use 'self' proxy to ensure @Transactional on the worker method is honored
+            self.reloadKieContainer();
         } finally {
-            // 4. RESTORE the original context (CRITICAL)
-            BankContextHolder.setBankId(previousBankId);
+            TenantContextHolder.setBankId(previousBankId);
         }
     }
 }

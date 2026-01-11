@@ -12,7 +12,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
-public class BankContextFilter extends OncePerRequestFilter {
+public class TenantContextFilter extends OncePerRequestFilter {
 
     private final SecurityContext securityContext;
 
@@ -23,19 +23,13 @@ public class BankContextFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            // 1. Fetch the Bank ID from the current authenticated JWT principal
             String bankId = securityContext.getCurrentBankId();
-
-            // 2. Set the Bank ID in the static ThreadLocal holder
-            BankContextHolder.setBankId(bankId);
-
+            TenantContextHolder.setBankId(bankId);
             filterChain.doFilter(request, response);
         } catch (IllegalStateException e) {
-            // Log the failure, but still allow filter chain to proceed for public endpoints
             filterChain.doFilter(request, response);
         } finally {
-            // CRITICAL: Always clear the context after the request completes
-            BankContextHolder.clear();
+            TenantContextHolder.clear();
         }
     }
 }

@@ -6,6 +6,7 @@ import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
+import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class FeatureComponentServiceTest {
+public class FeatureComponentServiceTest extends BaseServiceTest {
 
     @Mock
     private FeatureComponentRepository componentRepository;

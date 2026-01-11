@@ -1,5 +1,6 @@
 package com.bankengine.pricing.service;
 
+import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.converter.PriceValueMapper;
 import com.bankengine.pricing.converter.PricingComponentMapper;
 import com.bankengine.pricing.converter.PricingTierMapper;
@@ -15,7 +16,6 @@ import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class PricingComponentService {
+public class PricingComponentService extends BaseService {
 
     private final PricingComponentRepository componentRepository;
     private final PricingTierRepository tierRepository;
@@ -63,8 +63,7 @@ public class PricingComponentService {
      * Retrieves a PricingTier entity by ID.
      */
     public PricingTier getPricingTierById(Long id) {
-        return tierRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Pricing Tier not found with ID: " + id));
+        return getByIdSecurely(tierRepository, id, "Pricing Tier");
     }
 
     /**
@@ -85,11 +84,7 @@ public class PricingComponentService {
         updateTierConditions(tier, dto.getTier().getConditions());
         priceValueMapper.updateFromDto(dto.getValue(), value);
 
-        try {
-            value.setValueType(PriceValue.ValueType.valueOf(dto.getValue().getValueType().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid value type provided: " + dto.getValue().getValueType());
-        }
+        setValueType(dto.getValue(), value);
 
         tierRepository.save(tier);
         PriceValue savedValue = valueRepository.save(value);
@@ -106,6 +101,7 @@ public class PricingComponentService {
                 .map(dto -> {
                     TierCondition condition = tierConditionMapper.toEntity(dto);
                     condition.setPricingTier(tier);
+                    condition.setBankId(getCurrentBankId());
                     return condition;
                 })
                 .collect(Collectors.toSet());
@@ -113,10 +109,10 @@ public class PricingComponentService {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void deleteTierAndValue(Long componentId, Long tierId) {
         getPricingComponentById(componentId);
-        getTierById(tierId);
+        getPricingTierById(tierId);
         tierConditionRepository.deleteByPricingTierId(tierId);
         valueRepository.deleteByPricingTierId(tierId);
         tierRepository.deleteById(tierId);
@@ -129,13 +125,14 @@ public class PricingComponentService {
     }
 
     public PricingComponent getPricingComponentById(Long id) {
-        return componentRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Pricing Component not found with ID: " + id));
+        return getByIdSecurely(componentRepository, id, "Pricing Component");
     }
 
     @Transactional
     public PricingComponentResponse createComponent(PricingComponentRequest requestDto) {
         PricingComponent component = pricingComponentMapper.toEntity(requestDto);
+        component.setBankId(getCurrentBankId());
+
         try {
             component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
         } catch (IllegalArgumentException e) {
@@ -171,7 +168,7 @@ public class PricingComponentService {
         return pricingComponentMapper.toResponseDto(updatedComponent);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void deletePricingComponent(Long id) {
         PricingComponent component = getPricingComponentById(id);
         long tierCount = tierRepository.countByPricingComponentId(id);
@@ -189,22 +186,22 @@ public class PricingComponentService {
     /**
      * Links a new Tier and its Price Value to an existing Pricing Component.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public ProductPricingCalculationResult.PriceComponentDetail addTierAndValue(
             Long componentId,
             PricingTierRequest tierDto,
             PriceValueRequest valueDto) {
-
         PricingComponent component = getPricingComponentById(componentId);
+        String bankId = getCurrentBankId();
+
         PricingTier tier = pricingTierMapper.toEntity(tierDto);
         tier.setPricingComponent(component);
-        PriceValue value = priceValueMapper.toEntity(valueDto);
+        tier.setBankId(bankId);
 
-        try {
-            value.setValueType(PriceValue.ValueType.valueOf(valueDto.getValueType().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid value type provided: " + valueDto.getValueType());
-        }
+        PriceValue value = priceValueMapper.toEntity(valueDto);
+        value.setBankId(bankId);
+
+        setValueType(valueDto, value);
 
         value.setPricingTier(tier);
         tier.setPriceValues(Set.of(value));
@@ -214,6 +211,7 @@ public class PricingComponentService {
                     .map(dto -> {
                         TierCondition condition = tierConditionMapper.toEntity(dto);
                         condition.setPricingTier(tier);
+                        condition.setBankId(bankId);
                         return condition;
                     })
                     .collect(Collectors.toSet());
@@ -221,10 +219,19 @@ public class PricingComponentService {
         }
 
         PricingTier savedTier = tierRepository.save(tier);
-        PriceValue savedValue = valueRepository.findByPricingTierId(savedTier.getId())
-                .orElseThrow(() -> new RuntimeException("PriceValue not found after save."));
+        Long tierId = savedTier.getId();
+        PriceValue savedValue = valueRepository.findByPricingTierId(tierId)
+                .orElseThrow(() -> new RuntimeException("Price Value not found for Tier: " + tierId));
 
         reloadService.reloadKieContainer();
         return priceValueMapper.toResponseDto(savedValue);
+    }
+
+    private static void setValueType(PriceValueRequest valueDto, PriceValue value) {
+        try {
+            value.setValueType(PriceValue.ValueType.valueOf(valueDto.getValueType().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid value type provided: " + valueDto.getValueType());
+        }
     }
 }

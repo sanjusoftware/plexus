@@ -1,11 +1,11 @@
 package com.bankengine.catalog.repository;
 
 import com.bankengine.catalog.model.BundleProductLink;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.bankengine.common.repository.TenantRepository;
 
 import java.util.Optional;
 
-public interface BundleProductLinkRepository extends JpaRepository<BundleProductLink, Long> {
+public interface BundleProductLinkRepository extends TenantRepository<BundleProductLink, Long> {
 
     /**
      * Finds a BundleProductLink by its linked Product ID.

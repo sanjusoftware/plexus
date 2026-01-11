@@ -1,6 +1,6 @@
 package com.bankengine.config;
 
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.config.drools.DroolsKieModuleBuilder;
 import com.bankengine.pricing.service.BundleRuleBuilderService;
 import com.bankengine.pricing.service.ProductRuleBuilderService;
@@ -35,7 +35,7 @@ public class DroolsConfig {
 
         try {
             // 1. Elevate to System Mode to bypass the bankId requirement during startup
-            BankContextHolder.setSystemMode(true);
+            TenantContextHolder.setSystemMode(true);
 
             // 2. Fetch DRL content (Aspect will now see null bankId but permit it)
             String productRuleContent = ruleBuilderService.buildAllRulesForCompilation();
@@ -56,7 +56,7 @@ public class DroolsConfig {
         } finally {
             // 6. CRITICAL: Always clear system mode and context to prevent leaks
             // to subsequent threads or logic
-            BankContextHolder.clear();
+            TenantContextHolder.clear();
         }
     }
 }

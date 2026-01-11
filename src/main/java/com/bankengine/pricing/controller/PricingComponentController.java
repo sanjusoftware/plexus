@@ -89,10 +89,11 @@ public class PricingComponentController {
     }
 
     @Operation(summary = "Delete a pricing component (Dependency Checked)",
-            description = "Deletes a pricing component by its ID. Fails with 409 Conflict if associated tiers or product links exist.")
-    @ApiResponse(responseCode = "204", description = "Component successfully deleted (No Content).")
-    @ApiResponse(responseCode = "409", description = "Conflict: Component is linked to existing pricing tiers or product links.") // <--- SLIGHTLY IMPROVED DESCRIPTION
-    @ApiResponse(responseCode = "404", description = "Component not found.")
+            description = "Deletes a pricing component by its ID.  Returns 404 if the ID doesn't exist at all, or 403 if the ID belongs to another bank. Fails with 409 Conflict if associated tiers or product links exist.")
+    @ApiResponse(responseCode = "204", description = "Component successfully deleted.")
+    @ApiResponse(responseCode = "403", description = "Forbidden: Tenant mismatch. You cannot access resources belonging to another bank.")
+    @ApiResponse(responseCode = "404", description = "Not Found: Pricing component ID does not exist in the system.")
+    @ApiResponse(responseCode = "409", description = "Conflict: Component is linked to existing tiers or products.")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('pricing:component:delete')")

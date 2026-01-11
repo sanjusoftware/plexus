@@ -40,14 +40,12 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         }
 
         try {
-            BankContextHolder.setBankId(bankId);
-
+            TenantContextHolder.setBankId(bankId);
             Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
             return new JwtAuthenticationToken(jwt, authorities, getPrincipalClaimName(jwt));
 
         } finally {
-            // The BankContextFilter later in the chain will set it formally for the Web Request.
-            BankContextHolder.clear();
+            TenantContextHolder.clear();
         }
     }
 

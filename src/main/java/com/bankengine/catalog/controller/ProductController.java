@@ -63,7 +63,7 @@ public class ProductController {
     }
 
     /**
-     * GET /api/v1/products/{id}
+     * GET /api/v1/products/{productId}
      * Retrieves a Product and its associated features/pricing.
      */
     @Operation(summary = "Retrieve a product by its unique ID",
@@ -71,12 +71,12 @@ public class ProductController {
     @ApiResponse(responseCode = "200", description = "Product successfully retrieved.",
                  content = @Content(schema = @Schema(implementation = ProductResponse.class)))
     @ApiResponse(responseCode = "404", description = "Product not found with the given ID.")
-    @GetMapping("/{id}")
+    @GetMapping("/{productId}")
     @PreAuthorize("hasAuthority('catalog:product:read')")
     public ResponseEntity<ProductResponse> getProductById(
             @Parameter(description = "The unique ID of the product to retrieve", required = true)
-            @PathVariable Long id) {
-        return ResponseEntity.ok(productService.getProductResponseById(id));
+            @PathVariable Long productId) {
+        return ResponseEntity.ok(productService.getProductResponseById(productId));
     }
 
     /**
@@ -99,7 +99,7 @@ public class ProductController {
     }
 
     /**
-     * PUT /api/v1/products/{id}
+     * PUT /api/v1/products/{productId}
      * Updates administrative fields only if product is in DRAFT.
      */
     @Operation(summary = "Update product metadata (DRAFT status only)",
@@ -107,13 +107,13 @@ public class ProductController {
     @ApiResponse(responseCode = "200", description = "Product successfully updated.")
     @ApiResponse(responseCode = "400", description = "Validation or business logic error.")
     @ApiResponse(responseCode = "403", description = "Update not allowed for current product status (ACTIVE/INACTIVE).")
-    @PutMapping("/{id}")
+    @PutMapping("/{productId}")
     @PreAuthorize("hasAuthority('catalog:product:update')")
     public ResponseEntity<ProductResponse> updateProduct(
             @Parameter(description = "The unique ID of the product to update", required = true)
-            @PathVariable Long id,
+            @PathVariable Long productId,
             @Valid @RequestBody ProductRequest requestDto) {
-        return ResponseEntity.ok(productService.updateProduct(id, requestDto));
+        return ResponseEntity.ok(productService.updateProduct(productId, requestDto));
     }
 
     /**

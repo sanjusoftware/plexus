@@ -1,24 +1,12 @@
 package com.bankengine.pricing.repository;
 
+import com.bankengine.common.repository.TenantRepository;
 import com.bankengine.pricing.model.ProductPricingLink;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-public interface ProductPricingLinkRepository extends JpaRepository<ProductPricingLink, Long> {
-
-    // Find all pricing components linked to a specific product
+public interface ProductPricingLinkRepository extends TenantRepository<ProductPricingLink, Long> {
     List<ProductPricingLink> findByProductId(Long productId);
-
-    // Required for dependency check
-    boolean existsByPricingComponentId(Long pricingComponentId);
-
-    // Required to provide a dependency count for helpful error messages
     long countByPricingComponentId(Long pricingComponentId);
-
-    @Transactional
-    @Modifying
-    void deleteByProductId(Long productId);
+    boolean existsByPricingComponentIdAndProductId(Long pricingComponentId, Long productId);
 }

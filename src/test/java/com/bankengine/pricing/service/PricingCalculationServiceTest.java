@@ -1,6 +1,6 @@
 package com.bankengine.pricing.service;
 
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.pricing.dto.PriceRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.model.PriceValue;
@@ -8,6 +8,7 @@ import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
+import com.bankengine.test.config.BaseServiceTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class PricingCalculationServiceTest {
+class PricingCalculationServiceTest extends BaseServiceTest {
 
     @Mock
     private ProductPricingLinkRepository productPricingLinkRepository;
@@ -41,12 +42,12 @@ class PricingCalculationServiceTest {
     private PricingCalculationService pricingCalculationService;
 
     private PriceRequest request;
-    private MockedStatic<BankContextHolder> mockedBankContext;
+    private MockedStatic<TenantContextHolder> mockedBankContext;
 
     @BeforeEach
     void setUp() {
-        mockedBankContext = Mockito.mockStatic(BankContextHolder.class);
-        mockedBankContext.when(BankContextHolder::getBankId).thenReturn("TEST_BANK");
+        mockedBankContext = Mockito.mockStatic(TenantContextHolder.class);
+        mockedBankContext.when(TenantContextHolder::getBankId).thenReturn("TEST_BANK");
 
         request = PriceRequest.builder()
                 .productId(1L)

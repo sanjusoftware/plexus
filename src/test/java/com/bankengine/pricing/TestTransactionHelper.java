@@ -11,7 +11,6 @@ import com.bankengine.pricing.repository.*;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -37,7 +36,7 @@ public class TestTransactionHelper {
     // Find-or-Create DSL for Catalog Entities (DRY)
     // =================================================================
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void cleanupCommittedMetadata() {
         metadataRepository.findByAttributeKey("customerSegment")
                 .ifPresent(metadataRepository::delete);
@@ -46,7 +45,7 @@ public class TestTransactionHelper {
         flushAndClear();
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public PricingComponent createPricingComponentInDb(String name) {
         PricingComponent component = new PricingComponent();
         component.setName(name);
@@ -55,7 +54,7 @@ public class TestTransactionHelper {
         return componentRepository.save(component);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public PricingTier createCommittedTierDependency(Long componentId, String tierName) {
         PricingComponent component = componentRepository.findById(componentId)
                 .orElseThrow(() -> new RuntimeException("Component not found"));
@@ -75,7 +74,7 @@ public class TestTransactionHelper {
         return tierRepository.save(tier);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public Long createLinkedTierAndValue(String componentName, String tierName) {
         PricingComponent component = createPricingComponentInDb(componentName);
         PricingTier tier = createCommittedTierDependency(component.getId(), tierName);
@@ -92,7 +91,7 @@ public class TestTransactionHelper {
     /**
      * Idempotently retrieves or creates a ProductType by name within the current bank context.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public ProductType getOrCreateProductType(String name) {
         return productTypeRepository.findByName(name)
                 .orElseGet(() -> {
@@ -106,7 +105,7 @@ public class TestTransactionHelper {
     /**
      * Idempotently retrieves or creates a Product.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public Product getOrCreateProduct(String name, ProductType type, String category) {
         return productRepository.findByName(name)
                 .orElseGet(() -> {
@@ -124,7 +123,7 @@ public class TestTransactionHelper {
     // Authentication/Role Helpers
     // =================================================================
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public Role createRoleInDb(String roleName, Set<String> authorities) {
         return roleRepository.findByName(roleName)
                 .map(existingRole -> {
@@ -150,14 +149,14 @@ public class TestTransactionHelper {
     // Pricing Metadata & Graph Helpers
     // =================================================================
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void setupCommittedMetadata() {
         createAndSaveMetadata("customerSegment", "STRING");
         createAndSaveMetadata("transactionAmount", "DECIMAL");
         flushAndClear();
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public PricingInputMetadata createAndSaveMetadata(String key, String dataType) {
         return metadataRepository.findByAttributeKey(key).orElseGet(() -> {
             PricingInputMetadata metadata = new PricingInputMetadata();
@@ -168,7 +167,7 @@ public class TestTransactionHelper {
         });
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void deleteComponentGraphById(Long componentId) {
         componentRepository.findById(componentId).ifPresent(component -> {
             List<Long> tierIds = component.getPricingTiers().stream().map(PricingTier::getId).toList();
@@ -184,17 +183,17 @@ public class TestTransactionHelper {
     // Transactional Utilities
     // =================================================================
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public <T> T doInTransaction(java.util.function.Supplier<T> action) {
         return action.get();
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void doInTransaction(Runnable action) {
         action.run();
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void flushAndClear() {
         entityManager.flush();
         entityManager.clear();
@@ -204,7 +203,7 @@ public class TestTransactionHelper {
      * Legacy helper kept for backward compatibility with older tests,
      * but updated to use internal find-or-create logic.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public Long createProductInDb(String name, Long productTypeId, String category) {
         ProductType type = productTypeRepository.findById(productTypeId)
                 .orElseThrow(() -> new IllegalStateException("Type not found"));

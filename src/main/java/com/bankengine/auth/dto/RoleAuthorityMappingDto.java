@@ -17,6 +17,4 @@ public class RoleAuthorityMappingDto {
     @ValidAuthorities
     private Set<String> authorities;
 
-    // Optional: Include bankId if roles are specific to a client bank
-    private String bankId;
 }

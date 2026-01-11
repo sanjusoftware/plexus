@@ -1,10 +1,11 @@
 package com.bankengine.catalog.service;
 
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.converter.ProductTypeMapper;
 import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.test.config.BaseServiceTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ProductTypeServiceTest {
+public class ProductTypeServiceTest extends BaseServiceTest {
 
     @Mock
     private ProductTypeRepository productTypeRepository;
@@ -44,7 +45,7 @@ public class ProductTypeServiceTest {
     @Test
     void testCreateProductType() {
         final String TEST_BANK_ID = "BANK_A_UNIT_TEST";
-        BankContextHolder.setBankId(TEST_BANK_ID);
+        TenantContextHolder.setBankId(TEST_BANK_ID);
 
         try {
             ProductTypeDto dto = new ProductTypeDto();
@@ -56,7 +57,7 @@ public class ProductTypeServiceTest {
             assertNotNull(result);
             verify(productTypeRepository, times(1)).save(any(ProductType.class));
         } finally {
-            BankContextHolder.clear();
+            TenantContextHolder.clear();
         }
     }
 }

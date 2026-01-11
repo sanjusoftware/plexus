@@ -2,6 +2,7 @@ package com.bankengine.auth.service;
 
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
+import com.bankengine.common.service.BaseService;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,17 +14,17 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class RoleManagementService {
+public class RoleManagementService extends BaseService {
 
     private final RoleRepository roleRepository;
     private final PermissionMappingService permissionMappingService; // Needed for cache eviction
 
     @Transactional
-    public void saveRoleMapping(String roleName, String bankId, Set<String> authorities) {
+    public void saveRoleMapping(String roleName, Set<String> authorities) {
         Role role = roleRepository.findByName(roleName).orElse(new Role());
 
         role.setName(roleName);
-        role.setBankId(bankId); // Update or set the bank ID
+        role.setBankId(getCurrentBankId()); // Update or set the bank ID
         role.setAuthorities(authorities); // Set the new authorities
 
         roleRepository.save(role);

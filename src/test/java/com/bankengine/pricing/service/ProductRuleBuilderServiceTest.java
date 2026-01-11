@@ -4,6 +4,7 @@ import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.service.drl.DroolsExpressionBuilder;
+import com.bankengine.test.config.BaseServiceTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -17,14 +18,13 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for ProductRuleBuilderService focusing on DRL syntax generation.
  */
-public class ProductRuleBuilderServiceTest {
+public class ProductRuleBuilderServiceTest extends BaseServiceTest {
 
     @Mock
     private PricingComponentRepository componentRepository;
@@ -40,14 +40,12 @@ public class ProductRuleBuilderServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Initializes all fields annotated with @Mock and @InjectMocks
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
     void testBuildRules_shouldGenerateCorrectDRL() {
-        // ARRANGE: Setup Mocks for a single component with one tier
-        // Component: Name='TestFee', Tier: ID=100, Condition: customAttribute > 500, PriceValue: ABSOLUTE 10.00
+        // ARRANGE
         PricingInputMetadata metadata = mock(PricingInputMetadata.class);
         when(metadata.getFqnType()).thenReturn("java.math.BigDecimal");
 
@@ -55,7 +53,6 @@ public class ProductRuleBuilderServiceTest {
         priceValue.setPriceAmount(new BigDecimal("10.00"));
         priceValue.setValueType(ValueType.ABSOLUTE);
 
-        // Create a specific mock for TierCondition and stub its attributeName
         TierCondition tierConditionMock = mock(TierCondition.class);
         when(tierConditionMock.getAttributeName()).thenReturn("transactionAmount");
         when(tierConditionMock.getConnector()).thenReturn(null);
@@ -69,12 +66,8 @@ public class ProductRuleBuilderServiceTest {
         when(component.getName()).thenReturn("TestFee");
         when(component.getPricingTiers()).thenReturn(List.of(tier));
 
-        when(componentRepository.findAllEagerlyForRules()).thenReturn(List.of(component));
-
-        // Metadata and Expression Stubbing
-        when(metadataService.getMetadataEntitiesByKeys(anySet())).thenReturn(List.of(metadata));
+        when(componentRepository.findAll()).thenReturn(List.of(component));
         when(metadataService.getMetadataEntityByKey("transactionAmount")).thenReturn(metadata);
-
         when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class)))
                 .thenReturn(MOCKED_DRL_EXPRESSION);
 
@@ -82,61 +75,52 @@ public class ProductRuleBuilderServiceTest {
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
 
         // ASSERT
-        assertTrue(drl.contains("Rule_TestFee_Tier_100"), "DRL must contain the rule header.");
-        assertTrue(drl.contains(MOCKED_DRL_EXPRESSION), "DRL must contain the expression from the builder.");
+        assertTrue(drl.contains("rule \"PRICING_" + TEST_BANK_ID.toUpperCase()), "Rule name missing Bank ID");
+        assertTrue(drl.contains("PricingInput ( bankId == \"" + TEST_BANK_ID + "\""), "LHS missing Bank ID");
+        assertTrue(drl.contains(MOCKED_DRL_EXPRESSION), "LHS missing expression");
 
-        assertTrue(drl.contains("        PriceValue priceValueFact = new PriceValue();\n"), "DRL must contain the PriceValue fact creation.");
-        assertTrue(drl.contains("        priceValueFact.setPriceAmount(new BigDecimal(\"10.00\"));\n"), "DRL must contain the price setter for PriceValue fact.");
-        assertTrue(drl.contains("        priceValueFact.setValueType(PriceValue.ValueType.valueOf(\"ABSOLUTE\"));\n"), "DRL must contain the ValueType setter for PriceValue fact.");
-        assertTrue(drl.contains("        insert(priceValueFact);\n"), "DRL must contain the 'insert(priceValueFact);' action.");
+        // RHS Assertions (Matching actual template)
+        assertTrue(drl.contains("PriceValue priceValueFact = new PriceValue();"));
+        assertTrue(drl.contains("priceValueFact.setPriceAmount(new BigDecimal(\"10.00\"));"));
+        assertTrue(drl.contains("priceValueFact.setBankId(\"" + TEST_BANK_ID + "\");"));
+        assertTrue(drl.contains("insert(priceValueFact);"));
     }
 
     @Test
     void testBuildRules_shouldGenerateCorrectDRL_withCustomAttributeAndFreeCount() {
-        // ARRANGE: Setup Mocks for a component with two tiers:
-        // Tier 1 (200): ABSOLUTE 10.00, Condition: customAttribute > 500
-        // Tier 2 (500): FREE_COUNT 5, Condition: NONE
-
+        // ARRANGE
         PricingInputMetadata metadata = mock(PricingInputMetadata.class);
         when(metadata.getFqnType()).thenReturn("java.math.BigDecimal");
 
-        // --- Tier 1: Custom Attribute (ABS) ---
+        // Tier 1: ABSOLUTE
         PriceValue priceValue1 = new PriceValue();
         priceValue1.setPriceAmount(new BigDecimal("10.00"));
         priceValue1.setValueType(ValueType.ABSOLUTE);
 
-        // Create a specific mock for TierCondition and stub its attributeName
         TierCondition tierConditionMock = mock(TierCondition.class);
         when(tierConditionMock.getAttributeName()).thenReturn("transactionAmount");
-        when(tierConditionMock.getConnector()).thenReturn(null);
 
         PricingTier tier1 = mock(PricingTier.class);
         when(tier1.getId()).thenReturn(200L);
         when(tier1.getConditions()).thenReturn(Set.of(tierConditionMock));
         when(tier1.getPriceValues()).thenReturn(Set.of(priceValue1));
 
-        // --- Tier 2: Free Count (Uses FREE_COUNT ValueType) ---
+        // Tier 2: FREE_COUNT
         PriceValue priceValue2 = new PriceValue();
         priceValue2.setPriceAmount(new BigDecimal("5"));
         priceValue2.setValueType(ValueType.FREE_COUNT);
 
         PricingTier tier2 = mock(PricingTier.class);
         when(tier2.getId()).thenReturn(500L);
-        when(tier2.getConditions()).thenReturn(Collections.emptySet()); // Unconditional rule
+        when(tier2.getConditions()).thenReturn(Collections.emptySet());
         when(tier2.getPriceValues()).thenReturn(Set.of(priceValue2));
 
-        // --- Component ---
         PricingComponent component = mock(PricingComponent.class);
         when(component.getName()).thenReturn("TestFee");
         when(component.getPricingTiers()).thenReturn(List.of(tier1, tier2));
 
-        when(componentRepository.findAllEagerlyForRules()).thenReturn(List.of(component));
-
-        // Metadata and Expression Stubbing
-        when(metadataService.getMetadataEntitiesByKeys(anySet())).thenReturn(List.of(metadata));
+        when(componentRepository.findAll()).thenReturn(List.of(component));
         when(metadataService.getMetadataEntityByKey("transactionAmount")).thenReturn(metadata);
-
-        // Stub the expression builder to return the expected DRL fragment
         when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class)))
                 .thenReturn(MOCKED_DRL_EXPRESSION);
 
@@ -144,43 +128,34 @@ public class ProductRuleBuilderServiceTest {
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
 
         // ASSERT
-        // --- Rule 1: ABSOLUTE Fee (TestFee_Tier_200) ---
-        assertTrue(drl.contains("Rule_TestFee_Tier_200"), "DRL must contain the ABSOLUTE rule header.");
-        assertTrue(drl.contains(MOCKED_DRL_EXPRESSION),
-                "DRL must contain the expression from the builder for the custom attribute.");
+        // Rule Name Check
+        assertTrue(drl.contains("PRICING_" + TEST_BANK_ID.toUpperCase() + "_TestFee_Tier_200"));
+        assertTrue(drl.contains("PRICING_" + TEST_BANK_ID.toUpperCase() + "_TestFee_Tier_500"));
 
-        // Assert the NEW insertion logic for Tier 200 (10.00, ABSOLUTE)
-        assertTrue(drl.contains("priceValueFact.setPriceAmount(new BigDecimal(\"10.00\"));"),
-                "Tier 200 must set PriceAmount to 10.00 via the PriceValue fact.");
-        assertTrue(drl.contains("priceValueFact.setValueType(PriceValue.ValueType.valueOf(\"ABSOLUTE\"));"),
-                "Tier 200 must set ValueType to ABSOLUTE via the PriceValue fact.");
+        // LHS Check (BankId must be present even in unconditional rules)
+        assertTrue(drl.contains("PricingInput ( bankId == \"" + TEST_BANK_ID + "\" )"),
+                "Unconditional rule should still check bankId");
 
+        // RHS ValueType Check (Direct Enum access, not valueOf)
+        assertTrue(drl.contains("priceValueFact.setValueType(PriceValue.ValueType.ABSOLUTE);"));
+        assertTrue(drl.contains("priceValueFact.setValueType(PriceValue.ValueType.FREE_COUNT);"));
 
-        // --- Rule 2: FREE_COUNT Benefit (TestFee_Tier_500) ---
-        assertTrue(drl.contains("Rule_TestFee_Tier_500"), "DRL must contain the FREE_COUNT rule header.");
+        // RHS Amount Checks
+        assertTrue(drl.contains("priceValueFact.setPriceAmount(new BigDecimal(\"10.00\"));"));
+        assertTrue(drl.contains("priceValueFact.setPriceAmount(new BigDecimal(\"5\"));"));
 
-        // Check for the unconditional rule trigger
-        assertTrue(drl.contains("        $input : PricingInput ( true )\n"),
-                "DRL must contain the unconditional rule trigger.");
-
-        // Assert the NEW insertion logic for Tier 500 (5, FREE_COUNT)
-        assertTrue(drl.contains("priceValueFact.setPriceAmount(new BigDecimal(\"5\"));"),
-                "Tier 500 must set PriceAmount to 5 via the PriceValue fact.");
-        assertTrue(drl.contains("priceValueFact.setValueType(PriceValue.ValueType.valueOf(\"FREE_COUNT\"));"),
-                "Tier 500 must set ValueType to FREE_COUNT via the PriceValue fact.");
-
-        // Both rules must include the common insertion and creation statements
-        assertTrue(drl.contains("PriceValue priceValueFact = new PriceValue();"),
-                "DRL must contain the PriceValue fact creation.");
-        assertTrue(drl.contains("insert(priceValueFact);"),
-                "DRL must contain the 'insert(priceValueFact);' action.");
+        // Common RHS elements
+        assertTrue(drl.contains("priceValueFact.setBankId(\"" + TEST_BANK_ID + "\");"));
+        assertTrue(drl.contains("insert(priceValueFact);"));
     }
-
 
     @Test
     void buildRules_shouldReturnPlaceholderRulesWhenNoComponentsExist() {
-        when(componentRepository.findAllEagerlyForRules()).thenReturn(Collections.emptyList());
+        when(componentRepository.findAll()).thenReturn(Collections.emptyList());
+
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
-        assertTrue(drl.contains("PlaceholderRule_DoNothing"), "DRL should contain the placeholder rule when no components are found.");
+
+        assertTrue(drl.contains("rule \"Placeholder_pricing\""));
+        assertTrue(drl.contains("$input : PricingInput ( )"));
     }
 }

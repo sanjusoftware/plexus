@@ -1,6 +1,5 @@
 package com.bankengine.catalog.service;
 
-import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.dto.ProductBundleRequest;
 import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
@@ -9,8 +8,7 @@ import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.exception.ValidationException;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import com.bankengine.test.config.BaseServiceTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ProductBundleServiceTest {
+class ProductBundleServiceTest extends BaseServiceTest {
 
     @Mock
     private ProductBundleRepository bundleRepository;
@@ -40,16 +38,6 @@ class ProductBundleServiceTest {
 
     @InjectMocks
     private ProductBundleService bundleService;
-
-    @BeforeEach
-    void setUp() {
-        BankContextHolder.setBankId("TEST_BANK_001");
-    }
-
-    @AfterEach
-    void tearDown() {
-        BankContextHolder.clear();
-    }
 
     @Test
     void activateBundle_ShouldFail_WhenProductIsDraft() {
@@ -184,7 +172,7 @@ class ProductBundleServiceTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> bundleService.cloneBundle(1L, "New Name"));
 
-        assertTrue(ex.getMessage().contains("Source bundle has multiple Main Accounts"));
+        assertTrue(ex.getMessage().contains("Data Integrity Error"));
         verify(bundleRepository, never()).save(any());
     }
 

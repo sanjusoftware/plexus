@@ -1,7 +1,6 @@
 package com.bankengine.catalog;
 
-import com.bankengine.auth.config.test.WithMockRole;
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
@@ -10,6 +9,7 @@ import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.test.config.AbstractIntegrationTest;
+import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Map;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -31,26 +32,13 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
 
     private static final String API_URL = "/api/v1/product-types";
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private ProductTypeRepository productTypeRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private ProductFeatureLinkRepository productFeatureLinkRepository;
-
-    @Autowired
-    private ProductPricingLinkRepository productPricingLinkRepository;
-
-    @Autowired
-    private TestTransactionHelper txHelper;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private ProductTypeRepository productTypeRepository;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private ProductFeatureLinkRepository productFeatureLinkRepository;
+    @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
+    @Autowired private TestTransactionHelper txHelper;
 
     // --- Role Constants ---
     public static final String ROLE_PREFIX = "PTIT_";
@@ -58,67 +46,45 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     private static final String READER_ROLE = ROLE_PREFIX + "PRODUCT_TYPE_READER";
     private static final String UNAUTHORIZED_ROLE = ROLE_PREFIX + "UNAUTHORIZED";
 
-
-    // =================================================================
-    // SETUP AND TEARDOWN (Committed Data Lifecycle)
-    // =================================================================
-
-    /**
-     * Set up committed roles required for security context loading.
-     */
     @BeforeAll
     static void setupCommittedRoles(@Autowired TestTransactionHelper txHelperStatic) {
-        // CREATOR needs read/create permission
-        Set<String> creatorAuths = Set.of("catalog:product-type:create", "catalog:product-type:read");
-        // READER only needs read permission
-        Set<String> readerAuths = Set.of("catalog:product-type:read");
-        // UNAUTHORIZED has no relevant permission
-        Set<String> unauthorizedAuths = Set.of("some:other:permission");
-
-        txHelperStatic.createRoleInDb(CREATOR_ROLE, creatorAuths);
-        txHelperStatic.createRoleInDb(READER_ROLE, readerAuths);
-        txHelperStatic.createRoleInDb(UNAUTHORIZED_ROLE, unauthorizedAuths);
-
-        txHelperStatic.flushAndClear();
+        seedBaseRoles(txHelperStatic, Map.of(
+            CREATOR_ROLE, Set.of("catalog:product-type:create", "catalog:product-type:read"),
+            READER_ROLE, Set.of("catalog:product-type:read"),
+            UNAUTHORIZED_ROLE, Set.of("some:other:permission")
+        ));
     }
 
-    /**
-     * Cleans up all committed data, including entities created by API/helper calls.
-     * Note: This is now essential since @Transactional is removed.
-     */
     @AfterEach
     void cleanUp() {
         txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
             productFeatureLinkRepository.deleteAllInBatch();
             productPricingLinkRepository.deleteAllInBatch();
             productRepository.deleteAllInBatch();
             productTypeRepository.deleteAllInBatch();
         });
-        txHelper.flushAndClear();
     }
 
     private ProductType createAndSaveProductType(String name) {
-        final String currentBankId = BankContextHolder.getBankId();
         return txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
             ProductType type = new ProductType();
             type.setName(name);
-            type.setBankId(currentBankId);
             return productTypeRepository.save(type);
         });
     }
 
-// --------------------------------------------------------------------------------
-//                                 GET /api/v1/product-types
-// --------------------------------------------------------------------------------
+    // =================================================================
+    // GET /api/v1/product-types
+    // =================================================================
 
     @Test
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200AndAllProductTypes() throws Exception {
-        // Arrange: Data is committed via the helper method
         createAndSaveProductType("CASA");
         createAndSaveProductType("Credit Card");
 
-        // Act & Assert
         mockMvc.perform(get(API_URL)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -130,35 +96,28 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200AndEmptyListWhenNoProductTypesExist() throws Exception {
-        // Arrange: Database is empty due to @AfterEach cleanup
-
-        // Act & Assert
-        mockMvc.perform(get(API_URL)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get(API_URL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
-    @WithMockRole(roles = {UNAUTHORIZED_ROLE}) // User lacks the 'read' permission
+    @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenReadingWithoutPermission() throws Exception {
-        mockMvc.perform(get(API_URL)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get(API_URL))
                 .andExpect(status().isForbidden());
     }
 
-// --------------------------------------------------------------------------------
-//                                 POST /api/v1/product-types
-// --------------------------------------------------------------------------------
+    // =================================================================
+    // POST /api/v1/product-types
+    // =================================================================
 
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn201AndCreateProductTypeSuccessfully() throws Exception {
-        // Arrange
         ProductTypeDto requestDto = new ProductTypeDto();
         requestDto.setName("Fixed Deposit");
 
-        // Act & Assert
         mockMvc.perform(post(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -182,11 +141,9 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn400WhenNameIsMissing() throws Exception {
-        // Arrange
         ProductTypeDto requestDto = new ProductTypeDto();
-        requestDto.setName(null); // Invalid: @NotBlank
+        requestDto.setName(null);
 
-        // Act & Assert
         mockMvc.perform(post(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -197,11 +154,9 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn400WhenNameIsTooShort() throws Exception {
-        // Arrange
         ProductTypeDto requestDto = new ProductTypeDto();
-        requestDto.setName("A"); // Invalid: @Size min=3
+        requestDto.setName("A");
 
-        // Act & Assert
         mockMvc.perform(post(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -212,19 +167,15 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn409ConflictWhenCreatingDuplicateName() throws Exception {
-        // Arrange: Create the type once successfully (Committed via helper)
         createAndSaveProductType("Checking Account");
 
-        // Arrange: Prepare the same request DTO again
         ProductTypeDto requestDto = new ProductTypeDto();
         requestDto.setName("Checking Account");
 
-        // Act & Assert: Attempt to create it a second time (API call commits)
         mockMvc.perform(post(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                // The expected status for a database conflict (Unique Constraint Violation)
-                .andExpect(status().isConflict()) // HttpStatus.CONFLICT (409) is appropriate
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").exists());
     }
 }

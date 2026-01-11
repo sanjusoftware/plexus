@@ -10,11 +10,11 @@ import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.catalog.repository.specification.ProductSpecification;
+import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.pricing.service.PricingComponentService;
-import com.bankengine.web.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,7 +31,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class ProductService {
+public class ProductService extends BaseService {
 
     private final ProductRepository productRepository;
     private final ProductFeatureLinkRepository featureLinkRepository;
@@ -59,18 +59,12 @@ public class ProductService {
      */
     @Transactional(readOnly = true)
     public Page<ProductResponse> searchProducts(ProductSearchRequest criteria) {
-
-        // 1. Build the dynamic query specification
         Specification<Product> specification = ProductSpecification.filterBy(criteria);
 
-        // 2. Create the Pageable object for pagination and sorting
         Sort sort = Sort.by(Sort.Direction.fromString(criteria.getSortDirection()), criteria.getSortBy());
         Pageable pageable = PageRequest.of(criteria.getPage(), criteria.getSize(), sort);
 
-        // 3. Execute the search using the specification and pageable
         Page<Product> productPage = productRepository.findAll(specification, pageable);
-
-        // 4. Map the results to a DTO Page
         return productPage.map(productMapper::toResponse);
     }
 
@@ -202,23 +196,18 @@ public class ProductService {
      */
     @Transactional
     public ProductResponse createProduct(ProductRequest requestDto) {
-        if (requestDto.getProductTypeId() == null) {
-            throw new IllegalArgumentException("Product Type ID is required for creation.");
-        }
-        // 1. Look up the required ProductType entity (using centralized lookup)
+        // 1. Validate the ProductType belongs to the bank
         ProductType productType = getProductTypeById(requestDto.getProductTypeId());
 
-        // 2. Convert DTO to Entity
         Product product = new Product();
         product.setName(requestDto.getName());
-        product.setBankId(requestDto.getBankId());
+        product.setBankId(getCurrentBankId());
         product.setEffectiveDate(requestDto.getEffectiveDate());
         product.setExpirationDate(requestDto.getExpirationDate());
         product.setStatus(requestDto.getStatus());
         product.setProductType(productType);
         product.setCategory(requestDto.getCategory());
 
-        // 3. Save and convert back to DTO for response
         Product savedProduct = productRepository.save(product);
         return productMapper.toResponse(savedProduct);
     }
@@ -227,8 +216,8 @@ public class ProductService {
      * Retrieves Product by ID and converts it to a Response DTO.
      */
     @Transactional
-    public ProductResponse getProductResponseById(Long id) {
-        Product product = getProductEntityById(id);
+    public ProductResponse getProductResponseById(Long productId) {
+        Product product = getProductEntityById(productId);
         return productMapper.toResponse(product);
     }
 
@@ -260,16 +249,14 @@ public class ProductService {
      * Helper method to retrieve a Product entity by ID, throwing NotFoundException on failure (404).
      */
     public Product getProductEntityById(Long id) {
-        return productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product not found with ID: " + id));
+        return getByIdSecurely(productRepository, id, "Product");
     }
 
     /**
      * Helper method to retrieve a ProductType entity by ID, throwing NotFoundException on failure (404).
      */
     private ProductType getProductTypeById(Long id) {
-        return productTypeRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product Type not found with ID: " + id));
+        return getByIdSecurely(productTypeRepository, id, "Product Type");
     }
 
     /**
@@ -277,8 +264,8 @@ public class ProductService {
      * Used for administrative updates before launch.
      */
     @Transactional
-    public ProductResponse updateProduct(Long id, ProductRequest dto) {
-        Product product = getProductEntityById(id);
+    public ProductResponse updateProduct(Long productId, ProductRequest dto) {
+        Product product = getProductEntityById(productId);
 
         // Don't allow update to INACTIVE/ARCHIVED product
         if ("INACTIVE".equals(product.getStatus()) || "ARCHIVED".equals(product.getStatus())) {
@@ -293,7 +280,7 @@ public class ProductService {
         // Status, Effective Date, and Expiration Date handled by direct methods.
         // Only update administrative metadata:
         product.setName(dto.getName());
-        product.setBankId(dto.getBankId());
+        product.setBankId(getCurrentBankId());
 
         Product updatedProduct = productRepository.save(product);
         return productMapper.toResponse(updatedProduct);

@@ -44,7 +44,7 @@ public class RoleMappingController {
     @PostMapping("/mapping")
     @PreAuthorize("hasAuthority('auth:role:write')")
     public ResponseEntity<Void> mapAuthoritiesToRole(@Valid @RequestBody RoleAuthorityMappingDto dto) {
-        roleManagementService.saveRoleMapping(dto.getRoleName(), dto.getBankId(), dto.getAuthorities());
+        roleManagementService.saveRoleMapping(dto.getRoleName(), dto.getAuthorities());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

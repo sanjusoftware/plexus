@@ -1,7 +1,7 @@
 package com.bankengine.auth.config;
 
-import com.bankengine.auth.security.BankContextFilter;
 import com.bankengine.auth.security.JwtAuthConverter;
+import com.bankengine.auth.security.TenantContextFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,18 +35,18 @@ public class SecurityConfig {
     private String jwtIssuerUri;
 
     private final JwtAuthConverter jwtAuthConverter;
-    private final BankContextFilter bankContextFilter; // <-- NEW FIELD
+    private final TenantContextFilter tenantContextFilter; // <-- NEW FIELD
 
-    public SecurityConfig(JwtAuthConverter jwtAuthConverter, BankContextFilter bankContextFilter) { // <-- INJECT FILTER
+    public SecurityConfig(JwtAuthConverter jwtAuthConverter, TenantContextFilter tenantContextFilter) { // <-- INJECT FILTER
         this.jwtAuthConverter = jwtAuthConverter;
-        this.bankContextFilter = bankContextFilter;
+        this.tenantContextFilter = tenantContextFilter;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 5. TENANCY FILTER: Inject the BankContextFilter AFTER the JWT (Bearer Token) authentication has occurred.
-                .addFilterAfter(bankContextFilter, BearerTokenAuthenticationFilter.class)
+                // 5. TENANCY FILTER: Inject the TenantContextFilter AFTER the JWT (Bearer Token) authentication has occurred.
+                .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class)
 
                 // 1. STATELESS: Use stateless session management (essential for JWT)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -61,7 +61,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/h2-console/**"
+                                "/h2-console/**",
+                                "/error"
                         ).permitAll()
 
                         // Allow POST for /products for initial testing

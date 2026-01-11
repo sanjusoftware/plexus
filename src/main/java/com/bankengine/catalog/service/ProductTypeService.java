@@ -1,17 +1,17 @@
 package com.bankengine.catalog.service;
 
-import com.bankengine.auth.security.BankContextHolder;
 import com.bankengine.catalog.converter.ProductTypeMapper;
 import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.common.service.BaseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-public class ProductTypeService {
+public class ProductTypeService extends BaseService {
 
     private final ProductTypeRepository productTypeRepository;
     private final ProductTypeMapper productTypeMapper;
@@ -39,11 +39,8 @@ public class ProductTypeService {
      */
     @Transactional
     public ProductType createProductType(ProductTypeDto requestDto) {
-        String bankId = BankContextHolder.getBankId();
-
         ProductType productType = productTypeMapper.toEntity(requestDto);
-        productType.setBankId(bankId);
-
+        productType.setBankId(getCurrentBankId());
         return productTypeRepository.save(productType);
     }
 }

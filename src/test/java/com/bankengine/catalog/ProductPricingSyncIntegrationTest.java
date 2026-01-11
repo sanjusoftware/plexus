@@ -1,6 +1,6 @@
 package com.bankengine.catalog;
 
-import com.bankengine.auth.config.test.WithMockRole;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.dto.ProductPricing;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
@@ -12,6 +12,7 @@ import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.test.config.AbstractIntegrationTest;
+import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
@@ -23,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,236 +46,166 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     @Autowired private TestTransactionHelper txHelper;
     @Autowired private EntityManager entityManager;
 
-    // --- Role Constants ---
     public static final String ROLE_PREFIX = "PPST_";
     public static final String ADMIN_ROLE = ROLE_PREFIX + "CATALOG_ADMIN";
     public static final String READER_ROLE = ROLE_PREFIX + "CATALOG_READER";
     public static final String UNAUTHORIZED_ROLE = ROLE_PREFIX + "UNAUTHORIZED_ROLE";
 
-    // Entities used for setup - CHANGED to static and initialized in @BeforeAll
-    private static Product product;
-    private static PricingComponent compRate; // CORE_RATE context
-    private static PricingComponent compFee; // ANNUAL_FEE context
-    private static PricingComponent compDiscount; // DISCOUNT context
+    private static Long productId;
+    private static Long compRateId;
+    private static Long compFeeId;
+    private static Long compDiscountId;
 
-    // =================================================================
-    // SETUP AND TEARDOWN (Committed Data Lifecycle)
-    // =================================================================
-
-    /**
-     * Set up all required roles and permanent committed entities once before all tests run.
-     */
     @BeforeAll
     static void setupCommittedData(@Autowired TestTransactionHelper txHelperStatic,
                                    @Autowired ProductRepository productRepoStatic,
                                    @Autowired ProductTypeRepository productTypeRepoStatic,
                                    @Autowired PricingComponentRepository pricingComponentRepoStatic) {
 
-        // 1. Setup Roles (Committed)
-        Set<String> adminAuths = Set.of("catalog:product:update"); // Only need update permission for this class
-        Set<String> readerAuths = Set.of("catalog:product:read");
-        Set<String> unauthorizedAuths = Set.of("some:other:permission");
+        seedBaseRoles(txHelperStatic, Map.of(
+            ADMIN_ROLE, Set.of("catalog:product:update", "catalog:product:read"),
+            READER_ROLE, Set.of("catalog:product:read"),
+            UNAUTHORIZED_ROLE, Set.of("some:other:permission")
+        ));
 
-        txHelperStatic.createRoleInDb(ADMIN_ROLE, adminAuths);
-        txHelperStatic.createRoleInDb(READER_ROLE, readerAuths);
-        txHelperStatic.createRoleInDb(UNAUTHORIZED_ROLE, unauthorizedAuths);
+        try {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
 
-        // 2. Setup Product and Components (Committed Transaction - Find or Create)
-        txHelperStatic.doInTransaction(() -> {
-            // a. Setup ProductType
-            ProductType type = productTypeRepoStatic.findByName("Savings Account")
-                    .orElseGet(() -> {
-                        ProductType newType = new ProductType();
-                        newType.setName("Savings Account");
-                        newType.setBankId(TEST_BANK_ID);
-                        return productTypeRepoStatic.save(newType);
-                    });
+            txHelperStatic.doInTransaction(() -> {
+                ProductType type = productTypeRepoStatic.findByName("Savings Account")
+                        .orElseGet(() -> {
+                            ProductType nt = new ProductType();
+                            nt.setName("Savings Account");
+                            return productTypeRepoStatic.save(nt);
+                        });
 
-            // b. Setup Product
-            product = productRepoStatic.findByName("Pricing Sync Product")
-                    .orElseGet(() -> {
-                        Product p = new Product();
-                        p.setName("Pricing Sync Product");
-                        p.setProductType(type);
-                        p.setBankId(TEST_BANK_ID);
-                        p.setCategory("RETAIL");
-                        return productRepoStatic.save(p);
-                    });
+                Product p = productRepoStatic.findByName("Pricing Sync Product")
+                        .orElseGet(() -> {
+                            Product np = new Product();
+                            np.setName("Pricing Sync Product");
+                            np.setProductType(type);
+                            np.setCategory("RETAIL");
+                            return productRepoStatic.save(np);
+                        });
+                productId = p.getId();
 
-            // c. Setup Pricing Components
-            compRate = pricingComponentRepoStatic.findByName("Standard Interest Rate")
-                    .orElseGet(() -> {
-                        PricingComponent c = new PricingComponent();
-                        c.setName("Standard Interest Rate");
-                        c.setType(PricingComponent.ComponentType.RATE);
-                        c.setBankId(TEST_BANK_ID);
-                        return pricingComponentRepoStatic.save(c);
-                    });
-
-            compFee = pricingComponentRepoStatic.findByName("Monthly Maintenance Fee")
-                    .orElseGet(() -> {
-                        PricingComponent c = new PricingComponent();
-                        c.setName("Monthly Maintenance Fee");
-                        c.setType(PricingComponent.ComponentType.FEE);
-                        c.setBankId(TEST_BANK_ID);
-                        return pricingComponentRepoStatic.save(c);
-                    });
-
-            compDiscount = pricingComponentRepoStatic.findByName("Loyalty Discount")
-                    .orElseGet(() -> {
-                        PricingComponent c = new PricingComponent();
-                        c.setName("Loyalty Discount");
-                        c.setType(PricingComponent.ComponentType.DISCOUNT);
-                        c.setBankId(TEST_BANK_ID);
-                        return pricingComponentRepoStatic.save(c);
-                    });
-        });
-
-        txHelperStatic.flushAndClear();
+                compRateId = pricingComponentRepoStatic.save(new PricingComponent("Standard Interest Rate", PricingComponent.ComponentType.RATE)).getId();
+                compFeeId = pricingComponentRepoStatic.save(new PricingComponent("Monthly Maintenance Fee", PricingComponent.ComponentType.FEE)).getId();
+                compDiscountId = pricingComponentRepoStatic.save(new PricingComponent("Loyalty Discount", PricingComponent.ComponentType.DISCOUNT)).getId();
+            });
+        } finally {
+            TenantContextHolder.clear();
+        }
     }
 
-    /**
-     * Clean up ALL committed ProductPricingLinks created during a test run.
-     */
     @BeforeEach
     @AfterEach
     void cleanUpLinks() {
-        // Runs before AND after each test to ensure isolation and cleanup of committed links
         txHelper.doInTransaction(() -> {
-            if (product != null) {
-                // Delete only the links associated with the shared product
-                pricingLinkRepository.deleteAllInBatch(pricingLinkRepository.findByProductId(product.getId()));
-            }
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            pricingLinkRepository.deleteAllInBatch(pricingLinkRepository.findByProductId(productId));
         });
         entityManager.clear();
     }
 
+    // --- Helpers ---
 
-    // =================================================================
-    // HELPER METHODS
-    // =================================================================
-
-    // Helper method to create a DTO for synchronization
-    private ProductPricing createPricingDto(PricingComponent component, String context) {
+    private ProductPricing createPricingDto(Long componentId, String context) {
         ProductPricing dto = new ProductPricing();
-        dto.setPricingComponentId(component.getId());
+        dto.setPricingComponentId(componentId);
         dto.setContext(context);
         return dto;
     }
 
-    // Helper method to create an initial link entity (used for ARRANGE step)
-    private ProductPricingLink createInitialLink(Product p, PricingComponent pc, String context) {
+    private ProductPricingLink createInitialLink(Long pId, Long pcId, String context) {
         ProductPricingLink link = new ProductPricingLink();
-        link.setProduct(p);
-        link.setPricingComponent(pc);
+        link.setProduct(entityManager.getReference(Product.class, pId));
+        link.setPricingComponent(entityManager.getReference(PricingComponent.class, pcId));
         link.setContext(context);
+        link.setBankId(TEST_BANK_ID);
         return link;
     }
 
-    // =================================================================
-    // 0. SECURITY TEST
-    // =================================================================
+    // --- Tests ---
 
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenSyncingPricingWithoutPermission() throws Exception {
-        List<ProductPricing> requests = List.of(createPricingDto(compRate, "RATE"));
+        List<ProductPricing> requests = List.of(createPricingDto(compRateId, "RATE"));
 
-        mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
+        mockMvc.perform(put("/api/v1/products/{id}/pricing", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requests)))
                 .andExpect(status().isForbidden());
     }
 
-    // =================================================================
-    // 1. INITIAL CREATE (No existing links)
-    // =================================================================
-
     @Test
     void shouldCreateNewPricingLinksWhenNoneExist() throws Exception {
         List<ProductPricing> requests = List.of(
-                createPricingDto(compRate, "CORE_RATE"),
-                createPricingDto(compFee, "MONTHLY_FEE")
+                createPricingDto(compRateId, "CORE_RATE"),
+                createPricingDto(compFeeId, "MONTHLY_FEE")
         );
 
-        // ACT: Synchronize
-        mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
+        mockMvc.perform(put("/api/v1/products/{id}/pricing", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requests)))
                 .andExpect(status().isOk());
 
-        // VERIFY: Check DB count (requires dedicated transaction since MockMvc commits)
         txHelper.doInTransaction(() -> {
-            assertThat(pricingLinkRepository.findByProductId(product.getId())).hasSize(2);
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            assertThat(pricingLinkRepository.findByProductId(productId)).hasSize(2);
         });
     }
 
-    // =================================================================
-    // 2. CREATE and DELETE (Full Sync)
-    // =================================================================
-
     @Test
     void shouldPerformFullSync_CreateAndDelete() throws Exception {
-        // ARRANGE: Setup initial state (Only compRate and compDiscount linked). Must be committed.
+        // ARRANGE: Seed initial state
         txHelper.doInTransaction(() -> {
-            pricingLinkRepository.save(createInitialLink(product, compRate, "CORE_RATE")); // Initial Rate
-            pricingLinkRepository.save(createInitialLink(product, compDiscount, "LOYALTY_DISCOUNT")); // Initial Discount
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            pricingLinkRepository.save(createInitialLink(productId, compRateId, "CORE_RATE"));
+            pricingLinkRepository.save(createInitialLink(productId, compDiscountId, "LOYALTY_DISCOUNT"));
         });
 
-        // ARRANGE: Target state (compFee is created, compDiscount is deleted)
+        // ACT: Request sync (Keep Rate, Add Fee, implicitly Delete Discount)
         List<ProductPricing> requests = List.of(
-                createPricingDto(compRate, "CORE_RATE"), // Remains unchanged
-                createPricingDto(compFee, "ANNUAL_FEE") // New fee link created
+                createPricingDto(compRateId, "CORE_RATE"),
+                createPricingDto(compFeeId, "ANNUAL_FEE")
         );
-        // compDiscount link is missing, so the API should delete it.
 
-        // ACT: Synchronize
-        mockMvc.perform(put("/api/v1/products/{id}/pricing", product.getId())
+        mockMvc.perform(put("/api/v1/products/{id}/pricing", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requests)))
                 .andExpect(status().isOk());
 
-        // VERIFY 1: Check DB final state
+        // VERIFY
         txHelper.doInTransaction(() -> {
-            List<ProductPricingLink> finalLinks = pricingLinkRepository.findByProductId(product.getId());
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            List<ProductPricingLink> finalLinks = pricingLinkRepository.findByProductId(productId);
             assertThat(finalLinks).hasSize(2);
 
-            // VERIFY 2: Check composition (should contain CORE_RATE and ANNUAL_FEE contexts)
             List<String> finalContexts = finalLinks.stream()
                     .map(ProductPricingLink::getContext)
                     .collect(Collectors.toList());
             assertThat(finalContexts).containsExactlyInAnyOrder("CORE_RATE", "ANNUAL_FEE");
 
-            // VERIFY 3: Check deletion (Discount link should be gone)
-            assertThat(pricingLinkRepository.existsByPricingComponentId(compDiscount.getId())).isFalse();
+            // Discount should be gone
+            assertThat(pricingLinkRepository.existsByPricingComponentIdAndProductId(compDiscountId, productId)).isFalse();
         });
     }
 
-    // =================================================================
-    // 3. ERROR HANDLING (Not Found)
-    // =================================================================
-
     @Test
     void shouldReturn404OnSyncWithNonExistentProductOrComponent() throws Exception {
-        // Use the committed Product ID
-        Long existingProductId = product.getId();
-
         // Test 1: Non-existent Product ID
         mockMvc.perform(put("/api/v1/products/99999/pricing")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(createPricingDto(compRate, "RATE")))))
+                        .content(objectMapper.writeValueAsString(List.of(createPricingDto(compRateId, "RATE")))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("Product not found")));
 
         // Test 2: Non-existent Pricing Component ID
-        List<ProductPricing> badLinks = List.of(
-                new ProductPricing() {{
-                    setPricingComponentId(99999L); // ID that doesn't exist
-                    setContext("BAD_LINK");
-                }}
-        );
+        List<ProductPricing> badLinks = List.of(createPricingDto(99999L, "BAD_LINK"));
 
-        mockMvc.perform(put("/api/v1/products/{id}/pricing", existingProductId)
+        mockMvc.perform(put("/api/v1/products/{id}/pricing", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(badLinks)))
                 .andExpect(status().isNotFound())

@@ -1,6 +1,6 @@
 package com.bankengine.pricing.service;
 
-import com.bankengine.auth.security.BankContextHolder;
+import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
 import com.bankengine.pricing.dto.BundlePriceResponse.ProductPricingResult;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class BundlePricingService {
+public class BundlePricingService extends BaseService {
 
     private final PricingCalculationService pricingCalculationService;
     private final BundleRulesEngineService bundleRulesEngineService;
@@ -37,7 +37,6 @@ public class BundlePricingService {
 
         List<ProductPricingResult> productResults = new ArrayList<>();
         BigDecimal grossTotal = BigDecimal.ZERO;
-        String currentBankId = BankContextHolder.getBankId();
 
         for (BundlePriceRequest.ProductRequest productReq : request.getProducts()) {
             PriceRequest singlePriceRequest = new PriceRequest();
@@ -59,7 +58,7 @@ public class BundlePricingService {
         }
 
         BundlePricingInput bundleInputFact = new BundlePricingInput();
-        bundleInputFact.setBankId(currentBankId);
+        bundleInputFact.setBankId(getCurrentBankId());
         bundleInputFact.setCustomerSegment(request.getCustomerSegment());
         bundleInputFact.setGrossTotalAmount(grossTotal);
 

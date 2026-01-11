@@ -13,6 +13,7 @@ import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.service.PricingComponentService;
+import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,7 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ProductServiceTest {
+public class ProductServiceTest extends BaseServiceTest {
 
     @Mock
     private ProductRepository productRepository;
