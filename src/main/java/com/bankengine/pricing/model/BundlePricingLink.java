@@ -38,9 +38,6 @@ public class BundlePricingLink extends AuditableEntity {
     @JoinColumn(name = "pricing_component_id", nullable = false)
     private PricingComponent pricingComponent;
 
-    // Optional: A field to define the context/purpose (e.g., 'BUNDLE_FEE_CORE')
-    private String context;
-
     /**
      * Stores the direct fixed value if rules are not used.
      */
@@ -56,7 +53,6 @@ public class BundlePricingLink extends AuditableEntity {
     public BundlePricingLink(ProductBundle productBundle, PricingComponent pricingComponent, String context, BigDecimal fixedValue, boolean useRulesEngine) {
         this.productBundle = productBundle;
         this.pricingComponent = pricingComponent;
-        this.context = context;
         this.fixedValue = fixedValue;
         this.useRulesEngine = useRulesEngine;
     }

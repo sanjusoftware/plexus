@@ -19,7 +19,6 @@ public class PricingLinkMapperTest {
 
         ProductPricingLink oldLink = new ProductPricingLink();
         oldLink.setPricingComponent(pricingComponent);
-        oldLink.setContext("Test Context");
 
         // Act
         ProductPricingLink newLink = mapper.clone(oldLink);
@@ -28,6 +27,5 @@ public class PricingLinkMapperTest {
         assertThat(newLink).isNotNull();
         assertThat(newLink.getId()).isNull();
         assertThat(newLink.getPricingComponent().getName()).isEqualTo("Test Pricing");
-        assertThat(newLink.getContext()).isEqualTo("Test Context");
     }
 }

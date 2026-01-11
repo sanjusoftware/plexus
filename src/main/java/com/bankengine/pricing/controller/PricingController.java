@@ -2,7 +2,7 @@ package com.bankengine.pricing.controller;
 
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
-import com.bankengine.pricing.dto.PriceRequest;
+import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.service.BundlePricingService;
 import com.bankengine.pricing.service.PricingCalculationService;
@@ -33,10 +33,10 @@ public class PricingController {
             description = "Evaluates all fixed and rules-driven components. Returns the final price and breakdown.")
     @ApiResponse(responseCode = "200", description = "Successfully calculated pricing.",
             content = @Content(schema = @Schema(implementation = ProductPricingCalculationResult.class)))
-    @PostMapping("/calculate")
+    @PostMapping("/calculate/product")
     @PreAuthorize("hasAuthority('pricing:calculate:read')")
     public ResponseEntity<ProductPricingCalculationResult> calculateProductPrice(
-            @Valid @RequestBody PriceRequest request) {
+            @Valid @RequestBody PricingRequest request) {
 
         ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
         return ResponseEntity.ok(result);
@@ -44,7 +44,7 @@ public class PricingController {
 
     @Operation(summary = "Calculate the total price for a product bundle")
     @ApiResponse(responseCode = "200", description = "Successfully calculated bundle pricing.")
-    @PostMapping("/bundle/calculate")
+    @PostMapping("/calculate/bundle")
     @PreAuthorize("hasAuthority('pricing:bundle:calculate:read')")
     public ResponseEntity<BundlePriceResponse> calculateBundlePrice(
             @Valid @RequestBody BundlePriceRequest request) {

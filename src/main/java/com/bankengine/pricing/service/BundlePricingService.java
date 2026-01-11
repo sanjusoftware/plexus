@@ -4,7 +4,7 @@ import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
 import com.bankengine.pricing.dto.BundlePriceResponse.ProductPricingResult;
-import com.bankengine.pricing.dto.PriceRequest;
+import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
 import com.bankengine.pricing.model.PriceValue;
@@ -39,13 +39,13 @@ public class BundlePricingService extends BaseService {
         BigDecimal grossTotal = BigDecimal.ZERO;
 
         for (BundlePriceRequest.ProductRequest productReq : request.getProducts()) {
-            PriceRequest singlePriceRequest = new PriceRequest();
-            singlePriceRequest.setProductId(productReq.getProductId());
-            singlePriceRequest.setAmount(productReq.getAmount());
-            singlePriceRequest.setCustomerSegment(request.getCustomerSegment());
-            singlePriceRequest.setEffectiveDate(request.getEffectiveDate());
+            PricingRequest singlePricingRequest = new PricingRequest();
+            singlePricingRequest.setProductId(productReq.getProductId());
+            singlePricingRequest.setAmount(productReq.getAmount());
+            singlePricingRequest.setCustomerSegment(request.getCustomerSegment());
+            singlePricingRequest.setEffectiveDate(request.getEffectiveDate());
 
-            ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(singlePriceRequest);
+            ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(singlePricingRequest);
 
             BigDecimal productTotal = result.getFinalChargeablePrice();
             grossTotal = grossTotal.add(productTotal);
@@ -83,7 +83,6 @@ public class BundlePricingService extends BaseService {
         return adjustments.entrySet().stream().map(entry -> PriceComponentDetail.builder()
             .componentCode(entry.getKey())
             .amount(entry.getValue())
-            .context("BUNDLE_ADJUSTMENT")
             .sourceType("BUNDLE_RULES")
             .valueType(PriceValue.ValueType.DISCOUNT_ABSOLUTE)
             .build()

@@ -6,7 +6,7 @@ import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.data.seeding.CoreMetadataSeeder;
-import com.bankengine.pricing.dto.PriceRequest;
+import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
 import com.bankengine.pricing.model.*;
@@ -104,7 +104,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentRepository.save(component);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, component, "ANNUAL_FEE", null, true
+                    persistedProduct, component, null, true
             ));
 
             entityManager.flush();
@@ -138,7 +138,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockUser(authorities = {"pricing:calculation:read"})
     void testStandardRuleExecution_Success() {
-        PriceRequest request = PriceRequest.builder()
+        PricingRequest request = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(TEST_AMOUNT)
@@ -185,7 +185,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentRepository.save(persistedComponent);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, persistedComponent, "AGE_RULE", null, true
+                    persistedProduct, persistedComponent, null, true
             ));
 
             entityManager.flush();
@@ -194,7 +194,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
 
-        PriceRequest successRequest = PriceRequest.builder()
+        PricingRequest successRequest = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(TEST_AMOUNT)
@@ -207,7 +207,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         assertTrue(successResults.stream().anyMatch(r -> r.getAmount().compareTo(new BigDecimal("20.00")) == 0));
         assertTrue(successResults.stream().anyMatch(r -> r.getAmount().compareTo(new BigDecimal("10.00")) == 0));
 
-        PriceRequest failureRequest = PriceRequest.builder()
+        PricingRequest failureRequest = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(TEST_AMOUNT)
@@ -245,7 +245,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentRepository.save(component);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, component, "ATM_BENEFIT", null, true
+                    persistedProduct, component, null, true
             ));
 
             entityManager.flush();
@@ -254,7 +254,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
 
-        PriceRequest request = PriceRequest.builder()
+        PricingRequest request = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(TEST_AMOUNT)
@@ -293,7 +293,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         );
         Long tierId = tierOptional.orElseThrow(() -> new RuntimeException("Tier not found for component")).getId();
 
-        PriceRequest baselineRequest = PriceRequest.builder()
+        PricingRequest baselineRequest = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(TEST_AMOUNT)
@@ -319,7 +319,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
 
-        PriceRequest failRequest = PriceRequest.builder()
+        PricingRequest failRequest = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(TEST_AMOUNT)
@@ -362,7 +362,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentRepository.save(component);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, component, "BULK_DISCOUNT", null, true
+                    persistedProduct, component, null, true
             ));
 
             entityManager.flush();
@@ -371,7 +371,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
 
-        PriceRequest successRequest = PriceRequest.builder()
+        PricingRequest successRequest = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(TEST_AMOUNT)
@@ -386,7 +386,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         assertTrue(discountResult.isPresent(), "The DISCOUNT_PERCENTAGE benefit must be present in the results.");
         assertEquals(new BigDecimal("5.00"), discountResult.get().getAmount(), "DISCOUNT_PERCENTAGE amount must be 5.00.");
 
-        PriceRequest failureRequest = PriceRequest.builder()
+        PricingRequest failureRequest = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .amount(new BigDecimal("400.00"))

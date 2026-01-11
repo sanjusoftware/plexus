@@ -26,7 +26,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -110,18 +109,16 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
 
     // --- Helpers ---
 
-    private ProductPricing createPricingDto(Long componentId, String context) {
+    private ProductPricing createPricingDto(Long componentId) {
         ProductPricing dto = new ProductPricing();
         dto.setPricingComponentId(componentId);
-        dto.setContext(context);
         return dto;
     }
 
-    private ProductPricingLink createInitialLink(Long pId, Long pcId, String context) {
+    private ProductPricingLink createInitialLink(Long pId, Long pcId) {
         ProductPricingLink link = new ProductPricingLink();
         link.setProduct(entityManager.getReference(Product.class, pId));
         link.setPricingComponent(entityManager.getReference(PricingComponent.class, pcId));
-        link.setContext(context);
         link.setBankId(TEST_BANK_ID);
         return link;
     }
@@ -131,7 +128,7 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenSyncingPricingWithoutPermission() throws Exception {
-        List<ProductPricing> requests = List.of(createPricingDto(compRateId, "RATE"));
+        List<ProductPricing> requests = List.of(createPricingDto(compRateId));
 
         mockMvc.perform(put("/api/v1/products/{id}/pricing", productId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -142,8 +139,8 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     void shouldCreateNewPricingLinksWhenNoneExist() throws Exception {
         List<ProductPricing> requests = List.of(
-                createPricingDto(compRateId, "CORE_RATE"),
-                createPricingDto(compFeeId, "MONTHLY_FEE")
+                createPricingDto(compRateId),
+                createPricingDto(compFeeId)
         );
 
         mockMvc.perform(put("/api/v1/products/{id}/pricing", productId)
@@ -162,14 +159,14 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
         // ARRANGE: Seed initial state
         txHelper.doInTransaction(() -> {
             TenantContextHolder.setBankId(TEST_BANK_ID);
-            pricingLinkRepository.save(createInitialLink(productId, compRateId, "CORE_RATE"));
-            pricingLinkRepository.save(createInitialLink(productId, compDiscountId, "LOYALTY_DISCOUNT"));
+            pricingLinkRepository.save(createInitialLink(productId, compRateId));
+            pricingLinkRepository.save(createInitialLink(productId, compDiscountId));
         });
 
         // ACT: Request sync (Keep Rate, Add Fee, implicitly Delete Discount)
         List<ProductPricing> requests = List.of(
-                createPricingDto(compRateId, "CORE_RATE"),
-                createPricingDto(compFeeId, "ANNUAL_FEE")
+                createPricingDto(compRateId),
+                createPricingDto(compFeeId)
         );
 
         mockMvc.perform(put("/api/v1/products/{id}/pricing", productId)
@@ -183,11 +180,6 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
             List<ProductPricingLink> finalLinks = pricingLinkRepository.findByProductId(productId);
             assertThat(finalLinks).hasSize(2);
 
-            List<String> finalContexts = finalLinks.stream()
-                    .map(ProductPricingLink::getContext)
-                    .collect(Collectors.toList());
-            assertThat(finalContexts).containsExactlyInAnyOrder("CORE_RATE", "ANNUAL_FEE");
-
             // Discount should be gone
             assertThat(pricingLinkRepository.existsByPricingComponentIdAndProductId(compDiscountId, productId)).isFalse();
         });
@@ -198,12 +190,12 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
         // Test 1: Non-existent Product ID
         mockMvc.perform(put("/api/v1/products/99999/pricing")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(createPricingDto(compRateId, "RATE")))))
+                        .content(objectMapper.writeValueAsString(List.of(createPricingDto(compRateId)))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("Product not found")));
 
         // Test 2: Non-existent Pricing Component ID
-        List<ProductPricing> badLinks = List.of(createPricingDto(99999L, "BAD_LINK"));
+        List<ProductPricing> badLinks = List.of(createPricingDto(99999L));
 
         mockMvc.perform(put("/api/v1/products/{id}/pricing", productId)
                         .contentType(MediaType.APPLICATION_JSON)

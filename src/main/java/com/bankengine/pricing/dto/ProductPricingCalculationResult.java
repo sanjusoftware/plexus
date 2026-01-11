@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -17,10 +18,13 @@ public class ProductPricingCalculationResult {
     @Builder
     public static class PriceComponentDetail {
         private String componentCode;
-        private String context;
         private BigDecimal amount;
         private PriceValue.ValueType valueType;
-        private String sourceType; // FIXED_VALUE or RULES_ENGINE
+        private String sourceType;
         private Long matchedTierId;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+        private String createdBy;
+        private String updatedBy;
     }
 }

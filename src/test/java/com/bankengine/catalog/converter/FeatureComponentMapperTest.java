@@ -17,11 +17,13 @@ public class FeatureComponentMapperTest {
     void testToEntity() {
         FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Test Feature");
+        dto.setDataType("STRING");
 
         FeatureComponent entity = mapper.toEntity(dto);
 
         assertNotNull(entity);
         assertEquals(dto.getName(), entity.getName());
+        assertEquals(FeatureComponent.DataType.STRING, entity.getDataType());
     }
 
     @Test
@@ -41,12 +43,15 @@ public class FeatureComponentMapperTest {
     void testUpdateFromDto() {
         FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Updated Feature");
+        dto.setDataType("BOOLEAN");
 
         FeatureComponent entity = new FeatureComponent();
         entity.setName("Original Feature");
+        entity.setDataType(FeatureComponent.DataType.STRING);
 
         mapper.updateFromDto(dto, entity);
 
         assertEquals(dto.getName(), entity.getName());
+        assertEquals(FeatureComponent.DataType.BOOLEAN, entity.getDataType());
     }
 }

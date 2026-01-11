@@ -27,7 +27,7 @@ public class FeatureComponent extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @NonNull
-    private DataType dataType; // To ensure value is stored/read correctly (e.g., STRING, INTEGER, BOOLEAN)
+    private DataType dataType;
 
     public enum DataType {
         STRING, INTEGER, BOOLEAN, DECIMAL, DATE

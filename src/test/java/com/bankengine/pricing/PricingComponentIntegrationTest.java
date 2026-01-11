@@ -273,8 +273,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.amount", is(15.50)))
                 .andExpect(jsonPath("$.componentCode").value("ComponentToUpdate"))
-                .andExpect(jsonPath("$.valueType").value("PERCENTAGE"))
-                .andExpect(jsonPath("$.context").value("PRODUCT_TIER"));
+                .andExpect(jsonPath("$.valueType").value("PERCENTAGE"));
 
         // VERIFY
         txHelper.doInTransaction(() -> {

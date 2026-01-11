@@ -2,8 +2,11 @@ package com.bankengine.pricing;
 
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.model.Product;
+import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.model.ProductType;
+import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.pricing.model.*;
@@ -31,6 +34,9 @@ public class TestTransactionHelper {
     @Autowired private RoleRepository roleRepository;
     @Autowired private ProductRepository productRepository;
     @Autowired private ProductTypeRepository productTypeRepository;
+    @Autowired private ProductBundleRepository productBundleRepository;
+    @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
+
 
     // =================================================================
     // Find-or-Create DSL for Catalog Entities (DRY)
@@ -50,8 +56,24 @@ public class TestTransactionHelper {
         PricingComponent component = new PricingComponent();
         component.setName(name);
         component.setType(PricingComponent.ComponentType.RATE);
-        // Bank ID is usually handled by your AuditorAware automatically
         return componentRepository.save(component);
+    }
+
+    @Transactional
+    public void linkProductToPricingComponent(Long productId, Long componentId, BigDecimal fixedValue) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalStateException("Product not found"));
+        PricingComponent component = componentRepository.findById(componentId)
+                .orElseThrow(() -> new IllegalStateException("Pricing Component not found"));
+
+        ProductPricingLink link = new ProductPricingLink();
+        link.setProduct(product);
+        link.setPricingComponent(component);
+        link.setFixedValue(fixedValue);
+        link.setUseRulesEngine(false);
+        link.setBankId(product.getBankId());
+
+        productPricingLinkRepository.save(link);
     }
 
     @Transactional
@@ -208,5 +230,19 @@ public class TestTransactionHelper {
         ProductType type = productTypeRepository.findById(productTypeId)
                 .orElseThrow(() -> new IllegalStateException("Type not found"));
         return getOrCreateProduct(name, type, category).getId();
+    }
+
+    @Transactional
+    public ProductBundle createBundleInDb(String name) {
+        ProductBundle bundle = new ProductBundle();
+        bundle.setName(name);
+        // Code must be unique per bank_id; using a timestamp or UUID prevents collisions
+        bundle.setCode("BNDL_" + System.currentTimeMillis());
+        bundle.setEligibilitySegment("RETAIL");
+        bundle.setActivationDate(LocalDate.now());
+        bundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
+        bundle.setBankId(TenantContextHolder.getBankId());
+
+        return productBundleRepository.save(bundle);
     }
 }

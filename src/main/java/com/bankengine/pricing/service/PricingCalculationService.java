@@ -1,7 +1,7 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.common.service.BaseService;
-import com.bankengine.pricing.dto.PriceRequest;
+import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
 import com.bankengine.pricing.model.PriceValue;
@@ -33,7 +33,7 @@ public class PricingCalculationService extends BaseService {
     private static final String BANK_ID_KEY = "bankId";
 
     @Transactional(readOnly = true)
-    public ProductPricingCalculationResult getProductPricing(PriceRequest request) {
+    public ProductPricingCalculationResult getProductPricing(PricingRequest request) {
         List<ProductPricingLink> links = productPricingLinkRepository.findByProductId(request.getProductId());
 
         if (links.isEmpty()) {
@@ -68,7 +68,7 @@ public class PricingCalculationService extends BaseService {
                 .build();
     }
 
-    private Collection<PriceValue> determinePriceWithDrools(PriceRequest request) {
+    private Collection<PriceValue> determinePriceWithDrools(PricingRequest request) {
         KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
 
         PricingInput input = new PricingInput();
@@ -100,7 +100,6 @@ public class PricingCalculationService extends BaseService {
         if (link.getFixedValue() == null) return Optional.empty();
 
         return Optional.of(PriceComponentDetail.builder()
-                .context(link.getContext())
                 .componentCode(link.getPricingComponent().getName())
                 .amount(link.getFixedValue())
                 .valueType(PriceValue.ValueType.ABSOLUTE)
@@ -110,7 +109,6 @@ public class PricingCalculationService extends BaseService {
 
     private PriceComponentDetail mapFactToDetail(PriceValue fact) {
         return PriceComponentDetail.builder()
-                .context(fact.getComponentCode())
                 .componentCode(fact.getComponentCode())
                 .amount(fact.getPriceAmount())
                 .valueType(fact.getValueType())

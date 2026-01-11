@@ -14,7 +14,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PriceRequest {
+public class PricingRequest {
 
     // --- Core Catalog Input ---
     @NotNull(message = "Product ID is mandatory for pricing.")

@@ -356,7 +356,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         });
 
         PricingComponent pc = txHelper.doInTransaction(() -> pricingComponentRepository.findByName("Pricing 1").get());
-        ProductPricing req = ProductPricing.builder().pricingComponentId(pc.getId()).context("DEFAULT").build();
+        ProductPricing req = ProductPricing.builder().pricingComponentId(pc.getId()).build();
 
         mockMvc.perform(put(PRODUCT_API_BASE + "/{id}/pricing", productId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -384,7 +384,8 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
 
             PricingComponent pc = pricingComponentRepository.save(new PricingComponent("Monthly Fee", PricingComponent.ComponentType.FEE));
             ProductPricingLink pLink = new ProductPricingLink();
-            pLink.setProduct(oldProduct); pLink.setPricingComponent(pc); pLink.setContext("Retail"); pLink.setUseRulesEngine(false);
+            pLink.setProduct(oldProduct); pLink.setPricingComponent(pc);
+            pLink.setUseRulesEngine(false);
             pricingLinkRepository.save(pLink);
         });
 
@@ -403,8 +404,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.pricing.length()").value(1))
                 .andExpect(jsonPath("$.features[0].featureName").value("Premium Support"))
                 .andExpect(jsonPath("$.features[0].featureValue").value("Included"))
-                .andExpect(jsonPath("$.pricing[0].pricingComponentName").value("Monthly Fee"))
-                .andExpect(jsonPath("$.pricing[0].context").value("Retail"));
+                .andExpect(jsonPath("$.pricing[0].pricingComponentName").value("Monthly Fee"));
 
         // 5. Verify Archival
         mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProductId))

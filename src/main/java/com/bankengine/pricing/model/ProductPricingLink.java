@@ -33,9 +33,6 @@ public class ProductPricingLink extends AuditableEntity {
     @JoinColumn(name = "pricing_component_id", nullable = false)
     private PricingComponent pricingComponent;
 
-    // Optional: A field to define the context/purpose (e.g., 'CORE_RATE', 'ANNUAL_FEE')
-    private String context;
-
     /**
      * Stores the direct value (e.g., the amount of an annual fee or a fixed rate).
      * Used for simple pricing components that do not require the Rules Engine.
@@ -50,10 +47,9 @@ public class ProductPricingLink extends AuditableEntity {
     @Column(name = "use_rules_engine", nullable = false)
     private boolean useRulesEngine = false;
 
-    public ProductPricingLink(Product product, PricingComponent pricingComponent, String context, BigDecimal fixedValue, boolean useRulesEngine) {
+    public ProductPricingLink(Product product, PricingComponent pricingComponent, BigDecimal fixedValue, boolean useRulesEngine) {
         this.product = product;
         this.pricingComponent = pricingComponent;
-        this.context = context;
         this.fixedValue = fixedValue;
         this.useRulesEngine = useRulesEngine;
     }

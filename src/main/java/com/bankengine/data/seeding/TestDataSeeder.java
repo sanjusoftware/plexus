@@ -192,7 +192,6 @@ public class TestDataSeeder implements CommandLineRunner {
             ProductPricingLink link = new ProductPricingLink();
             link.setProduct(p);
             link.setPricingComponent(fee);
-            link.setContext("CORE_FEE");
             link.setBankId(bankId);
             productPricingLinkRepository.save(link);
         });

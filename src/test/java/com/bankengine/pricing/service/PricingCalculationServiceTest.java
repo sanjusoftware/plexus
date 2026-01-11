@@ -1,7 +1,7 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.auth.security.TenantContextHolder;
-import com.bankengine.pricing.dto.PriceRequest;
+import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
@@ -41,7 +41,7 @@ class PricingCalculationServiceTest extends BaseServiceTest {
     @InjectMocks
     private PricingCalculationService pricingCalculationService;
 
-    private PriceRequest request;
+    private PricingRequest request;
     private MockedStatic<TenantContextHolder> mockedBankContext;
 
     @BeforeEach
@@ -49,7 +49,7 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         mockedBankContext = Mockito.mockStatic(TenantContextHolder.class);
         mockedBankContext.when(TenantContextHolder::getBankId).thenReturn("TEST_BANK");
 
-        request = PriceRequest.builder()
+        request = PricingRequest.builder()
                 .productId(1L)
                 .amount(new BigDecimal("1000.00"))
                 .customerSegment("RETAIL")
@@ -67,19 +67,11 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         ProductPricingLink fixedLink = createLink("FixedFee", new BigDecimal("10.00"), false);
         when(productPricingLinkRepository.findByProductId(anyLong()))
                 .thenReturn(List.of(fixedLink));
-
-        // Stub the aggregator to return a known value
         when(priceAggregator.calculate(anyList(), any(BigDecimal.class)))
                 .thenReturn(new BigDecimal("10.00"));
-
-        // ACT
         ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
-
-        // ASSERT
         assertNotNull(result);
         assertEquals(new BigDecimal("10.00"), result.getFinalChargeablePrice());
-
-        // Verify that the service actually called the aggregator with the collected components
         verify(priceAggregator).calculate(argThat(list -> list.size() == 1), eq(request.getAmount()));
     }
 
@@ -139,7 +131,6 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         link.setPricingComponent(comp);
         link.setFixedValue(val);
         link.setUseRulesEngine(useRules);
-        link.setContext(name);
         return link;
     }
 }

@@ -27,6 +27,6 @@ public class BundlePriceRequest {
         @NotNull
         private Long productId;
         @NotNull
-        private BigDecimal amount; // Transactional amount relevant to this product
+        private BigDecimal amount;
     }
 }

@@ -91,7 +91,7 @@ public class PricingComponentService extends BaseService {
 
         reloadService.reloadKieContainer();
 
-        return priceValueMapper.toResponseDto(savedValue);
+        return priceValueMapper.toDetailDto(savedValue);
     }
 
     private void updateTierConditions(PricingTier tier, List<TierConditionDto> conditionDtos) {
@@ -224,7 +224,7 @@ public class PricingComponentService extends BaseService {
                 .orElseThrow(() -> new RuntimeException("Price Value not found for Tier: " + tierId));
 
         reloadService.reloadKieContainer();
-        return priceValueMapper.toResponseDto(savedValue);
+        return priceValueMapper.toDetailDto(savedValue);
     }
 
     private static void setValueType(PriceValueRequest valueDto, PriceValue value) {

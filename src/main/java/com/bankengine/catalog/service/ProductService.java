@@ -144,51 +144,41 @@ public class ProductService extends BaseService {
     public ProductResponse syncProductPricing(Long productId, List<ProductPricing> syncDtos) {
         Product product = getProductEntityById(productId);
 
-        // Define a composite key: ComponentID + Context is unique per product
-        // Map: { ComponentID_Context -> ProductPricingLink }
-        Map<String, ProductPricingLink> currentLinksMap = pricingLinkRepository.findByProductId(productId).stream()
-                .collect(Collectors.toMap(
-                        link -> link.getPricingComponent().getId() + "_" + link.getContext(),
-                        link -> link
-                ));
-
-        // Collect the set of incoming composite keys
-        Set<String> incomingKeys = syncDtos.stream()
-                .map(dto -> dto.getPricingComponentId() + "_" + dto.getContext())
+        // 1. Identify what should stay or be updated
+        Set<Long> incomingIds = syncDtos.stream()
+                .map(ProductPricing::getPricingComponentId)
                 .collect(Collectors.toSet());
 
-        // 1. IDENTIFY and DELETE links that are no longer present (Cleanup)
-        List<ProductPricingLink> linksToDelete = currentLinksMap.values().stream()
-                .filter(link -> !incomingKeys.contains(link.getPricingComponent().getId() + "_" + link.getContext()))
-                .collect(Collectors.toList());
+        // 2. Remove orphans by modifying the collection directly
+        product.getProductPricingLinks().removeIf(link ->
+                !incomingIds.contains(link.getPricingComponent().getId()));
 
-        pricingLinkRepository.deleteAll(linksToDelete);
-        pricingLinkRepository.flush(); // Flush deletions to the DB
+        // 3. Add new links
+        Set<Long> existingIds = product.getProductPricingLinks().stream()
+                .map(link -> link.getPricingComponent().getId())
+                .collect(Collectors.toSet());
 
-        // 2. IDENTIFY and CREATE links that are incoming
         for (ProductPricing dto : syncDtos) {
-            String compositeKey = dto.getPricingComponentId() + "_" + dto.getContext();
-
-            if (!currentLinksMap.containsKey(compositeKey)) {
-                // CREATE: Link is new
+            if (!existingIds.contains(dto.getPricingComponentId())) {
                 PricingComponent component = pricingComponentService.getPricingComponentById(dto.getPricingComponentId());
 
                 ProductPricingLink newLink = new ProductPricingLink();
                 newLink.setProduct(product);
                 newLink.setPricingComponent(component);
-                newLink.setContext(dto.getContext());
                 newLink.setBankId(product.getBankId());
-                pricingLinkRepository.save(newLink);
+
+                product.getProductPricingLinks().add(newLink);
             }
         }
 
-        pricingLinkRepository.flush();
+        // 4. Save parent (cascades to children) and flush
+        productRepository.save(product);
+        productRepository.flush();
 
-        // RELOAD/REFRESH: Force the product to see the new links in the DB
-        product = getProductEntityById(productId);
-        entityManager.refresh(product);
+        // Clear to ensure the next fetch is fresh from DB
+        entityManager.clear();
 
-        return productMapper.toResponse(product);
+        return getProductResponseById(productId);
     }
 
     /**
@@ -406,7 +396,6 @@ public class ProductService extends BaseService {
                     ProductPricingLink newLink = new ProductPricingLink();
                     newLink.setProduct(savedNewProduct);
                     newLink.setPricingComponent(oldLink.getPricingComponent());
-                    newLink.setContext(oldLink.getContext());
                     newLink.setFixedValue(oldLink.getFixedValue());
                     newLink.setUseRulesEngine(oldLink.isUseRulesEngine());
                     newLink.setBankId(bankId);
