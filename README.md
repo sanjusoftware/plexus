@@ -59,15 +59,14 @@ For a token to be accepted and successfully authorize a user (e.g., a `SUPER_ADM
 ```json
 {
   "sub": "dev_user_identifier",
-  "bank_id": "GLOBAL-BANK-001",        // Tenenat bank id
-  "roles": ["SUPER_ADMIN", "ANALYST"], // MUST be a JSON array of role names
-  "iss": "http://localhost:8080",      // Must match security.jwt.issuer-uri
-  "aud": "bank-engine-api",            // Must match security.jwt.audience
-  "iat": 1732540800,                   // Issued At Timestamp (Unix epoch)
-  "exp": 1795697637                    // Expiration Timestamp (Unix epoch)
+  "bank_id": "GLOBAL-BANK-001",
+  "roles": ["SUPER_ADMIN", "ANALYST"],
+  "iss": "http://localhost:8080",
+  "aud": "bank-engine-api",
+  "iat": 1732540800,
+  "exp": 1795697637
 }
 ```
-
 
 ### B. Access Control
 Access is granted using method-level security with **`@PreAuthorize`**.
@@ -124,3 +123,45 @@ The goal is for a consuming application (e.g., a customer onboarding system) to 
 ### Benefit of this Architecture
 * **Centralized Pricing Updates**: If the rule for the `STANDARD` segment changes globally from $10.00 to $12.00, only **one** `PriceValue` needs to be updated. All products linked to `PricingComponent` 201 instantly inherit the change.
 * **Product-Specific Overrides**: Product features are isolated. If a product needs a limit of **10** free withdrawals instead of 5, only its specific `ProductFeatureLink` needs updating, leaving the `FeatureComponent` master definition intact.
+* **Auditable Integrity**: Every configuration change and calculation result is automatically tagged with `createdBy` and `updatedAt` metadata via JPA Auditing.
+
+***
+
+## 6. Development & Testing
+Plexus maintains high code quality with a suite of over 142+ integration tests covering multi-tenancy, RBAC, and calculation logic.
+
+### Running Tests
+```bash
+./mvnw clean test
+```
+The test suite utilizes a `TestTransactionHelper` to perform idempotent data seeding, ensuring unique constraints are respected across parallel test executions by using "find-or-create" logic.
+
+### Bundle Pricing Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client as Client System
+    participant BPS as BundlePricingService
+    participant PCS as ProductPricingService
+    participant RE as BundleRulesEngine (Drools)
+
+    Client->>BPS: calculateTotalBundlePrice(request)
+    
+    loop For each Product in Bundle
+        BPS->>PCS: getProductPricing(singlePricingRequest)
+        PCS-->>BPS: return ProductPricingCalculationResult
+    end
+
+    Note over BPS: 1. Calculate Gross Total (Sum of individual results)
+    
+    BPS->>BPS: 2. Fetch BundlePricingLinks (Database)
+    Note right of BPS: Filter: !useRulesEngine & fixedValue != null
+
+    BPS->>RE: 3. determineBundleAdjustments(BundlePricingInput)
+    Note over RE: Fire rules based on grossTotal,<br/>segment, and bankId
+    RE-->>BPS: return adjustedFact (Map of Adjustments)
+
+    Note over BPS: 4. Aggregate Net Total<br/>(Gross + Fixed + Rules)
+
+    BPS-->>Client: return BundlePriceResponse
+```
