@@ -120,22 +120,6 @@ The goal is for a consuming application (e.g., a customer onboarding system) to 
     * Rule 201-1 fires (`conditionValue` matches `STANDARD`).
 * **Result**: The Price Service returns the associated `PriceValue`: `$10.00` (with `valueType`: `ABSOLUTE`).
 
-### Benefit of this Architecture
-* **Centralized Pricing Updates**: If the rule for the `STANDARD` segment changes globally from $10.00 to $12.00, only **one** `PriceValue` needs to be updated. All products linked to `PricingComponent` 201 instantly inherit the change.
-* **Product-Specific Overrides**: Product features are isolated. If a product needs a limit of **10** free withdrawals instead of 5, only its specific `ProductFeatureLink` needs updating, leaving the `FeatureComponent` master definition intact.
-* **Auditable Integrity**: Every configuration change and calculation result is automatically tagged with `createdBy` and `updatedAt` metadata via JPA Auditing.
-
-***
-
-## 6. Development & Testing
-Plexus maintains high code quality with a suite of over 142+ integration tests covering multi-tenancy, RBAC, and calculation logic.
-
-### Running Tests
-```bash
-./mvnw clean test
-```
-The test suite utilizes a `TestTransactionHelper` to perform idempotent data seeding, ensuring unique constraints are respected across parallel test executions by using "find-or-create" logic.
-
 ### Bundle Pricing Sequence Diagram
 
 ```mermaid
@@ -165,3 +149,19 @@ sequenceDiagram
 
     BPS-->>Client: return BundlePriceResponse
 ```
+
+## 6. Benefit of this Architecture
+* **Centralized Pricing Updates**: If the rule for the `STANDARD` segment changes globally from $10.00 to $12.00, only **one** `PriceValue` needs to be updated. All products linked to `PricingComponent` 201 instantly inherit the change.
+* **Product-Specific Overrides**: Product features are isolated. If a product needs a limit of **10** free withdrawals instead of 5, only its specific `ProductFeatureLink` needs updating, leaving the `FeatureComponent` master definition intact.
+* **Auditable Integrity**: Every configuration change and calculation result is automatically tagged with `createdBy` and `updatedAt` metadata via JPA Auditing.
+
+***
+
+## 7. Development & Testing
+Plexus maintains high code quality with a suite of over 142+ integration tests covering multi-tenancy, RBAC, and calculation logic.
+
+### Running Tests
+```bash
+./mvnw clean test
+```
+The test suite utilizes a `TestTransactionHelper` to perform idempotent data seeding, ensuring unique constraints are respected across parallel test executions by using "find-or-create" logic.
