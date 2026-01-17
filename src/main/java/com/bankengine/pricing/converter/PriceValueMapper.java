@@ -17,6 +17,7 @@ public interface PriceValueMapper {
     @Mapping(target = "valueType", ignore = true)
     @Mapping(target = "matchedTierId", ignore = true)
     @Mapping(target = "componentCode", ignore = true)
+    @Mapping(target = "rawValue", source = "priceAmount")
     PriceValue toEntity(PriceValueRequest dto);
 
     @ToAuditableEntity
@@ -24,11 +25,13 @@ public interface PriceValueMapper {
     @Mapping(target = "valueType", ignore = true)
     @Mapping(target = "matchedTierId", ignore = true)
     @Mapping(target = "componentCode", ignore = true)
+    @Mapping(target = "rawValue", source = "priceAmount")
     void updateFromDto(PriceValueRequest dto, @MappingTarget PriceValue entity);
 
-    @Mapping(target = "amount", source = "priceAmount")
     @Mapping(target = "componentCode", source = "pricingTier.pricingComponent.name")
     @Mapping(target = "matchedTierId", source = "pricingTier.id")
     @Mapping(target = "sourceType", constant = "CATALOG")
+    @Mapping(target = "calculatedAmount", ignore = true)
+    @Mapping(target = "targetComponentCode", ignore = true)
     ProductPricingCalculationResult.PriceComponentDetail toDetailDto(PriceValue entity);
 }

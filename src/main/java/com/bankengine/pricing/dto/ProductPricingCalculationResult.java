@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -18,13 +17,13 @@ public class ProductPricingCalculationResult {
     @Builder
     public static class PriceComponentDetail {
         private String componentCode;
-        private BigDecimal amount;
+        private BigDecimal rawValue;
         private PriceValue.ValueType valueType;
+
+        // This field is calculated by the Service, NOT Drools
+        private BigDecimal calculatedAmount; // e.g., $50.00 (Result of 5% of $1000)
+        private String targetComponentCode; // Optional: for targeted discounts
         private String sourceType;
         private Long matchedTierId;
-        private LocalDateTime createdAt;
-        private LocalDateTime updatedAt;
-        private String createdBy;
-        private String updatedBy;
     }
 }

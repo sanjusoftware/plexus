@@ -24,6 +24,9 @@ public class BundlePriceRequest {
 
     private LocalDate effectiveDate = LocalDate.now();
 
+    // ADDED: To pass any metadata (e.g., yearsWithBank, region, etc.)
+    private java.util.Map<String, Object> customAttributes;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

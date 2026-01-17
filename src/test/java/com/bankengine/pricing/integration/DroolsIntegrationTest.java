@@ -97,14 +97,14 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             condition.setConnector(TierCondition.LogicalConnector.AND);
             tier.getConditions().add(condition);
 
-            PriceValue priceValue = new PriceValue(tier, EXPECTED_PRICE_INITIAL, ValueType.ABSOLUTE);
+            PriceValue priceValue = new PriceValue(tier, EXPECTED_PRICE_INITIAL, ValueType.FEE_ABSOLUTE);
             tier.getPriceValues().add(priceValue);
 
             component.getPricingTiers().add(tier);
             pricingComponentRepository.save(component);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, component, null, true
+                    persistedProduct, component, null, null, null, true
             ));
 
             entityManager.flush();
@@ -150,8 +150,8 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         assertFalse(components.isEmpty(), "Expected at least one price component result.");
         PriceComponentDetail firstComponent = components.get(0);
 
-        assertEquals(EXPECTED_PRICE_INITIAL, firstComponent.getAmount(), "Rule execution must succeed.");
-        assertEquals(ValueType.ABSOLUTE.name(), firstComponent.getValueType().name());
+        assertEquals(EXPECTED_PRICE_INITIAL, firstComponent.getRawValue(), "Rule execution must succeed.");
+        assertEquals(ValueType.FEE_ABSOLUTE.name(), firstComponent.getValueType().name());
     }
 
     @Test
@@ -178,14 +178,14 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             condition.setConnector(TierCondition.LogicalConnector.AND);
             tier.getConditions().add(condition);
 
-            PriceValue priceValue = new PriceValue(tier, new BigDecimal("20.00"), ValueType.ABSOLUTE);
+            PriceValue priceValue = new PriceValue(tier, new BigDecimal("20.00"), ValueType.FEE_ABSOLUTE);
             tier.getPriceValues().add(priceValue);
 
             persistedComponent.getPricingTiers().add(tier);
             pricingComponentRepository.save(persistedComponent);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, persistedComponent, null, true
+                    persistedProduct, persistedComponent, null, null, null, true
             ));
 
             entityManager.flush();
@@ -204,8 +204,8 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         List<PriceComponentDetail> successResults = pricingCalculationService.getProductPricing(successRequest).getComponentBreakdown();
 
         assertEquals(2, successResults.size(), "Expected two price facts.");
-        assertTrue(successResults.stream().anyMatch(r -> r.getAmount().compareTo(new BigDecimal("20.00")) == 0));
-        assertTrue(successResults.stream().anyMatch(r -> r.getAmount().compareTo(new BigDecimal("10.00")) == 0));
+        assertTrue(successResults.stream().anyMatch(r -> r.getRawValue().compareTo(new BigDecimal("20.00")) == 0));
+        assertTrue(successResults.stream().anyMatch(r -> r.getRawValue().compareTo(new BigDecimal("10.00")) == 0));
 
         PricingRequest failureRequest = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
@@ -217,7 +217,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         List<PriceComponentDetail> failureResults = pricingCalculationService.getProductPricing(failureRequest).getComponentBreakdown();
 
         assertEquals(1, failureResults.size(), "Only the Annual Fee rule should fire, resulting in 1 fact.");
-        assertEquals(new BigDecimal("10.00"), failureResults.get(0).getAmount(), "Only the $10.00 Annual Fee must be present.");
+        assertEquals(new BigDecimal("10.00"), failureResults.get(0).getRawValue(), "Only the $10.00 Annual Fee must be present.");
     }
 
     @Test
@@ -245,7 +245,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentRepository.save(component);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, component, null, true
+                    persistedProduct, component, null,  null, null,true
             ));
 
             entityManager.flush();
@@ -269,7 +269,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                 .findFirst();
 
         assertTrue(freeCountResult.isPresent(), "The FREE_COUNT benefit must be present in the results.");
-        assertTrue(new BigDecimal("5").compareTo(freeCountResult.get().getAmount()) == 0, "FREE_COUNT amount must be 5.");
+        assertTrue(new BigDecimal("5").compareTo(freeCountResult.get().getRawValue()) == 0, "FREE_COUNT amount must be 5.");
     }
 
     @Test
@@ -301,17 +301,18 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         List<PriceComponentDetail> resultsBefore = pricingCalculationService.getProductPricing(baselineRequest).getComponentBreakdown();
         assertFalse(resultsBefore.isEmpty());
-        assertEquals(EXPECTED_PRICE_INITIAL, resultsBefore.get(0).getAmount());
+        assertEquals(EXPECTED_PRICE_INITIAL, resultsBefore.get(0).getRawValue());
 
         pricingComponentService.deleteTierAndValue(componentId, tierId);
 
-        Assertions.assertEquals(0L, getTierCountDirectly(componentId),
-                "Database tier count must be zero after first deletion transaction commits.");
+        Assertions.assertEquals(0L, pricingTierRepository.countByPricingComponentId(componentId),
+                "Database tier count must be zero after first deletion.");
 
         transactionTemplate.execute(new TransactionCallbackWithoutResult() {
             @Override
             protected void doInTransactionWithoutResult(TransactionStatus status) {
-                jdbcTemplate.update("DELETE FROM PRODUCT_PRICING_LINK WHERE PRICING_COMPONENT_ID = ?", componentId);
+                productPricingLinkRepository.deleteByPricingComponentId(componentId);
+                productPricingLinkRepository.flush();
                 entityManager.clear();
                 pricingComponentService.deletePricingComponent(componentId);
             }
@@ -362,7 +363,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentRepository.save(component);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, component, null, true
+                    persistedProduct, component, null,  null, null,true
             ));
 
             entityManager.flush();
@@ -384,7 +385,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                 .findFirst();
 
         assertTrue(discountResult.isPresent(), "The DISCOUNT_PERCENTAGE benefit must be present in the results.");
-        assertEquals(new BigDecimal("5.00"), discountResult.get().getAmount(), "DISCOUNT_PERCENTAGE amount must be 5.00.");
+        assertEquals(new BigDecimal("5.00"), discountResult.get().getRawValue(), "DISCOUNT_PERCENTAGE amount must be 5.00.");
 
         PricingRequest failureRequest = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
@@ -394,10 +395,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         List<PriceComponentDetail> failureResults = pricingCalculationService.getProductPricing(failureRequest).getComponentBreakdown();
         assertEquals(1, failureResults.size(), "Only the baseline rule should fire.");
-        assertEquals(EXPECTED_PRICE_INITIAL, failureResults.get(0).getAmount());
+        assertEquals(EXPECTED_PRICE_INITIAL, failureResults.get(0).getRawValue());
     }
 
-    private long getTierCountDirectly(Long componentId) {
-        return jdbcTemplate.queryForObject("SELECT COUNT(id) FROM pricing_tier WHERE component_id = ?", Long.class, componentId);
-    }
 }

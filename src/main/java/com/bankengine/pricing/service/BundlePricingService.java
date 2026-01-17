@@ -9,6 +9,7 @@ import com.bankengine.pricing.dto.BundlePriceResponse.ProductPricingResult;
 import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
+import com.bankengine.pricing.model.BundlePricingLink;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.rules.model.BundlePricingInput;
 import com.bankengine.rules.service.BundleRulesEngineService;
@@ -18,9 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,16 +77,27 @@ public class BundlePricingService extends BaseService {
 
         List<PriceComponentDetail> bundleAdjustments = new ArrayList<>();
 
-        // 3. Process Fixed Adjustments from Database (BundlePricingLink)
+        // 3. Process Fixed Adjustments (BundlePricingLink)
         if (bundle.getBundlePricingLinks() != null) {
             bundle.getBundlePricingLinks().stream()
                 .filter(link -> !link.isUseRulesEngine() && link.getFixedValue() != null)
-                .forEach(link -> bundleAdjustments.add(PriceComponentDetail.builder()
+                .forEach(link -> {
+                    // Determine type: if negative and type null, assume DISCOUNT_ABSOLUTE
+                    PriceValue.ValueType resolvedType = link.getFixedValueType();
+                    if (resolvedType == null) {
+                        resolvedType = link.getFixedValue().compareTo(BigDecimal.ZERO) < 0
+                                ? PriceValue.ValueType.DISCOUNT_ABSOLUTE
+                                : PriceValue.ValueType.FEE_ABSOLUTE;
+                    }
+
+                    bundleAdjustments.add(PriceComponentDetail.builder()
                         .componentCode(link.getPricingComponent().getName())
-                        .amount(link.getFixedValue())
-                        .valueType(PriceValue.ValueType.ABSOLUTE)
+                        .rawValue(link.getFixedValue())
+                        .calculatedAmount(link.getFixedValue())
+                        .valueType(resolvedType)
                         .sourceType("FIXED_VALUE")
-                        .build()));
+                        .build());
+                });
         }
 
         // 4. Process Dynamic Adjustments from Rules Engine (Drools)
@@ -92,12 +106,31 @@ public class BundlePricingService extends BaseService {
         bundleInputFact.setCustomerSegment(request.getCustomerSegment());
         bundleInputFact.setGrossTotalAmount(grossTotal);
 
+        // Contextual awareness for Bundle rules
+        bundleInputFact.setContainedProductIds(bundle.getContainedProducts().stream()
+                .map(link -> link.getProduct().getId())
+                .collect(Collectors.toList()));
+
+        // Populate targeted IDs so the "contains" check in DRL works
+        Set<Long> targetComponentIds = bundle.getBundlePricingLinks().stream()
+                .filter(BundlePricingLink::isUseRulesEngine)
+                .map(link -> link.getPricingComponent().getId())
+                .collect(Collectors.toSet());
+        bundleInputFact.setTargetPricingComponentIds(targetComponentIds);
+
+        // Populate Custom Attributes for LHS matching
+        bundleInputFact.getCustomAttributes().put("customerSegment", request.getCustomerSegment());
+        bundleInputFact.getCustomAttributes().put("transactionAmount", grossTotal);
+        if (request.getCustomAttributes() != null) {
+            bundleInputFact.getCustomAttributes().putAll(request.getCustomAttributes());
+        }
+
         BundlePricingInput adjustedFact = bundleRulesEngineService.determineBundleAdjustments(bundleInputFact);
-        bundleAdjustments.addAll(convertRulesToDetail(adjustedFact.getAdjustments()));
+        bundleAdjustments.addAll(convertRulesToDetail(adjustedFact.getAdjustments(), grossTotal));
 
         // 5. Aggregate Final Amounts
         BigDecimal totalAdjustments = bundleAdjustments.stream()
-                .map(PriceComponentDetail::getAmount)
+                .map(PriceComponentDetail::getCalculatedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return BundlePriceResponse.builder()
@@ -109,14 +142,31 @@ public class BundlePricingService extends BaseService {
                 .build();
     }
 
-    private List<PriceComponentDetail> convertRulesToDetail(Map<String, BigDecimal> adjustments) {
+    /**
+     * Converts the structured BundleAdjustment facts into UI-friendly details.
+     */
+    private List<PriceComponentDetail> convertRulesToDetail(Map<String, BundlePricingInput.BundleAdjustment> adjustments, BigDecimal grossTotal) {
         if (adjustments == null) return new ArrayList<>();
-        return adjustments.entrySet().stream().map(entry -> PriceComponentDetail.builder()
-            .componentCode(entry.getKey())
-            .amount(entry.getValue())
-            .sourceType("BUNDLE_RULES")
-            .valueType(PriceValue.ValueType.DISCOUNT_ABSOLUTE)
-            .build()
-        ).collect(Collectors.toList());
+
+        return adjustments.entrySet().stream().map(entry -> {
+            String code = entry.getKey();
+            BundlePricingInput.BundleAdjustment adj = entry.getValue();
+            PriceValue.ValueType valueType = PriceValue.ValueType.valueOf(adj.getType());
+
+            // Calculate monetary value based on type
+            BigDecimal calculatedAmount = switch (valueType) {
+                case DISCOUNT_PERCENTAGE, FEE_PERCENTAGE -> grossTotal.multiply(adj.getValue())
+                        .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                default -> adj.getValue();
+            };
+
+            return PriceComponentDetail.builder()
+                    .componentCode(code)
+                    .rawValue(adj.getValue())
+                    .calculatedAmount(calculatedAmount)
+                    .sourceType("BUNDLE_RULES")
+                    .valueType(valueType)
+                    .build();
+        }).collect(Collectors.toList());
     }
 }

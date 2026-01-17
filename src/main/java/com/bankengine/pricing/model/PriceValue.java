@@ -22,27 +22,27 @@ public class PriceValue extends AuditableEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tier_id", nullable = false)
-    private PricingTier pricingTier; // Links to the tier
+    @JoinColumn(name = "pricing_tier_id", nullable = false)
+    private PricingTier pricingTier;
 
     @Column(nullable = false)
-    private BigDecimal priceAmount; // The actual fee amount or rate percentage
+    private BigDecimal rawValue; // The actual fee amount or rate percentage
 
     @Enumerated(EnumType.STRING)
     private ValueType valueType; // ABSOLUTE (e.g., $50), PERCENTAGE (e.g., 2.5%)
 
     public enum ValueType {
-        ABSOLUTE,
-        PERCENTAGE,
+        FEE_ABSOLUTE,
+        FEE_PERCENTAGE,
         WAIVED,
         DISCOUNT_PERCENTAGE,
         DISCOUNT_ABSOLUTE,
         FREE_COUNT
     }
 
-    public PriceValue(PricingTier pricingTier, BigDecimal priceAmount, ValueType valueType) {
+    public PriceValue(PricingTier pricingTier, BigDecimal rawValue, ValueType valueType) {
         this.pricingTier = pricingTier;
-        this.priceAmount = priceAmount;
+        this.rawValue = rawValue;
         this.valueType = valueType;
     }
 

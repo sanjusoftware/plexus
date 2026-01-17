@@ -25,7 +25,7 @@ public class PricingTier extends AuditableEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "component_id", nullable = false)
+    @JoinColumn(name = "pricing_component_id", nullable = false)
     private PricingComponent pricingComponent;
 
     @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)

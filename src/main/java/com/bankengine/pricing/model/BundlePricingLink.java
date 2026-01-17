@@ -44,16 +44,22 @@ public class BundlePricingLink extends AuditableEntity {
     @Column(name = "fixed_value")
     private BigDecimal fixedValue;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "fixed_value_type")
+    private PriceValue.ValueType fixedValueType;
+
     /**
      * If true, the pricing is determined by the Drools Rules Engine.
      */
     @Column(name = "use_rules_engine", nullable = false)
     private boolean useRulesEngine = false;
 
-    public BundlePricingLink(ProductBundle productBundle, PricingComponent pricingComponent, String context, BigDecimal fixedValue, boolean useRulesEngine) {
+    public BundlePricingLink(ProductBundle productBundle, PricingComponent pricingComponent,
+                             BigDecimal fixedValue, PriceValue.ValueType fixedValueType, boolean useRulesEngine) {
         this.productBundle = productBundle;
         this.pricingComponent = pricingComponent;
         this.fixedValue = fixedValue;
+        this.fixedValueType = fixedValueType;
         this.useRulesEngine = useRulesEngine;
     }
 }

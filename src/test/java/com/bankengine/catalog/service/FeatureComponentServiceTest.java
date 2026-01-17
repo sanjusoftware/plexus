@@ -9,6 +9,7 @@ import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,6 +39,7 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     private FeatureComponentService featureComponentService;
 
     @Test
+    @DisplayName("Should create feature and return response when name is unique")
     void testCreateFeature() {
         FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Test Feature");
@@ -55,6 +57,7 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should throw exception when creating a feature with an existing name")
     void testCreateFeature_withExistingName() {
         FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Test Feature");
@@ -66,6 +69,7 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should retrieve internal entity by ID")
     void testGetFeatureComponentById() {
         when(componentRepository.findById(1L)).thenReturn(Optional.of(new FeatureComponent()));
 
@@ -75,6 +79,7 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should throw NotFoundException when ID does not exist")
     void testGetFeatureComponentById_notFound() {
         when(componentRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -82,6 +87,7 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should return list of all feature responses")
     void testGetAllFeatures() {
         when(componentRepository.findAll()).thenReturn(Collections.singletonList(new FeatureComponent()));
         when(featureComponentMapper.toResponseDto(any(FeatureComponent.class))).thenReturn(new FeatureComponentResponse());
@@ -90,6 +96,7 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should update existing feature when requested name is not a conflict")
     void testUpdateFeature() {
         FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Updated Feature");
@@ -110,6 +117,7 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should delete feature when no product links exist")
     void testDeleteFeature() {
         when(componentRepository.findById(1L)).thenReturn(Optional.of(new FeatureComponent()));
         when(linkRepository.existsByFeatureComponentId(1L)).thenReturn(false);
@@ -120,6 +128,7 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should prevent deletion and throw DependencyViolationException when links exist")
     void testDeleteFeature_withDependencies() {
         when(componentRepository.findById(1L)).thenReturn(Optional.of(new FeatureComponent()));
         when(linkRepository.existsByFeatureComponentId(1L)).thenReturn(true);

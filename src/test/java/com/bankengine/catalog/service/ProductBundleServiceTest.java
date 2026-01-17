@@ -40,6 +40,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
     private ProductBundleService bundleService;
 
     @Test
+    @DisplayName("Activate Bundle - Should fail when any linked product is still in DRAFT status")
     void activateBundle_ShouldFail_WhenProductIsDraft() {
         Long bundleId = 1L;
         ProductBundle bundle = new ProductBundle();
@@ -55,6 +56,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Update Bundle - Should archive current version and create a new record")
     void updateBundle_ShouldArchiveOldAndCreateNew() {
         Long oldId = 1L;
         ProductBundle oldBundle = new ProductBundle();
@@ -78,9 +80,8 @@ class ProductBundleServiceTest extends BaseServiceTest {
     }
 
     @Test
-    @DisplayName("Clone Bundle - Deep copy check for links and DRAFT status")
+    @DisplayName("Clone Bundle - Ensure deep copy of links and initialization to DRAFT")
     void cloneBundle_DeepCopyCheck() {
-        // Arrange
         ProductBundle source = new ProductBundle();
         source.setId(1L);
         source.setName("Source Bundle");
@@ -94,29 +95,22 @@ class ProductBundleServiceTest extends BaseServiceTest {
         when(bundleRepository.findById(1L)).thenReturn(Optional.of(source));
         when(bundleRepository.save(any(ProductBundle.class))).thenAnswer(i -> {
             ProductBundle b = i.getArgument(0);
-            b.setId(2L); // Set an ID to simulate saving
+            b.setId(2L);
             return b;
         });
 
-        // Act
         bundleService.cloneBundle(1L, "New Bundle Name");
 
-        // Assert
-        // Verify the Header save with specific property checks
-        verify(bundleRepository).save(argThat(b -> {
-            boolean nameMatches = "New Bundle Name".equals(b.getName());
-            boolean statusIsDraft = b.getStatus() == ProductBundle.BundleStatus.DRAFT;
-            // Check if code contains the original code or is generally populated
-            boolean codeIsPopulated = b.getCode() != null && b.getCode().contains("SRC-01");
+        verify(bundleRepository).save(argThat(b ->
+            "New Bundle Name".equals(b.getName()) &&
+            b.getStatus() == ProductBundle.BundleStatus.DRAFT &&
+            b.getBankId().equals(TEST_BANK_ID) &&
+            b.getCode() != null && b.getCode().contains("SRC-01")
+        ));
 
-            return nameMatches && statusIsDraft && codeIsPopulated;
-        }));
-
-        // Verify the Link save
-        // Note: Ensure your service calls bundleLinkRepository.save() or .saveAll()
         verify(bundleProductLinkRepository).save(argThat(link ->
                 link.getProduct().getId().equals(10L) &&
-                        link.getProductBundle().getName().equals("New Bundle Name")
+                link.getProductBundle().getName().equals("New Bundle Name")
         ));
     }
 

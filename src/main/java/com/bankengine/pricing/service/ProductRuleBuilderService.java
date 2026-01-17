@@ -32,16 +32,25 @@ public class ProductRuleBuilderService extends AbstractRuleBuilderService {
         if (tier.getPriceValues() == null || tier.getPriceValues().isEmpty()) {
             return "        // No action defined";
         }
+
         PriceValue pv = tier.getPriceValues().iterator().next();
+
+        // Ensure we have a default value type if one isn't specified,
+        // though our validation should catch this earlier.
+        String valueTypeStr = pv.getValueType() != null ? pv.getValueType().name() : "FEE_ABSOLUTE";
+
         return String.format("""
                     PriceValue priceValueFact = new PriceValue();
                     priceValueFact.setMatchedTierId(%dL);
-                    priceValueFact.setPriceAmount(new BigDecimal("%s"));
+                    priceValueFact.setRawValue(new BigDecimal("%s"));
                     priceValueFact.setValueType(PriceValue.ValueType.%s);
                     priceValueFact.setComponentCode("%s");
                     priceValueFact.setBankId("%s");
                     insert(priceValueFact);""",
-                tier.getId(), pv.getPriceAmount(), pv.getValueType(),
-                component.getName().replaceAll("\\s", "_"), getSafeBankIdForDrl());
+                tier.getId(),
+                pv.getRawValue(),
+                valueTypeStr,
+                component.getName().replaceAll("\\s", "_"),
+                getSafeBankIdForDrl());
     }
 }

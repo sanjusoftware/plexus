@@ -39,6 +39,6 @@ public class BundleRuleBuilderService extends AbstractRuleBuilderService {
                     $input.addAdjustment("%s_Tier%d", new BigDecimal("%s"), "%s");
                     update($input);""",
                 component.getName().replaceAll("\\s", "_"), tier.getId(),
-                pv.getPriceAmount().toPlainString(), pv.getValueType().name());
+                pv.getRawValue().toPlainString(), pv.getValueType().name());
     }
 }

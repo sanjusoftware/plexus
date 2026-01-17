@@ -8,6 +8,9 @@ import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.service.drl.DroolsExpressionBuilder;
+import com.bankengine.rules.service.KieContainerReloadService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.Iterator;
 import java.util.List;
@@ -18,6 +21,10 @@ public abstract class AbstractRuleBuilderService extends BaseService {
     protected final PricingComponentRepository componentRepository;
     protected final PricingInputMetadataService metadataService;
     protected final DroolsExpressionBuilder droolsExpressionBuilder;
+
+    @Autowired
+    @Lazy
+    protected KieContainerReloadService kieContainerReloadService;
 
     public AbstractRuleBuilderService(
             PricingComponentRepository componentRepository,
@@ -34,6 +41,14 @@ public abstract class AbstractRuleBuilderService extends BaseService {
     protected abstract String buildRHSAction(PricingComponent component, PricingTier tier);
     protected abstract List<PricingComponent> fetchComponents();
 
+    /**
+     * Public orchestration method to refresh Drools rules.
+     * This is called by both Admin UI (on save) and Integration Tests (on setup).
+     */
+    public void rebuildRules() {
+        kieContainerReloadService.reloadKieContainer(getSafeBankIdForDrl());
+    }
+
     // --- Core Orchestration ---
 
     public String buildAllRulesForCompilation() {
@@ -48,13 +63,32 @@ public abstract class AbstractRuleBuilderService extends BaseService {
             drl.append(body).append("\n\n");
         }
 
-        return components.isEmpty() ? buildPlaceholderRules() : drl.toString();
+        String finalDrl = components.isEmpty() ? buildPlaceholderRules() : drl.toString();
+
+        // --- DEBUG LOGGING ADDED HERE ---
+        logGeneratedDrl(finalDrl);
+
+        return finalDrl;
+    }
+
+    private void logGeneratedDrl(String drl) {
+        System.out.println("========================================================");
+        System.out.println("GENERATED DRL FOR PACKAGE: " + getPackageSubPath());
+        System.out.println("========================================================");
+        System.out.println(drl);
+        System.out.println("========================================================");
     }
 
     private String buildSingleRule(PricingComponent component, PricingTier tier) {
         String ruleName = String.format("%s_%s_%s_Tier_%d",
                 getPackageSubPath().toUpperCase(), getSafeBankIdForDrl(),
                 component.getName().replaceAll("\\s", "_"), tier.getId());
+
+        // Added a debug print to the RHS (then) of the rule so you know if it fires
+        String rhsWithLogging = String.format("""
+            System.out.println("🔥 Rule Fired: %s");
+            %s
+            """, ruleName, buildRHSAction(component, tier));
 
         return String.format("""
             rule "%s"
@@ -64,7 +98,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
             %s
                 then
             %s
-            end""", ruleName, tier.getId(), buildLHSCondition(tier), buildRHSAction(component, tier));
+            end""", ruleName, tier.getId(), buildLHSCondition(tier, component.getId()), rhsWithLogging);
     }
 
     // --- Common Shared Logic ---
@@ -102,13 +136,27 @@ public abstract class AbstractRuleBuilderService extends BaseService {
             """, getPackageSubPath(), safeBankId, factImport);
     }
 
-    protected String buildLHSCondition(PricingTier tier) {
+    protected String buildLHSCondition(PricingTier tier, Long componentId) {
+        if (componentId == null || componentId <= 0) {
+            throw new IllegalStateException(String.format(
+                    "Cannot build DRL for component '%s' because its ID is missing or invalid (%s).",
+                    tier.getPricingComponent() != null ? tier.getPricingComponent().getName() : "Unknown",
+                    componentId));
+        }
+
         String bankId = getSafeBankIdForDrl();
         String factName = getFactType().substring(getFactType().lastIndexOf(".") + 1);
 
         StringBuilder conditionBuilder = new StringBuilder();
+
+        // 1. Check Bank Context
         conditionBuilder.append(String.format("bankId == \"%s\"", bankId));
 
+        // 2. Check Targeted Component ID (The "Explicit Intent" filter)
+        // This ensures the rule only fires if the component is linked to the Product/Bundle
+        conditionBuilder.append(String.format(", targetPricingComponentIds contains %dL", componentId));
+
+        // 3. Append User-Defined Tier Conditions
         if (tier.getConditions() != null && !tier.getConditions().isEmpty()) {
             conditionBuilder.append(", ");
             Iterator<TierCondition> it = tier.getConditions().iterator();

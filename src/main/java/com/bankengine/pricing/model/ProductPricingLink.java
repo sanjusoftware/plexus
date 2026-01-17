@@ -40,6 +40,17 @@ public class ProductPricingLink extends AuditableEntity {
     @Column(name = "fixed_value")
     private BigDecimal fixedValue;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "fixed_value_type")
+    private PriceValue.ValueType fixedValueType;
+
+    /**
+     * The code of the component this discount/fee targets
+     * (used for specific discounts, e.g., 10% discount on maintenance fee of an account).
+     */
+    @Column(name = "target_component_code")
+    private String targetComponentCode;
+
     /**
      * If true, the pricing is determined by the Drools Rules Engine.
      * If false, the price is the fixedValue.
@@ -47,10 +58,14 @@ public class ProductPricingLink extends AuditableEntity {
     @Column(name = "use_rules_engine", nullable = false)
     private boolean useRulesEngine = false;
 
-    public ProductPricingLink(Product product, PricingComponent pricingComponent, BigDecimal fixedValue, boolean useRulesEngine) {
+    public ProductPricingLink(Product product, PricingComponent pricingComponent,
+                              BigDecimal fixedValue, PriceValue.ValueType fixedValueType,
+                              String targetComponentCode, boolean useRulesEngine) {
         this.product = product;
         this.pricingComponent = pricingComponent;
         this.fixedValue = fixedValue;
+        this.fixedValueType = fixedValueType;
+        this.targetComponentCode = targetComponentCode;
         this.useRulesEngine = useRulesEngine;
     }
 }

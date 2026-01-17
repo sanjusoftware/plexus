@@ -1,11 +1,11 @@
 package com.bankengine.catalog.service;
 
-import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.converter.ProductTypeMapper;
 import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.test.config.BaseServiceTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,42 +22,35 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class ProductTypeServiceTest extends BaseServiceTest {
-
     @Mock
     private ProductTypeRepository productTypeRepository;
-
     @Mock
     private ProductTypeMapper productTypeMapper;
-
     @InjectMocks
     private ProductTypeService productTypeService;
 
     @Test
+    @DisplayName("Find All - Should return all product types from repository")
     void testFindAllProductTypes() {
         when(productTypeRepository.findAll()).thenReturn(Collections.singletonList(new ProductType()));
-
         List<ProductType> result = productTypeService.findAllProductTypes();
-
         assertEquals(1, result.size());
         verify(productTypeRepository, times(1)).findAll();
     }
 
     @Test
+    @DisplayName("Create Product Type - Should use bankId from context and save entity")
     void testCreateProductType() {
-        final String TEST_BANK_ID = "BANK_A_UNIT_TEST";
-        TenantContextHolder.setBankId(TEST_BANK_ID);
+        ProductTypeDto dto = new ProductTypeDto();
+        dto.setName("LOAN");
 
-        try {
-            ProductTypeDto dto = new ProductTypeDto();
-            when(productTypeMapper.toEntity(dto)).thenReturn(new ProductType());
-            when(productTypeRepository.save(any(ProductType.class))).thenReturn(new ProductType());
+        when(productTypeMapper.toEntity(dto)).thenReturn(new ProductType());
+        when(productTypeRepository.save(argThat(entity ->
+                TEST_BANK_ID.equals(entity.getBankId())
+        ))).thenReturn(new ProductType());
 
-            ProductType result = productTypeService.createProductType(dto);
-
-            assertNotNull(result);
-            verify(productTypeRepository, times(1)).save(any(ProductType.class));
-        } finally {
-            TenantContextHolder.clear();
-        }
+        ProductType result = productTypeService.createProductType(dto);
+        assertNotNull(result);
+        verify(productTypeRepository, times(1)).save(any(ProductType.class));
     }
 }

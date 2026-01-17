@@ -25,8 +25,8 @@ public class DroolsKieModuleBuilder {
     public static final String VERSION = "1.0.0";
     public static final String KBASE_NAME = "KBase1";
     public static final String KSESSION_NAME = "KSession1";
-    public static final String PRODUCT_RULES_PATH = "src/main/resources/rules/product_rules.drl";
-    public static final String BUNDLE_RULES_PATH = "src/main/resources/rules/bundle_rules.drl";
+    public static final String PRODUCT_RULES_PATH = "src/main/resources/bankengine/pricing/rules/%s/product_rules.drl";
+    public static final String BUNDLE_RULES_PATH = "src/main/resources/bankengine/bundle/rules/%s/bundle_rules.drl";
 
     private final KieServices kieServices = KieServices.Factory.get();
     private final ReleaseId releaseId = kieServices.newReleaseId(GROUP_ID, ARTIFACT_ID, VERSION);

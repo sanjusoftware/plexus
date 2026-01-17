@@ -19,7 +19,7 @@ public class DroolsConfig {
 
     @Autowired
     @Lazy
-    private ProductRuleBuilderService ruleBuilderService;
+    private ProductRuleBuilderService productRuleBuilderService;
 
     @Autowired
     @Lazy
@@ -34,28 +34,20 @@ public class DroolsConfig {
         KieServices kieServices = KieServices.Factory.get();
 
         try {
-            // 1. Elevate to System Mode to bypass the bankId requirement during startup
             TenantContextHolder.setSystemMode(true);
-
-            // 2. Fetch DRL content (Aspect will now see null bankId but permit it)
-            String productRuleContent = ruleBuilderService.buildAllRulesForCompilation();
+            String productRuleContent = productRuleBuilderService.buildAllRulesForCompilation();
             String bundleRuleContent = bundleRuleBuilderService.buildAllRulesForCompilation();
+            String safePathId = "system";
+            String productPath = String.format(DroolsKieModuleBuilder.PRODUCT_RULES_PATH, safePathId);
+            String bundlePath = String.format(DroolsKieModuleBuilder.BUNDLE_RULES_PATH, safePathId);
 
-            // 3. Prepare content map
             Map<String, String> drlContent = Map.of(
-                    DroolsKieModuleBuilder.PRODUCT_RULES_PATH, productRuleContent,
-                    DroolsKieModuleBuilder.BUNDLE_RULES_PATH, bundleRuleContent
+                    productPath, productRuleContent,
+                    bundlePath, bundleRuleContent
             );
-
-            // 4. Build the KieModule
             ReleaseId releaseId = moduleBuilder.buildAndInstallKieModule(drlContent);
-
-            // 5. Return the KieContainer associated with the new ReleaseId
             return kieServices.newKieContainer(releaseId);
-
         } finally {
-            // 6. CRITICAL: Always clear system mode and context to prevent leaks
-            // to subsequent threads or logic
             TenantContextHolder.clear();
         }
     }

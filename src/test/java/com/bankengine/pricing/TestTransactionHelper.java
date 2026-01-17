@@ -64,7 +64,7 @@ public class TestTransactionHelper {
     }
 
     @Transactional
-    public void linkProductToPricingComponent(Long productId, Long componentId, BigDecimal fixedValue) {
+    public void linkProductToPricingComponent(Long productId, Long componentId, BigDecimal fixedValue, PriceValue.ValueType type) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
         PricingComponent component = pricingComponentRepository.findById(componentId)
@@ -74,6 +74,7 @@ public class TestTransactionHelper {
         link.setProduct(product);
         link.setPricingComponent(component);
         link.setFixedValue(fixedValue);
+        link.setFixedValueType(type);
         link.setUseRulesEngine(false);
         link.setBankId(product.getBankId());
 
@@ -81,7 +82,23 @@ public class TestTransactionHelper {
     }
 
     @Transactional
+    public void linkProductToPricingComponent(Long productId, Long componentId, BigDecimal fixedValue) {
+        // Overload or update to use a default ValueType
+        linkProductToPricingComponent(productId, componentId, fixedValue, PriceValue.ValueType.FEE_ABSOLUTE);
+    }
+
+    @Transactional
     public void linkBundleToPricingComponent(Long bundleId, Long componentId, BigDecimal fixedValue) {
+        // For bundles, if fixedValue is negative, it's usually a DISCOUNT_ABSOLUTE
+        PriceValue.ValueType type = (fixedValue.compareTo(BigDecimal.ZERO) < 0)
+                ? PriceValue.ValueType.DISCOUNT_ABSOLUTE
+                : PriceValue.ValueType.FEE_ABSOLUTE;
+
+        linkBundleToPricingComponent(bundleId, componentId, fixedValue, type);
+    }
+
+    @Transactional
+    public void linkBundleToPricingComponent(Long bundleId, Long componentId, BigDecimal fixedValue, PriceValue.ValueType type) {
         ProductBundle bundle = productBundleRepository.findById(bundleId)
                 .orElseThrow(() -> new IllegalStateException("Bundle not found"));
         PricingComponent component = pricingComponentRepository.findById(componentId)
@@ -91,6 +108,7 @@ public class TestTransactionHelper {
         link.setProductBundle(bundle);
         link.setPricingComponent(component);
         link.setFixedValue(fixedValue);
+        link.setFixedValueType(type);
         link.setUseRulesEngine(false);
         link.setBankId(bundle.getBankId());
 
@@ -128,8 +146,8 @@ public class TestTransactionHelper {
 
         PriceValue value = new PriceValue();
         value.setPricingTier(tier);
-        value.setPriceAmount(new BigDecimal("10.00"));
-        value.setValueType(PriceValue.ValueType.ABSOLUTE);
+        value.setRawValue(new BigDecimal("10.00"));
+        value.setValueType(PriceValue.ValueType.FEE_ABSOLUTE);
         valueRepository.save(value);
 
         return component.getId();

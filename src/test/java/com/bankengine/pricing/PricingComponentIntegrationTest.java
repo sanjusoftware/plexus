@@ -115,7 +115,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         PriceValueRequest val = new PriceValueRequest();
         val.setPriceAmount(new BigDecimal("5.00"));
-        val.setValueType("ABSOLUTE");
+        val.setValueType("FEE_ABSOLUTE");
 
         TieredPriceRequest req = new TieredPriceRequest();
         req.setTier(tier);
@@ -236,9 +236,9 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(getValidTierValueDto())))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.amount", is(5.00)))
+                .andExpect(jsonPath("$.rawValue", is(5.00)))
                 .andExpect(jsonPath("$.componentCode").value("TieredComponent"))
-                .andExpect(jsonPath("$.valueType").value("ABSOLUTE"));
+                .andExpect(jsonPath("$.valueType").value("FEE_ABSOLUTE"));
     }
 
     @Test
@@ -264,16 +264,16 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         TieredPriceRequest updateReq = getValidTierValueDto();
         updateReq.getTier().setTierName("UpdatedTierName");
         updateReq.getValue().setPriceAmount(new BigDecimal("15.50"));
-        updateReq.getValue().setValueType("PERCENTAGE");
+        updateReq.getValue().setValueType("FEE_PERCENTAGE");
 
         // ACT
         mockMvc.perform(put("/api/v1/pricing-components/{cId}/tiers/{tId}", componentId, tierId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateReq)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.amount", is(15.50)))
+                .andExpect(jsonPath("$.rawValue", is(15.50)))
                 .andExpect(jsonPath("$.componentCode").value("ComponentToUpdate"))
-                .andExpect(jsonPath("$.valueType").value("PERCENTAGE"));
+                .andExpect(jsonPath("$.valueType").value("FEE_PERCENTAGE"));
 
         // VERIFY
         txHelper.doInTransaction(() -> {

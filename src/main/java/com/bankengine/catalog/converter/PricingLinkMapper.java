@@ -26,14 +26,10 @@ public interface PricingLinkMapper {
     @ToAuditableEntity
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "pricingComponent", ignore = true)
-    @Mapping(target = "fixedValue", ignore = true)
-    @Mapping(target = "useRulesEngine", ignore = true)
     ProductPricingLink toEntity(ProductPricing dto);
 
     @ToAuditableEntity
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "pricingComponent", ignore = true)
-    @Mapping(target = "fixedValue", ignore = true)
-    @Mapping(target = "useRulesEngine", ignore = true)
     void updateFromDto(ProductPricing dto, @MappingTarget ProductPricingLink entity);
 }

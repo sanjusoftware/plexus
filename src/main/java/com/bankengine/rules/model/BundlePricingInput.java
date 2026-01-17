@@ -1,61 +1,39 @@
 package com.bankengine.rules.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-/**
- * Drools Fact used by the BundleRulesEngineService to calculate adjustments (discounts/waivers).
- * It holds the aggregated context and accumulates adjustments.
- */
 @Data
 @NoArgsConstructor
 public class BundlePricingInput {
-
-    // Input facts used by the DRL conditions (LHS)
     private String bankId;
     private String customerSegment;
+    private Set<Long> targetPricingComponentIds;
+    private List<Long> containedProductIds;
     private BigDecimal grossTotalAmount;
 
-    // Map for custom runtime facts defined in PricingInputMetadata
     private Map<String, Object> customAttributes = new HashMap<>();
+    private final Map<String, BundleAdjustment> adjustments = new HashMap<>();
 
-    // Output map updated by the DRL rules (RHS)
-    // Key: adjustment code, Value: monetary amount (negative for deductions)
-    private final Map<String, BigDecimal> adjustments = new HashMap<>();
-
-    /**
-     * Constructor to satisfy the compiler error. (Resolves Error 1)
-     */
-    public BundlePricingInput(String bankId, String customerSegment, BigDecimal grossTotalAmount) {
-        this.bankId = bankId;
-        this.customerSegment = customerSegment;
-        this.grossTotalAmount = grossTotalAmount;
+    public int getProductCount() {
+        return containedProductIds != null ? containedProductIds.size() : 0;
     }
 
-    /**
-     * Helper method used by the DRL to apply an adjustment.
-     * The rule logic will call $input.addAdjustment(...)
-     */
-    public void addAdjustment(String adjustmentCode, BigDecimal amount, String description) {
-        this.adjustments.put(adjustmentCode, amount);
-        // Note: The description parameter is currently ignored but kept for DRL readability.
+    @Data
+    @AllArgsConstructor
+    public static class BundleAdjustment {
+        private BigDecimal value;
+        private String type;
     }
 
-    /**
-     * Calculates the final net total amount. (Resolves Error 2)
-     */
-    public BigDecimal getNetTotalAmount() {
-        // Start with the gross total
-        BigDecimal netTotal = this.grossTotalAmount != null ? this.grossTotalAmount : BigDecimal.ZERO;
-
-        // Sum up all adjustments (which are typically negative for discounts/waivers)
-        BigDecimal totalAdjustments = adjustments.values().stream()
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return netTotal.add(totalAdjustments);
+    public void addAdjustment(String code, BigDecimal value, String type) {
+        this.adjustments.put(code, new BundleAdjustment(value, type));
     }
 }
