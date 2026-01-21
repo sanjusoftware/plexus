@@ -18,7 +18,7 @@ public class TenantFilterAspect {
     public static final String FILTER_NAME = "bankTenantFilter";
     public static final String PARAM_NAME = "bankId";
 
-    @Before("execution(* com.bankengine..repository..*(..))")
+    @Before("execution(* com.bankengine..repository..*(..)) || execution(* org.springframework.data.repository.Repository+.*(..))")
     public void enableTenantFilter() {
         // This call will throw the exception if a hacker/unauth user hits it
         // But it will return null safely if we are in System Mode.
@@ -29,6 +29,8 @@ public class TenantFilterAspect {
             entityManager.unwrap(Session.class)
                     .enableFilter("bankTenantFilter")
                     .setParameter("bankId", bankId);
+        } else {
+            entityManager.unwrap(Session.class).disableFilter("bankTenantFilter");
         }
     }
 }

@@ -1,0 +1,711 @@
+Initialized native services in: /home/jules/.gradle/native
+Initialized jansi services in: /home/jules/.gradle/native
+The client will now receive all logging from the daemon (pid: 2780). The daemon log file: /home/jules/.gradle/daemon/8.14/daemon-2780.out.log
+Starting 28th build in daemon [uptime: 29 mins 56.315 secs, performance: 99%, GC rate: 0.00/s, heap usage: 0% of 512 MiB, non-heap usage: 27% of 384 MiB]
+Using 4 worker leases.
+Not watching /app since the file system is not supported
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Settings evaluated using settings file '/app/settings.gradle'.
+Projects loaded. Root project using build file '/app/build.gradle'.
+Included projects: [root project 'plexus']
+
+> Configure project :
+Evaluating root project 'plexus' using build file '/app/build.gradle'.
+Resolved plugin [id: 'java']
+Resolved plugin [id: 'org.springframework.boot', version: '3.3.1']
+Resolved plugin [id: 'io.spring.dependency-management', version: '1.1.5']
+Resolved plugin [id: 'jacoco']
+Applying dependency management to configuration 'annotationProcessor' in project 'plexus'
+Applying dependency management to configuration 'apiElements' in project 'plexus'
+Applying dependency management to configuration 'archives' in project 'plexus'
+Applying dependency management to configuration 'bootArchives' in project 'plexus'
+Applying dependency management to configuration 'compileClasspath' in project 'plexus'
+Applying dependency management to configuration 'compileOnly' in project 'plexus'
+Applying dependency management to configuration 'default' in project 'plexus'
+Applying dependency management to configuration 'developmentOnly' in project 'plexus'
+Applying dependency management to configuration 'implementation' in project 'plexus'
+Applying dependency management to configuration 'mainSourceElements' in project 'plexus'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'plexus'
+Applying dependency management to configuration 'runtimeClasspath' in project 'plexus'
+Applying dependency management to configuration 'runtimeElements' in project 'plexus'
+Applying dependency management to configuration 'runtimeOnly' in project 'plexus'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'plexus'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'plexus'
+Applying dependency management to configuration 'testCompileClasspath' in project 'plexus'
+Applying dependency management to configuration 'testCompileOnly' in project 'plexus'
+Applying dependency management to configuration 'testImplementation' in project 'plexus'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'plexus'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'plexus'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'plexus'
+Applying dependency management to configuration 'jacocoAgent' in project 'plexus'
+Applying dependency management to configuration 'jacocoAnt' in project 'plexus'
+Applying dependency management to configuration 'coverageDataElementsForTest' in project 'plexus'
+All projects evaluated.
+Task name matched 'test'
+Selected primary task 'test' from project :
+Tasks to be executed: [task ':compileJava', task ':processResources', task ':classes', task ':compileTestJava', task ':processTestResources', task ':testClasses', task ':test', task ':jacocoTestReport']
+Tasks that were excluded: []
+Resolve mutations for :compileJava (Thread[#1974,Execution worker,5,main]) started.
+:compileJava (Thread[#1974,Execution worker,5,main]) started.
+
+> Task :compileJava UP-TO-DATE
+Resolving global dependency management for project 'plexus'
+Excluding [javax.annotation:javax.annotation-api]
+Excluding []
+Custom actions are attached to task ':compileJava'.
+Caching disabled for task ':compileJava' because:
+  Build cache is disabled
+Skipping task ':compileJava' as it is up-to-date.
+Resolve mutations for :processResources (Thread[#1974,Execution worker,5,main]) started.
+:processResources (Thread[#1974,Execution worker,5,main]) started.
+
+> Task :processResources UP-TO-DATE
+Caching disabled for task ':processResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':processResources' as it is up-to-date.
+Resolve mutations for :classes (Thread[#1974,Execution worker,5,main]) started.
+:classes (Thread[#1974,Execution worker,5,main]) started.
+
+> Task :classes UP-TO-DATE
+Skipping task ':classes' as it has no actions.
+Resolve mutations for :compileTestJava (Thread[#1974,Execution worker,5,main]) started.
+:compileTestJava (Thread[#1974,Execution worker,5,main]) started.
+
+> Task :compileTestJava UP-TO-DATE
+Excluding []
+Excluding []
+Custom actions are attached to task ':compileTestJava'.
+Caching disabled for task ':compileTestJava' because:
+  Build cache is disabled
+Skipping task ':compileTestJava' as it is up-to-date.
+Resolve mutations for :processTestResources (Thread[#1974,Execution worker,5,main]) started.
+:processTestResources (Thread[#1974,Execution worker,5,main]) started.
+
+> Task :processTestResources UP-TO-DATE
+Caching disabled for task ':processTestResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':processTestResources' as it is up-to-date.
+Resolve mutations for :testClasses (Thread[#1974,Execution worker,5,main]) started.
+:testClasses (Thread[#1974,Execution worker,5,main]) started.
+
+> Task :testClasses UP-TO-DATE
+Skipping task ':testClasses' as it has no actions.
+Resolve mutations for :test (Thread[#1974,Execution worker,5,main]) started.
+:test (Thread[#1974,Execution worker,5,main]) started.
+Gradle Test Executor 26 started executing tests.
+
+> Task :test
+Excluding []
+Excluding []
+Custom actions are attached to task ':test'.
+Caching disabled for task ':test' because:
+  Build cache is disabled
+Task ':test' is not up-to-date because:
+  Task has failed previously.
+Starting process 'Gradle Test Executor 26'. Working directory: /app Command: /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Dorg.gradle.internal.worker.tmpdir=/app/build/tmp/test/work -javaagent:/app/build/tmp/.cache/expanded/zip_cde35f471dab581134460fc9a50e2c59/jacocoagent.jar=destfile=build/jacoco/test.exec,append=true,inclnolocationclasses=false,dumponexit=true,output=file,jmx=false @/home/jules/.gradle/.tmp/gradle-worker-classpath5574222978963978969txt -Xmx512m -Dfile.encoding=UTF-8 -Duser.country -Duser.language=en -Duser.variant -ea worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 26'
+Successfully started process 'Gradle Test Executor 26'
+
+BankConfigurationIntegrationTest STANDARD_OUT
+    12:54:41.344 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.bankengine.common.BankConfigurationIntegrationTest]: BankConfigurationIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+    12:54:41.594 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.bankengine.PlexusApplication for test class com.bankengine.common.BankConfigurationIntegrationTest
+
+      .   ____          _            __ _ _
+     /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+    ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+     \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+      '  |____| .__|_| |_|_| |_\__, | / / / /
+     =========|_|==============|___/=/_/_/_/
+
+     :: Spring Boot ::                (v3.3.1)
+
+    2026-01-21T12:54:42.537Z  INFO 13837 --- [    Test worker] c.b.c.BankConfigurationIntegrationTest   : Starting BankConfigurationIntegrationTest using Java 21.0.8 with PID 13837 (started by jules in /app)
+    2026-01-21T12:54:42.543Z  INFO 13837 --- [    Test worker] c.b.c.BankConfigurationIntegrationTest   : The following 1 profile is active: "test"
+    2026-01-21T12:54:43.936Z  INFO 13837 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+    2026-01-21T12:54:44.100Z  INFO 13837 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 149 ms. Found 15 JPA repository interfaces.
+    2026-01-21T12:54:46.305Z  INFO 13837 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+    2026-01-21T12:54:46.418Z  INFO 13837 --- [    Test worker] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.2.Final
+    2026-01-21T12:54:46.502Z  INFO 13837 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+    2026-01-21T12:54:47.106Z  INFO 13837 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+    2026-01-21T12:54:47.161Z  INFO 13837 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+    2026-01-21T12:54:47.681Z  INFO 13837 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:testdb user=SA
+    2026-01-21T12:54:47.684Z  INFO 13837 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+    2026-01-21T12:54:47.742Z  WARN 13837 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+    2026-01-21T12:54:50.414Z  INFO 13837 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+    Hibernate: drop table if exists bank_category_conflicts cascade
+    Hibernate: drop table if exists bank_configuration cascade
+    Hibernate: drop table if exists bundle_pricing_link cascade
+    Hibernate: drop table if exists bundle_product_link cascade
+    Hibernate: drop table if exists feature_component cascade
+    Hibernate: drop table if exists price_value cascade
+    Hibernate: drop table if exists pricing_component cascade
+    Hibernate: drop table if exists pricing_input_metadata cascade
+    Hibernate: drop table if exists pricing_tier cascade
+    Hibernate: drop table if exists product cascade
+    Hibernate: drop table if exists product_bundle cascade
+    Hibernate: drop table if exists product_feature_link cascade
+    Hibernate: drop table if exists product_pricing_link cascade
+    Hibernate: drop table if exists product_type cascade
+    Hibernate: drop table if exists role cascade
+    Hibernate: drop table if exists role_authority cascade
+    Hibernate: drop table if exists tier_condition cascade
+    Hibernate: create table bank_category_conflicts (config_id bigint not null, categorya varchar(255), categoryb varchar(255))
+    Hibernate: create table bank_configuration (allow_multi_bundle_product boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id))
+    Hibernate: create table bundle_pricing_link (fixed_value numeric(38,2), use_rules_engine boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_component_id bigint not null, product_bundle_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id))
+    Hibernate: create table bundle_product_link (is_main_account boolean not null, is_mandatory boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, product_bundle_id bigint not null, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id), constraint UK_bundle_product_link_unique unique (product_bundle_id, product_id))
+    Hibernate: create table feature_component (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), data_type enum ('BOOLEAN','DATE','DECIMAL','INTEGER','STRING'), primary key (id), unique (bank_id, name))
+    Hibernate: create table price_value (price_amount numeric(38,2) not null, created_at timestamp(6) not null, id bigint generated by default as identity, tier_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), value_type enum ('ABSOLUTE','DISCOUNT_ABSOLUTE','DISCOUNT_PERCENTAGE','FREE_COUNT','PERCENTAGE','WAIVED'), primary key (id))
+    Hibernate: create table pricing_component (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), type enum ('BENEFIT','DISCOUNT','FEE','PACKAGE_FEE','RATE','WAIVER'), primary key (id), unique (bank_id, name))
+    Hibernate: create table pricing_input_metadata (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, attribute_key varchar(255) not null, created_by varchar(255), data_type varchar(255) not null, display_name varchar(255), updated_by varchar(255), primary key (id), unique (bank_id, attribute_key))
+    Hibernate: create table pricing_tier (max_threshold numeric(38,2), min_threshold numeric(38,2), component_id bigint not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), tier_name varchar(255), updated_by varchar(255), primary key (id))
+    Hibernate: create table product (effective_date date, expiration_date date, created_at timestamp(6) not null, id bigint generated by default as identity, product_type_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, category varchar(255) not null, created_by varchar(255), name varchar(255) not null, status varchar(255), updated_by varchar(255), primary key (id), unique (bank_id, name))
+    Hibernate: create table product_bundle (activation_date date not null, expiry_date date, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, description varchar(500), code varchar(255) not null, created_by varchar(255), eligibility_segment varchar(255) not null, name varchar(255) not null, updated_by varchar(255), status enum ('ACTIVE','ARCHIVED','DRAFT') not null, primary key (id), unique (bank_id, code))
+    Hibernate: create table product_feature_link (created_at timestamp(6) not null, feature_component_id bigint not null, id bigint generated by default as identity, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, feature_value varchar(1000) not null, created_by varchar(255), updated_by varchar(255), primary key (id), constraint UK_product_feature_link unique (product_id, feature_component_id))
+    Hibernate: create table product_pricing_link (fixed_value numeric(38,2), use_rules_engine boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_component_id bigint not null, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id))
+    Hibernate: create table product_type (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), primary key (id), unique (bank_id, name))
+    Hibernate: create table role (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, name varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id), unique (bank_id, name))
+    Hibernate: create table role_authority (role_id bigint not null, authority_name varchar(100) not null, primary key (role_id, authority_name))
+    Hibernate: create table tier_condition (created_at timestamp(6) not null, id bigint generated by default as identity, pricing_tier_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, attribute_name varchar(255) not null, attribute_value varchar(255) not null, created_by varchar(255), updated_by varchar(255), connector enum ('AND','OR'), operator enum ('EQ','GE','GT','IN','LE','LT','NE') not null, primary key (id))
+    Hibernate: alter table if exists bank_category_conflicts add constraint FKr0vrtot93e79suavixq45d7lh foreign key (config_id) references bank_configuration
+    Hibernate: alter table if exists bundle_pricing_link add constraint FK7xek441d2oiaw0qry67re3cyh foreign key (pricing_component_id) references pricing_component
+    Hibernate: alter table if exists bundle_pricing_link add constraint FKb6uvgka986o2w6tr4tqj26qcm foreign key (product_bundle_id) references product_bundle
+    Hibernate: alter table if exists bundle_product_link add constraint FKoaef6c64w9i5ks8w6bnf4jhuy foreign key (product_id) references product
+    Hibernate: alter table if exists bundle_product_link add constraint FKb3qfh82701omsauktkjj8qjow foreign key (product_bundle_id) references product_bundle
+    Hibernate: alter table if exists price_value add constraint FK9pbfmuqsie304uejy5tj9gika foreign key (tier_id) references pricing_tier
+    Hibernate: alter table if exists pricing_tier add constraint FKf15rcukfiidxpcrcy8n194cg foreign key (component_id) references pricing_component
+    Hibernate: alter table if exists product add constraint FKlabq3c2e90ybbxk58rc48byqo foreign key (product_type_id) references product_type
+    Hibernate: alter table if exists product_feature_link add constraint FKijhxky9yjt15afkrnxknw06q5 foreign key (feature_component_id) references feature_component
+    Hibernate: alter table if exists product_feature_link add constraint FKoprgvgys5k9qo9gfbo861c5ou foreign key (product_id) references product
+    Hibernate: alter table if exists product_pricing_link add constraint FKm4wkb51iswgwhgu20bwtbew7x foreign key (pricing_component_id) references pricing_component
+    Hibernate: alter table if exists product_pricing_link add constraint FKbcr1wkacs2jh6j5oismthncsk foreign key (product_id) references product
+    Hibernate: alter table if exists role_authority add constraint FK2052966dco7y9f97s1a824bj1 foreign key (role_id) references role
+    Hibernate: alter table if exists tier_condition add constraint FKrr97dtiopm88a00d0it7k5v9r foreign key (pricing_tier_id) references pricing_tier
+    2026-01-21T12:54:50.585Z  INFO 13837 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+    Hibernate: select pc1_0.id,pc1_0.bank_id,pc1_0.created_at,pc1_0.created_by,pc1_0.name,pt1_0.component_id,pt1_0.id,pt1_0.bank_id,c1_0.pricing_tier_id,c1_0.id,c1_0.attribute_name,c1_0.attribute_value,c1_0.bank_id,c1_0.connector,c1_0.created_at,c1_0.created_by,c1_0.operator,c1_0.updated_at,c1_0.updated_by,pt1_0.created_at,pt1_0.created_by,pt1_0.max_threshold,pt1_0.min_threshold,pv1_0.tier_id,pv1_0.id,pv1_0.bank_id,pv1_0.created_at,pv1_0.created_by,pv1_0.price_amount,pv1_0.updated_at,pv1_0.updated_by,pv1_0.value_type,pt1_0.tier_name,pt1_0.updated_at,pt1_0.updated_by,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by from pricing_component pc1_0 left join pricing_tier pt1_0 on pc1_0.id=pt1_0.component_id left join tier_condition c1_0 on pt1_0.id=c1_0.pricing_tier_id left join price_value pv1_0 on pt1_0.id=pv1_0.tier_id where pc1_0.bank_id=?
+    Hibernate: select pc1_0.id,pc1_0.bank_id,pc1_0.created_at,pc1_0.created_by,pc1_0.name,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by from pricing_component pc1_0 where pc1_0.type in (?,?)
+    2026-01-21T12:54:53.078Z  WARN 13837 --- [    Test worker] o.k.m.i.embedder.MavenSettings           : Environment variable M2_HOME is not set
+    2026-01-21T12:54:54.801Z  WARN 13837 --- [    Test worker] o.d.c.kie.builder.impl.KieBuilderImpl    : File 'rules/bundle_rules.drl' is in folder 'rules' but declares package 'bankengine.bundle.rules.system'. It is advised to have a correspondance between package and folder names.
+    2026-01-21T12:54:54.803Z  WARN 13837 --- [    Test worker] o.d.c.kie.builder.impl.KieBuilderImpl    : File 'rules/product_rules.drl' is in folder 'rules' but declares package 'bankengine.pricing.rules.system'. It is advised to have a correspondance between package and folder names.
+
+BankConfigurationIntegrationTest STANDARD_ERROR
+    java.lang.instrument.IllegalClassFormatException: Error while instrumenting org/drools/drl/parser/lang/DRL6Lexer with JaCoCo 0.8.11.202310140853/f33756c.
+	at org.jacoco.agent.rt.internal_4742761.CoverageTransformer.transform(CoverageTransformer.java:94)
+	at java.instrument/java.lang.instrument.ClassFileTransformer.transform(ClassFileTransformer.java:244)
+	at java.instrument/sun.instrument.TransformerManager.transform(TransformerManager.java:188)
+	at java.instrument/sun.instrument.InstrumentationImpl.transform(InstrumentationImpl.java:610)
+	at java.base/java.lang.ClassLoader.defineClass1(Native Method)
+	at java.base/java.lang.ClassLoader.defineClass(ClassLoader.java:1027)
+	at java.base/java.security.SecureClassLoader.defineClass(SecureClassLoader.java:150)
+	at java.base/jdk.internal.loader.BuiltinClassLoader.defineClass(BuiltinClassLoader.java:862)
+	at java.base/jdk.internal.loader.BuiltinClassLoader.findClassOnClassPathOrNull(BuiltinClassLoader.java:760)
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClassOrNull(BuiltinClassLoader.java:681)
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:639)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:526)
+	at org.drools.drl.parser.DRLFactory.getDRLLexer(DRLFactory.java:112)
+	at org.drools.drl.parser.DRLFactory.buildLexer(DRLFactory.java:59)
+	at org.drools.drl.parser.DrlParser.parse(DrlParser.java:166)
+	at org.drools.drl.parser.DrlParser.parse(DrlParser.java:156)
+	at org.drools.drl.parser.DrlParser.parse(DrlParser.java:145)
+	at org.drools.compiler.builder.impl.resources.DrlResourceHandler.process(DrlResourceHandler.java:52)
+	at org.drools.compiler.builder.impl.PackageDescrBuilder.buildResource(PackageDescrBuilder.java:70)
+	at org.drools.compiler.builder.impl.PackageDescrBuilder.build(PackageDescrBuilder.java:48)
+	at org.drools.compiler.builder.impl.CompositeKnowledgeBuilderImpl.buildPackageDescr(CompositeKnowledgeBuilderImpl.java:168)
+	at org.drools.compiler.builder.impl.CompositeKnowledgeBuilderImpl.build(CompositeKnowledgeBuilderImpl.java:111)
+	at org.drools.compiler.builder.impl.CompositeKnowledgeBuilderImpl.build(CompositeKnowledgeBuilderImpl.java:104)
+	at org.drools.compiler.kie.builder.impl.AbstractKieProject.buildKnowledgePackages(AbstractKieProject.java:270)
+	at org.drools.compiler.kie.builder.impl.AbstractKieProject.buildKnowledgePackages(AbstractKieProject.java:216)
+	at org.drools.compiler.kie.builder.impl.AbstractKieProject.verify(AbstractKieProject.java:80)
+	at org.drools.compiler.kie.builder.impl.KieBuilderImpl.buildKieProject(KieBuilderImpl.java:282)
+	at org.drools.compiler.kie.builder.impl.KieBuilderImpl.buildAll(KieBuilderImpl.java:248)
+	at org.drools.compiler.kie.builder.impl.KieBuilderImpl.buildAll(KieBuilderImpl.java:195)
+	at com.bankengine.config.drools.DroolsKieModuleBuilder.buildAndInstallKieModule(DroolsKieModuleBuilder.java:78)
+	at com.bankengine.config.DroolsConfig.kieContainer(DroolsConfig.java:51)
+	at com.bankengine.config.DroolsConfig$$SpringCGLIB$$0.CGLIB$kieContainer$0(<generated>)
+	at com.bankengine.config.DroolsConfig$$SpringCGLIB$$FastClass$$1.invoke(<generated>)
+	at org.springframework.cglib.proxy.MethodProxy.invokeSuper(MethodProxy.java:258)
+	at org.springframework.context.annotation.ConfigurationClassEnhancer$BeanMethodInterceptor.intercept(ConfigurationClassEnhancer.java:348)
+	at com.bankengine.config.DroolsConfig$$SpringCGLIB$$0.kieContainer(<generated>)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:140)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:644)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:485)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1337)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1167)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:562)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:522)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:335)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1443)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1353)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:904)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:782)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:237)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1357)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1194)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:562)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:522)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:335)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1443)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1353)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:904)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:782)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:237)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1357)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1194)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:562)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:522)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:335)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1443)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1353)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:904)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:782)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:237)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1357)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1194)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:562)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:522)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:335)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1443)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1353)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:904)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:782)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:237)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1357)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1194)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:562)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:522)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:335)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:975)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:962)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:624)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:754)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:456)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:335)
+	at org.springframework.boot.test.context.SpringBootContextLoader.lambda$loadContext$3(SpringBootContextLoader.java:137)
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:58)
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:46)
+	at org.springframework.boot.SpringApplication.withHook(SpringApplication.java:1463)
+	at org.springframework.boot.test.context.SpringBootContextLoader$ContextLoaderHook.run(SpringBootContextLoader.java:553)
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:137)
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:108)
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContextInternal(DefaultCacheAwareContextLoaderDelegate.java:225)
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:152)
+	at org.springframework.test.context.support.DefaultTestContext.getApplicationContext(DefaultTestContext.java:130)
+	at org.springframework.test.context.web.ServletTestExecutionListener.setUpRequestContextIfNecessary(ServletTestExecutionListener.java:191)
+	at org.springframework.test.context.web.ServletTestExecutionListener.prepareTestInstance(ServletTestExecutionListener.java:130)
+	at org.springframework.test.context.TestContextManager.prepareTestInstance(TestContextManager.java:260)
+	at org.springframework.test.context.junit.jupiter.SpringExtension.postProcessTestInstance(SpringExtension.java:163)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$invokeTestInstancePostProcessors$10(ClassBasedTestDescriptor.java:378)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.executeAndMaskThrowable(ClassBasedTestDescriptor.java:383)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$invokeTestInstancePostProcessors$11(ClassBasedTestDescriptor.java:378)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining(StreamSpliterators.java:310)
+	at java.base/java.util.stream.Streams$ConcatSpliterator.forEachRemaining(Streams.java:735)
+	at java.base/java.util.stream.Streams$ConcatSpliterator.forEachRemaining(Streams.java:734)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.invokeTestInstancePostProcessors(ClassBasedTestDescriptor.java:377)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$instantiateAndPostProcessTestInstance$6(ClassBasedTestDescriptor.java:290)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.instantiateAndPostProcessTestInstance(ClassBasedTestDescriptor.java:289)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$testInstancesProvider$4(ClassBasedTestDescriptor.java:279)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$testInstancesProvider$5(ClassBasedTestDescriptor.java:278)
+	at org.junit.jupiter.engine.execution.TestInstancesProvider.getTestInstances(TestInstancesProvider.java:31)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$prepare$0(TestMethodTestDescriptor.java:106)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.prepare(TestMethodTestDescriptor.java:105)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.prepare(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$prepare$2(NodeTestTask.java:123)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.prepare(NodeTestTask.java:123)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:90)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.processAllTestClasses(JUnitPlatformTestClassProcessor.java:124)
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.access$000(JUnitPlatformTestClassProcessor.java:99)
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor.stop(JUnitPlatformTestClassProcessor.java:94)
+	at org.gradle.api.internal.tasks.testing.SuiteTestClassProcessor.stop(SuiteTestClassProcessor.java:63)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:36)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:24)
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33)
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:92)
+	at jdk.proxy2/jdk.proxy2.$Proxy6.stop(Unknown Source)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$3.run(TestWorker.java:200)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:132)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63)
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
+    Caused by: java.io.IOException: Error while instrumenting org/drools/drl/parser/lang/DRL6Lexer with JaCoCo 0.8.11.202310140853/f33756c.
+	at org.jacoco.agent.rt.internal_4742761.core.instr.Instrumenter.instrumentError(Instrumenter.java:161)
+	at org.jacoco.agent.rt.internal_4742761.core.instr.Instrumenter.instrument(Instrumenter.java:111)
+	at org.jacoco.agent.rt.internal_4742761.CoverageTransformer.transform(CoverageTransformer.java:92)
+	... 205 more
+    Caused by: org.jacoco.agent.rt.internal_4742761.asm.MethodTooLargeException: Method too large: org/drools/drl/parser/lang/DRL6Lexer.mID ()V
+	at org.jacoco.agent.rt.internal_4742761.asm.MethodWriter.computeMethodInfoSize(MethodWriter.java:2088)
+	at org.jacoco.agent.rt.internal_4742761.asm.ClassWriter.toByteArray(ClassWriter.java:512)
+	at org.jacoco.agent.rt.internal_4742761.core.instr.Instrumenter.instrument(Instrumenter.java:92)
+	at org.jacoco.agent.rt.internal_4742761.core.instr.Instrumenter.instrument(Instrumenter.java:109)
+	... 206 more
+
+BankConfigurationIntegrationTest STANDARD_OUT
+    2026-01-21T12:54:57.717Z  WARN 13837 --- [    Test worker] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+    2026-01-21T12:54:59.874Z  INFO 13837 --- [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+    2026-01-21T12:54:59.876Z  INFO 13837 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+    2026-01-21T12:54:59.879Z  INFO 13837 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+    2026-01-21T12:54:59.927Z  INFO 13837 --- [    Test worker] c.b.c.BankConfigurationIntegrationTest   : Started BankConfigurationIntegrationTest in 18.008 seconds (process running for 20.411)
+    --- Seeding System Admin Data ---
+    Hibernate: select bc1_0.id,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.created_at,bc1_0.created_by,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=? and bc1_0.bank_id=? fetch first ? rows only
+    Hibernate: insert into bank_configuration (allow_multi_bundle_product,bank_id,created_at,created_by,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+    Seeded SYSTEM bank.
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
+    Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+    Seeded SYSTEM_ADMIN role.
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+
+BankConfigurationIntegrationTest > bankAdmin_CanOnlySeeOwnBank() STANDARD_OUT
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.bank_id = ? and r1_0.name in (?)
+
+BankConfigurationIntegrationTest > bankAdmin_CanOnlySeeOwnBank() STANDARD_ERROR
+    WARNING: A Java agent has been loaded dynamically (/home/jules/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.14.17/e3c251a39dc90badaf71c83427ba46840f219d8d/byte-buddy-agent-1.14.17.jar)
+    WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+    WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+    WARNING: Dynamic loading of agents will be disallowed by default in a future release
+
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+Gradle Test Executor 26 finished executing tests.
+2026-01-21T12:55:01.517Z  INFO 13837 --- [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+Hibernate: drop table if exists bank_category_conflicts cascade
+Hibernate: drop table if exists bank_configuration cascade
+Hibernate: drop table if exists bundle_pricing_link cascade
+Hibernate: drop table if exists bundle_product_link cascade
+Hibernate: drop table if exists feature_component cascade
+Hibernate: drop table if exists price_value cascade
+Hibernate: drop table if exists pricing_component cascade
+Hibernate: drop table if exists pricing_input_metadata cascade
+Hibernate: drop table if exists pricing_tier cascade
+Hibernate: drop table if exists product cascade
+Hibernate: drop table if exists product_bundle cascade
+Hibernate: drop table if exists product_feature_link cascade
+Hibernate: drop table if exists product_pricing_link cascade
+Hibernate: drop table if exists product_type cascade
+Hibernate: drop table if exists role cascade
+Hibernate: drop table if exists role_authority cascade
+Hibernate: drop table if exists tier_condition cascade
+2026-01-21T12:55:01.772Z  INFO 13837 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-21T12:55:01.776Z  INFO 13837 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+
+> Task :test FAILED
+
+BankConfigurationIntegrationTest > bankAdmin_CanOnlySeeOwnBank() STANDARD_OUT
+    Hibernate: select bc1_0.id,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.created_at,bc1_0.created_by,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
+    Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.bank_id = ? and r1_0.name=?
+    Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into bank_configuration (allow_multi_bundle_product,bank_id,created_at,created_by,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+    Hibernate: insert into bank_configuration (allow_multi_bundle_product,bank_id,created_at,created_by,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+
+    MockHttpServletRequest:
+          HTTP Method = GET
+          Request URI = /api/v1/banks/BANK_A
+           Parameters = {}
+              Headers = []
+                 Body = null
+        Session Attrs = {}
+
+    Handler:
+                 Type = com.bankengine.common.controller.BankConfigurationController
+               Method = com.bankengine.common.controller.BankConfigurationController#getBank(String)
+
+    Async:
+        Async started = false
+         Async result = null
+
+    Resolved Exception:
+                 Type = null
+
+    ModelAndView:
+            View name = null
+                 View = null
+                Model = null
+
+    FlashMap:
+           Attributes = null
+
+    MockHttpServletResponse:
+               Status = 403
+        Error message = null
+              Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", WWW-Authenticate:"Bearer error="insufficient_scope", error_description="The request requires higher privileges than provided by the access token.", error_uri="https://tools.ietf.org/html/rfc6750#section-3.1"", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"SAMEORIGIN"]
+         Content type = null
+                 Body =
+        Forwarded URL = null
+       Redirected URL = null
+              Cookies = []
+
+    MockHttpServletRequest:
+          HTTP Method = GET
+          Request URI = /api/v1/banks/BANK_A
+           Parameters = {}
+              Headers = []
+                 Body = null
+        Session Attrs = {}
+
+    Handler:
+                 Type = com.bankengine.common.controller.BankConfigurationController
+               Method = com.bankengine.common.controller.BankConfigurationController#getBank(String)
+
+    Async:
+        Async started = false
+         Async result = null
+
+    Resolved Exception:
+                 Type = null
+
+    ModelAndView:
+            View name = null
+                 View = null
+                Model = null
+
+    FlashMap:
+           Attributes = null
+
+    MockHttpServletResponse:
+               Status = 403
+        Error message = null
+              Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", WWW-Authenticate:"Bearer error="insufficient_scope", error_description="The request requires higher privileges than provided by the access token.", error_uri="https://tools.ietf.org/html/rfc6750#section-3.1"", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"SAMEORIGIN"]
+         Content type = null
+                 Body =
+        Forwarded URL = null
+       Redirected URL = null
+              Cookies = []
+
+BankConfigurationIntegrationTest > bankAdmin_CanOnlySeeOwnBank() FAILED
+    java.lang.AssertionError: Status expected:<200> but was:<403>
+        at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+        at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+        at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+        at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+        at com.bankengine.common.BankConfigurationIntegrationTest.bankAdmin_CanOnlySeeOwnBank(BankConfigurationIntegrationTest.java:96)
+
+BankConfigurationIntegrationTest > unauthorizedUser_CannotCreateBank() STANDARD_OUT
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.bank_id = ? and r1_0.name in (?)
+    Hibernate: select bc1_0.id,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.created_at,bc1_0.created_by,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
+    Hibernate: delete from bank_category_conflicts where config_id=?
+    Hibernate: delete from bank_configuration where id=?
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
+    Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.bank_id = ? and r1_0.name=?
+    Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
+
+BankConfigurationIntegrationTest > systemAdmin_CanCreateAndSeeAllBanks() STANDARD_OUT
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name in (?)
+    Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
+    Hibernate: select bc1_0.id,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.created_at,bc1_0.created_by,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
+    Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
+    Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.bank_id = ? and r1_0.name=?
+    Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
+    Hibernate: insert into bank_configuration (allow_multi_bundle_product,bank_id,created_at,created_by,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+    Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+    Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+
+    MockHttpServletRequest:
+          HTTP Method = POST
+          Request URI = /api/v1/banks
+           Parameters = {}
+              Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"85"]
+                 Body = {"bankId":"NEW_BANK","allowProductInMultipleBundles":true,"categoryConflictRules":[]}
+        Session Attrs = {}
+
+    Handler:
+                 Type = com.bankengine.common.controller.BankConfigurationController
+               Method = com.bankengine.common.controller.BankConfigurationController#createBank(BankConfigurationRequest)
+
+    Async:
+        Async started = false
+         Async result = null
+
+    Resolved Exception:
+                 Type = null
+
+    ModelAndView:
+            View name = null
+                 View = null
+                Model = null
+
+    FlashMap:
+           Attributes = null
+
+    MockHttpServletResponse:
+               Status = 201
+        Error message = null
+              Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"SAMEORIGIN"]
+         Content type = application/json
+                 Body = {"bankId":"NEW_BANK","allowProductInMultipleBundles":true,"categoryConflictRules":[]}
+        Forwarded URL = null
+       Redirected URL = null
+              Cookies = []
+    Hibernate: select bc1_0.id,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.created_at,bc1_0.created_by,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where 1=1 and bc1_0.bank_id=? fetch first ? rows only
+    Hibernate: select ccr1_0.config_id,ccr1_0.categorya,ccr1_0.categoryb from bank_category_conflicts ccr1_0 where ccr1_0.config_id=?
+
+    MockHttpServletRequest:
+          HTTP Method = GET
+          Request URI = /api/v1/banks/NEW_BANK
+           Parameters = {}
+              Headers = []
+                 Body = null
+        Session Attrs = {}
+
+    Handler:
+                 Type = com.bankengine.common.controller.BankConfigurationController
+               Method = com.bankengine.common.controller.BankConfigurationController#getBank(String)
+
+    Async:
+        Async started = false
+         Async result = null
+
+    Resolved Exception:
+                 Type = null
+
+    ModelAndView:
+            View name = null
+                 View = null
+                Model = null
+
+    FlashMap:
+           Attributes = null
+
+    MockHttpServletResponse:
+               Status = 200
+        Error message = null
+              Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"SAMEORIGIN"]
+         Content type = application/json
+                 Body = {"bankId":"NEW_BANK","allowProductInMultipleBundles":true,"categoryConflictRules":[]}
+        Forwarded URL = null
+       Redirected URL = null
+              Cookies = []
+
+3 tests completed, 1 failed
+Finished generating test XML results (0.002 secs) into: /app/build/test-results/test
+Generating HTML test report...
+Finished generating test html results (0.005 secs) into: /app/build/reports/tests/test
+
+[Incubating] Problems report is available at: file:///app/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///app/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 24s
+5 actionable tasks: 1 executed, 4 up-to-date
+Some of the file system contents retained in the virtual file system are on file systems that Gradle doesn't support watching. The relevant state was discarded to ensure changes to these locations are properly detected. You can override this by explicitly enabling file system watching.

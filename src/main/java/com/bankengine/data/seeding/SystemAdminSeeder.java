@@ -30,7 +30,7 @@ public class SystemAdminSeeder implements CommandLineRunner {
 
         TenantContextHolder.setSystemMode(true);
         try {
-            if (bankConfigurationRepository.findById(systemBankId).isEmpty()) {
+            if (bankConfigurationRepository.findTenantAwareByBankId(systemBankId).isEmpty()) {
                 BankConfiguration systemBank = new BankConfiguration();
                 systemBank.setBankId(systemBankId);
                 systemBank.setAllowProductInMultipleBundles(true);

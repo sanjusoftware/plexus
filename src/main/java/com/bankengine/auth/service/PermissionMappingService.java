@@ -34,7 +34,7 @@ public class PermissionMappingService {
      * @return A Set of unique permission strings (authorities) corresponding to the roles.
      */
     @Transactional(readOnly = true)
-    @Cacheable(value = CACHE_NAME, key = "#roleNames", sync = true)
+    @Cacheable(value = CACHE_NAME, key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #roleNames", sync = true)
     public Set<String> getPermissionsForRoles(Collection<String> roleNames) {
 
         // 1. Fetch all Role entities associated with the given role names.

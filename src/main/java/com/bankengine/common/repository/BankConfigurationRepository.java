@@ -1,10 +1,10 @@
 package com.bankengine.common.repository;
 
 import com.bankengine.common.model.BankConfiguration;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-public interface BankConfigurationRepository extends JpaRepository<BankConfiguration, String> {
-    Optional<BankConfiguration> findByBankId(String bankId);
+@Repository
+public interface BankConfigurationRepository extends TenantRepository<BankConfiguration, Long> {
 }
