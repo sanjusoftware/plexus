@@ -12,6 +12,22 @@ Plexus is a scalable banking platform built with Java and Spring Boot. It implem
 
 ***
 
+# Application Architecture & Multi-tenancy
+
+Plexus is designed as a multi-tenant platform, supporting both single-instance (On-prem) and multi-instance (SaaS) deployments.
+
+## 1. Multi-tenant Isolation
+Isolation is enforced at the database level using a shared-schema, row-level filtering approach:
+- **Tenant Identifier**: Every tenant-aware entity inherits from `AuditableEntity` which contains a `bank_id` column.
+- **Automatic Filtering**: A Hibernate filter (`bankTenantFilter`) is automatically applied to all repository calls via an Aspect (`TenantFilterAspect`), ensuring users only see data belonging to their bank.
+- **Context Management**: The `TenantContextHolder` (ThreadLocal) stores the current request's `bankId`, which is extracted from the JWT by the `JwtAuthConverter`.
+
+## 2. Core Entities for Management
+- **`BankConfiguration`**: Defines the tenant itself. The `bankId` (String) is the primary key and readable identifier.
+- **`Role`**: Bank-specific roles (e.g., `SUPER_ADMIN` for `BANK_A`) are stored with their mapped permissions.
+
+***
+
 # Product Catalog and Pricing Model
 This system employs a decoupled, highly reusable architecture where Products are assembled by linking to reusable Components. This design prevents data duplication and centralizes maintenance for both feature configurations and complex pricing rules.
 
@@ -76,6 +92,34 @@ Access is granted using method-level security with **`@PreAuthorize`**.
 
 ### C. System Permissions Discovery
 To ensure consistency and performance, the application discovers all available authorities by scanning **`@PreAuthorize`** annotations via reflection during startup. This master list is then **cached** in memory using Spring's `@Cacheable` to optimize subsequent authorization lookups and validation checks, avoiding repeated reflection overhead.
+
+***
+
+# Setup & Deployment
+
+## 1. Prerequisites
+- Java 17+
+- PostgreSQL (or H2 for local development)
+- Gradle 8+
+
+## 2. On-Premise vs SaaS Setup
+
+### On-Premise / Private Cloud
+In an on-premise deployment, typically only one bank is configured.
+1. **Startup**: On initial startup, the `SystemAdminSeeder` automatically creates a `SYSTEM` bank and a `SYSTEM_ADMIN` role.
+2. **Initial Bank Creation**: Use the `SYSTEM_ADMIN` credentials to call the Bank Management API to create your bank (e.g., `MY_BANK`).
+3. **Admin User**: The system automatically creates a `SUPER_ADMIN` role for `MY_BANK` with all available permissions.
+
+### SaaS Deployment
+In a SaaS environment, the platform owner manages multiple banks.
+1. **System Admin**: The platform owner uses the `SYSTEM_ADMIN` role to onboard new bank clients via the `/api/v1/banks` endpoint.
+2. **Tenant Isolation**: Each bank client receives their own `bank_id`. When their users log in, their JWT must contain their specific `bank_id` claim to ensure data isolation.
+
+## 3. Environment Configuration
+Key environment variables / properties:
+- `SPRING_PROFILES_ACTIVE`: `dev` (H2) or `prod` (Postgres)
+- `SECURITY_JWT_SECRET_KEY`: 32+ character secret for JWT signing.
+- `SECURITY_JWT_ISSUER_URI`: The issuer URI for JWT validation.
 
 ***
 
@@ -162,6 +206,148 @@ Plexus maintains high code quality with a suite of over 142+ integration tests c
 
 ### Running Tests
 ```bash
-./mvnw clean test
+./gradlew test
 ```
 The test suite utilizes a `TestTransactionHelper` to perform idempotent data seeding, ensuring unique constraints are respected across parallel test executions by using "find-or-create" logic.
+
+***
+
+# Bank Administration Guide
+
+This guide walks through the end-to-end setup of a new bank and its products.
+
+## Step 1: System Admin - Create a New Bank
+The System Admin initializes the bank and its administrative role.
+
+**Request:** `POST /api/v1/banks`
+**Authority:** `system:bank:write`
+```json
+{
+  "bankId": "GLOBAL-BANK-001",
+  "allowProductInMultipleBundles": true,
+  "categoryConflictRules": [
+    { "categoryA": "RETAIL", "categoryB": "WEALTH" }
+  ]
+}
+```
+
+## Step 2: Bank Admin - Configure Bank Settings
+The Bank Admin for `GLOBAL-BANK-001` can update their bank's configuration.
+
+**Request:** `PUT /api/v1/banks/GLOBAL-BANK-001`
+**Authority:** `bank:config:write`
+```json
+{
+  "allowProductInMultipleBundles": false,
+  "categoryConflictRules": [
+    { "categoryA": "RETAIL", "categoryB": "INVESTMENT" }
+  ]
+}
+```
+
+## Step 3: Bank Admin - Configure Roles & Permissions
+The Bank Admin for `GLOBAL-BANK-001` can now define custom roles. Note that a `SUPER_ADMIN` role is automatically created with all bank-level permissions (excluding `system:*` authorities).
+
+**Request:** `POST /api/v1/roles/mapping`
+**Authority:** `auth:role:write`
+```json
+{
+  "roleName": "PRODUCT_MANAGER",
+  "authorities": ["catalog:product:create", "catalog:product:read", "catalog:product:update"]
+}
+```
+
+## Step 4: Bank Admin - Setup Product Metadata
+Define the foundation for products.
+
+### A. Create Product Type
+**Request:** `POST /api/v1/product-types`
+**Authority:** `catalog:type:create`
+```json
+{
+  "name": "CASA"
+}
+```
+*Assuming ID returned is `1`.*
+
+### B. Create Feature Component
+**Request:** `POST /api/v1/feature-components`
+**Authority:** `catalog:feature:create`
+```json
+{
+  "name": "Max_Free_ATM_Txn",
+  "dataType": "INTEGER"
+}
+```
+*Assuming ID returned is `10`.*
+
+### C. Create Pricing Component
+**Request:** `POST /api/v1/pricing-components`
+**Authority:** `pricing:component:create`
+```json
+{
+  "name": "Monthly_Maintenance_Fee",
+  "type": "FEE"
+}
+```
+*Assuming ID returned is `100`.*
+
+## Step 5: Bank Admin - Create and Configure Product
+### A. Create Product (DRAFT)
+**Request:** `POST /api/v1/products`
+**Authority:** `catalog:product:create`
+```json
+{
+  "name": "Global Savings",
+  "productTypeId": 1,
+  "category": "RETAIL",
+  "effectiveDate": "2024-01-01"
+}
+```
+*Assuming ID returned is `500`.*
+
+### B. Link Features
+**Request:** `PUT /api/v1/products/500/features`
+**Authority:** `catalog:product:update`
+```json
+[
+  {
+    "featureComponentId": 10,
+    "featureValue": "10"
+  }
+]
+```
+
+### C. Link Pricing
+**Request:** `PUT /api/v1/products/500/pricing`
+**Authority:** `catalog:product:update`
+```json
+[
+  {
+    "pricingComponentId": 100
+  }
+]
+```
+
+### D. Activate Product
+**Request:** `POST /api/v1/products/500/activate`
+**Authority:** `catalog:product:activate`
+
+## Step 6: Bank Admin - Create Product Bundle
+**Request:** `POST /api/v1/product-bundles`
+**Authority:** `catalog:bundle:create`
+```json
+{
+  "code": "GOLD-ELITE-001",
+  "name": "Gold Elite Bundle",
+  "description": "Premium savings bundle",
+  "eligibilitySegment": "RETAIL",
+  "products": [
+    {
+      "productId": 500,
+      "mandatory": true,
+      "mainAccount": true
+    }
+  ]
+}
+```

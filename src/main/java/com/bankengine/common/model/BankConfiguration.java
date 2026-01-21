@@ -6,7 +6,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,23 +22,34 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@AttributeOverrides({
-        @AttributeOverride(
-                name = "bankId",
-                column = @Column(name = "bank_id", unique = true)
-        )
-})
+@EntityListeners(AuditingEntityListener.class)
 @TenantEntity
-public class BankConfiguration extends AuditableEntity {
+public class BankConfiguration {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "bank_id", length = 50)
+    private String bankId;
 
     @Column(name = "allow_multi_bundle_product", nullable = false)
     private boolean allowProductInMultipleBundles = false;
 
     @ElementCollection
-    @CollectionTable(name = "bank_category_conflicts", joinColumns = @JoinColumn(name = "config_id"))
+    @CollectionTable(name = "bank_category_conflicts", joinColumns = @JoinColumn(name = "bank_id"))
     private List<CategoryConflictRule> categoryConflictRules = new ArrayList<>();
+
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    private String updatedBy;
 }
