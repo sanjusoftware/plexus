@@ -24,7 +24,8 @@ public class TenantFilterAspect {
         // But it will return null safely if we are in System Mode.
         String bankId = TenantContextHolder.getBankId();
 
-        if (bankId != null) {
+        // System admin (SYSTEM bank) should not be filtered, allowing them to see all banks/tenants
+        if (bankId != null && !"SYSTEM".equals(bankId)) {
             entityManager.unwrap(Session.class)
                     .enableFilter("bankTenantFilter")
                     .setParameter("bankId", bankId);
