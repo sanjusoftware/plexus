@@ -49,8 +49,10 @@ public class BankConfigurationService extends BaseService {
 
     @Transactional
     public BankConfigurationResponse updateBank(String bankId, BankConfigurationRequest request) {
-        BankConfiguration config = bankConfigurationRepository.findById(bankId)
+        BankConfiguration config = bankConfigurationRepository.findTenantAwareByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+
+        validateTenantAccess(config.getBankId());
 
         config.setAllowProductInMultipleBundles(request.isAllowProductInMultipleBundles());
         if (request.getCategoryConflictRules() != null) {
@@ -66,9 +68,19 @@ public class BankConfigurationService extends BaseService {
 
     @Transactional(readOnly = true)
     public BankConfigurationResponse getBank(String bankId) {
-        BankConfiguration config = bankConfigurationRepository.findById(bankId)
+        BankConfiguration config = bankConfigurationRepository.findTenantAwareByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+
+        validateTenantAccess(config.getBankId());
+
         return mapToResponse(config);
+    }
+
+    private void validateTenantAccess(String bankId) {
+        String currentBankId = getCurrentBankId();
+        if (!"SYSTEM".equals(currentBankId) && !currentBankId.equals(bankId)) {
+            throw new NotFoundException("Bank configuration not found for: " + bankId);
+        }
     }
 
     private void createSuperAdminRole(String bankId) {
