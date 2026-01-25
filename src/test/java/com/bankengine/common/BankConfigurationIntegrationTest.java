@@ -7,6 +7,7 @@ import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,114 +15,101 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private BankConfigurationRepository bankConfigurationRepository;
+    @Autowired private com.bankengine.pricing.TestTransactionHelper txHelper;
+    @Autowired private com.bankengine.auth.service.PermissionMappingService permissionMappingService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    // Pattern: Define Role Constants with unique prefixes
+    public static final String ROLE_PREFIX = "BCIT_";
+    private static final String SYSTEM_ADMIN_ROLE = ROLE_PREFIX + "SYSTEM_ADMIN";
+    private static final String BANK_A_ADMIN_ROLE = ROLE_PREFIX + "BANK_A_ADMIN";
+    private static final String UNAUTHORIZED_ROLE = ROLE_PREFIX + "GUEST";
 
-    @Autowired
-    private BankConfigurationRepository bankConfigurationRepository;
-
-    @Autowired
-    private com.bankengine.pricing.TestTransactionHelper txHelper;
-
-    @Autowired
-    private com.bankengine.auth.service.PermissionMappingService permissionMappingService;
+    @BeforeAll
+    static void setupCommittedData(@Autowired com.bankengine.pricing.TestTransactionHelper txHelperStatic) {
+        seedBaseRoles(txHelperStatic, Map.of(
+            SYSTEM_ADMIN_ROLE, Set.of("system:bank:write", "system:bank:read"),
+            BANK_A_ADMIN_ROLE, Set.of("bank:config:read", "bank:config:write"),
+            UNAUTHORIZED_ROLE, Set.of("catalog:read")
+        ));
+    }
 
     @BeforeEach
     void setup() {
         TenantContextHolder.setSystemMode(true);
         bankConfigurationRepository.deleteAll();
-
-        // Seed SYSTEM_ADMIN role for SYSTEM bank
-        TenantContextHolder.setBankId("SYSTEM");
-        txHelper.getOrCreateRoleInDb("SYSTEM_ADMIN", java.util.Set.of("system:bank:write", "system:bank:read"));
-
-        // Seed SUPER_ADMIN role for BANK_A
-        TenantContextHolder.setBankId("BANK_A");
-        txHelper.getOrCreateRoleInDb("SUPER_ADMIN", java.util.Set.of("bank:config:read", "bank:config:write"));
-
-        txHelper.flushAndClear();
-        // CRITICAL: Evict cache AFTER seeding so that WithMockRole (which might have failed earlier)
-        // doesn't poison subsequent calls, though WithMockRole for the CURRENT method
-        // has already executed.
-        permissionMappingService.evictAllRolePermissionsCache();
         TenantContextHolder.clear();
     }
 
     @Test
+    @WithMockRole(roles = {SYSTEM_ADMIN_ROLE}, bankId = "SYSTEM")
     void systemAdmin_CanCreateAndSeeAllBanks() throws Exception {
         BankConfigurationRequest request = new BankConfigurationRequest("NEW_BANK", true, List.of());
 
         // Create a bank
         mockMvc.perform(post("/api/v1/banks")
-                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                                .jwt(jwt -> jwt.claim("bank_id", "SYSTEM"))
-                                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("system:bank:write")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.bankId").value("NEW_BANK"));
 
         // System admin can see the bank configuration
-        mockMvc.perform(get("/api/v1/banks/NEW_BANK")
-                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                                .jwt(jwt -> jwt.claim("bank_id", "SYSTEM"))
-                                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("system:bank:read"))))
-                .andDo(print())
+        mockMvc.perform(get("/api/v1/banks/NEW_BANK"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bankId").value("NEW_BANK"));
     }
 
+    // --- 2. BANK ADMIN TESTS ---
+
     @Test
+    @WithMockRole(roles = {BANK_A_ADMIN_ROLE})
     void bankAdmin_CanOnlySeeOwnBank() throws Exception {
-        // Setup another bank in DB
-        TenantContextHolder.setSystemMode(true);
-        BankConfiguration otherBank = new BankConfiguration();
-        otherBank.setBankId("BANK_B");
-        otherBank.setAllowProductInMultipleBundles(false);
+        // Setup data manually in DB
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setSystemMode(true);
 
-        BankConfiguration ownBank = new BankConfiguration();
-        ownBank.setBankId("BANK_A");
-        ownBank.setAllowProductInMultipleBundles(true);
+            BankConfiguration otherBank = new BankConfiguration();
+            otherBank.setBankId("BANK_B");
+            otherBank.setAllowProductInMultipleBundles(false);
 
-        bankConfigurationRepository.saveAll(List.of(otherBank, ownBank));
-        TenantContextHolder.clear();
+            BankConfiguration ownBank = new BankConfiguration();
+            ownBank.setBankId("BANK_A");
+            ownBank.setAllowProductInMultipleBundles(true);
+
+            bankConfigurationRepository.saveAll(List.of(otherBank, ownBank));
+            return null;
+        });
 
         // Bank A admin sees their own bank
-        mockMvc.perform(get("/api/v1/banks/BANK_A")
-                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                                .jwt(jwt -> jwt.claim("bank_id", "BANK_A"))
-                                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("bank:config:read"))))
-                .andDo(print())
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/banks/BANK_A"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bankId").value("BANK_A"));
 
-        // Bank A admin cannot see Bank B (404 due to manual isolation in service)
-        mockMvc.perform(get("/api/v1/banks/BANK_B")
-                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                                .jwt(jwt -> jwt.claim("bank_id", "BANK_A"))
-                                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("bank:config:read"))))
-                .andDo(print())
+        // Bank A admin cannot see Bank B
+        mockMvc.perform(get("/api/v1/banks/BANK_B"))
                 .andExpect(status().isNotFound());
     }
 
+    // --- 3. NEGATIVE TESTS ---
+
     @Test
+    @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void unauthorizedUser_CannotCreateBank() throws Exception {
         BankConfigurationRequest request = new BankConfigurationRequest("FAIL", true, List.of());
 
         mockMvc.perform(post("/api/v1/banks")
-                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                                .jwt(jwt -> jwt.claim("bank_id", "BANK_A"))
-                                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("catalog:read")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
