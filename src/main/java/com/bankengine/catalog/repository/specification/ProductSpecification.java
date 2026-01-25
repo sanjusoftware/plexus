@@ -9,6 +9,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,6 +52,17 @@ public class ProductSpecification {
         }
         if (criteria.getEffectiveDateTo() != null) {
             predicates.add(builder.lessThanOrEqualTo(root.get("effectiveDate"), criteria.getEffectiveDateTo()));
+        }
+
+        // 7. Active Now Logic (If requested, usually for display)
+        // Check: effectiveDate <= now AND (expirationDate IS NULL OR expirationDate >= now)
+        if ("ACTIVE".equals(criteria.getStatus())) {
+            LocalDate now = LocalDate.now();
+            predicates.add(builder.lessThanOrEqualTo(root.get("effectiveDate"), now));
+            predicates.add(builder.or(
+                builder.isNull(root.get("expirationDate")),
+                builder.greaterThanOrEqualTo(root.get("expirationDate"), now)
+            ));
         }
 
         return builder.and(predicates.toArray(new Predicate[0]));
