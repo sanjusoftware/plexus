@@ -44,6 +44,8 @@ public class PricingComponent extends AuditableEntity {
     @Column(nullable = false)
     private String name; // e.g., "Annual Fee", "Base Interest Rate", "ATM Withdrawal Fee"
 
+    private String description;
+
     @Enumerated(EnumType.STRING)
     private ComponentType type;
 
@@ -51,7 +53,7 @@ public class PricingComponent extends AuditableEntity {
     private List<PricingTier> pricingTiers = new ArrayList<>();
 
     public enum ComponentType {
-        FEE, RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE
+        FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE
     }
 
     public PricingComponent(String name, ComponentType type) {

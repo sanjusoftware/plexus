@@ -9,7 +9,7 @@ import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
-import com.bankengine.catalog.repository.specification.ProductSpecification;
+import com.bankengine.catalog.specification.ProductSpecification;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;

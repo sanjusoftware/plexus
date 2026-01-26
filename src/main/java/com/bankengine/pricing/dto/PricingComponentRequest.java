@@ -17,4 +17,6 @@ public class PricingComponentRequest {
 
     @NotBlank(message = "Component type is required (e.g., FEE, RATE).")
     private String type;
+
+    private String description;
 }

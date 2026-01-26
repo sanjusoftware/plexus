@@ -55,4 +55,25 @@ public class Product extends AuditableEntity {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<BundleProductLink> bundleLinks = new ArrayList<>();
 
+    @Column(length = 100)
+    private String tagline; // Marketing headline
+
+    @Column(length = 2000)
+    private String fullDescription; // Rich text description
+
+    @Column(length = 500)
+    private String iconUrl; // Icon for UI display
+
+    @Column(name = "display_order")
+    private Integer displayOrder; // For sorting in catalog
+
+    @Column(name = "is_featured")
+    private boolean isFeatured; // For homepage highlights
+
+    @Column(name = "target_customer_segments")
+    private String targetCustomerSegments; // Comma-separated: "RETAIL,PREMIUM"
+
+    @Column(name = "terms_and_conditions", columnDefinition = "TEXT")
+    private String termsAndConditions;
+
 }

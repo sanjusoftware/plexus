@@ -114,7 +114,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             Long p1Id = txHelper.createProductInDb("Product 1", typeId, "RETAIL");
             Long p2Id = txHelper.createProductInDb("Product 2", typeId, "RETAIL");
 
-            PricingComponent component = txHelper.createPricingComponentInDb("Bundle Discount");
+            PricingComponent component = txHelper.createPricingComponentInDb("Standard Fee");
             txHelper.linkProductToPricingComponent(p1Id, component.getId(), new BigDecimal("10.00"));
             txHelper.linkProductToPricingComponent(p2Id, component.getId(), new BigDecimal("5.00"));
 
@@ -127,13 +127,8 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setProductBundleId(ids.get("bundle"));
         request.setCustomerSegment("RETAIL");
 
-        BundlePriceRequest.ProductRequest pr1 = new BundlePriceRequest.ProductRequest();
-        pr1.setProductId(ids.get("p1"));
-        pr1.setAmount(BigDecimal.valueOf(1000));
-
-        BundlePriceRequest.ProductRequest pr2 = new BundlePriceRequest.ProductRequest();
-        pr2.setProductId(ids.get("p2"));
-        pr2.setAmount(BigDecimal.valueOf(1000));
+        BundlePriceRequest.ProductRequest pr1 = new BundlePriceRequest.ProductRequest(ids.get("p1"), BigDecimal.valueOf(1000));
+        BundlePriceRequest.ProductRequest pr2 = new BundlePriceRequest.ProductRequest(ids.get("p2"), BigDecimal.valueOf(1000));
 
         request.setProducts(List.of(pr1, pr2));
 
@@ -154,11 +149,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         Map<String, Long> ids = txHelper.doInTransaction(() -> {
             TenantContextHolder.setBankId(TEST_BANK_ID);
 
-            ProductType type = new ProductType();
-            type.setName("Multi-Adjustment Type");
-            type.setBankId(TEST_BANK_ID);
-            productTypeRepository.save(type);
-
+            ProductType type = txHelper.getOrCreateProductType("Multi-Adjustment Type");
             Long p1Id = txHelper.createProductInDb("Product A", type.getId(), "RETAIL");
             Long p2Id = txHelper.createProductInDb("Product B", type.getId(), "RETAIL");
 
@@ -196,13 +187,18 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                // Totals: Gross (10+5=15) + Adjustments (-2.00 + 1.50 = -0.50) = Net 14.50
-                .andExpect(jsonPath("$.grossTotalAmount").value(15.00))
+                /* Logic Check:
+                   Products: 10.00 + 5.00 = 15.00
+                   Bundle Fee: +1.50
+                   Gross Total: 15.00 + 1.50 = 16.50
+                   Bundle Discount: -2.00
+                   Net Total: 16.50 - 2.00 = 14.50
+                */
+                .andExpect(jsonPath("$.grossTotalAmount").value(16.50))
+                .andExpect(jsonPath("$.netTotalAmount").value(14.50))
+                .andExpect(jsonPath("$.bundleAdjustments.length()").value(2))
 
-                // --- Verification of the Adjustment Array ---
-                .andExpect(jsonPath("$.bundleAdjustments.length()").value(2)) // Adjusted to 2 based on setup above
-
-                // Verify First Adjustment (Discount)
+                // Verify Adjustment Details
                 .andExpect(jsonPath("$.bundleAdjustments[0].componentCode").value("Bundle Discount"))
                 .andExpect(jsonPath("$.bundleAdjustments[0].calculatedAmount").value(-2.00))
                 .andExpect(jsonPath("$.bundleAdjustments[0].valueType").value("DISCOUNT_ABSOLUTE"))
@@ -212,10 +208,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.bundleAdjustments[1].componentCode").value("Bundle Handling Fee"))
                 .andExpect(jsonPath("$.bundleAdjustments[1].calculatedAmount").value(1.50))
                 .andExpect(jsonPath("$.bundleAdjustments[1].valueType").value("FEE_ABSOLUTE"))
-                .andExpect(jsonPath("$.bundleAdjustments[1].sourceType").value("FIXED_VALUE"))
-
-                // Final Net Check
-                .andExpect(jsonPath("$.netTotalAmount").value(14.50));
+                .andExpect(jsonPath("$.bundleAdjustments[1].sourceType").value("FIXED_VALUE"));
     }
 
     @Test
@@ -230,13 +223,11 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
             // Component 1: 1% Transaction Fee
             PricingComponent feeComp = txHelper.createPricingComponentInDb("Service Fee %");
-            txHelper.linkProductToPricingComponent(pId, feeComp.getId(),
-                    new BigDecimal("1.00"), PriceValue.ValueType.FEE_PERCENTAGE);
+            txHelper.linkProductToPricingComponent(pId, feeComp.getId(), new BigDecimal("1.00"), PriceValue.ValueType.FEE_PERCENTAGE);
 
             // Component 2: 10% Discount on that fee
             PricingComponent discComp = txHelper.createPricingComponentInDb("Loyalty Discount %");
-            txHelper.linkProductToPricingComponent(pId, discComp.getId(),
-                    new BigDecimal("10.00"), PriceValue.ValueType.DISCOUNT_PERCENTAGE);
+            txHelper.linkProductToPricingComponent(pId, discComp.getId(), new BigDecimal("10.00"), PriceValue.ValueType.DISCOUNT_PERCENTAGE);
 
             return pId;
         });
@@ -244,7 +235,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         PricingRequest request = new PricingRequest();
         request.setProductId(productId);
         request.setCustomerSegment("RETAIL");
-        request.setAmount(new BigDecimal("1000.00")); // Basis for the 1% fee
+        request.setAmount(new BigDecimal("1000.00"));
         request.setEffectiveDate(LocalDate.now());
 
         // 2. ACT & ASSERT

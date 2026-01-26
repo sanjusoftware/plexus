@@ -88,7 +88,7 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
                         });
                 productId = p.getId();
 
-                compRateId = pricingComponentRepoStatic.save(new PricingComponent("Standard Interest Rate", PricingComponent.ComponentType.RATE)).getId();
+                compRateId = pricingComponentRepoStatic.save(new PricingComponent("Standard Interest Rate", PricingComponent.ComponentType.INTEREST_RATE)).getId();
                 compFeeId = pricingComponentRepoStatic.save(new PricingComponent("Monthly Maintenance Fee", PricingComponent.ComponentType.FEE)).getId();
                 compDiscountId = pricingComponentRepoStatic.save(new PricingComponent("Loyalty Discount", PricingComponent.ComponentType.DISCOUNT)).getId();
             });

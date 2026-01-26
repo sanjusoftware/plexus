@@ -2,6 +2,7 @@ package com.bankengine.pricing.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,6 +11,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class BundlePriceRequest {
 
     @NotNull(message = "Product Bundle ID is mandatory for pricing.")
@@ -22,12 +26,14 @@ public class BundlePriceRequest {
     @NotNull(message = "Customer Segment is mandatory for pricing rule matching.")
     private String customerSegment;
 
+    @Builder.Default
     private LocalDate effectiveDate = LocalDate.now();
 
     // ADDED: To pass any metadata (e.g., yearsWithBank, region, etc.)
     private java.util.Map<String, Object> customAttributes;
 
     @Data
+    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ProductRequest {

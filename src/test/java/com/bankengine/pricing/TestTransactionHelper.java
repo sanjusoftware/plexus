@@ -3,9 +3,11 @@ package com.bankengine.pricing;
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.security.TenantContextHolder;
+import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.model.ProductType;
+import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
@@ -38,6 +40,7 @@ public class TestTransactionHelper {
     @Autowired private ProductBundleRepository productBundleRepository;
     @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
     @Autowired private BundlePricingLinkRepository bundlePricingLinkRepository;
+    @Autowired private BundleProductLinkRepository bundleProductLinkRepository;
 
     // =================================================================
     // Find-or-Create DSL for Catalog Entities (DRY)
@@ -269,5 +272,28 @@ public class TestTransactionHelper {
         bundle.setBankId(TenantContextHolder.getBankId());
 
         return productBundleRepository.save(bundle);
+    }
+
+    /**
+     * Creates a complete Bundle graph: Bundle -> Linked Product -> Bundle Pricing Adjustment
+     */
+    @Transactional
+    public Long setupFullBundleWithPricing(String bundleName, String productName, BigDecimal discountValue, PriceValue.ValueType discountType) {
+        ProductType defaultType = getOrCreateProductType("SAVINGS");
+        Product product = getOrCreateProduct(productName, defaultType, "RETAIL");
+
+        PricingComponent productBaseFee = createPricingComponentInDb("Product Base Fee");
+        linkProductToPricingComponent(product.getId(), productBaseFee.getId(), BigDecimal.ZERO);
+
+        ProductBundle bundle = createBundleInDb(bundleName);
+
+        // Ensure the link is persisted
+        BundleProductLink link = new BundleProductLink(bundle, product, true, true);
+        link.setBankId(TenantContextHolder.getBankId());
+        bundleProductLinkRepository.save(link);
+
+        linkBundleToPricingComponent(bundle.getId(), createPricingComponentInDb(bundleName + " Benefit").getId(), discountValue, discountType);
+
+        return bundle.getId();
     }
 }

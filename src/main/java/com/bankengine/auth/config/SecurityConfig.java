@@ -62,7 +62,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/h2-console/**",
-                                "/error"
+                                "/error",
+                                "/api/v1/public/catalog/**"
                         ).permitAll()
 
                         // Allow POST for /products for initial testing

@@ -1,6 +1,8 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.auth.security.TenantContextHolder;
+import com.bankengine.catalog.model.Product;
+import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.model.PriceValue;
@@ -24,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,6 +36,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PricingCalculationServiceTest extends BaseServiceTest {
 
+    @Mock
+    private ProductRepository productRepository;
     @Mock
     private ProductPricingLinkRepository productPricingLinkRepository;
     @Mock
@@ -56,6 +61,11 @@ class PricingCalculationServiceTest extends BaseServiceTest {
                 .amount(new BigDecimal("1000.00"))
                 .customerSegment("RETAIL")
                 .build();
+
+        // Satisfy getByIdSecurely check for successful tests
+        Product mockProduct = new Product();
+        mockProduct.setId(1L);
+        lenient().when(productRepository.findById(1L)).thenReturn(Optional.of(mockProduct));
     }
 
     @AfterEach

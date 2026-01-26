@@ -1,5 +1,6 @@
 package com.bankengine.catalog.converter;
 
+import com.bankengine.catalog.dto.ProductCatalogCard;
 import com.bankengine.catalog.dto.ProductRequest;
 import com.bankengine.catalog.dto.ProductResponse;
 import com.bankengine.catalog.dto.ProductVersionRequest;
@@ -27,6 +28,7 @@ public interface ProductMapper {
     @ToAuditableEntity
     @Mapping(target = "productType", source = "productType")
     @Mapping(target = "name", source = "dto.name")
+    @Mapping(target = "featured", source = "dto.featured")
     @Mapping(target = "productFeatureLinks", ignore = true)
     @Mapping(target = "productPricingLinks", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)
@@ -34,6 +36,7 @@ public interface ProductMapper {
 
     @ToAuditableEntity
     @Mapping(target = "productType", ignore = true)
+    @Mapping(target = "featured", source = "dto.featured")
     @Mapping(target = "productFeatureLinks", ignore = true)
     @Mapping(target = "productPricingLinks", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)
@@ -49,4 +52,13 @@ public interface ProductMapper {
     @Mapping(target = "expirationDate", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)
     Product createNewVersionFrom(Product oldProduct, ProductVersionRequest requestDto);
+
+    @Mapping(target = "productId", source = "id")
+    @Mapping(target = "productName", source = "name")
+    @Mapping(target = "productTypeDisplayName", source = "productType.name")
+    @Mapping(target = "keyFeatures", ignore = true)
+    @Mapping(target = "pricingSummary", ignore = true)
+    @Mapping(target = "eligibleForCustomer", ignore = true)
+    @Mapping(target = "eligibilityMessage", ignore = true)
+    ProductCatalogCard toCatalogCard(Product product);
 }

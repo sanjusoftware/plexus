@@ -1,4 +1,4 @@
-package com.bankengine.catalog.repository.specification;
+package com.bankengine.catalog.specification;
 
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.dto.ProductSearchRequest;

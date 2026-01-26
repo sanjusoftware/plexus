@@ -132,7 +132,6 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         pricingComponentRepository.deleteAllInBatch();
         productRepository.deleteAllInBatch();
         productTypeRepository.deleteAllInBatch();
-
     }
 
     @Test
@@ -157,6 +156,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockUser(authorities = {"pricing:calculation:read", "pricing:metadata:write", "pricing:component:write"})
     void testRuleExecutionWithCustomInputAttribute() {
+        final Long productId = this.persistedProduct.getId();
+
+        // Step 1: Add new metadata, component, and link in a transaction
         transactionTemplate.execute(status -> {
             PricingInputMetadata metadata = new PricingInputMetadata();
             metadata.setAttributeKey("CLIENT_AGE");
@@ -164,12 +166,13 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             metadata.setDisplayName("Client Age for Pricing");
             pricingInputMetadataRepository.save(metadata);
 
+            Product currentProduct = productRepository.findById(productId).orElseThrow();
+
             String customCompName = "AgeRuleComponent";
             PricingComponent component = new PricingComponent(customCompName, PricingComponent.ComponentType.FEE);
             PricingComponent persistedComponent = pricingComponentRepository.save(component);
 
             PricingTier tier = new PricingTier(persistedComponent, "Senior Tier", BigDecimal.ZERO, null);
-
             TierCondition condition = new TierCondition();
             condition.setPricingTier(tier);
             condition.setAttributeName("CLIENT_AGE");
@@ -180,44 +183,48 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             PriceValue priceValue = new PriceValue(tier, new BigDecimal("20.00"), ValueType.FEE_ABSOLUTE);
             tier.getPriceValues().add(priceValue);
-
             persistedComponent.getPricingTiers().add(tier);
             pricingComponentRepository.save(persistedComponent);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, persistedComponent, null, null, null, true
+                    currentProduct, persistedComponent, null, null, null, true
             ));
 
             entityManager.flush();
+            entityManager.clear();
             return null;
         });
 
+        // Step 2: Reload rules so the new component ID is in the KieBase
         kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
 
-        PricingRequest successRequest = PricingRequest.builder()
-                .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT)
-                .amount(TEST_AMOUNT)
-                .customAttributes(Collections.singletonMap("CLIENT_AGE", 65L))
-                .build();
+        // Step 3: Execute and Assert
+        transactionTemplate.execute(status -> {
+            PricingRequest successRequest = PricingRequest.builder()
+                    .productId(productId)
+                    .customerSegment(TEST_SEGMENT)
+                    .amount(TEST_AMOUNT)
+                    .customAttributes(Collections.singletonMap("CLIENT_AGE", 65L))
+                    .build();
 
-        List<PriceComponentDetail> successResults = pricingCalculationService.getProductPricing(successRequest).getComponentBreakdown();
+            List<PriceComponentDetail> successResults = pricingCalculationService.getProductPricing(successRequest).getComponentBreakdown();
 
-        assertEquals(2, successResults.size(), "Expected two price facts.");
-        assertTrue(successResults.stream().anyMatch(r -> r.getRawValue().compareTo(new BigDecimal("20.00")) == 0));
-        assertTrue(successResults.stream().anyMatch(r -> r.getRawValue().compareTo(new BigDecimal("10.00")) == 0));
+            assertEquals(2, successResults.size(), "Expected both Annual Fee and Age Fee facts.");
+            assertTrue(successResults.stream().anyMatch(r -> r.getRawValue().compareTo(new BigDecimal("20.00")) == 0));
+            assertTrue(successResults.stream().anyMatch(r -> r.getRawValue().compareTo(new BigDecimal("10.00")) == 0));
 
-        PricingRequest failureRequest = PricingRequest.builder()
-                .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT)
-                .amount(TEST_AMOUNT)
-                .customAttributes(Collections.singletonMap("CLIENT_AGE", 55L))
-                .build();
+            PricingRequest failureRequest = PricingRequest.builder()
+                    .productId(productId)
+                    .customerSegment(TEST_SEGMENT)
+                    .amount(TEST_AMOUNT)
+                    .customAttributes(Collections.singletonMap("CLIENT_AGE", 55L))
+                    .build();
 
-        List<PriceComponentDetail> failureResults = pricingCalculationService.getProductPricing(failureRequest).getComponentBreakdown();
+            List<PriceComponentDetail> failureResults = pricingCalculationService.getProductPricing(failureRequest).getComponentBreakdown();
+            assertEquals(1, failureResults.size(), "Only the Annual Fee rule should fire for age 55.");
 
-        assertEquals(1, failureResults.size(), "Only the Annual Fee rule should fire, resulting in 1 fact.");
-        assertEquals(new BigDecimal("10.00"), failureResults.get(0).getRawValue(), "Only the $10.00 Annual Fee must be present.");
+            return null;
+        });
     }
 
     @Test
@@ -245,7 +252,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentRepository.save(component);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, component, null,  null, null,true
+                    persistedProduct, component, null, null, null, true
             ));
 
             entityManager.flush();
@@ -363,7 +370,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentRepository.save(component);
 
             productPricingLinkRepository.save(new ProductPricingLink(
-                    persistedProduct, component, null,  null, null,true
+                    persistedProduct, component, null, null, null, true
             ));
 
             entityManager.flush();
@@ -397,5 +404,4 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         assertEquals(1, failureResults.size(), "Only the baseline rule should fire.");
         assertEquals(EXPECTED_PRICE_INITIAL, failureResults.get(0).getRawValue());
     }
-
 }

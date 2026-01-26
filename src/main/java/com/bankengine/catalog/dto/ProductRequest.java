@@ -33,4 +33,12 @@ public class ProductRequest {
 
     @NotBlank(message = "Product category is required (e.g., RETAIL, WEALTH, CORPORATE).")
     private String category;
+
+    private String tagline;
+    private String fullDescription;
+    private String iconUrl;
+    private Integer displayOrder;
+    private boolean isFeatured;
+    private String targetCustomerSegments;
+    private String termsAndConditions;
 }
