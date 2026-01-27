@@ -11,9 +11,11 @@ import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.rules.model.PricingInput;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.NotFoundException;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.kie.api.runtime.ClassObjectFilter;
 import org.kie.api.runtime.KieSession;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +41,7 @@ public class PricingCalculationService extends BaseService {
         getByIdSecurely(productRepository, request.getProductId(), "Product");
 
         // 2. FETCH LINKS
-        List<ProductPricingLink> links = productPricingLinkRepository.findByProductId(request.getProductId());
+        List<ProductPricingLink> links = getCachedLinks(request.getProductId());
 
         if (links.isEmpty()) {
             throw new NotFoundException("No pricing configuration found for product ID: " + request.getProductId());
@@ -75,6 +77,12 @@ public class PricingCalculationService extends BaseService {
                 .finalChargeablePrice(finalPrice)
                 .componentBreakdown(allComponents)
                 .build();
+    }
+
+    @Cacheable(value = "productPricingLinks",
+            key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #productId")
+    private List<ProductPricingLink> getCachedLinks(@NotNull(message = "Product ID is mandatory for pricing.") Long productId) {
+        return productPricingLinkRepository.findByProductId(productId);
     }
 
     private PriceComponentDetail mapFixedLinkToDetail(ProductPricingLink link) {

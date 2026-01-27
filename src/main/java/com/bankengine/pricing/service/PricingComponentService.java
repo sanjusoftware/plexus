@@ -15,6 +15,7 @@ import com.bankengine.pricing.repository.*;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,6 +71,7 @@ public class PricingComponentService extends BaseService {
      * Updates an existing Pricing Tier and its associated Price Value.
      */
     @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public ProductPricingCalculationResult.PriceComponentDetail updateTierAndValue(
             Long componentId,
             Long tierId,
@@ -110,6 +112,7 @@ public class PricingComponentService extends BaseService {
     }
 
     @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public void deleteTierAndValue(Long componentId, Long tierId) {
         getPricingComponentById(componentId);
         getPricingTierById(tierId);
@@ -117,11 +120,6 @@ public class PricingComponentService extends BaseService {
         valueRepository.deleteByPricingTierId(tierId);
         tierRepository.deleteById(tierId);
         reloadService.reloadKieContainer();
-    }
-
-    private void getTierById(Long tierId) {
-        tierRepository.findById(tierId)
-                .orElseThrow(() -> new NotFoundException("Pricing Tier not found with ID: " + tierId));
     }
 
     public PricingComponent getPricingComponentById(Long id) {
@@ -156,6 +154,7 @@ public class PricingComponentService extends BaseService {
     }
 
     @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public PricingComponentResponse updateComponent(Long id, PricingComponentRequest requestDto) {
         PricingComponent component = getPricingComponentById(id);
         pricingComponentMapper.updateFromDto(requestDto, component);
@@ -187,6 +186,7 @@ public class PricingComponentService extends BaseService {
      * Links a new Tier and its Price Value to an existing Pricing Component.
      */
     @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public ProductPricingCalculationResult.PriceComponentDetail addTierAndValue(
             Long componentId,
             PricingTierRequest tierDto,

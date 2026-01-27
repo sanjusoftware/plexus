@@ -8,6 +8,7 @@ import org.kie.api.KieServices;
 import org.kie.api.builder.ReleaseId;
 import org.kie.api.runtime.KieContainer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +49,7 @@ public class KieContainerReloadService {
      * Throws RuntimeException if compilation fails.
      */
     @Transactional(readOnly = true)
+    @CacheEvict(value = {"publicCatalog", "productDetails", "productPricingLinks"}, allEntries = true)
     public void reloadKieContainer() {
         KieServices kieServices = KieServices.Factory.get();
 

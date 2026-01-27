@@ -20,6 +20,7 @@ import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.BundlePricingService;
 import com.bankengine.pricing.service.PricingCalculationService;
 import com.bankengine.web.exception.NotFoundException;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -51,6 +52,8 @@ public class PublicCatalogService extends BaseService {
         this.bundlePricingService = bundlePricingService;
     }
 
+    @Cacheable(value = "publicCatalog",
+            key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #category + '_' + #productTypeId + '_' + #customerSegment + '_' + #pageable.pageNumber")
     public Page<ProductCatalogCard> getActiveProducts(
             String category,
             Long productTypeId,
@@ -86,6 +89,8 @@ public class PublicCatalogService extends BaseService {
         return products.map(this::toProductCatalogCard);
     }
 
+    @Cacheable(value = "productDetails",
+            key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #productId")
     public ProductDetailView getProductDetailView(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
