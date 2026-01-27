@@ -69,10 +69,12 @@ public class ProductBundleService extends BaseService {
     public Long updateBundle(Long oldBundleId, ProductBundleRequest dto) {
         ProductBundle oldBundle = getByIdSecurely(productBundleRepository, oldBundleId, "Bundle");
 
+        // 1. Mark as archived
         oldBundle.setStatus(ProductBundle.BundleStatus.ARCHIVED);
         oldBundle.setExpiryDate(LocalDate.now());
-        productBundleRepository.save(oldBundle);
+        productBundleRepository.saveAndFlush(oldBundle);
 
+        // 2. Create the new version
         return saveBundleWithLinks(dto).getId();
     }
 

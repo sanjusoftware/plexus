@@ -286,14 +286,14 @@ public class PublicCatalogService extends BaseService {
                     .name(component.getName())
                     .value(displayValue)
                     .condition(component.getDescription())
-                    .highlighted(component.getType() == PricingComponent.ComponentType.FEE)
+                    .highlighted(component.getType() == PricingComponent.ComponentType.FEE || component.getType() == PricingComponent.ComponentType.PACKAGE_FEE)
                     .build();
 
-            // Categorize based on type
+            // Categorize based on type properly mapped to UI groupings
             switch (component.getType()) {
-                case FEE -> fees.add(item);
+                case FEE, PACKAGE_FEE -> fees.add(item);
                 case INTEREST_RATE -> rates.add(item);
-                case DISCOUNT -> waivers.add(item);
+                case DISCOUNT, WAIVER, BENEFIT -> waivers.add(item);
                 default -> fees.add(item); // Fallback for other types
             }
         });
@@ -316,7 +316,8 @@ public class PublicCatalogService extends BaseService {
 
         return switch (component.getType()) {
             case INTEREST_RATE -> link.getFixedValue().toString() + "% p.a.";
-            case FEE -> "$" + link.getFixedValue().toString();
+            case FEE, PACKAGE_FEE -> "$" + link.getFixedValue().toString();
+            case DISCOUNT, WAIVER, BENEFIT -> link.getFixedValue().toString();
             default -> link.getFixedValue().toString();
         };
     }

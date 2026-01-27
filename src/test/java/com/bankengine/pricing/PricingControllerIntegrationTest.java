@@ -118,7 +118,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             txHelper.linkProductToPricingComponent(p1Id, component.getId(), new BigDecimal("10.00"));
             txHelper.linkProductToPricingComponent(p2Id, component.getId(), new BigDecimal("5.00"));
 
-            ProductBundle bundle = txHelper.createBundleInDb("Super Salary Package");
+            ProductBundle bundle = txHelper.createBundleInDb("Super Salary Package", ProductBundle.BundleStatus.ACTIVE);
 
             return Map.of("p1", p1Id, "p2", p2Id, "bundle", bundle.getId());
         });
@@ -157,7 +157,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             txHelper.linkProductToPricingComponent(p1Id, productFee.getId(), new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE);
             txHelper.linkProductToPricingComponent(p2Id, productFee.getId(), new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE);
 
-            ProductBundle bundle = txHelper.createBundleInDb("Multi-Adjustment Bundle");
+            ProductBundle bundle = txHelper.createBundleInDb("Multi-Adjustment Bundle", ProductBundle.BundleStatus.ACTIVE);
 
             // Adjustment 1: Fixed Bundle Discount (Negative)
             PricingComponent bundleDisc = txHelper.createPricingComponentInDb("Bundle Discount");

@@ -2,6 +2,7 @@ package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
+import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.common.exception.ValidationException;
 import com.bankengine.common.model.BankConfiguration;
@@ -27,7 +28,6 @@ public class CatalogConstraintService extends BaseService {
     public void validateProductCanBeBundled(Long productId) {
         String currentBankId = getCurrentBankId();
 
-        // 1. Check Bank Configuration (Dynamic Flag)
         boolean allowMultiBundle = bankConfigurationRepository.findByBankId(currentBankId)
                 .map(BankConfiguration::isAllowProductInMultipleBundles)
                 .orElse(false);
@@ -36,15 +36,23 @@ public class CatalogConstraintService extends BaseService {
             return;
         }
 
-        // 2. Strict Mode Validation (Check DB for existing links)
-        Optional<BundleProductLink> existingLink = bundleProductLinkRepository.findByProductId(productId);
+        // 1. Fetch all historical links
+        List<BundleProductLink> allLinks = bundleProductLinkRepository.findAllByProductId(productId);
 
-        if (existingLink.isPresent()) {
-            String existingBundleCode = existingLink.get().getProductBundle().getCode();
+        // 2. Filter: Only count links that are in DRAFT or ACTIVE bundles
+        // ARCHIVED bundles are considered "historical" and do not block new bundling
+        Optional<BundleProductLink> activeConflict = allLinks.stream()
+                .filter(link -> link.getProductBundle().getStatus() != ProductBundle.BundleStatus.ARCHIVED)
+                .findFirst();
+
+        if (activeConflict.isPresent()) {
+            String bundleCode = activeConflict.get().getProductBundle().getCode();
+            ProductBundle.BundleStatus status = activeConflict.get().getProductBundle().getStatus();
 
             throw new ValidationException(
-                    String.format("Product ID %d is already assigned to Bundle %s. Configuration for bank %s prevents multi-bundling.",
-                            productId, existingBundleCode, currentBankId)
+                    String.format("Product ID %d is currently in an %s bundle (%s). " +
+                                    "Multi-bundling is disabled for bank %s.",
+                            productId, status, bundleCode, currentBankId)
             );
         }
     }

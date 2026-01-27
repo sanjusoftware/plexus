@@ -28,19 +28,32 @@ import java.util.Set;
 @Component
 public class TestTransactionHelper {
 
-    @Autowired private PricingComponentRepository pricingComponentRepository;
-    @Autowired private PricingTierRepository tierRepository;
-    @Autowired private PriceValueRepository valueRepository;
-    @Autowired private PricingInputMetadataRepository metadataRepository;
-    @Autowired private TierConditionRepository tierConditionRepository;
-    @Autowired private EntityManager entityManager;
-    @Autowired private RoleRepository roleRepository;
-    @Autowired private ProductRepository productRepository;
-    @Autowired private ProductTypeRepository productTypeRepository;
-    @Autowired private ProductBundleRepository productBundleRepository;
-    @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
-    @Autowired private BundlePricingLinkRepository bundlePricingLinkRepository;
-    @Autowired private BundleProductLinkRepository bundleProductLinkRepository;
+    @Autowired
+    private PricingComponentRepository pricingComponentRepository;
+    @Autowired
+    private PricingTierRepository tierRepository;
+    @Autowired
+    private PriceValueRepository valueRepository;
+    @Autowired
+    private PricingInputMetadataRepository metadataRepository;
+    @Autowired
+    private TierConditionRepository tierConditionRepository;
+    @Autowired
+    private EntityManager entityManager;
+    @Autowired
+    private RoleRepository roleRepository;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ProductTypeRepository productTypeRepository;
+    @Autowired
+    private ProductBundleRepository productBundleRepository;
+    @Autowired
+    private ProductPricingLinkRepository productPricingLinkRepository;
+    @Autowired
+    private BundlePricingLinkRepository bundlePricingLinkRepository;
+    @Autowired
+    private BundleProductLinkRepository bundleProductLinkRepository;
 
     // =================================================================
     // Find-or-Create DSL for Catalog Entities (DRY)
@@ -86,7 +99,6 @@ public class TestTransactionHelper {
 
     @Transactional
     public void linkProductToPricingComponent(Long productId, Long componentId, BigDecimal fixedValue) {
-        // Overload or update to use a default ValueType
         linkProductToPricingComponent(productId, componentId, fixedValue, PriceValue.ValueType.FEE_ABSOLUTE);
     }
 
@@ -262,13 +274,13 @@ public class TestTransactionHelper {
     }
 
     @Transactional
-    public ProductBundle createBundleInDb(String name) {
+    public ProductBundle createBundleInDb(String name, ProductBundle.BundleStatus bundleStatus) {
         ProductBundle bundle = new ProductBundle();
         bundle.setName(name);
         bundle.setCode("BNDL_" + System.currentTimeMillis());
         bundle.setEligibilitySegment("RETAIL");
         bundle.setActivationDate(LocalDate.now());
-        bundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
+        bundle.setStatus(bundleStatus);
         bundle.setBankId(TenantContextHolder.getBankId());
 
         return productBundleRepository.save(bundle);
@@ -278,14 +290,14 @@ public class TestTransactionHelper {
      * Creates a complete Bundle graph: Bundle -> Linked Product -> Bundle Pricing Adjustment
      */
     @Transactional
-    public Long setupFullBundleWithPricing(String bundleName, String productName, BigDecimal discountValue, PriceValue.ValueType discountType) {
+    public ProductBundle setupFullBundleWithPricing(String bundleName, String productName, BigDecimal discountValue, PriceValue.ValueType discountType, ProductBundle.BundleStatus bundleStatus) {
         ProductType defaultType = getOrCreateProductType("SAVINGS");
         Product product = getOrCreateProduct(productName, defaultType, "RETAIL");
 
         PricingComponent productBaseFee = createPricingComponentInDb("Product Base Fee");
         linkProductToPricingComponent(product.getId(), productBaseFee.getId(), BigDecimal.ZERO);
 
-        ProductBundle bundle = createBundleInDb(bundleName);
+        ProductBundle bundle = createBundleInDb(bundleName, bundleStatus);
 
         // Ensure the link is persisted
         BundleProductLink link = new BundleProductLink(bundle, product, true, true);
@@ -294,6 +306,6 @@ public class TestTransactionHelper {
 
         linkBundleToPricingComponent(bundle.getId(), createPricingComponentInDb(bundleName + " Benefit").getId(), discountValue, discountType);
 
-        return bundle.getId();
+        return bundle;
     }
 }

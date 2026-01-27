@@ -1,6 +1,7 @@
 package com.bankengine.catalog;
 
 import com.bankengine.auth.security.TenantContextHolder;
+import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
@@ -104,18 +105,17 @@ class PublicCatalogIntegrationTest extends AbstractIntegrationTest {
         Long bundleId = txHelper.doInTransaction(() -> {
             TenantContextHolder.setBankId(TEST_BANK_ID);
 
-            Long bId = txHelper.setupFullBundleWithPricing(
+            ProductBundle bundle = txHelper.setupFullBundleWithPricing(
                     "Welcome Bundle",
                     "Basic Savings",
-                    new BigDecimal("-2.00"), // Negative for discount
-                    PriceValue.ValueType.DISCOUNT_ABSOLUTE
+                    new BigDecimal("-2.00"),
+                    PriceValue.ValueType.DISCOUNT_ABSOLUTE, ProductBundle.BundleStatus.ACTIVE
             );
 
-            // Let's add a fixed fee to the bundle so we have a base price to test
             PricingComponent baseFee = txHelper.createPricingComponentInDb("Monthly Package Fee");
-            txHelper.linkBundleToPricingComponent(bId, baseFee.getId(), new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE);
+            txHelper.linkBundleToPricingComponent(bundle.getId(), baseFee.getId(), new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE);
 
-            return bId;
+            return bundle.getId();
         });
 
         // ACT & ASSERT
