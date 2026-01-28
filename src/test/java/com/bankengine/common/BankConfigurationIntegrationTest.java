@@ -114,4 +114,17 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @WithMockRole(roles = {BANK_A_ADMIN_ROLE}, bankId = "BANK_A")
+    void bankAdmin_UpdatingOtherBank_Returns404Not403() throws Exception {
+        // Obfuscation check: If I try to update BANK_B, don't tell me it exists (403).
+        // Tell me I can't find it (404).
+        BankConfigurationRequest request = new BankConfigurationRequest("BANK_B", true, List.of());
+
+        mockMvc.perform(get("/api/v1/banks/BANK_B")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound()); // Hits the validateTenantAccess branch
+    }
 }

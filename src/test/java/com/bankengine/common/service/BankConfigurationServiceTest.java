@@ -2,6 +2,7 @@ package com.bankengine.common.service;
 
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.PermissionMappingService;
 import com.bankengine.common.dto.BankConfigurationRequest;
@@ -11,6 +12,7 @@ import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.web.exception.NotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -109,5 +111,39 @@ class BankConfigurationServiceTest {
         when(bankConfigurationRepository.findTenantAwareByBankId("UNKNOWN")).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () -> bankConfigurationService.getBank("UNKNOWN"));
+    }
+
+    @Test
+    @DisplayName("UpdateBank should trigger lambda branch when bank missing")
+    void updateBank_WhenNotExists_ShouldTriggerLambda() {
+        // Targets the lambda: .orElseThrow(() -> new NotFoundException(...))
+        when(bankConfigurationRepository.findTenantAwareByBankId("MISSING")).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () ->
+                bankConfigurationService.updateBank("MISSING", standardRequest)
+        );
+    }
+
+    @Test
+    @DisplayName("ValidateTenantAccess should allow SYSTEM mode")
+    void getBank_WhenSystemMode_ShouldSucceedRegardlessOfTenant() {
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId("BANK_A");
+
+        when(bankConfigurationRepository.findTenantAwareByBankId("BANK_A")).thenReturn(Optional.of(config));
+        TenantContextHolder.setBankId("SYSTEM");
+
+        assertDoesNotThrow(() -> bankConfigurationService.getBank("BANK_A"));
+    }
+
+    @Test
+    @DisplayName("CreateBank should handle null conflict rules")
+    void createBank_WithNullRules_ShouldSucceed() {
+        standardRequest.setCategoryConflictRules(null);
+        when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of());
+        TenantContextHolder.setBankId("SYSTEM");
+
+        assertDoesNotThrow(() -> bankConfigurationService.createBank(standardRequest));
+        verify(bankConfigurationRepository).save(argThat(config -> config.getCategoryConflictRules().isEmpty()));
     }
 }

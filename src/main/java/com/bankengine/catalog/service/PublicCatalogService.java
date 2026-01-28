@@ -15,6 +15,7 @@ import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
 import com.bankengine.pricing.dto.PricingRequest;
+import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.BundlePricingService;
@@ -44,7 +45,11 @@ public class PublicCatalogService extends BaseService {
     private final PricingCalculationService pricingCalculationService;
     private final BundlePricingService bundlePricingService;
 
-    public PublicCatalogService(ProductRepository productRepository, ProductBundleRepository productBundleRepository, ProductMapper productMapper, PricingCalculationService pricingCalculationService, BundlePricingService bundlePricingService) {
+    public PublicCatalogService(ProductRepository productRepository,
+                                ProductBundleRepository productBundleRepository,
+                                ProductMapper productMapper,
+                                PricingCalculationService pricingCalculationService,
+                                BundlePricingService bundlePricingService) {
         this.productRepository = productRepository;
         this.productBundleRepository = productBundleRepository;
         this.productMapper = productMapper;
@@ -177,7 +182,10 @@ public class PublicCatalogService extends BaseService {
 
         // 4. Extract labels for "Benefits" display
         List<String> benefits = pricing.getBundleAdjustments().stream()
-                .filter(adj -> adj.getValueType().name().contains("DISCOUNT") || adj.getValueType().name().contains("WAIVER"))
+                .filter(adj -> adj.getValueType() == ValueType.WAIVED ||
+                               adj.getValueType() == ValueType.DISCOUNT_PERCENTAGE ||
+                               adj.getValueType() == ValueType.DISCOUNT_ABSOLUTE ||
+                               adj.getValueType() == ValueType.FREE_COUNT)
                 .map(adj -> adj.getComponentCode().replace("_", " "))
                 .toList();
 
@@ -286,7 +294,8 @@ public class PublicCatalogService extends BaseService {
                     .name(component.getName())
                     .value(displayValue)
                     .condition(component.getDescription())
-                    .highlighted(component.getType() == PricingComponent.ComponentType.FEE || component.getType() == PricingComponent.ComponentType.PACKAGE_FEE)
+                    .highlighted(component.getType() == PricingComponent.ComponentType.FEE ||
+                                 component.getType() == PricingComponent.ComponentType.PACKAGE_FEE)
                     .build();
 
             // Categorize based on type properly mapped to UI groupings
@@ -311,7 +320,7 @@ public class PublicCatalogService extends BaseService {
      */
     private String formatPricingValue(ProductPricingLink link, PricingComponent component) {
         if (link.getFixedValue() == null) {
-            return "Variable"; // Or component.getName() if you prefer
+            return component.getName();
         }
 
         return switch (component.getType()) {

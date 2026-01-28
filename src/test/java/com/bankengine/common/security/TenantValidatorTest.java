@@ -22,7 +22,6 @@ class TenantValidatorTest {
     void validateOwnership_ShouldSucceed_WhenTenantsMatch() {
         TestEntity entity = new TestEntity();
         entity.setBankId("GOLD_BANK");
-
         assertDoesNotThrow(() -> validator.validateOwnership(entity, 1L, "GOLD_BANK"));
     }
 
@@ -30,10 +29,25 @@ class TenantValidatorTest {
     void validateOwnership_ShouldThrowNotFound_WhenTenantMismatch() {
         TestEntity entity = new TestEntity();
         entity.setBankId("OTHER_BANK");
-
-        // Should throw NotFound (not Forbidden) to obscure resource existence
         assertThrows(NotFoundException.class, () ->
                 validator.validateOwnership(entity, 1L, "GOLD_BANK")
+        );
+    }
+
+    @Test
+    void validateOwnership_ShouldThrowNotFound_WhenEntityIsNull() {
+        assertThrows(NotFoundException.class, () ->
+                validator.validateOwnership(null, 999L, "GOLD_BANK")
+        );
+    }
+
+    @Test
+    void validateOwnership_ShouldThrowNotFound_WhenBankIdInContextIsNull() {
+        TestEntity entity = new TestEntity();
+        entity.setBankId("GOLD_BANK");
+
+        assertThrows(NotFoundException.class, () ->
+                validator.validateOwnership(entity, 1L, null)
         );
     }
 }

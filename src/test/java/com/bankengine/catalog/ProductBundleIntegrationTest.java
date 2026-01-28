@@ -118,14 +118,9 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     void tearDown() {
         txHelper.doInTransaction(() -> {
             TenantContextHolder.setBankId(TEST_BANK_ID);
-
-            // 1. Delete ALL child links first (The "Leaves" of the tree)
             bundlePricingLinkRepository.deleteAllInBatch();
             bundleProductLinkRepository.deleteAllInBatch();
-
-            // 2. Delete the parent (The "Root")
             productBundleRepository.deleteAllInBatch();
-
             TenantContextHolder.clear();
         });
     }
