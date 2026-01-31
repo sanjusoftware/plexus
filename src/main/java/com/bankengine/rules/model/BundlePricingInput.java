@@ -19,6 +19,7 @@ public class BundlePricingInput {
     private LocalDate referenceDate = LocalDate.now();
 
     private Set<Long> targetPricingComponentIds;
+    private Set<Long> activePricingTierIds;
     private List<Long> containedProductIds;
     private BigDecimal grossTotalAmount;
 

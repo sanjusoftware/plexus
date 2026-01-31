@@ -1,7 +1,6 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.catalog.repository.ProductBundleRepository;
-import com.bankengine.common.exception.ValidationException;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
@@ -15,6 +14,7 @@ import com.bankengine.pricing.repository.BundlePricingLinkRepository;
 import com.bankengine.rules.model.BundlePricingInput;
 import com.bankengine.rules.service.BundleRulesEngineService;
 import com.bankengine.web.exception.NotFoundException;
+import com.bankengine.web.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

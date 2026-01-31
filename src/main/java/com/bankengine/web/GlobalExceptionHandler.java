@@ -1,8 +1,8 @@
 package com.bankengine.web;
 
-import com.bankengine.common.exception.ValidationException;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
+import com.bankengine.web.exception.ValidationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

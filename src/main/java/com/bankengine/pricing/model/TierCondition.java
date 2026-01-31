@@ -46,6 +46,14 @@ public class TierCondition extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private LogicalConnector connector;
 
+    public TierCondition(PricingTier pricingTier, String attributeName, Operator operator, String attributeValue, LogicalConnector connector) {
+        this.pricingTier = pricingTier;
+        this.attributeName = attributeName;
+        this.operator = operator;
+        this.attributeValue = attributeValue;
+        this.connector = connector;
+    }
+
     public enum Operator {
         EQ, // == (Equal)
         NE, // != (Not Equal)

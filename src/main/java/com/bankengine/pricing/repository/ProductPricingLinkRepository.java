@@ -20,6 +20,13 @@ public interface ProductPricingLinkRepository extends TenantRepository<ProductPr
     List<ProductPricingLink> findByProductIdAndDate(@Param("productId") Long productId,
                                                     @Param("targetDate") LocalDate targetDate);
 
+    @Query("SELECT t.id FROM PricingTier t " +
+            "JOIN ProductPricingLink l ON l.pricingComponent.id = t.pricingComponent.id " +
+            "WHERE l.product.id = :productId " +
+            "AND t.effectiveDate <= :targetDate " +
+            "AND (t.expiryDate IS NULL OR t.expiryDate >= :targetDate)")
+    List<Long> findActiveTierIds(@Param("productId") Long productId, @Param("targetDate") LocalDate targetDate);
+
     List<ProductPricingLink> findByProductId(Long productId);
     long countByPricingComponentId(Long pricingComponentId);
     boolean existsByPricingComponentIdAndProductId(Long pricingComponentId, Long productId);

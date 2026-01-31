@@ -57,19 +57,7 @@ public class KieContainerReloadService {
             String productRuleContent = productRuleBuilderService.buildAllRulesForCompilation();
             String bundleRuleContent = bundleRuleBuilderService.buildAllRulesForCompilation();
 
-        // 1. Generate dynamic paths based on the Bank ID to match the package declaration
-        String bankId = TenantContextHolder.getBankId();
-        String safeBankId = (bankId != null)
-                ? bankId.toLowerCase().replaceAll("[^a-z0-9]", "")
-                : "system";
-
-        String productPath = String.format(DroolsKieModuleBuilder.PRODUCT_RULES_PATH, safeBankId);
-        String bundlePath = String.format(DroolsKieModuleBuilder.BUNDLE_RULES_PATH, safeBankId);
-
-        Map<String, String> drlContent = Map.of(
-                productPath, productRuleContent,
-                bundlePath, bundleRuleContent
-        );
+            Map<String, String> drlContent = getDrlContent(productRuleContent, bundleRuleContent);
 
             ReleaseId releaseId = moduleBuilder.buildAndInstallKieModule(drlContent);
             KieContainer newContainer = kieServices.newKieContainer(releaseId);
@@ -79,8 +67,23 @@ public class KieContainerReloadService {
 
         } catch (RuntimeException e) {
             System.err.println("❌ DROOLS COMPILATION ERROR during reload!");
-            throw e; // Rethrow to trigger rollback and notify caller
+            throw e;
         }
+    }
+
+    private static Map<String, String> getDrlContent(String productRuleContent, String bundleRuleContent) {
+        String bankId = TenantContextHolder.getBankId();
+        String safeBankId = (bankId != null)
+                ? bankId.toLowerCase().replaceAll("[^a-z0-9]", "")
+                : "system";
+
+        String productPath = String.format(DroolsKieModuleBuilder.PRODUCT_RULES_PATH, safeBankId);
+        String bundlePath = String.format(DroolsKieModuleBuilder.BUNDLE_RULES_PATH, safeBankId);
+
+        return Map.of(
+                productPath, productRuleContent,
+                bundlePath, bundleRuleContent
+        );
     }
 
     /**

@@ -23,12 +23,7 @@ public class PricingRequest {
 
     private BigDecimal amount;
 
-    // "Mid-Cycle Changes".
-    // Use this to fetch the price that was active on a specific date (e.g. start of billing cycle).
-    @Builder.Default
-    private LocalDate referenceDate = LocalDate.now();
-
-    // Optional: Date to check for rate/fee applicability (default to today)
+    // Date to check for rate/fee applicability (default to today)
     @Builder.Default
     private LocalDate effectiveDate = LocalDate.now();
 

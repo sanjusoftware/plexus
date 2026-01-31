@@ -4,11 +4,11 @@ import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
-import com.bankengine.common.exception.ValidationException;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.common.service.BaseService;
+import com.bankengine.web.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

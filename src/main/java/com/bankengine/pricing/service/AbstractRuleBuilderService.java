@@ -37,8 +37,11 @@ public abstract class AbstractRuleBuilderService extends BaseService {
 
     // --- Template Methods (Subclasses must implement these) ---
     protected abstract String getFactType();
+
     protected abstract String getPackageSubPath();
+
     protected abstract String buildRHSAction(PricingComponent component, PricingTier tier);
+
     protected abstract List<PricingComponent> fetchComponents();
 
     /**
@@ -86,19 +89,19 @@ public abstract class AbstractRuleBuilderService extends BaseService {
 
         // Added a debug print to the RHS (then) of the rule so you know if it fires
         String rhsWithLogging = String.format("""
-            System.out.println("🔥 Rule Fired: %s");
-            %s
-            """, ruleName, buildRHSAction(component, tier));
+                System.out.println("🔥 Rule Fired: %s");
+                %s
+                """, ruleName, buildRHSAction(component, tier));
 
         return String.format("""
-            rule "%s"
-                no-loop true
-                salience %d
-                when
-            %s
-                then
-            %s
-            end""", ruleName, tier.getId(), buildLHSCondition(tier, component.getId()), rhsWithLogging);
+                rule "%s"
+                    no-loop true
+                    salience %d
+                    when
+                %s
+                    then
+                %s
+                end""", ruleName, tier.getId(), buildLHSCondition(tier, component.getId()), rhsWithLogging);
     }
 
     // --- Common Shared Logic ---
@@ -127,21 +130,19 @@ public abstract class AbstractRuleBuilderService extends BaseService {
         String factImport = getFactType();
 
         return String.format("""
-            package bankengine.%s.rules.%s;
-            
-            import %s;
-            import com.bankengine.pricing.model.PriceValue;
-            import java.math.BigDecimal;
-            
-            """, getPackageSubPath(), safeBankId, factImport);
+                package bankengine.%s.rules.%s;
+                
+                import %s;
+                import com.bankengine.pricing.model.PriceValue;
+                import java.math.BigDecimal;
+                import java.time.LocalDate;
+                
+                """, getPackageSubPath(), safeBankId, factImport);
     }
 
     protected String buildLHSCondition(PricingTier tier, Long componentId) {
-        if (componentId == null || componentId <= 0) {
-            throw new IllegalStateException(String.format(
-                    "Cannot build DRL for component '%s' because its ID is missing or invalid (%s).",
-                    tier.getPricingComponent() != null ? tier.getPricingComponent().getName() : "Unknown",
-                    componentId));
+        if (tier.getId() == null || tier.getId() <= 0) {
+            throw new IllegalStateException("Cannot build DRL because Tier ID is missing.");
         }
 
         String bankId = getSafeBankIdForDrl();
@@ -152,11 +153,11 @@ public abstract class AbstractRuleBuilderService extends BaseService {
         // 1. Check Bank Context
         conditionBuilder.append(String.format("bankId == \"%s\"", bankId));
 
-        // 2. Check Targeted Component ID (The "Explicit Intent" filter)
-        // This ensures the rule only fires if the component is linked to the Product/Bundle
-        conditionBuilder.append(String.format(", targetPricingComponentIds contains %dL", componentId));
+        // 2. Check Targeted Tier ID (Date-Aware Filter) - activePricingTierIds
+        // This is the "kill switch" for rules whose effective dates haven't arrived.
+        conditionBuilder.append(String.format(", activePricingTierIds contains %dL", tier.getId()));
 
-        // 3. Append User-Defined Tier Conditions
+        // 3. Append User-Defined Tier Conditions (Segment, Amount, etc.)
         if (tier.getConditions() != null && !tier.getConditions().isEmpty()) {
             conditionBuilder.append(", ");
             Iterator<TierCondition> it = tier.getConditions().iterator();
@@ -177,12 +178,12 @@ public abstract class AbstractRuleBuilderService extends BaseService {
     protected String buildPlaceholderRules() {
         String factName = getFactType().substring(getFactType().lastIndexOf(".") + 1);
         return getDrlHeader() + String.format("""
-            rule "Placeholder_%s"
-                when
-                    $input : %s ( )
-                then
-                    // No rules defined for this tenant
-            end
-            """, getPackageSubPath(), factName);
+                rule "Placeholder_%s"
+                    when
+                        $input : %s ( )
+                    then
+                        // No rules defined for this tenant
+                end
+                """, getPackageSubPath(), factName);
     }
 }

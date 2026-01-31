@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 /**
  * Utility responsible for generating the Drools Rule Language (DRL) expression fragment
  * for a single TierCondition.
- * This class is stateless and handles all type casting and syntax formatting required by Drools.
  */
 @Component
 public class DroolsExpressionBuilder {
@@ -34,44 +33,28 @@ public class DroolsExpressionBuilder {
         }
 
         String dataType = metadata.getDataType().toUpperCase();
+        String fqnType = metadata.getFqnType();
         boolean needsQuotes = "STRING".equals(dataType) || "DATE".equals(dataType);
 
-        // Check if the type requires BigDecimal comparison logic
-        boolean isBigDecimal = "java.math.BigDecimal".equals(metadata.getFqnType());
-
-        // 1. Determine the fact property access path and casting
-        String accessPath;
-        // DRL Map Access: customAttributes["attributeName"]
+        // 1. Determine the access path and casting
         String mapAccess = String.format("customAttributes[\"%s\"]", attributeName);
+        String accessPath = (!"STRING".equals(dataType))
+                ? String.format("((%s) %s)", fqnType, mapAccess)
+                : mapAccess;
 
-        // If the type is not String (default Map return type), we must cast it.
-        if (!"STRING".equals(dataType)) {
-            // Example: ((java.math.BigDecimal) customAttributes["transactionAmount"])
-            accessPath = String.format("((%s) %s)", metadata.getFqnType(), mapAccess);
-        } else {
-            accessPath = mapAccess;
-        }
-
-        // 2. Build the operator and formatted value
+        // 2. Handle the 'IN' operator (Shared across types)
         if (operator == Operator.IN) {
             String quotedValues = Arrays.stream(attributeValue.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
                     .map(s -> needsQuotes ? String.format("\"%s\"", s) : s)
                     .collect(Collectors.joining(", "));
-
-            // Example: customAttributes["segment"] in ( "PREMIUM", "STANDARD" )
             return String.format("%s in ( %s )", accessPath, quotedValues);
         }
 
-        // Handle relational operators (EQ, GT, LT, etc.)
-        if (isBigDecimal) {
-            // CRITICAL FIX: Use compareTo() for BigDecimal. The RHS must be a new BigDecimal instance.
-            String bigDecimalFqn = metadata.getFqnType(); // "java.math.BigDecimal"
-            // RHS: new java.math.BigDecimal("500.00")
-            String rhs = String.format("new %s(\"%s\")", bigDecimalFqn, attributeValue.trim());
-
-            // LHS.compareTo(RHS) > 0
+        // 3. Type-Specific Relational Logic
+        if ("java.math.BigDecimal".equals(fqnType)) {
+            String rhs = String.format("new java.math.BigDecimal(\"%s\")", attributeValue.trim());
             return switch (operator) {
                 case EQ -> String.format("%s.compareTo(%s) == 0", accessPath, rhs);
                 case NE -> String.format("%s.compareTo(%s) != 0", accessPath, rhs);
@@ -79,28 +62,36 @@ public class DroolsExpressionBuilder {
                 case GE -> String.format("%s.compareTo(%s) >= 0", accessPath, rhs);
                 case LT -> String.format("%s.compareTo(%s) < 0", accessPath, rhs);
                 case LE -> String.format("%s.compareTo(%s) <= 0", accessPath, rhs);
-                default -> throw new IllegalStateException("Unsupported operator for BigDecimal: " + operator);
+                default -> throw new IllegalStateException("Unsupported BigDecimal operator: " + operator);
             };
-
-        } else {
-            // Logic for non-BigDecimal types (String, Long, Boolean, LocalDate)
-            String operatorSymbol = switch (operator) {
-                case EQ -> "==";
-                case NE -> "!=";
-                case GT -> ">";
-                case GE -> ">=";
-                case LT -> "<";
-                case LE -> "<=";
-                default -> throw new IllegalStateException("Unsupported operator: " + operator);
-            };
-
-            String formattedValue = needsQuotes
-                    ? String.format("\"%s\"", attributeValue.trim())
-                    : attributeValue.trim();
-
-            // 3. Combine access path, operator, and value
-            // Example result: "((java.lang.Long) customAttributes["age"]) > 18"
-            return String.format("%s %s %s", accessPath, operatorSymbol, formattedValue);
         }
+
+        if ("java.time.LocalDate".equals(fqnType)) {
+            // RHS: java.time.LocalDate.parse("2026-01-31")
+            String rhs = String.format("java.time.LocalDate.parse(\"%s\")", attributeValue.trim());
+            return switch (operator) {
+                case EQ -> String.format("%s.isEqual(%s)", accessPath, rhs);
+                case NE -> String.format("!%s.isEqual(%s)", accessPath, rhs);
+                case GT -> String.format("%s.isAfter(%s)", accessPath, rhs);
+                case GE -> String.format("(!%s.isBefore(%s))", accessPath, rhs);
+                case LT -> String.format("%s.isBefore(%s)", accessPath, rhs);
+                case LE -> String.format("(!%s.isAfter(%s))", accessPath, rhs);
+                default -> throw new IllegalStateException("Unsupported Date operator: " + operator);
+            };
+        }
+
+        // 4. Default Relational Logic (Long, Boolean, String EQ)
+        String operatorSymbol = switch (operator) {
+            case EQ -> "==";
+            case NE -> "!=";
+            case GT -> ">";
+            case GE -> ">=";
+            case LT -> "<";
+            case LE -> "<=";
+            default -> throw new IllegalStateException("Unsupported operator: " + operator);
+        };
+
+        String formattedValue = needsQuotes ? String.format("\"%s\"", attributeValue.trim()) : attributeValue.trim();
+        return String.format("%s %s %s", accessPath, operatorSymbol, formattedValue);
     }
 }

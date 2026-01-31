@@ -20,10 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,40 +34,42 @@ public class PricingCalculationService extends BaseService {
 
     @Transactional(readOnly = true)
     public ProductPricingCalculationResult getProductPricing(PricingRequest request) {
-        // 1. SECURE FETCH: Verify tenant ownership
         getByIdSecurely(productRepository, request.getProductId(), "Product");
 
-        // 2. FETCH LINKS (Date-aware for mid-cycle requirement)
+        // 1. Fetch Links (Handles Fixed Value components even if tiers don't exist yet)
         List<ProductPricingLink> links = getCachedLinks(request.getProductId(), request.getEffectiveDate());
 
         if (links.isEmpty()) {
-            throw new NotFoundException("No active pricing configuration found for product ID: "
+            throw new NotFoundException("No active pricing configuration found for product: "
                 + request.getProductId() + " on date: " + request.getEffectiveDate());
         }
 
         List<PriceComponentDetail> allComponents = new ArrayList<>();
 
-        // 3. Process Fixed
+        // 2. Process Fixed Values
         links.stream()
                 .filter(link -> !link.isUseRulesEngine() && link.getFixedValue() != null)
                 .map(this::mapFixedLinkToDetail)
                 .forEach(allComponents::add);
 
-        // 4. Process Rules
+        // 3. Process Rule-Based Components
         List<ProductPricingLink> ruleBasedLinks = links.stream()
                 .filter(ProductPricingLink::isUseRulesEngine).toList();
 
         if (!ruleBasedLinks.isEmpty()) {
-            Set<Long> targetIds = ruleBasedLinks.stream()
+            // Fetch only Tier IDs that are valid for the specific request date
+            List<Long> activeTierIds = productPricingLinkRepository.findActiveTierIds(
+                    request.getProductId(), request.getEffectiveDate());
+
+            Set<Long> componentIds = ruleBasedLinks.stream()
                     .map(l -> l.getPricingComponent().getId())
                     .collect(Collectors.toSet());
 
-            determinePriceWithDrools(request, targetIds).stream()
+            determinePriceWithDrools(request, componentIds, new HashSet<>(activeTierIds)).stream()
                     .map(this::mapFactToDetail)
                     .forEach(allComponents::add);
         }
 
-        // 5. Aggregate logic handles pro-rata and slab breaching
         BigDecimal finalPrice = priceAggregator.calculate(allComponents, request);
 
         return ProductPricingCalculationResult.builder()
@@ -79,9 +78,33 @@ public class PricingCalculationService extends BaseService {
                 .build();
     }
 
-    /**
-     * Updated Cache Key to include effectiveDate to prevent returning stale/future rules.
-     */
+    private Collection<PriceValue> determinePriceWithDrools(PricingRequest request, Set<Long> componentIds, Set<Long> activeTierIds) {
+        KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
+        try {
+            PricingInput input = new PricingInput();
+            input.setBankId(getCurrentBankId());
+            input.setTargetPricingComponentIds(componentIds);
+            input.setActivePricingTierIds(activeTierIds); // Pass the date-filtered IDs
+            input.setReferenceDate(request.getEffectiveDate());
+
+            if (request.getCustomAttributes() != null) {
+                input.getCustomAttributes().putAll(request.getCustomAttributes());
+            }
+
+            input.getCustomAttributes().put("productId", request.getProductId());
+            input.getCustomAttributes().put("customerSegment", request.getCustomerSegment());
+            input.getCustomAttributes().put("transactionAmount", request.getAmount());
+
+            kieSession.insert(input);
+            kieSession.fireAllRules();
+
+            return kieSession.getObjects(new ClassObjectFilter(PriceValue.class))
+                    .stream().map(PriceValue.class::cast).toList();
+        } finally {
+            kieSession.dispose();
+        }
+    }
+
     @Cacheable(value = "productPricingLinks",
             key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #productId + '_' + #effectiveDate")
     private List<ProductPricingLink> getCachedLinks(Long productId, LocalDate effectiveDate) {
@@ -101,7 +124,6 @@ public class PricingCalculationService extends BaseService {
     }
 
     private PriceComponentDetail mapFactToDetail(PriceValue fact) {
-        // Defensive check: Drools might return a PriceValue with no Tier association
         boolean proRata = fact.getPricingTier() != null && fact.getPricingTier().isProRataApplicable();
         boolean fullBreach = fact.getPricingTier() != null && fact.getPricingTier().isApplyChargeOnFullBreach();
 
@@ -114,33 +136,5 @@ public class PricingCalculationService extends BaseService {
                 .proRataApplicable(proRata)
                 .applyChargeOnFullBreach(fullBreach)
                 .build();
-    }
-
-    private Collection<PriceValue> determinePriceWithDrools(PricingRequest request, Set<Long> targetIds) {
-        KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
-        PricingInput input = new PricingInput();
-        input.setBankId(getCurrentBankId());
-        input.setTargetPricingComponentIds(targetIds);
-
-        input.setReferenceDate(request.getEffectiveDate());
-
-        if (request.getCustomAttributes() != null) {
-            input.getCustomAttributes().putAll(request.getCustomAttributes());
-        }
-
-        // Context injection for Rules Engine
-        input.getCustomAttributes().put("productId", request.getProductId());
-        input.getCustomAttributes().put("customerSegment", request.getCustomerSegment());
-        input.getCustomAttributes().put("transactionAmount", request.getAmount());
-        input.getCustomAttributes().put("effectiveDate", request.getEffectiveDate());
-
-        try {
-            kieSession.insert(input);
-            kieSession.fireAllRules();
-            return kieSession.getObjects(new ClassObjectFilter(PriceValue.class))
-                    .stream().map(PriceValue.class::cast).toList();
-        } finally {
-            kieSession.dispose();
-        }
     }
 }
