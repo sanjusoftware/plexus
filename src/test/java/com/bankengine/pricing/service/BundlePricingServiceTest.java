@@ -4,16 +4,17 @@ import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.ProductBundleRepository;
+import com.bankengine.common.exception.ValidationException;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.model.BundlePricingLink;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.repository.BundlePricingLinkRepository;
 import com.bankengine.rules.model.BundlePricingInput;
 import com.bankengine.rules.service.BundleRulesEngineService;
 import com.bankengine.test.config.BaseServiceTest;
-import com.bankengine.web.exception.NotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,24 +36,24 @@ class BundlePricingServiceTest extends BaseServiceTest {
 
     @Mock
     private PricingCalculationService pricingCalculationService;
-
     @Mock
     private BundleRulesEngineService bundleRulesEngineService;
-
     @Mock
     private ProductBundleRepository productBundleRepository;
+    @Mock
+    private BundlePricingLinkRepository bundlePricingLinkRepository;
 
     @InjectMocks
     private BundlePricingService bundlePricingService;
 
     @Test
-    @DisplayName("Branch: Should throw NotFoundException when product list is empty")
+    @DisplayName("Branch: Should throw ValidationException when product list is empty")
     void calculateTotalBundlePrice_EmptyProducts_ThrowsException() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .products(List.of())
                 .build();
 
-        assertThrows(NotFoundException.class, () -> bundlePricingService.calculateTotalBundlePrice(request));
+        assertThrows(ValidationException.class, () -> bundlePricingService.calculateTotalBundlePrice(request));
     }
 
     @Test
@@ -94,22 +95,26 @@ class BundlePricingServiceTest extends BaseServiceTest {
         rulesLink.setPricingComponent(ruleComp);
         rulesLink.setUseRulesEngine(true);
 
+        // STUB REPOSITORY: Tell the service these links are "active" in the DB
+        List<BundlePricingLink> activeLinks = List.of(fixedFeeLink, rulesLink);
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any()))
+                .thenReturn(activeLinks);
+
         ProductBundle bundle = new ProductBundle();
         bundle.setId(bundleId);
-        bundle.setBundlePricingLinks(List.of(fixedFeeLink, rulesLink));
+        bundle.setBundlePricingLinks(activeLinks);
 
         // Setup internal products for Drools context
         Product p1 = new Product(); p1.setId(10L);
         Product p2 = new Product(); p2.setId(11L);
-        BundleProductLink link1 = new BundleProductLink(); link1.setProduct(p1);
-        BundleProductLink link2 = new BundleProductLink(); link2.setProduct(p2);
-        bundle.setContainedProducts(List.of(link1, link2));
+        BundleProductLink bpl1 = new BundleProductLink(); bpl1.setProduct(p1);
+        BundleProductLink bpl2 = new BundleProductLink(); bpl2.setProduct(p2);
+        bundle.setContainedProducts(List.of(bpl1, bpl2));
 
         when(productBundleRepository.findById(bundleId)).thenReturn(Optional.of(bundle));
 
         // 3. Mock Rules Engine: Adding a 10% Discount and a WAIVED component
         BundlePricingInput rulesOutput = new BundlePricingInput();
-        // Fixed the compile error: Using addAdjustment helper instead of setter
         rulesOutput.addAdjustment("BUNDLE_DISCOUNT", new BigDecimal("10.00"), "DISCOUNT_PERCENTAGE");
         rulesOutput.addAdjustment("OVERDRAFT_PROTECTION", BigDecimal.ZERO, "WAIVED");
 
@@ -122,7 +127,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         // Base Products = 200
         // Fees = 5 (Fixed)
         // Gross = 205
-        // Discounts = 10% of 200 (not 205, base is products only) = -20
+        // Discounts = 10% of 200 (base is products only) = -20
         // Net = 205 - 20 = 185
         assertAll(
                 () -> assertEquals(new BigDecimal("205.00"), response.getGrossTotalAmount(), "Gross should include fixed fees"),
@@ -160,6 +165,10 @@ class BundlePricingServiceTest extends BaseServiceTest {
         bundle.setBundlePricingLinks(new ArrayList<>());
         bundle.setContainedProducts(new ArrayList<>());
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(bundle));
+
+        // Return empty list for this test as we only want Rules Engine adjustments
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any()))
+                .thenReturn(new ArrayList<>());
 
         BundlePricingInput rulesOutput = new BundlePricingInput();
         rulesOutput.addAdjustment("FREE_TRANSFERS", new BigDecimal("5.00"), "FREE_COUNT");

@@ -33,5 +33,7 @@ public interface PriceValueMapper {
     @Mapping(target = "sourceType", constant = "CATALOG")
     @Mapping(target = "calculatedAmount", ignore = true)
     @Mapping(target = "targetComponentCode", ignore = true)
+    @Mapping(target = "proRataApplicable", source = "pricingTier.proRataApplicable")
+    @Mapping(target = "applyChargeOnFullBreach", source = "pricingTier.applyChargeOnFullBreach")
     ProductPricingCalculationResult.PriceComponentDetail toDetailDto(PriceValue entity);
 }

@@ -21,6 +21,7 @@ import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.BundlePricingService;
 import com.bankengine.pricing.service.PricingCalculationService;
 import com.bankengine.web.exception.NotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 public class PublicCatalogService extends BaseService {
@@ -140,18 +142,20 @@ public class PublicCatalogService extends BaseService {
                     if (estimatedMonthlyBalance != null) {
                         // Simulate a pricing calculation based on the user's balance
                         // This is where the Drools engine/Pricing Service logic from your patch kicks in
-                        PricingRequest request = new PricingRequest();
-                        request.setProductId(product.getId());
-                        request.setAmount(estimatedMonthlyBalance);
+                        PricingRequest request = PricingRequest.builder()
+                                .productId(product.getId())
+                                .amount(estimatedMonthlyBalance)
+                                .customerSegment(customerSegment)
+                                .effectiveDate(LocalDate.now())
+                                .build();
 
                         try {
                             var calculation = pricingCalculationService.getProductPricing(request);
-
-                            // Update the card with the personalized result
                             card.getPricingSummary().setMainPriceValue(calculation.getFinalChargeablePrice());
                             card.getPricingSummary().setPriceDescription("Personalized for your balance");
                         } catch (Exception e) {
                             // Fallback if calculation fails
+                            log.error("Failed to calculate personalized pricing for product {}", product.getId(), e);
                             card.setEligibilityMessage("Pricing currently unavailable");
                         }
                     }
@@ -166,12 +170,13 @@ public class PublicCatalogService extends BaseService {
 
     public BundleCatalogCard getPublicBundleDetails(Long bundleId, String segment) {
         // 1. Fetch the technical bundle structure
-        ProductBundle bundle = productBundleRepository.findById(bundleId).orElseThrow();
+        ProductBundle bundle = getByIdSecurely(productBundleRepository, bundleId, "ProductBundle");
 
         // 2. Build the request for the Pricing Service
         BundlePriceRequest pricingRequest = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
                 .customerSegment(segment)
+                .effectiveDate(LocalDate.now())
                 .products(bundle.getContainedProducts().stream()
                         .map(link -> new BundlePriceRequest.ProductRequest(link.getProduct().getId(), BigDecimal.ZERO))
                         .toList())

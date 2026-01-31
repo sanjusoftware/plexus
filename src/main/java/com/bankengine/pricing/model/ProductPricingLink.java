@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "product_pricing_link")
@@ -28,7 +29,6 @@ public class ProductPricingLink extends AuditableEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    // Links to the specific pricing component (e.g., "Interest Rate", "Transaction Fee")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pricing_component_id", nullable = false)
     private PricingComponent pricingComponent;
@@ -58,6 +58,33 @@ public class ProductPricingLink extends AuditableEntity {
     @Column(name = "use_rules_engine", nullable = false)
     private boolean useRulesEngine = false;
 
+    /**
+     * Effective date when the pricing configuration becomes active.
+     */
+    @Column(name = "effective_date", nullable = false)
+    private LocalDate effectiveDate;
+
+    /**
+     * Date on which the pricing configuration ceases to exist.
+     * Defaults to 9999-12-31 to represent an open-ended link.
+     */
+    @Column(name = "expiry_date", nullable = false)
+    private LocalDate expiryDate;
+
+    /**
+     * JPA Lifecycle hook to ensure defaults are set if not provided.
+     * Sets effective date to today and expiry to exactly 1 year from now.
+     */
+    @PrePersist
+    protected void onCreate() {
+        if (this.effectiveDate == null) {
+            this.effectiveDate = LocalDate.now();
+        }
+        if (this.expiryDate == null) {
+            this.expiryDate = this.effectiveDate.plusYears(1);
+        }
+    }
+
     public ProductPricingLink(Product product, PricingComponent pricingComponent,
                               BigDecimal fixedValue, PriceValue.ValueType fixedValueType,
                               String targetComponentCode, boolean useRulesEngine) {
@@ -67,5 +94,7 @@ public class ProductPricingLink extends AuditableEntity {
         this.fixedValueType = fixedValueType;
         this.targetComponentCode = targetComponentCode;
         this.useRulesEngine = useRulesEngine;
+        this.effectiveDate = LocalDate.now();
+        this.expiryDate = this.effectiveDate.plusYears(1);
     }
 }

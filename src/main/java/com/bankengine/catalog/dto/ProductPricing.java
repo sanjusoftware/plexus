@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -20,4 +21,6 @@ public class ProductPricing {
     private PriceValue.ValueType fixedValueType;
     private boolean useRulesEngine;
     private String targetComponentCode;
+    private LocalDate effectiveDate;
+    private LocalDate expiryDate;
 }

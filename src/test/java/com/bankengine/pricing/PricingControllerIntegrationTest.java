@@ -313,34 +313,38 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             ProductType type = txHelper.getOrCreateProductType("Targeted Type");
             Long pId = txHelper.createProductInDb("Targeted Account", type.getId(), "RETAIL");
 
-            // Fee: ATM Fee
-            PricingComponent atmFee = txHelper.createPricingComponentInDb("ATM_FEE");
-            txHelper.linkProductToPricingComponent(pId, atmFee.getId(), new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE);
+        // Fee: ATM Fee
+        PricingComponent atmFee = txHelper.createPricingComponentInDb("ATM_FEE");
+        txHelper.linkProductToPricingComponent(pId, atmFee.getId(), new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE);
 
-            // Discount: Targeted only at ATM_FEE
-            PricingComponent disc = txHelper.createPricingComponentInDb("ATM_WAIVER");
-            ProductPricingLink link = new ProductPricingLink();
-            link.setProduct(productRepository.getReferenceById(pId));
-            link.setPricingComponent(disc);
-            link.setFixedValue(new BigDecimal("100.00"));
-            link.setFixedValueType(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
-            link.setTargetComponentCode("ATM_FEE");
-            link.setBankId(TEST_BANK_ID);
-            productPricingLinkRepository.save(link);
+        // Discount: ATM Waiver (Fixed Value Link - Now supported by LEFT JOIN)
+        PricingComponent disc = txHelper.createPricingComponentInDb("ATM_WAIVER");
+        txHelper.linkProductToPricingComponent(pId, disc.getId(), new BigDecimal("100.00"), PriceValue.ValueType.DISCOUNT_PERCENTAGE);
 
-            return pId;
-        });
+        // Since the current helper doesn't support setting 'targetComponentCode', we update the link manually
+        ProductPricingLink link = productPricingLinkRepository.findByProductId(pId).stream()
+                .filter(l -> l.getPricingComponent().getName().equals("ATM_WAIVER"))
+                .findFirst().orElseThrow();
+
+        link.setTargetComponentCode("ATM_FEE");
+        productPricingLinkRepository.save(link);
+
+        return pId;
+    });
+
+    txHelper.flushAndClear();
 
         PricingRequest request = new PricingRequest();
         request.setProductId(productId);
         request.setCustomerSegment("RETAIL");
         request.setAmount(BigDecimal.ZERO);
+        request.setEffectiveDate(LocalDate.now());
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
-                        .header("X-Bank-Id", TEST_BANK_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.componentBreakdown.length()").value(2))
                 .andExpect(jsonPath("$.componentBreakdown[1].targetComponentCode").value("ATM_FEE"))
                 .andExpect(jsonPath("$.componentBreakdown[1].calculatedAmount").value(-5.00))
                 .andExpect(jsonPath("$.finalChargeablePrice").value(0.00));

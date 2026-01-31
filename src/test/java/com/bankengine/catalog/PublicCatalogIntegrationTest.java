@@ -50,14 +50,9 @@ class PublicCatalogIntegrationTest extends AbstractIntegrationTest {
     void clean() {
         txHelper.doInTransaction(() -> {
             TenantContextHolder.setBankId(TEST_BANK_ID);
-            // 1. Delete all Pricing Links (Join tables/Dependencies)
             bundlePricingLinkRepository.deleteAllInBatch();
-            productPricingLinkRepository.deleteAllInBatch(); // Added this
-
-            // 2. Delete Product-to-Bundle links
+            productPricingLinkRepository.deleteAllInBatch();
             bundleProductLinkRepository.deleteAllInBatch();
-
-            // 3. Delete Parents
             productBundleRepository.deleteAllInBatch();
             productRepository.deleteAllInBatch();
         });
@@ -82,7 +77,8 @@ class PublicCatalogIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {"STRANGER"})
     @DisplayName("Security - Recommendations should return 403 for user with wrong role")
     void testRecommendationForbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/public/catalog/products/recommended").param("customerSegment", "RETAIL"))
+        mockMvc.perform(get("/api/v1/public/catalog/products/recommended")
+                        .param("customerSegment", "RETAIL"))
                 .andExpect(status().isForbidden());
     }
 
@@ -98,22 +94,19 @@ class PublicCatalogIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Public Bundle Display - Should show net total and list of benefits")
     void testPublicBundleDisplay() throws Exception {
-        // ARRANGE: Use the helper to build a $0 standalone product bundled with a 20% discount
-        // Note: Since individual product pricing isn't setup here, grossTotal is 0,
-        // so we use a FEE_ABSOLUTE of 10.00 and a DISCOUNT_ABSOLUTE of 2.00 to test the math.
-
         Long bundleId = txHelper.doInTransaction(() -> {
             TenantContextHolder.setBankId(TEST_BANK_ID);
-
             ProductBundle bundle = txHelper.setupFullBundleWithPricing(
                     "Welcome Bundle",
                     "Basic Savings",
                     new BigDecimal("-2.00"),
-                    PriceValue.ValueType.DISCOUNT_ABSOLUTE, ProductBundle.BundleStatus.ACTIVE
+                    PriceValue.ValueType.DISCOUNT_ABSOLUTE,
+                    ProductBundle.BundleStatus.ACTIVE
             );
 
-            PricingComponent baseFee = txHelper.createPricingComponentInDb("Monthly Package Fee");
-            txHelper.linkBundleToPricingComponent(bundle.getId(), baseFee.getId(), new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE);
+            PricingComponent bundleFee = txHelper.createPricingComponentInDb("Monthly Package Fee");
+            txHelper.linkBundleToPricingComponent(bundle.getId(), bundleFee.getId(), new BigDecimal("10.00"));
+            txHelper.flushAndClear();
 
             return bundle.getId();
         });

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Links a PricingComponent to a ProductBundle. This allows applying fees or
@@ -54,6 +55,28 @@ public class BundlePricingLink extends AuditableEntity {
     @Column(name = "use_rules_engine", nullable = false)
     private boolean useRulesEngine = false;
 
+    /**
+     * Effective date when the bundle pricing configuration becomes active.
+     */
+    @Column(name = "effective_date", nullable = false)
+    private LocalDate effectiveDate;
+
+    /**
+     * Date on which the bundle pricing configuration ceases to exist.
+     */
+    @Column(name = "expiry_date", nullable = false)
+    private LocalDate expiryDate;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.effectiveDate == null) {
+            this.effectiveDate = LocalDate.now();
+        }
+        if (this.expiryDate == null) {
+            this.expiryDate = this.effectiveDate.plusYears(1);
+        }
+    }
+
     public BundlePricingLink(ProductBundle productBundle, PricingComponent pricingComponent,
                              BigDecimal fixedValue, PriceValue.ValueType fixedValueType, boolean useRulesEngine) {
         this.productBundle = productBundle;
@@ -61,5 +84,7 @@ public class BundlePricingLink extends AuditableEntity {
         this.fixedValue = fixedValue;
         this.fixedValueType = fixedValueType;
         this.useRulesEngine = useRulesEngine;
+        this.effectiveDate = LocalDate.now();
+        this.expiryDate = this.effectiveDate.plusYears(1);
     }
 }

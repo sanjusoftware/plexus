@@ -11,7 +11,6 @@ import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.rules.model.PricingInput;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.NotFoundException;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.kie.api.runtime.ClassObjectFilter;
 import org.kie.api.runtime.KieSession;
@@ -20,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -40,15 +40,15 @@ public class PricingCalculationService extends BaseService {
         // 1. SECURE FETCH: Verify tenant ownership
         getByIdSecurely(productRepository, request.getProductId(), "Product");
 
-        // 2. FETCH LINKS
-        List<ProductPricingLink> links = getCachedLinks(request.getProductId());
+        // 2. FETCH LINKS (Date-aware for mid-cycle requirement)
+        List<ProductPricingLink> links = getCachedLinks(request.getProductId(), request.getEffectiveDate());
 
         if (links.isEmpty()) {
-            throw new NotFoundException("No pricing configuration found for product ID: " + request.getProductId());
+            throw new NotFoundException("No active pricing configuration found for product ID: "
+                + request.getProductId() + " on date: " + request.getEffectiveDate());
         }
 
         List<PriceComponentDetail> allComponents = new ArrayList<>();
-        BigDecimal txAmount = request.getAmount() != null ? request.getAmount() : BigDecimal.ZERO;
 
         // 3. Process Fixed
         links.stream()
@@ -70,8 +70,8 @@ public class PricingCalculationService extends BaseService {
                     .forEach(allComponents::add);
         }
 
-        // 5. Aggregate
-        BigDecimal finalPrice = priceAggregator.calculate(allComponents, txAmount);
+        // 5. Aggregate logic handles pro-rata and slab breaching
+        BigDecimal finalPrice = priceAggregator.calculate(allComponents, request);
 
         return ProductPricingCalculationResult.builder()
                 .finalChargeablePrice(finalPrice)
@@ -79,47 +79,41 @@ public class PricingCalculationService extends BaseService {
                 .build();
     }
 
+    /**
+     * Updated Cache Key to include effectiveDate to prevent returning stale/future rules.
+     */
     @Cacheable(value = "productPricingLinks",
-            key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #productId")
-    private List<ProductPricingLink> getCachedLinks(@NotNull(message = "Product ID is mandatory for pricing.") Long productId) {
-        return productPricingLinkRepository.findByProductId(productId);
+            key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #productId + '_' + #effectiveDate")
+    private List<ProductPricingLink> getCachedLinks(Long productId, LocalDate effectiveDate) {
+        return productPricingLinkRepository.findByProductIdAndDate(productId, effectiveDate);
     }
 
     private PriceComponentDetail mapFixedLinkToDetail(ProductPricingLink link) {
-        BigDecimal signedAmount = calculateSignedAmount(link.getFixedValue(), link.getFixedValueType());
         return PriceComponentDetail.builder()
                 .componentCode(link.getPricingComponent().getName())
                 .rawValue(link.getFixedValue())
                 .valueType(link.getFixedValueType())
-                .calculatedAmount(signedAmount)
                 .sourceType("FIXED_VALUE")
                 .targetComponentCode(link.getTargetComponentCode())
+                .proRataApplicable(false)
+                .applyChargeOnFullBreach(false)
                 .build();
     }
 
     private PriceComponentDetail mapFactToDetail(PriceValue fact) {
-        BigDecimal signedAmount = calculateSignedAmount(fact.getRawValue(), fact.getValueType());
+        // Defensive check: Drools might return a PriceValue with no Tier association
+        boolean proRata = fact.getPricingTier() != null && fact.getPricingTier().isProRataApplicable();
+        boolean fullBreach = fact.getPricingTier() != null && fact.getPricingTier().isApplyChargeOnFullBreach();
+
         return PriceComponentDetail.builder()
                 .componentCode(fact.getComponentCode())
                 .rawValue(fact.getRawValue())
                 .valueType(fact.getValueType())
-                .calculatedAmount(signedAmount)
                 .sourceType("RULES_ENGINE")
                 .matchedTierId(fact.getMatchedTierId())
+                .proRataApplicable(proRata)
+                .applyChargeOnFullBreach(fullBreach)
                 .build();
-    }
-
-    private BigDecimal calculateSignedAmount(BigDecimal rawValue, PriceValue.ValueType type) {
-        if (rawValue == null) return BigDecimal.ZERO;
-        BigDecimal absVal = rawValue.abs();
-
-        // At product level, we keep percentages as 0 for Aggregator to handle,
-        // but ensure absolute values have correct signs.
-        return switch (type) {
-            case FEE_ABSOLUTE -> absVal;
-            case DISCOUNT_ABSOLUTE -> absVal.negate();
-            default -> BigDecimal.ZERO;
-        };
     }
 
     private Collection<PriceValue> determinePriceWithDrools(PricingRequest request, Set<Long> targetIds) {
@@ -128,15 +122,17 @@ public class PricingCalculationService extends BaseService {
         input.setBankId(getCurrentBankId());
         input.setTargetPricingComponentIds(targetIds);
 
+        input.setReferenceDate(request.getEffectiveDate());
+
         if (request.getCustomAttributes() != null) {
             input.getCustomAttributes().putAll(request.getCustomAttributes());
         }
 
-        // Override/set standard fields to ensure they use the "Official" DTO values
-        // This acts as a "Source of Truth" guarantee.
+        // Context injection for Rules Engine
         input.getCustomAttributes().put("productId", request.getProductId());
         input.getCustomAttributes().put("customerSegment", request.getCustomerSegment());
         input.getCustomAttributes().put("transactionAmount", request.getAmount());
+        input.getCustomAttributes().put("effectiveDate", request.getEffectiveDate());
 
         try {
             kieSession.insert(input);

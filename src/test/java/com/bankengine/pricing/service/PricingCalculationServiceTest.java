@@ -7,6 +7,7 @@ import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.rules.model.PricingInput;
@@ -24,6 +25,7 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -59,10 +61,10 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         request = PricingRequest.builder()
                 .productId(1L)
                 .amount(new BigDecimal("1000.00"))
+                .effectiveDate(LocalDate.now())
                 .customerSegment("RETAIL")
                 .build();
 
-        // Satisfy getByIdSecurely check for successful tests
         Product mockProduct = new Product();
         mockProduct.setId(1L);
         lenient().when(productRepository.findById(1L)).thenReturn(Optional.of(mockProduct));
@@ -78,21 +80,21 @@ class PricingCalculationServiceTest extends BaseServiceTest {
     void getProductPricing_shouldOrchestrateCollectionAndAggregation() {
         ProductPricingLink fixedLink = createLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
         
-        when(productPricingLinkRepository.findByProductId(1L)).thenReturn(List.of(fixedLink));
-        when(priceAggregator.calculate(anyList(), any(BigDecimal.class))).thenReturn(new BigDecimal("10.00"));
+        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(fixedLink));
+        when(priceAggregator.calculate(anyList(), any(PricingRequest.class))).thenReturn(new BigDecimal("10.00"));
 
         ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
         
         assertNotNull(result);
         assertEquals(new BigDecimal("10.00"), result.getFinalChargeablePrice());
-        verify(priceAggregator).calculate(argThat(list -> list.size() == 1), eq(new BigDecimal("1000.00")));
+        verify(priceAggregator).calculate(argThat(list -> list.size() == 1), eq(request));
     }
 
     @Test
     @DisplayName("Should include WAIVED and FREE_COUNT types in the breakdown")
     void getProductPricing_shouldIncludeWaivedAndFreeCountInBreakdown() {
         ProductPricingLink rulesLink = createLink(202L, "RulesComp", null, null, true);
-        when(productPricingLinkRepository.findByProductId(1L)).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
         KieSession mockSession = setupMockDrools();
 
@@ -101,7 +103,7 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         PriceValue freeCountFact = createFact("ATM_FREE_WITHDRAWALS", "5.00", PriceValue.ValueType.FREE_COUNT);
 
         when(mockSession.getObjects(any())).thenReturn((Collection) List.of(feeFact, waivedFact, freeCountFact));
-        when(priceAggregator.calculate(anyList(), any(BigDecimal.class))).thenReturn(new BigDecimal("10.00"));
+        when(priceAggregator.calculate(anyList(), any(PricingRequest.class))).thenReturn(new BigDecimal("10.00"));
 
         ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
 
@@ -110,14 +112,13 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         assertTrue(result.getComponentBreakdown().stream().anyMatch(d -> d.getValueType() == PriceValue.ValueType.FREE_COUNT));
     }
 
-    // --- TEST 3: Targeting Logic (New Requirement) ---
     @Test
     @DisplayName("Should only send component IDs marked for rules engine to Drools")
     void getProductPricing_shouldTargetOnlyRuleBasedComponentIds() {
         ProductPricingLink fixed = createLink(1L, "Fixed", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
         ProductPricingLink rules = createLink(2L, "Rules", null, null, true);
         
-        when(productPricingLinkRepository.findByProductId(1L)).thenReturn(List.of(fixed, rules));
+        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(fixed, rules));
         KieSession mockSession = setupMockDrools();
 
         pricingCalculationService.getProductPricing(request);
@@ -130,41 +131,72 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         assertFalse(targetIds.contains(1L));
     }
 
-    // --- TEST 4: Exception Handling (Standard Practice) ---
     @Test
     @DisplayName("Should throw NotFoundException if no links exist for product")
     void getProductPricing_shouldThrowExceptionWhenNoLinks() {
-        when(productPricingLinkRepository.findByProductId(anyLong())).thenReturn(List.of());
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of());
         assertThrows(NotFoundException.class, () -> pricingCalculationService.getProductPricing(request));
     }
 
     @Test
     @DisplayName("Should only whitelist component IDs found in the database links")
     void getProductPricing_shouldIgnoreNonTargetedRules() {
-        // 1. ARRANGE: DB has 2 links for this product (101 and 102)
         ProductPricingLink link1 = createLink(101L, "Fee_A", null, null, true);
         ProductPricingLink link2 = createLink(102L, "Fee_B", null, null, true);
-        when(productPricingLinkRepository.findByProductId(1L)).thenReturn(List.of(link1, link2));
+        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(link1, link2));
 
         KieSession mockSession = setupMockDrools();
 
-        // 2. ACT
         pricingCalculationService.getProductPricing(request);
 
-        // 3. ASSERT: Capture the input sent to the Rules Engine
         ArgumentCaptor<PricingInput> inputCaptor = ArgumentCaptor.forClass(PricingInput.class);
         verify(mockSession).insert(inputCaptor.capture());
 
         Set<Long> sentIds = inputCaptor.getValue().getTargetPricingComponentIds();
-
-        // Verify the whitelist only contains what the Service found in the Repository
         assertEquals(2, sentIds.size(), "Should only have 2 target IDs");
         assertTrue(sentIds.contains(101L));
         assertTrue(sentIds.contains(102L));
+        assertFalse(sentIds.contains(999L));
+    }
 
-        // This confirms that even if a Rule for 999 exists in the DRL,
-        // it won't fire because the Service didn't authorize it.
-        assertFalse(sentIds.contains(999L), "ID 999 must not be sent if not linked to product");
+    @Test
+    @DisplayName("DSK: Should propagate Tier flags (Pro-rata/Breach) to Aggregator")
+    void getProductPricing_shouldPropagateNewTierFlags() {
+        ProductPricingLink rulesLink = createLink(300L, "DskComp", null, null, true);
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+
+        KieSession mockSession = setupMockDrools();
+
+        // Define specific DSK tier behavior
+        PricingTier dskTier = new PricingTier();
+        dskTier.setProRataApplicable(true);
+        dskTier.setApplyChargeOnFullBreach(true);
+
+        PriceValue fact = createFact("DSK_FEE", "50.00", PriceValue.ValueType.FEE_ABSOLUTE);
+        fact.setPricingTier(dskTier);
+
+        when(mockSession.getObjects(any())).thenReturn((Collection) List.of(fact));
+
+        pricingCalculationService.getProductPricing(request);
+
+        // Verify aggregator receives the flags
+        verify(priceAggregator).calculate(argThat(list ->
+            list.get(0).isProRataApplicable() && list.get(0).isApplyChargeOnFullBreach()
+        ), eq(request));
+    }
+
+    @Test
+    @DisplayName("Temporal: Should use effectiveDate from request for link lookup")
+    void getProductPricing_shouldUseRequestEffectiveDateForLookup() {
+        LocalDate historicalDate = LocalDate.now().minusMonths(1);
+        request.setEffectiveDate(historicalDate);
+
+        ProductPricingLink oldLink = createLink(10L, "OldFee", new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
+        when(productPricingLinkRepository.findByProductIdAndDate(1L, historicalDate)).thenReturn(List.of(oldLink));
+
+        pricingCalculationService.getProductPricing(request);
+
+        verify(productPricingLinkRepository).findByProductIdAndDate(1L, historicalDate);
     }
 
     // --- Helper Methods ---
@@ -194,6 +226,7 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         pv.setComponentCode(code);
         pv.setRawValue(new BigDecimal(val));
         pv.setValueType(type);
+        pv.setPricingTier(new PricingTier());
         return pv;
     }
 }

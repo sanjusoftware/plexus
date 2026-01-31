@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -47,5 +48,19 @@ public class PricingTier extends AuditableEntity {
         this.minThreshold = minThreshold;
         this.maxThreshold = maxThreshold;
     }
+
+    // Support for "Rule changes applying only at next billing period"
+    @Column(name = "effective_date", nullable = false)
+    private LocalDate effectiveDate = LocalDate.now();
+
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
+
+    // Identify if this tier allows pro-rating
+    private boolean proRataApplicable = false;
+
+    // "Slab Breaching" flag
+    // If true, the fee applies to the WHOLE transaction if the limit is breached
+    private boolean applyChargeOnFullBreach = false;
 
 }

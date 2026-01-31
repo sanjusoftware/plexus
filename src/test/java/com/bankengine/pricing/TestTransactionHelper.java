@@ -74,6 +74,7 @@ public class TestTransactionHelper {
                 .orElseGet(() -> {
                     PricingComponent component = new PricingComponent();
                     component.setName(name);
+                    component.setBankId(TenantContextHolder.getBankId());
                     component.setType(PricingComponent.ComponentType.FEE); // or set a default
                     return pricingComponentRepository.save(component);
                 });
@@ -86,6 +87,11 @@ public class TestTransactionHelper {
         PricingComponent component = pricingComponentRepository.findById(componentId)
                 .orElseThrow(() -> new IllegalStateException("Pricing Component not found"));
 
+        // Ensure at least one tier exists so the Service's INNER JOIN doesn't fail
+        if (component.getPricingTiers() == null || component.getPricingTiers().isEmpty()) {
+            createCommittedTierDependency(componentId, "Default Base Tier");
+        }
+
         ProductPricingLink link = new ProductPricingLink();
         link.setProduct(product);
         link.setPricingComponent(component);
@@ -93,6 +99,8 @@ public class TestTransactionHelper {
         link.setFixedValueType(type);
         link.setUseRulesEngine(false);
         link.setBankId(product.getBankId());
+        link.setEffectiveDate(LocalDate.now().minusDays(1));
+        link.setExpiryDate(LocalDate.now().plusYears(10));
 
         productPricingLinkRepository.save(link);
     }
@@ -119,6 +127,10 @@ public class TestTransactionHelper {
         PricingComponent component = pricingComponentRepository.findById(componentId)
                 .orElseThrow(() -> new IllegalStateException("Pricing Component not found"));
 
+        if (component.getPricingTiers() == null || component.getPricingTiers().isEmpty()) {
+            createCommittedTierDependency(componentId, "Bundle Benefit Tier");
+        }
+
         BundlePricingLink link = new BundlePricingLink();
         link.setProductBundle(bundle);
         link.setPricingComponent(component);
@@ -126,6 +138,8 @@ public class TestTransactionHelper {
         link.setFixedValueType(type);
         link.setUseRulesEngine(false);
         link.setBankId(bundle.getBankId());
+        link.setEffectiveDate(LocalDate.now().minusDays(1));
+        link.setExpiryDate(LocalDate.now().plusYears(10));
 
         if (bundle.getBundlePricingLinks() == null) {
             bundle.setBundlePricingLinks(new ArrayList<>());
@@ -143,6 +157,10 @@ public class TestTransactionHelper {
         tier.setPricingComponent(component);
         tier.setTierName(tierName);
         tier.setMinThreshold(BigDecimal.ZERO);
+        tier.setEffectiveDate(LocalDate.now().minusDays(1));
+        tier.setExpiryDate(LocalDate.now().plusYears(10));
+        tier.setProRataApplicable(false);
+        tier.setApplyChargeOnFullBreach(false);
 
         TierCondition condition = new TierCondition();
         condition.setPricingTier(tier);
@@ -193,6 +211,7 @@ public class TestTransactionHelper {
                     p.setProductType(type);
                     p.setCategory(category);
                     p.setStatus("ACTIVE");
+                    p.setBankId(TenantContextHolder.getBankId());
                     p.setEffectiveDate(LocalDate.now().minusDays(1));
                     return productRepository.save(p);
                 });
@@ -274,6 +293,44 @@ public class TestTransactionHelper {
     }
 
     @Transactional
+    public void linkProductToBundle(Long bundleId, Long productId, boolean isMain) {
+        ProductBundle bundle = productBundleRepository.findById(bundleId)
+                .orElseThrow(() -> new IllegalStateException("Bundle not found"));
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalStateException("Product not found"));
+
+        BundleProductLink link = new BundleProductLink(bundle, product, true, isMain);
+        link.setBankId(bundle.getBankId());
+        bundleProductLinkRepository.save(link);
+
+        // Update the in-memory collection so bundle.getContainedProducts() isn't empty
+        if (bundle.getContainedProducts() == null) {
+            bundle.setContainedProducts(new ArrayList<>());
+        }
+        bundle.getContainedProducts().add(link);
+    }
+
+    @Transactional
+    public ProductPricingLink linkProductToPricingComponentReturn(Long productId, Long componentId, BigDecimal fixedValue, PriceValue.ValueType type) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalStateException("Product not found"));
+        PricingComponent component = pricingComponentRepository.findById(componentId)
+                .orElseThrow(() -> new IllegalStateException("Pricing Component not found"));
+
+        ProductPricingLink link = new ProductPricingLink();
+        link.setProduct(product);
+        link.setPricingComponent(component);
+        link.setFixedValue(fixedValue);
+        link.setFixedValueType(type);
+        link.setUseRulesEngine(false);
+        link.setBankId(product.getBankId());
+        link.setEffectiveDate(LocalDate.now().minusDays(1)); // Ensures visibility today
+        link.setExpiryDate(LocalDate.now().plusYears(10));
+
+        return productPricingLinkRepository.save(link);
+    }
+
+    @Transactional
     public ProductBundle createBundleInDb(String name, ProductBundle.BundleStatus bundleStatus) {
         ProductBundle bundle = new ProductBundle();
         bundle.setName(name);
@@ -292,20 +349,31 @@ public class TestTransactionHelper {
     @Transactional
     public ProductBundle setupFullBundleWithPricing(String bundleName, String productName, BigDecimal discountValue, PriceValue.ValueType discountType, ProductBundle.BundleStatus bundleStatus) {
         ProductType defaultType = getOrCreateProductType("SAVINGS");
+
+        // 1. Ensure product exists
         Product product = getOrCreateProduct(productName, defaultType, "RETAIL");
 
-        PricingComponent productBaseFee = createPricingComponentInDb("Product Base Fee");
+        // 2. Ensure the product HAS an active pricing link.
+        // The PricingCalculationService throws 404 if a product in a bundle has no price.
+        PricingComponent productBaseFee = createPricingComponentInDb("Standard Base Fee");
+
+        // We use a specific method to ensure the link is saved and flushed
         linkProductToPricingComponent(product.getId(), productBaseFee.getId(), BigDecimal.ZERO);
 
+        // 3. Create bundle
         ProductBundle bundle = createBundleInDb(bundleName, bundleStatus);
 
-        // Ensure the link is persisted
-        BundleProductLink link = new BundleProductLink(bundle, product, true, true);
-        link.setBankId(TenantContextHolder.getBankId());
-        bundleProductLinkRepository.save(link);
+        // 4. Link product to bundle
+        linkProductToBundle(bundle.getId(), product.getId(), true);
 
+        // 5. Link the benefit (discount)
         linkBundleToPricingComponent(bundle.getId(), createPricingComponentInDb(bundleName + " Benefit").getId(), discountValue, discountType);
 
-        return bundle;
+        // 6. Flush to disk and clear cache so the Service sees clean DB state
+        entityManager.flush();
+        entityManager.clear();
+
+        return productBundleRepository.findById(bundle.getId())
+                .orElseThrow(() -> new IllegalStateException("Bundle lost after clear"));
     }
 }

@@ -22,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -111,6 +112,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingTierRequest tier = new PricingTierRequest();
         tier.setTierName("Default Tier");
         tier.setMinThreshold(BigDecimal.ZERO);
+        tier.setEffectiveDate(LocalDate.now());
         tier.setConditions(List.of(cond));
 
         PriceValueRequest val = new PriceValueRequest();
@@ -120,6 +122,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         TieredPriceRequest req = new TieredPriceRequest();
         req.setTier(tier);
         req.setValue(val);
+
         return req;
     }
 

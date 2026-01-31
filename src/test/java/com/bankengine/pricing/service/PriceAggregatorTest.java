@@ -1,5 +1,6 @@
 package com.bankengine.pricing.service;
 
+import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import org.junit.jupiter.api.DisplayName;
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,9 +31,42 @@ class PriceAggregatorTest {
                 createComponentDetail("GLOBAL_DISC", "10.00", ValueType.DISCOUNT_PERCENTAGE, null)
         );
 
-        BigDecimal result = aggregator.calculate(components, new BigDecimal("1000.00"));
+        PricingRequest request = PricingRequest.builder()
+                .amount(new BigDecimal("1000.00"))
+                .effectiveDate(LocalDate.now())
+                .build();
 
+        BigDecimal result = aggregator.calculate(components, request);
+
+        // Expected: 10 + 20 = 30 fees. Discount: 50% of 10 (5) + 10% of 30 (3) = 8. Total = 22.
         assertEquals(new BigDecimal("22.00").setScale(2, RoundingMode.HALF_UP), result);
+    }
+
+    @Test
+    @DisplayName("Pro-rata Check - Should calculate partial fee for first month")
+    void shouldHandleProRataCalculation() {
+        // ARRANGE: Monthly fee of $30.00
+        List<PriceComponentDetail> components = List.of(
+                PriceComponentDetail.builder()
+                        .componentCode("MONTHLY_FEE")
+                        .rawValue(new BigDecimal("30.00"))
+                        .valueType(ValueType.FEE_ABSOLUTE)
+                        .proRataApplicable(true)
+                        .build()
+        );
+
+        // Enrollment on the 16th of a 30-day month = 15 days active (exactly 50%)
+        PricingRequest request = PricingRequest.builder()
+                .enrollmentDate(LocalDate.of(2024, 6, 16))
+                .effectiveDate(LocalDate.of(2024, 6, 30))
+                .amount(BigDecimal.ZERO)
+                .build();
+
+        // ACT
+        BigDecimal result = aggregator.calculate(components, request);
+
+        // ASSERT
+        assertEquals(new BigDecimal("15.00").setScale(2, RoundingMode.HALF_UP), result);
     }
 
     @Test
@@ -46,10 +81,12 @@ class PriceAggregatorTest {
                 createComponentDetail("VIP_FEE", "50.00", ValueType.WAIVED, null)
         );
 
-        // ACT
-        BigDecimal result = aggregator.calculate(components, new BigDecimal("100.00"));
+        PricingRequest request = PricingRequest.builder()
+                .amount(new BigDecimal("100.00"))
+                .build();
 
-        // ASSERT
+        BigDecimal result = aggregator.calculate(components, request);
+
         assertEquals(new BigDecimal("10.00").setScale(2, RoundingMode.HALF_UP), result);
     }
 
@@ -64,10 +101,12 @@ class PriceAggregatorTest {
                 createComponentDetail("ATM_ENTITLEMENT", "5.00", ValueType.FREE_COUNT, null)
         );
 
-        // ACT
-        BigDecimal result = aggregator.calculate(components, new BigDecimal("10.00"));
+        PricingRequest request = PricingRequest.builder()
+                .amount(new BigDecimal("10.00"))
+                .build();
 
-        // ASSERT
+        BigDecimal result = aggregator.calculate(components, request);
+
         assertEquals(new BigDecimal("5.00").setScale(2, RoundingMode.HALF_UP), result);
     }
 
@@ -89,9 +128,14 @@ class PriceAggregatorTest {
                 createComponentDetail("ATM_FREE", "5.00", ValueType.FREE_COUNT, null) // Should be ignored in math
         );
 
-        BigDecimal result = aggregator.calculate(components, new BigDecimal("1000.00"));
-        assertEquals(new BigDecimal("24.70").setScale(2, RoundingMode.HALF_UP),
-                result.setScale(2, RoundingMode.HALF_UP));
+        PricingRequest request = PricingRequest.builder()
+                .amount(new BigDecimal("1000.00"))
+                .build();
+
+        BigDecimal result = aggregator.calculate(components, request);
+
+        // Fees: 10 + 20 = 30. Discounts: 5 + 0.30 = 5.30. Final: 24.70.
+        assertEquals(new BigDecimal("24.70").setScale(2, RoundingMode.HALF_UP), result);
     }
 
     @Test
@@ -102,10 +146,10 @@ class PriceAggregatorTest {
                 createComponentDetail("HUGE_DISC", "50.00", ValueType.DISCOUNT_ABSOLUTE, null)
         );
 
-        BigDecimal result = aggregator.calculate(components, new BigDecimal("10.00"));
+        PricingRequest request = PricingRequest.builder().amount(BigDecimal.ZERO).build();
+        BigDecimal result = aggregator.calculate(components, request);
 
-        assertEquals(new BigDecimal("0.00").setScale(2, RoundingMode.HALF_UP),
-                result.setScale(2, RoundingMode.HALF_UP));
+        assertEquals(new BigDecimal("0.00").setScale(2, RoundingMode.HALF_UP), result);
     }
 
     @Test
@@ -116,10 +160,12 @@ class PriceAggregatorTest {
                 createComponentDetail("FRACTIONAL_FEE", "1.75", ValueType.FEE_PERCENTAGE, null)
         );
 
-        // ACT: Pass 100.00 as the transaction amount
-        BigDecimal result = aggregator.calculate(components, new BigDecimal("100.00"));
+        PricingRequest request = PricingRequest.builder()
+                .amount(new BigDecimal("100.00"))
+                .build();
 
-        // ASSERT
+        BigDecimal result = aggregator.calculate(components, request);
+
         assertEquals(new BigDecimal("1.75").setScale(2, RoundingMode.HALF_UP), result);
     }
 

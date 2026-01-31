@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +22,14 @@ public class PricingTierRequest {
 
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
+
+    // Temporal versioning fields
+    private LocalDate effectiveDate;
+    private LocalDate expiryDate;
+
+    // Calculation logic flags
+    private boolean proRataApplicable;
+    private boolean applyChargeOnFullBreach;
 
     @Builder.Default
     private List<TierConditionDto> conditions = new ArrayList<>();

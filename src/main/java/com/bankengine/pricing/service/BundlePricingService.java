@@ -1,7 +1,7 @@
 package com.bankengine.pricing.service;
 
-import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.ProductBundleRepository;
+import com.bankengine.common.exception.ValidationException;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
@@ -11,10 +11,12 @@ import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
 import com.bankengine.pricing.model.BundlePricingLink;
 import com.bankengine.pricing.model.PriceValue;
+import com.bankengine.pricing.repository.BundlePricingLinkRepository;
 import com.bankengine.rules.model.BundlePricingInput;
 import com.bankengine.rules.service.BundleRulesEngineService;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BundlePricingService extends BaseService {
@@ -33,21 +36,25 @@ public class BundlePricingService extends BaseService {
     private final PricingCalculationService pricingCalculationService;
     private final BundleRulesEngineService bundleRulesEngineService;
     private final ProductBundleRepository productBundleRepository;
+    private final BundlePricingLinkRepository bundlePricingLinkRepository;
 
     /**
      * Calculates the total price for a bundle by:
-     * 1. Calculating individual product prices.
-     * 2. Applying fixed bundle-level adjustments from the database.
-     * 3. Applying dynamic bundle-level adjustments from the rules engine (Drools).
+     * 1. Validating input and calculating individual product prices.
+     * 2. Fetching active temporal links for bundle-level adjustments.
+     * 3. Applying fixed bundle-level adjustments from the database.
+     * 4. Applying dynamic bundle-level adjustments from the rules engine (Drools).
      */
     @Transactional(readOnly = true)
     public BundlePriceResponse calculateTotalBundlePrice(BundlePriceRequest request) {
 
+        // 0. Fail Fast: Validate input presence
         if (request.getProducts() == null || request.getProducts().isEmpty()) {
-            throw new NotFoundException("The bundle must contain at least one product.");
+            throw new ValidationException("Bundle calculation requires at least one product.");
         }
 
         // 1. Calculate Individual Product Prices
+        // We aggregate the prices of all products in the bundle as the "base" for adjustments
         List<ProductPricingResult> productResults = new ArrayList<>();
         BigDecimal productGrossTotal = BigDecimal.ZERO;
 
@@ -71,32 +78,40 @@ public class BundlePricingService extends BaseService {
                     .build());
         }
 
-        // 2. Fetch the Bundle Securely (Validates existence and tenant ownership)
-        ProductBundle bundle = productBundleRepository.findById(request.getProductBundleId())
+        // 2. Fetch Bundle and Active Temporal Links
+        // Verify bundle existence first
+        productBundleRepository.findById(request.getProductBundleId())
                 .orElseThrow(() -> new NotFoundException("Product Bundle not found with ID: " + request.getProductBundleId()));
 
-        List<PriceComponentDetail> bundleAdjustments = new ArrayList<>();
+        // Retrieve only the links that are active for the requested effectiveDate
+        List<BundlePricingLink> activeBundleLinks = bundlePricingLinkRepository
+                .findByBundleIdAndDate(request.getProductBundleId(), request.getEffectiveDate());
 
-        // This effectively final variable is required for lambda capturing
+        if (activeBundleLinks.isEmpty()) {
+            log.debug("No active bundle-level adjustments for bundle ID: {} on date: {}",
+                    request.getProductBundleId(), request.getEffectiveDate());
+            // We proceed with empty adjustments; the price is simply the sum of products
+        }
+
+        List<PriceComponentDetail> bundleAdjustments = new ArrayList<>();
         final BigDecimal finalProductGross = productGrossTotal;
 
-        // 3. Process Fixed Adjustments (BundlePricingLink)
-        if (bundle.getBundlePricingLinks() != null) {
-            bundle.getBundlePricingLinks().stream()
-                    .filter(link -> !link.isUseRulesEngine() && link.getFixedValue() != null)
-                    .forEach(link -> {
-                        PriceValue.ValueType type = link.getFixedValueType() != null ?
-                                link.getFixedValueType() : PriceValue.ValueType.FEE_ABSOLUTE;
+        // 3. Process Fixed Adjustments
+        // These are static fees or discounts defined directly on the link
+        activeBundleLinks.stream()
+                .filter(link -> !link.isUseRulesEngine() && link.getFixedValue() != null)
+                .forEach(link -> {
+                    PriceValue.ValueType type = link.getFixedValueType() != null ?
+                            link.getFixedValueType() : PriceValue.ValueType.FEE_ABSOLUTE;
 
-                        bundleAdjustments.add(PriceComponentDetail.builder()
-                                .componentCode(link.getPricingComponent().getName())
-                                .rawValue(link.getFixedValue())
-                                .calculatedAmount(calculateSignedAmount(link.getFixedValue(), type, finalProductGross))
-                                .valueType(type)
-                                .sourceType("FIXED_VALUE")
-                                .build());
-                    });
-        }
+                    bundleAdjustments.add(PriceComponentDetail.builder()
+                            .componentCode(link.getPricingComponent().getName())
+                            .rawValue(link.getFixedValue())
+                            .calculatedAmount(calculateSignedAmount(link.getFixedValue(), type, finalProductGross))
+                            .valueType(type)
+                            .sourceType("FIXED_VALUE")
+                            .build());
+                });
 
         // 4. Process Dynamic Adjustments from Rules Engine (Drools)
         BundlePricingInput bundleInputFact = new BundlePricingInput();
@@ -104,31 +119,30 @@ public class BundlePricingService extends BaseService {
         bundleInputFact.setBankId(getCurrentBankId());
         bundleInputFact.setCustomerSegment(request.getCustomerSegment());
 
-        // Provide context for rules that check for specific products within the bundle
-        bundleInputFact.setContainedProductIds(bundle.getContainedProducts().stream()
-                .map(link -> link.getProduct().getId())
-                .collect(Collectors.toList()));
+        // Ensure Rules Engine evaluates based on the requested effective date
+        bundleInputFact.setReferenceDate(request.getEffectiveDate());
 
-        // IMPORTANT: Whitelist only components linked to this bundle for the rules engine
-        Set<Long> targetComponentIds = bundle.getBundlePricingLinks().stream()
+        // Target only the components that the database says are active and rules-based
+        Set<Long> targetComponentIds = activeBundleLinks.stream()
                 .filter(BundlePricingLink::isUseRulesEngine)
                 .map(link -> link.getPricingComponent().getId())
                 .collect(Collectors.toSet());
         bundleInputFact.setTargetPricingComponentIds(targetComponentIds);
 
-        // Populate Custom Attributes for LHS matching in DRL
+        // Populate Custom Attributes for Rule LHS (Left Hand Side) matching
         bundleInputFact.getCustomAttributes().put("customerSegment", request.getCustomerSegment());
         bundleInputFact.getCustomAttributes().put("transactionAmount", finalProductGross);
+        bundleInputFact.getCustomAttributes().put("effectiveDate", request.getEffectiveDate());
         if (request.getCustomAttributes() != null) {
             bundleInputFact.getCustomAttributes().putAll(request.getCustomAttributes());
         }
 
-        // Fire Rules
+        // Fire Drools rules and convert the resulting adjustments into response details
         BundlePricingInput adjustedFact = bundleRulesEngineService.determineBundleAdjustments(bundleInputFact);
         bundleAdjustments.addAll(convertRulesToDetail(adjustedFact.getAdjustments(), finalProductGross));
 
         // 5. Aggregate Final Amounts
-        // Final Gross = Sum(Product Prices) + Sum(Bundle Fees)
+        // Bundle Fees (Positive) increase the total; Discounts (Negative) decrease it
         BigDecimal totalBundleFees = bundleAdjustments.stream()
                 .filter(adj -> isFee(adj.getValueType()))
                 .map(PriceComponentDetail::getCalculatedAmount)
@@ -148,7 +162,7 @@ public class BundlePricingService extends BaseService {
                 .grossTotalAmount(totalGross)
                 .bundleAdjustments(bundleAdjustments)
                 .productResults(productResults)
-                .netTotalAmount(totalGross.add(totalBundleDiscounts)) // Discounts are negative
+                .netTotalAmount(totalGross.add(totalBundleDiscounts))
                 .build();
     }
 

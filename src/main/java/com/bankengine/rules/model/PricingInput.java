@@ -3,6 +3,7 @@ package com.bankengine.rules.model;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -13,8 +14,12 @@ public class PricingInput {
     // Identifies the tenant
     private String bankId;
 
-    // The set of PricingComponent IDs that Drools should evaluate.
-    // Rules should check: "eval(input.getTargetPricingComponentIds().contains(componentId))"
+    /**
+     * The date used for temporal evaluation within the rules.
+     * Defaults to today if not provided.
+     */
+    private LocalDate referenceDate = LocalDate.now();
+
     private Set<Long> targetPricingComponentIds;
 
     // Contextual data (productId, customerSegment, transactionAmount, etc.)

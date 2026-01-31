@@ -19,6 +19,8 @@ public class ProductPricingCalculationResult {
         private String componentCode;
         private BigDecimal rawValue;
         private PriceValue.ValueType valueType;
+        private boolean proRataApplicable;
+        private boolean applyChargeOnFullBreach;
 
         // This field is calculated by the Service, NOT Drools
         private BigDecimal calculatedAmount; // e.g., $50.00 (Result of 5% of $1000)

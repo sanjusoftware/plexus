@@ -21,6 +21,8 @@ public interface PricingLinkMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "product", ignore = true)
+    @Mapping(target = "effectiveDate", ignore = true)
+    @Mapping(target = "expiryDate", ignore = true)
     ProductPricingLink clone(ProductPricingLink oldLink);
 
     @ToAuditableEntity

@@ -16,26 +16,29 @@ import java.util.Map;
 @AllArgsConstructor
 public class PricingRequest {
 
-    // --- Core Catalog Input ---
-    @NotNull(message = "Product ID is mandatory for pricing.")
+    @NotNull(message = "Product ID is mandatory.")
     private Long productId;
 
-    // Optional: If pricing depends on the parent bundle (e.g., a discounted rate only applies in Bundle X)
     private Long productBundleId;
 
-    // --- Transactional Inputs ---
-    @NotNull(message = "Amount is mandatory for fee/rate calculation.")
     private BigDecimal amount;
+
+    // "Mid-Cycle Changes".
+    // Use this to fetch the price that was active on a specific date (e.g. start of billing cycle).
+    @Builder.Default
+    private LocalDate referenceDate = LocalDate.now();
 
     // Optional: Date to check for rate/fee applicability (default to today)
     @Builder.Default
     private LocalDate effectiveDate = LocalDate.now();
 
-    // --- Customer/Bank Context ---
-    @NotNull(message = "Customer Segment is mandatory for pricing rule matching.")
-    private String customerSegment; // e.g., "RETAIL", "SME", "PREMIUM"
+    // "Pro-rata First Month".
+    private LocalDate enrollmentDate;
 
-    // Field to hold custom pricing attributes for Drools
+    @NotNull(message = "Customer Segment is mandatory.")
+    private String customerSegment;
+
+    // "External Facility Counters".
+    // Maps like: {"ATM_WITHDRAWAL_COUNT": 5, "POS_SPEND_TOTAL": 1200.50}
     private Map<String, Object> customAttributes;
-
 }
