@@ -20,7 +20,6 @@ class TenantContextHolderTest {
     @Test
     void getBankId_ShouldReturnNull_WhenInSystemMode() {
         TenantContextHolder.setSystemMode(true);
-        // Should not throw exception, even if bankId is null
         assertNull(TenantContextHolder.getBankId());
     }
 

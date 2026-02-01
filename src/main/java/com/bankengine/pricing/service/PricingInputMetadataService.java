@@ -122,8 +122,7 @@ public class PricingInputMetadataService extends BaseService {
                     "': It is used in one or more active tier conditions."
             );
         }
-
-        pricingInputMetadataRepository.delete(entity);
+        pricingInputMetadataRepository.deleteByAttributeKey(attributeKey);
         reloadService.reloadKieContainer();
     }
 }

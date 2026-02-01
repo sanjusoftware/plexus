@@ -10,15 +10,7 @@ import java.util.Set;
 
 @Repository
 public interface PricingInputMetadataRepository extends TenantRepository<PricingInputMetadata, Long> {
-
-    /**
-     * Finds a single metadata record based on the unique attribute key (e.g., "customerSegment").
-     */
     Optional<PricingInputMetadata> findByAttributeKey(String attributeKey);
-
-    /**
-     * Finds a list of metadata records whose keys are in the provided set.
-     * Used by ProductRuleBuilderService to efficiently load the cache before building rules.
-     */
     List<PricingInputMetadata> findByAttributeKeyIn(Set<String> attributeKeys);
+    void deleteByAttributeKey(String attributeKey);
 }

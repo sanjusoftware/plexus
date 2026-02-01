@@ -18,8 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -126,5 +125,49 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound()); // Hits the validateTenantAccess branch
+    }
+
+    @Test
+    @WithMockRole(roles = {SYSTEM_ADMIN_ROLE}, bankId = "SYSTEM")
+    void systemAdmin_CanUpdateBank() throws Exception {
+        // 1. Setup - Create a bank first
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setSystemMode(true);
+            BankConfiguration bank = new BankConfiguration();
+            bank.setBankId("UPDATE_TEST");
+            bank.setAllowProductInMultipleBundles(false);
+            bankConfigurationRepository.save(bank);
+            return null;
+        });
+
+        // 2. Update via API
+        BankConfigurationRequest updateRequest = new BankConfigurationRequest("UPDATE_TEST", true, List.of());
+
+        mockMvc.perform(put("/api/v1/banks/UPDATE_TEST")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowProductInMultipleBundles").value(true));
+    }
+
+    @Test
+    @WithMockRole(roles = {BANK_A_ADMIN_ROLE}, bankId = "BANK_A")
+    void bankAdmin_CanUpdateOwnBank() throws Exception {
+        // Setup own bank
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setSystemMode(true);
+            BankConfiguration bank = new BankConfiguration();
+            bank.setBankId("BANK_A");
+            bank.setAllowProductInMultipleBundles(false);
+            bankConfigurationRepository.save(bank);
+            return null;
+        });
+
+        BankConfigurationRequest request = new BankConfigurationRequest("BANK_A", true, List.of());
+
+        mockMvc.perform(put("/api/v1/banks/BANK_A")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
     }
 }
