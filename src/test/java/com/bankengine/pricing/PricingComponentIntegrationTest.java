@@ -1,14 +1,13 @@
 package com.bankengine.pricing;
 
 import com.bankengine.auth.security.TenantContextHolder;
+import com.bankengine.catalog.model.Product;
+import com.bankengine.catalog.model.ProductType;
 import com.bankengine.pricing.dto.*;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
-import com.bankengine.pricing.repository.PriceValueRepository;
-import com.bankengine.pricing.repository.PricingComponentRepository;
-import com.bankengine.pricing.repository.PricingTierRepository;
-import com.bankengine.pricing.repository.TierConditionRepository;
+import com.bankengine.pricing.repository.*;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,6 +41,8 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Autowired private PricingTierRepository tierRepository;
     @Autowired private PriceValueRepository valueRepository;
     @Autowired private TierConditionRepository tierConditionRepository;
+    @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
+    @Autowired private PricingComponentRepository pricingComponentRepository;
     @Autowired private TestTransactionHelper txHelper;
     @Autowired private EntityManager entityManager;
 
@@ -71,11 +72,11 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void cleanUp() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-            tierConditionRepository.deleteAllInBatch();
-            valueRepository.deleteAllInBatch();
-            tierRepository.deleteAllInBatch();
-            componentRepository.deleteAllInBatch();
+            productPricingLinkRepository.deleteAllInBatch(); // 1. Links
+            tierConditionRepository.deleteAllInBatch();      // 2. Conditions
+            valueRepository.deleteAllInBatch();              // 3. Values
+            tierRepository.deleteAllInBatch();               // 4. Tiers
+            pricingComponentRepository.deleteAllInBatch();   // 5. Components
         });
         txHelper.flushAndClear();
     }
@@ -321,5 +322,64 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("Pricing Tier not found")));
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldClearConditionsWhenUpdatingWithEmptyList() throws Exception {
+        Long componentId = txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            return txHelper.createLinkedTierAndValue("ClearCondComp", "InitialTier");
+        });
+        Long tierId = getTierFromComponentId(componentId).getId();
+
+        TieredPriceRequest updateReq = getValidTierValueDto();
+        updateReq.getTier().setConditions(List.of());
+
+        mockMvc.perform(put("/api/v1/pricing-components/{cId}/tiers/{tId}", componentId, tierId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk());
+
+        txHelper.doInTransaction(() -> {
+            PricingTier tier = tierRepository.findById(tierId).get();
+            assertThat(tier.getConditions()).isEmpty();
+        });
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldReturn400WhenAddingTierWithInvalidValueType() throws Exception {
+        PricingComponent component = createComponent("ValueTypeFail");
+        TieredPriceRequest req = getValidTierValueDto();
+        req.getValue().setValueType("NOT_A_VALID_TYPE");
+
+        mockMvc.perform(post("/api/v1/pricing-components/{id}/tiers", component.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("Invalid value type provided")));
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldReturn409WhenDeletingComponentWithMultipleDependencies() throws Exception {
+        PricingComponent component = createComponent("MultiDep");
+
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            // 1. Create a Tier (This is checked FIRST by the service)
+            txHelper.createCommittedTierDependency(component.getId(), "CheckTier");
+
+            // 2. Create a Product Link (This is checked SECOND)
+            ProductType type = txHelper.getOrCreateProductType("SAVINGS");
+            Product product = txHelper.getOrCreateProduct("CheckProduct", type, "RETAIL");
+            txHelper.linkProductToPricingComponent(product.getId(), component.getId(), BigDecimal.ZERO);
+        });
+
+        // 3. The service hits the Tier check first and exits
+        mockMvc.perform(delete("/api/v1/pricing-components/{id}", component.getId()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("association with 1 tiers exists")));
     }
 }

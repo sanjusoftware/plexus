@@ -26,10 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -79,12 +76,12 @@ class PricingCalculationServiceTest extends BaseServiceTest {
     @DisplayName("Should orchestrate fixed pricing collection and call aggregator")
     void getProductPricing_shouldOrchestrateCollectionAndAggregation() {
         ProductPricingLink fixedLink = createLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
-        
+
         when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(fixedLink));
         when(priceAggregator.calculate(anyList(), any(PricingRequest.class))).thenReturn(new BigDecimal("10.00"));
 
         ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
-        
+
         assertNotNull(result);
         assertEquals(new BigDecimal("10.00"), result.getFinalChargeablePrice());
         verify(priceAggregator).calculate(argThat(list -> list.size() == 1), eq(request));
@@ -117,7 +114,7 @@ class PricingCalculationServiceTest extends BaseServiceTest {
     void getProductPricing_shouldTargetOnlyRuleBasedComponentIds() {
         ProductPricingLink fixed = createLink(1L, "Fixed", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
         ProductPricingLink rules = createLink(2L, "Rules", null, null, true);
-        
+
         when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(fixed, rules));
         KieSession mockSession = setupMockDrools();
 
@@ -125,7 +122,7 @@ class PricingCalculationServiceTest extends BaseServiceTest {
 
         ArgumentCaptor<PricingInput> inputCaptor = ArgumentCaptor.forClass(PricingInput.class);
         verify(mockSession).insert(inputCaptor.capture());
-        
+
         Set<Long> targetIds = inputCaptor.getValue().getTargetPricingComponentIds();
         assertTrue(targetIds.contains(2L));
         assertFalse(targetIds.contains(1L));
@@ -181,7 +178,7 @@ class PricingCalculationServiceTest extends BaseServiceTest {
 
         // Verify aggregator receives the flags
         verify(priceAggregator).calculate(argThat(list ->
-            list.get(0).isProRataApplicable() && list.get(0).isApplyChargeOnFullBreach()
+                list.get(0).isProRataApplicable() && list.get(0).isApplyChargeOnFullBreach()
         ), eq(request));
     }
 
@@ -197,6 +194,102 @@ class PricingCalculationServiceTest extends BaseServiceTest {
         pricingCalculationService.getProductPricing(request);
 
         verify(productPricingLinkRepository).findByProductIdAndDate(1L, historicalDate);
+    }
+
+    @Test
+    @DisplayName("Branch: Should handle rules engine path when custom attributes are null")
+    void getProductPricing_shouldHandleNullCustomAttributes() {
+        request.setCustomAttributes(null); // Force the 'null' branch in determinePriceWithDrools
+        ProductPricingLink rulesLink = createLink(500L, "NullAttrComp", null, null, true);
+
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+        KieSession mockSession = setupMockDrools();
+
+        pricingCalculationService.getProductPricing(request);
+
+        ArgumentCaptor<PricingInput> inputCaptor = ArgumentCaptor.forClass(PricingInput.class);
+        verify(mockSession).insert(inputCaptor.capture());
+        assertNotNull(inputCaptor.getValue().getCustomAttributes());
+        // Should still contain the default injected attributes (productId, etc.)
+        assertTrue(inputCaptor.getValue().getCustomAttributes().containsKey("productId"));
+    }
+
+    @Test
+    @DisplayName("Branch: Should handle PriceValue with null PricingTier (Defensive Mapping)")
+    void mapFactToDetail_shouldHandleNullTier() {
+        ProductPricingLink rulesLink = createLink(600L, "NoTierComp", null, null, true);
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+
+        KieSession mockSession = setupMockDrools();
+
+        // Create fact with NO tier associated
+        PriceValue fact = createFact("ORPHAN_FEE", "20.00", PriceValue.ValueType.FEE_ABSOLUTE);
+        fact.setPricingTier(null);
+
+        when(mockSession.getObjects(any())).thenReturn((Collection) List.of(fact));
+        when(priceAggregator.calculate(anyList(), any())).thenReturn(BigDecimal.ZERO);
+
+        ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
+
+        // Verify the mapping didn't crash and defaulted flags to false
+        assertFalse(result.getComponentBreakdown().get(0).isProRataApplicable());
+        assertFalse(result.getComponentBreakdown().get(0).isApplyChargeOnFullBreach());
+    }
+
+    @Test
+    @DisplayName("Temporal: Should pass activeTierIds from repository to Drools input")
+    void getProductPricing_shouldInjectActiveTierIdsIntoDrools() {
+        ProductPricingLink rulesLink = createLink(700L, "TempComp", null, null, true);
+        List<Long> mockTierIds = List.of(8001L, 8002L);
+
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findActiveTierIds(eq(1L), any(LocalDate.class))).thenReturn(mockTierIds);
+
+        KieSession mockSession = setupMockDrools();
+
+        pricingCalculationService.getProductPricing(request);
+
+        ArgumentCaptor<PricingInput> inputCaptor = ArgumentCaptor.forClass(PricingInput.class);
+        verify(mockSession).insert(inputCaptor.capture());
+
+        // Assert the date-filtered Tier IDs are present
+        assertEquals(2, inputCaptor.getValue().getActivePricingTierIds().size());
+        assertTrue(inputCaptor.getValue().getActivePricingTierIds().contains(8001L));
+    }
+
+    @Test
+    @DisplayName("Branch: Should merge non-null custom attributes into PricingInput")
+    void getProductPricing_shouldMergeCustomAttributes() {
+        // 1. Setup request with custom attributes
+        request.setCustomAttributes(Map.of("promoCode", "SAVE10"));
+        ProductPricingLink rulesLink = createLink(800L, "AttrComp", null, null, true);
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+        KieSession mockSession = setupMockDrools();
+
+        pricingCalculationService.getProductPricing(request);
+
+        // 2. Verify merge happened
+        ArgumentCaptor<PricingInput> inputCaptor = ArgumentCaptor.forClass(PricingInput.class);
+        verify(mockSession).insert(inputCaptor.capture());
+        assertEquals("SAVE10", inputCaptor.getValue().getCustomAttributes().get("promoCode"));
+    }
+
+    @Test
+    @DisplayName("Branch: Should filter out links marked as FIXED but having no value")
+    void getProductPricing_shouldFilterEmptyFixedLinks() {
+        // Link marked as fixed (useRules=false) but has no value
+        ProductPricingLink emptyFixedLink = createLink(900L, "EmptyFixed", null, null, false);
+        // Link that is valid
+        ProductPricingLink validLink = createLink(901L, "ValidFixed", new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
+
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(emptyFixedLink, validLink));
+        when(priceAggregator.calculate(anyList(), any())).thenReturn(new BigDecimal("5.00"));
+
+        ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
+
+        // Breakdown should only contain the valid link
+        assertEquals(1, result.getComponentBreakdown().size());
+        assertEquals("ValidFixed", result.getComponentBreakdown().get(0).getComponentCode());
     }
 
     // --- Helper Methods ---

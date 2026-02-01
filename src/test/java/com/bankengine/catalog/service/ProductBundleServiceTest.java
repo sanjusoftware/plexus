@@ -16,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -259,5 +260,104 @@ class ProductBundleServiceTest extends BaseServiceTest {
         // Verify that we never tried to save a Link for the second (conflicting) product
         verify(bundleProductLinkRepository, never()).save(argThat(link ->
                 link.getProduct().getId().equals(102L)));
+    }
+
+    @Test
+    @DisplayName("Activate Bundle - Should fail for non-DRAFT bundles")
+    void activateBundle_ShouldFail_WhenNotDraft() {
+        Long bundleId = 1L;
+        ProductBundle bundle = new ProductBundle();
+        bundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
+        when(bundleRepository.findById(bundleId)).thenReturn(Optional.of(bundle));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> bundleService.activateBundle(bundleId));
+        assertTrue(ex.getMessage().contains("Only DRAFT bundles can be activated"));
+    }
+
+    @Test
+    @DisplayName("Activate Bundle - Should fail when bundle has no products")
+    void activateBundle_ShouldFail_WhenEmpty() {
+        Long bundleId = 1L;
+        ProductBundle bundle = new ProductBundle();
+        bundle.setStatus(ProductBundle.BundleStatus.DRAFT);
+        bundle.setContainedProducts(List.of()); // Empty
+
+        when(bundleRepository.findById(bundleId)).thenReturn(Optional.of(bundle));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> bundleService.activateBundle(bundleId));
+        assertEquals("Cannot activate a bundle with no products.", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Activate Bundle - Should adjust activation date if set in the past")
+    void activateBundle_ShouldAdjustPastDate() {
+        Long bundleId = 1L;
+        ProductBundle bundle = new ProductBundle();
+        bundle.setStatus(ProductBundle.BundleStatus.DRAFT);
+        bundle.setActivationDate(LocalDate.now().minusDays(5));
+
+        Product activeProduct = new Product();
+        activeProduct.setStatus("ACTIVE");
+        bundle.setContainedProducts(List.of(new BundleProductLink(bundle, activeProduct, true, true)));
+
+        when(bundleRepository.findById(bundleId)).thenReturn(Optional.of(bundle));
+
+        bundleService.activateBundle(bundleId);
+
+        assertEquals(LocalDate.now(), bundle.getActivationDate());
+        assertEquals(ProductBundle.BundleStatus.ACTIVE, bundle.getStatus());
+    }
+
+    @Test
+    @DisplayName("Archive Bundle - Should set status and expiry date correctly")
+    void archiveBundle_ShouldHandleExpiryDate() {
+        Long bundleId = 1L;
+        ProductBundle bundle = new ProductBundle();
+        bundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
+        bundle.setExpiryDate(LocalDate.now().plusDays(10));
+
+        when(bundleRepository.findById(bundleId)).thenReturn(Optional.of(bundle));
+
+        bundleService.archiveBundle(bundleId);
+
+        assertEquals(ProductBundle.BundleStatus.ARCHIVED, bundle.getStatus());
+        assertEquals(LocalDate.now(), bundle.getExpiryDate());
+    }
+
+    @Test
+    @DisplayName("Archive Bundle - Handle null expiry date branch")
+    void archiveBundle_ShouldHandleNullExpiry() {
+        ProductBundle bundle = new ProductBundle();
+        bundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
+        bundle.setExpiryDate(null);
+
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+
+        bundleService.archiveBundle(1L);
+
+        assertEquals(ProductBundle.BundleStatus.ARCHIVED, bundle.getStatus());
+        assertEquals(LocalDate.now(), bundle.getExpiryDate());
+    }
+
+    @Test
+    @DisplayName("Create Bundle - Handle request with null items list")
+    void createBundle_ShouldHandleNullItems() {
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setName("Empty Request Bundle");
+        request.setItems(null);
+
+        when(bundleRepository.save(any(ProductBundle.class))).thenAnswer(i -> {
+            ProductBundle b = i.getArgument(0);
+            b.setId(100L);
+            return b;
+        });
+
+        Long bundleId = bundleService.createBundle(request);
+
+        assertNotNull(bundleId, "The returned bundle ID should not be null");
+        assertEquals(100L, bundleId);
+        verify(bundleProductLinkRepository, never()).save(any());
     }
 }

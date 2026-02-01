@@ -129,7 +129,7 @@ public class ProductService extends BaseService {
                 featureLinkRepository.save(newLink);
             }
         }
-        featureLinkRepository.flush(); // Flush 2: Ensures creations/updates hit the DB immediately
+        featureLinkRepository.flush();
         entityManager.clear();
 
         Product updatedProduct = getProductEntityById(productId);
@@ -309,7 +309,6 @@ public class ProductService extends BaseService {
         }
 
         product.setStatus("INACTIVE");
-        // It's a good practice to set the expiration date to today on immediate deactivation.
         product.setExpirationDate(LocalDate.now());
 
         Product savedProduct = productRepository.save(product);

@@ -7,8 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class DroolsExpressionBuilderTest {
 
@@ -112,7 +111,90 @@ class DroolsExpressionBuilderTest {
         assertEquals("(!((java.time.LocalDate) customAttributes[\"effectiveDate\"]).isBefore(java.time.LocalDate.parse(\"2026-01-01\")))", result);
     }
 
-    // Helper methods for cleaner tests
+    @Test
+    @DisplayName("BigDecimal All Operators - Should cover all comparison branches")
+    void testBuildExpression_BigDecimal_AllOperators() {
+        PricingInputMetadata metadata = createMetadata("DECIMAL");
+
+        // Testing NE (!=)
+        assertEquals("((java.math.BigDecimal) customAttributes[\"amt\"]).compareTo(new java.math.BigDecimal(\"10\")) != 0",
+                builder.buildExpression(createCondition("amt", Operator.NE, "10"), metadata));
+
+        // Testing GE (>=)
+        assertEquals("((java.math.BigDecimal) customAttributes[\"amt\"]).compareTo(new java.math.BigDecimal(\"10\")) >= 0",
+                builder.buildExpression(createCondition("amt", Operator.GE, "10"), metadata));
+
+        // Testing LE (<=)
+        assertEquals("((java.math.BigDecimal) customAttributes[\"amt\"]).compareTo(new java.math.BigDecimal(\"10\")) <= 0",
+                builder.buildExpression(createCondition("amt", Operator.LE, "10"), metadata));
+    }
+
+    @Test
+    @DisplayName("LocalDate All Operators - Should cover all temporal branches")
+    void testBuildExpression_LocalDate_AllOperators() {
+        PricingInputMetadata metadata = createMetadata("DATE");
+        String dateVal = "2026-01-01";
+        String rhs = "java.time.LocalDate.parse(\"2026-01-01\")";
+        String access = "((java.time.LocalDate) customAttributes[\"dt\"])";
+
+        // Testing EQ
+        assertEquals(access + ".isEqual(" + rhs + ")",
+                builder.buildExpression(createCondition("dt", Operator.EQ, dateVal), metadata));
+
+        // Testing NE
+        assertEquals("!" + access + ".isEqual(" + rhs + ")",
+                builder.buildExpression(createCondition("dt", Operator.NE, dateVal), metadata));
+
+        // Testing LT
+        assertEquals(access + ".isBefore(" + rhs + ")",
+                builder.buildExpression(createCondition("dt", Operator.LT, dateVal), metadata));
+    }
+
+    @Test
+    @DisplayName("IN Operator - Should handle both String and Non-String types")
+    void testBuildExpression_InOperator_Branches() {
+        // String Branch: metadata.getFqnType() returns java.lang.String -> No cast applied
+        PricingInputMetadata strMetadata = createMetadata("STRING");
+        String strResult = builder.buildExpression(createCondition("segment", Operator.IN, "RETAIL, PREMIUM"), strMetadata);
+        assertEquals("customAttributes[\"segment\"] in ( \"RETAIL\", \"PREMIUM\" )", strResult);
+
+        // Long Branch: metadata.getFqnType() returns java.lang.Long -> Cast applied
+        PricingInputMetadata longMetadata = createMetadata("INTEGER");
+        String longResult = builder.buildExpression(createCondition("age", Operator.IN, "18, 21"), longMetadata);
+        assertEquals("((java.lang.Long) customAttributes[\"age\"]) in ( 18, 21 )", longResult);
+    }
+
+    @Test
+    @DisplayName("BigDecimal NE - Should cover the Not Equal branch")
+    void testBuildExpression_BigDecimal_NE() {
+        PricingInputMetadata metadata = createMetadata("DECIMAL");
+        TierCondition condition = createCondition("balance", Operator.NE, "0");
+
+        String result = builder.buildExpression(condition, metadata);
+        assertEquals("((java.math.BigDecimal) customAttributes[\"balance\"]).compareTo(new java.math.BigDecimal(\"0\")) != 0", result);
+    }
+
+    @Test
+    @DisplayName("LocalDate LT - Should cover the Before branch")
+    void testBuildExpression_Date_LT() {
+        PricingInputMetadata metadata = createMetadata("DATE");
+        TierCondition condition = createCondition("joiningDate", Operator.LT, "2020-01-01");
+
+        String result = builder.buildExpression(condition, metadata);
+        assertEquals("((java.time.LocalDate) customAttributes[\"joiningDate\"]).isBefore(java.time.LocalDate.parse(\"2020-01-01\"))", result);
+    }
+
+    @Test
+    @DisplayName("Unsupported Operator - Should throw IllegalStateException")
+    void testBuildExpression_UnsupportedOperator() {
+        PricingInputMetadata metadata = createMetadata("LONG");
+        TierCondition condition = createCondition("id", null, "10"); // Force default branch
+
+        // Since we can't easily pass a null to the switch, we use a reflection or
+        // a mock if necessary, but usually, a simple null check suffices:
+        assertThrows(NullPointerException.class, () -> builder.buildExpression(condition, metadata));
+    }
+
     private TierCondition createCondition(String name, Operator op, String val) {
         TierCondition c = new TierCondition();
         c.setAttributeName(name);

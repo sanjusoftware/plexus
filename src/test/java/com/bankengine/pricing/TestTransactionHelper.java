@@ -24,6 +24,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
+
+import static com.bankengine.test.config.AbstractIntegrationTest.TEST_BANK_ID;
 
 @Component
 public class TestTransactionHelper {
@@ -270,12 +273,13 @@ public class TestTransactionHelper {
     }
 
     @Transactional
-    public <T> T doInTransaction(java.util.function.Supplier<T> action) {
+    public <T> T doInTransaction(Supplier<T> action) {
         return action.get();
     }
 
     @Transactional
     public void doInTransaction(Runnable action) {
+        TenantContextHolder.setBankId(TEST_BANK_ID);
         action.run();
     }
 
