@@ -2,7 +2,6 @@ package com.bankengine.auth;
 
 import com.bankengine.auth.dto.RoleAuthorityMappingDto;
 import com.bankengine.auth.repository.RoleRepository;
-import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
@@ -72,7 +71,6 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
 
         // VERIFY DB
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             var role = roleRepository.findByName(roleName).orElseThrow();
             assertThat(role.getAuthorities()).isEqualTo(authorities);
             assertThat(role.getBankId()).isEqualTo(TEST_BANK_ID);
@@ -85,9 +83,7 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
         String roleName = "TO_BE_UPDATED";
         Set<String> initialAuths = Set.of("auth:role:read");
 
-        // Manual seed for specific test scenario
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelper.getOrCreateRoleInDb(roleName, initialAuths);
         });
 
@@ -100,7 +96,6 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isCreated());
 
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             assertThat(roleRepository.findByName(roleName).get().getAuthorities()).isEqualTo(newAuths);
         });
 

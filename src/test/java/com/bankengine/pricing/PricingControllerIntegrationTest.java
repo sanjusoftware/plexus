@@ -1,6 +1,5 @@
 package com.bankengine.pricing;
 
-import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
@@ -36,15 +35,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-    @Autowired private TestTransactionHelper txHelper;
-    @Autowired private EntityManager entityManager;
-    @Autowired private ProductTypeRepository productTypeRepository;
-    @Autowired private ProductRepository productRepository;
-    @Autowired private PricingComponentRepository pricingComponentRepository;
-    @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
-    @Autowired private ProductRuleBuilderService productRuleBuilderService;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private TestTransactionHelper txHelper;
+    @Autowired
+    private EntityManager entityManager;
+    @Autowired
+    private ProductTypeRepository productTypeRepository;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private PricingComponentRepository pricingComponentRepository;
+    @Autowired
+    private ProductPricingLinkRepository productPricingLinkRepository;
+    @Autowired
+    private ProductRuleBuilderService productRuleBuilderService;
 
     public static final String ROLE_PREFIX = "PC_";
     private static final String PRICING_READER_ROLE = ROLE_PREFIX + "TEST_READER";
@@ -60,7 +68,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void setupMetadata() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelper.setupCommittedMetadata();
         });
         entityManager.clear();
@@ -70,8 +77,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {PRICING_READER_ROLE})
     void calculateProductPrice_ShouldReturn200_WhenRequestIsValid() throws Exception {
         Long productId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-
             ProductType type = new ProductType();
             type.setName("Savings Type");
             type.setBankId(TEST_BANK_ID);
@@ -104,8 +109,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {PRICING_READER_ROLE})
     void calculateBundlePrice_ShouldReturn200_WhenRequestIsValid() throws Exception {
         Map<String, Long> ids = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-
             ProductType type = new ProductType();
             type.setName("Bundle Type");
             type.setBankId(TEST_BANK_ID);
@@ -147,8 +150,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     void calculateBundlePrice_ShouldApplyBundleAdjustments_WhenAdjustmentExists() throws Exception {
         // 1. ARRANGE: Create products and 3 bundle-level adjustments
         Map<String, Long> ids = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-
             ProductType type = txHelper.getOrCreateProductType("Multi-Adjustment Type");
             Long p1Id = txHelper.createProductInDb("Product A", type.getId(), "RETAIL");
             Long p2Id = txHelper.createProductInDb("Product B", type.getId(), "RETAIL");
@@ -216,8 +217,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     void calculateProductPrice_ShouldHandlePercentageFeeAndDiscount() throws Exception {
         // 1. ARRANGE: Create a product with 1% Fee and 10% Discount
         Long productId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-
             ProductType type = txHelper.getOrCreateProductType("Percentage Test Type");
             Long pId = txHelper.createProductInDb("High Value Account", type.getId(), "RETAIL");
 
@@ -264,18 +263,15 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {PRICING_READER_ROLE})
     void calculateProductPrice_ShouldPopulateMatchedTierId_WhenUsingRules() throws Exception {
-        // 1. ARRANGE: Create a component with a specific tier via the helper
         String componentName = "Tiered Service Fee";
         String tierName = "Gold Segment Tier";
 
         Long productId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             Long compId = txHelper.createLinkedTierAndValue(componentName, tierName);
 
             ProductType type = txHelper.getOrCreateProductType("Tiered Type");
             Long pId = txHelper.createProductInDb("Tiered Account", type.getId(), "RETAIL");
 
-            // Use No-Args constructor + Setters to avoid signature mismatches
             ProductPricingLink link = new ProductPricingLink();
             link.setProduct(productRepository.getReferenceById(pId));
             link.setPricingComponent(pricingComponentRepository.getReferenceById(compId));
@@ -287,7 +283,9 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         });
 
         // Ensure Drools picks up the new Tier condition (customerSegment == DEFAULT_SEGMENT)
-        productRuleBuilderService.rebuildRules();
+        txHelper.doInTransaction(() -> {
+            productRuleBuilderService.rebuildRules();
+        });
 
         PricingRequest request = new PricingRequest();
         request.setProductId(productId);
@@ -309,30 +307,29 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     void calculateProductPrice_ShouldPopulateTargetComponentCode_WhenDiscountIsTargeted() throws Exception {
         // 1. ARRANGE: Create a specific fee and a discount targeted at it
         Long productId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             ProductType type = txHelper.getOrCreateProductType("Targeted Type");
             Long pId = txHelper.createProductInDb("Targeted Account", type.getId(), "RETAIL");
 
-        // Fee: ATM Fee
-        PricingComponent atmFee = txHelper.createPricingComponentInDb("ATM_FEE");
-        txHelper.linkProductToPricingComponent(pId, atmFee.getId(), new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE);
+            // Fee: ATM Fee
+            PricingComponent atmFee = txHelper.createPricingComponentInDb("ATM_FEE");
+            txHelper.linkProductToPricingComponent(pId, atmFee.getId(), new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE);
 
-        // Discount: ATM Waiver (Fixed Value Link - Now supported by LEFT JOIN)
-        PricingComponent disc = txHelper.createPricingComponentInDb("ATM_WAIVER");
-        txHelper.linkProductToPricingComponent(pId, disc.getId(), new BigDecimal("100.00"), PriceValue.ValueType.DISCOUNT_PERCENTAGE);
+            // Discount: ATM Waiver (Fixed Value Link - Now supported by LEFT JOIN)
+            PricingComponent disc = txHelper.createPricingComponentInDb("ATM_WAIVER");
+            txHelper.linkProductToPricingComponent(pId, disc.getId(), new BigDecimal("100.00"), PriceValue.ValueType.DISCOUNT_PERCENTAGE);
 
-        // Since the current helper doesn't support setting 'targetComponentCode', we update the link manually
-        ProductPricingLink link = productPricingLinkRepository.findByProductId(pId).stream()
-                .filter(l -> l.getPricingComponent().getName().equals("ATM_WAIVER"))
-                .findFirst().orElseThrow();
+            // Since the current helper doesn't support setting 'targetComponentCode', we update the link manually
+            ProductPricingLink link = productPricingLinkRepository.findByProductId(pId).stream()
+                    .filter(l -> l.getPricingComponent().getName().equals("ATM_WAIVER"))
+                    .findFirst().orElseThrow();
 
-        link.setTargetComponentCode("ATM_FEE");
-        productPricingLinkRepository.save(link);
+            link.setTargetComponentCode("ATM_FEE");
+            productPricingLinkRepository.save(link);
 
-        return pId;
-    });
+            return pId;
+        });
 
-    txHelper.flushAndClear();
+        txHelper.flushAndClear();
 
         PricingRequest request = new PricingRequest();
         request.setProductId(productId);

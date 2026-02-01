@@ -1,6 +1,5 @@
 package com.bankengine.catalog;
 
-import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
@@ -58,7 +57,6 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void cleanUp() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             productFeatureLinkRepository.deleteAllInBatch();
             productPricingLinkRepository.deleteAllInBatch();
             productRepository.deleteAllInBatch();
@@ -68,7 +66,6 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
 
     private ProductType createAndSaveProductType(String name) {
         return txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             ProductType type = new ProductType();
             type.setName(name);
             return productTypeRepository.save(type);

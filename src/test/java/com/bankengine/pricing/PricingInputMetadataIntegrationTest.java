@@ -1,6 +1,5 @@
 package com.bankengine.pricing;
 
-import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.pricing.dto.PricingMetadataDto;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
@@ -58,7 +57,6 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void setup() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelper.setupCommittedMetadata();
         });
 
@@ -70,7 +68,6 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void tearDown() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelper.cleanupCommittedMetadata();
             metadataRepository.deleteAllInBatch();
         });
@@ -81,7 +78,6 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
 
     private PricingInputMetadata createTestMetadata(String key) {
         return txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             PricingInputMetadata metadata = new PricingInputMetadata();
             metadata.setAttributeKey(key);
             metadata.setDataType("STRING");
@@ -207,17 +203,13 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn409WhenDeletingMetadataWithDependencies() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-            return txHelper.createLinkedTierAndValue("ComponentForConflict", "TierForConflict");
-        });
+        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ComponentForConflict", "TierForConflict"));
 
         mockMvc.perform(delete(API_PATH + "/customerSegment"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Cannot delete Pricing Input Metadata 'customerSegment': It is used in one or more active tier conditions."));
 
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelper.deleteComponentGraphById(componentId);
         });
     }

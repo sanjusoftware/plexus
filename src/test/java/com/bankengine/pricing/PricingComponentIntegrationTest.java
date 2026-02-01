@@ -1,6 +1,5 @@
 package com.bankengine.pricing;
 
-import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.pricing.dto.*;
@@ -63,7 +62,6 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void setupMetadata() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelper.setupCommittedMetadata();
         });
         entityManager.clear();
@@ -83,14 +81,12 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
     private PricingComponent createComponent(String name) {
         return txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             return txHelper.createPricingComponentInDb(name);
         });
     }
 
     private PricingTier getTierFromComponentId(Long componentId) {
         return txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             PricingComponent component = componentRepository.findById(componentId)
                     .orElseThrow(() -> new IllegalStateException("Component not found"));
             return component.getPricingTiers().iterator().next();
@@ -220,7 +216,6 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     void shouldReturn409WhenDeletingComponentWithTiers() throws Exception {
         PricingComponent component = createComponent("ComponentWithTiers");
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelper.createCommittedTierDependency(component.getId(), "Tier 1");
         });
 
@@ -258,10 +253,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldUpdateTierAndValueAndReturn200() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-            return txHelper.createLinkedTierAndValue("ComponentToUpdate", "InitialTier");
-        });
+        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ComponentToUpdate", "InitialTier"));
         Long tierId = getTierFromComponentId(componentId).getId();
 
         // ARRANGE: Set the valueType to PERCENTAGE to match the test assertion
@@ -281,7 +273,6 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         // VERIFY
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             assertThat(tierRepository.findById(tierId).get().getTierName()).isEqualTo("UpdatedTierName");
         });
     }
@@ -289,10 +280,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldDeleteTierAndValueAndReturn204() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-            return txHelper.createLinkedTierAndValue("CompDelete", "TierDelete");
-        });
+        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("CompDelete", "TierDelete"));
         Long tierId = getTierFromComponentId(componentId).getId();
 
         mockMvc.perform(delete("/api/v1/pricing-components/{cId}/tiers/{tId}", componentId, tierId))
@@ -302,10 +290,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404ForNonExistentTierOrComponent() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-            return txHelper.createLinkedTierAndValue("Comp404", "Tier404");
-        });
+        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("Comp404", "Tier404"));
         Long tierId = getTierFromComponentId(componentId).getId();
         TieredPriceRequest dto = getValidTierValueDto();
 
@@ -327,10 +312,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldClearConditionsWhenUpdatingWithEmptyList() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-            return txHelper.createLinkedTierAndValue("ClearCondComp", "InitialTier");
-        });
+        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ClearCondComp", "InitialTier"));
         Long tierId = getTierFromComponentId(componentId).getId();
 
         TieredPriceRequest updateReq = getValidTierValueDto();
@@ -367,11 +349,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingComponent component = createComponent("MultiDep");
 
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-            // 1. Create a Tier (This is checked FIRST by the service)
             txHelper.createCommittedTierDependency(component.getId(), "CheckTier");
-
-            // 2. Create a Product Link (This is checked SECOND)
             ProductType type = txHelper.getOrCreateProductType("SAVINGS");
             Product product = txHelper.getOrCreateProduct("CheckProduct", type, "RETAIL");
             txHelper.linkProductToPricingComponent(product.getId(), component.getId(), BigDecimal.ZERO);

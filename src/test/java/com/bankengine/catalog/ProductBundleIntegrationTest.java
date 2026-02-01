@@ -72,7 +72,6 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void setupData() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             BankConfiguration config = bankConfigRepository.findByBankId(TEST_BANK_ID)
                     .orElseGet(() -> {
                         BankConfiguration newConfig = new BankConfiguration();
@@ -117,7 +116,6 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void tearDown() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             bundlePricingLinkRepository.deleteAllInBatch();
             bundleProductLinkRepository.deleteAllInBatch();
             productBundleRepository.deleteAllInBatch();
@@ -140,7 +138,6 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
 
         // Verification: The old bundle should still exist but be ARCHIVED
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             ProductBundle old = productBundleRepository.findById(existingBundleId)
                     .orElseThrow(() -> new AssertionError("Old bundle not found"));
 
@@ -186,11 +183,9 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = BUNDLE_ADMIN)
     @DisplayName("POST - Should reject bundle creation when products have conflicting categories")
     void createBundle_ShouldFail_OnCategoryConflict() throws Exception {
-        // 1. Create NEW, UNLINKED products specifically for this test
         final Long[] localProducts = new Long[2];
         txHelper.doInTransaction(() -> {
             ProductType type = txHelper.getOrCreateProductType("SAVINGS");
-            // We use unique names to ensure the helper creates NEW records
             localProducts[0] = txHelper.getOrCreateProduct("Conflict Product A", type, "RETAIL").getId();
             localProducts[1] = txHelper.getOrCreateProduct("Conflict Product B", type, "WEALTH").getId();
         });

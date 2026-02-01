@@ -90,7 +90,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void tearDown() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             featureLinkRepository.deleteAllInBatch();
             pricingLinkRepository.deleteAllInBatch();
             productRepository.deleteAllInBatch();
@@ -130,7 +129,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
 
         // 2. Setup "Type B" using find-or-create to avoid Unique Constraint violations
         Long typeBId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             return productTypeRepository.findByName("Type B")
                     .map(ProductType::getId)
                     .orElseGet(() -> {
@@ -154,7 +152,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
 
         // 4. Setup Foreign Bank Data (Find or Create)
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(OTHER_BANK_ID);
             if (productTypeRepository.findByName("Foreign Type X").isEmpty()) {
                 ProductType ptForeign = new ProductType();
                 ptForeign.setName("Foreign Type X");
@@ -330,7 +327,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     void shouldSyncProductFeatures() throws Exception {
         Long productId = createProductViaApi("DRAFT");
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             FeatureComponent feature = new FeatureComponent("Feature 1", FeatureComponent.DataType.STRING);
             featureComponentRepository.save(feature);
         });
@@ -350,7 +346,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     void shouldSyncProductPricing() throws Exception {
         Long productId = createProductViaApi("DRAFT");
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             PricingComponent pricing = new PricingComponent("Pricing 1", PricingComponent.ComponentType.FEE);
             pricingComponentRepository.save(pricing);
         });
@@ -376,7 +371,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         Long oldProductId = createProductViaApi("ACTIVE");
 
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             Product oldProduct = productRepository.findById(oldProductId).orElseThrow();
 
             FeatureComponent fc = featureComponentRepository.save(new FeatureComponent("Premium Support", FeatureComponent.DataType.STRING));
@@ -412,7 +406,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.expirationDate").value(newDate.minusDays(1).toString()));
         // Verify Archival of old
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             Product old = productRepository.findById(oldProductId).orElseThrow();
             assertThat(old.getStatus()).isEqualTo("ARCHIVED");
         });
@@ -465,7 +458,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldFilterProductsByBankIdAndProductType() throws Exception {
         Long typeCId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             ProductType pt = new ProductType(); pt.setName("Type C");
             return productTypeRepository.save(pt).getId();
         });

@@ -1,6 +1,5 @@
 package com.bankengine.catalog;
 
-import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
@@ -49,7 +48,6 @@ class PublicCatalogIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void clean() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             bundlePricingLinkRepository.deleteAllInBatch();
             productPricingLinkRepository.deleteAllInBatch();
             bundleProductLinkRepository.deleteAllInBatch();
@@ -92,10 +90,10 @@ class PublicCatalogIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @WithMockRole(roles = {"STRANGER"})
     @DisplayName("Public Bundle Display - Should show net total and list of benefits")
     void testPublicBundleDisplay() throws Exception {
         Long bundleId = txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             ProductBundle bundle = txHelper.setupFullBundleWithPricing(
                     "Welcome Bundle",
                     "Basic Savings",

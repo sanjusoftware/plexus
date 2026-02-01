@@ -92,7 +92,6 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void tearDown() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             linkRepository.deleteAllInBatch();
             featureComponentRepository.deleteAllInBatch();
         });
@@ -108,7 +107,6 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
     private FeatureComponent createFeatureComponentInDb(String name) {
         return txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             return featureComponentRepository.findByName(name)
                     .orElseGet(() -> {
                         FeatureComponent component = new FeatureComponent();
@@ -142,7 +140,6 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.id").isNumber());
         // Verify DB Tenancy & Auditing
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             FeatureComponent fc = featureComponentRepository.findByName("PremiumSupport").orElseThrow();
             assertThat(fc.getBankId()).isEqualTo(TEST_BANK_ID);
             assertThat(fc.getCreatedBy()).isNotEqualTo("SYSTEM"); // Should be mock user
@@ -256,7 +253,6 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
         // Assert via DB
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             assertThat(featureComponentRepository.findById(idToDelete)).isEmpty();
         });
     }
@@ -267,7 +263,6 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         FeatureComponent linkedComponent = createFeatureComponentInDb("LinkedFeature");
 
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             ProductFeatureLink link = new ProductFeatureLink();
             link.setFeatureComponent(linkedComponent);
             link.setProduct(sharedProduct);

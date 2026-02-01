@@ -111,7 +111,6 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void setup() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             linkRepository.deleteAllInBatch(linkRepository.findByProductId(product.getId()));
         });
         entityManager.clear();
@@ -159,7 +158,6 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.features.length()", is(2)));
 
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             assertThat(linkRepository.findByProductId(product.getId())).hasSize(2);
         });
     }
@@ -167,7 +165,6 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     @Test
     void shouldPerformFullSync_CreateUpdateAndDelete() throws Exception {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             linkRepository.save(createInitialLink(product, componentA, "10"));
             linkRepository.save(createInitialLink(product, componentC, "3.0"));
         });
@@ -184,17 +181,13 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.features.length()", is(2)));
 
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             List<ProductFeatureLink> finalLinks = linkRepository.findByProductId(product.getId());
-
             assertThat(finalLinks.stream().map(l -> l.getFeatureComponent().getId()).collect(Collectors.toSet()))
                     .containsExactlyInAnyOrder(componentA.getId(), componentB.getId());
-
             ProductFeatureLink linkA = finalLinks.stream()
                     .filter(l -> l.getFeatureComponent().getId().equals(componentA.getId()))
                     .findFirst().orElseThrow();
             assertThat(linkA.getFeatureValue()).isEqualTo("50");
-
             assertThat(finalLinks.stream().anyMatch(l -> l.getFeatureComponent().getId().equals(componentC.getId()))).isFalse();
         });
     }

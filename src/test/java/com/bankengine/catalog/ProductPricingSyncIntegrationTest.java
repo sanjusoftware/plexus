@@ -101,7 +101,6 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void cleanUpLinks() {
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             pricingLinkRepository.deleteAllInBatch(pricingLinkRepository.findByProductId(productId));
         });
         entityManager.clear();
@@ -149,7 +148,6 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
 
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             assertThat(pricingLinkRepository.findByProductId(productId)).hasSize(2);
         });
     }
@@ -158,7 +156,6 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     void shouldPerformFullSync_CreateAndDelete() throws Exception {
         // ARRANGE: Seed initial state
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             pricingLinkRepository.save(createInitialLink(productId, compRateId));
             pricingLinkRepository.save(createInitialLink(productId, compDiscountId));
         });
@@ -176,11 +173,8 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
 
         // VERIFY
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
             List<ProductPricingLink> finalLinks = pricingLinkRepository.findByProductId(productId);
             assertThat(finalLinks).hasSize(2);
-
-            // Discount should be gone
             assertThat(pricingLinkRepository.existsByPricingComponentIdAndProductId(compDiscountId, productId)).isFalse();
         });
     }

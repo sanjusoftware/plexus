@@ -274,13 +274,20 @@ public class TestTransactionHelper {
 
     @Transactional
     public <T> T doInTransaction(Supplier<T> action) {
-        return action.get();
+        try {
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            return action.get();
+        } finally {
+             TenantContextHolder.clear();
+        }
     }
 
     @Transactional
     public void doInTransaction(Runnable action) {
-        TenantContextHolder.setBankId(TEST_BANK_ID);
-        action.run();
+        doInTransaction(() -> {
+            action.run();
+            return null;
+        });
     }
 
     @Transactional
