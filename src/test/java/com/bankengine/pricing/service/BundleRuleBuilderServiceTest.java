@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -83,5 +84,28 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
 
         assertTrue(drl.contains("rule \"Placeholder_bundle\""));
         assertTrue(drl.contains("BundlePricingInput") && drl.contains("then"), "Placeholder must reference the correct Fact");
+    }
+
+    @Test
+    @DisplayName("Should handle tiers with no price values gracefully")
+    void testBuildRHSAction_noPriceValues() {
+        // ARRANGE
+        PricingComponent waiver = mock(PricingComponent.class);
+        when(waiver.getName()).thenReturn("Empty Waiver");
+
+        PricingTier tier = mock(PricingTier.class);
+        when(tier.getId()).thenReturn(111L);
+        // Explicitly set price values to empty
+        when(tier.getPriceValues()).thenReturn(Collections.emptySet());
+
+        when(waiver.getPricingTiers()).thenReturn(List.of(tier));
+        when(componentRepository.findByTypeIn(any())).thenReturn(List.of(waiver));
+
+        // ACT
+        String drl = bundleRuleBuilderService.buildAllRulesForCompilation();
+
+        // ASSERT
+        assertTrue(drl.contains("// No adjustment defined"), "Should contain the empty adjustment comment");
+        assertFalse(drl.contains("addAdjustment"), "Should not attempt to add an adjustment");
     }
 }
