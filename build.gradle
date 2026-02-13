@@ -9,7 +9,7 @@ group = 'com.bankengine.catalog'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    sourceCompatibility = '17'
+    sourceCompatibility = '21'
 }
 
 repositories {
@@ -29,6 +29,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.security:spring-security-oauth2-resource-server'
     implementation 'org.springframework.security:spring-security-oauth2-jose'
+
+    // FORCE UPGRADE for Transitive Vulnerabilities
+    constraints {
+        implementation('com.thoughtworks.xstream:xstream:1.4.21') {
+            because 'fixes CVE-2024-47072 (High Severity DoS vulnerability)'
+        }
+    }
 
     // Drools Dependencies
     def droolsVersion = '8.44.2.Final'
@@ -50,11 +57,13 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     runtimeOnly 'org.postgresql:postgresql'
-}
 
-tasks.named('test') {
-    useJUnitPlatform()
-    finalizedBy jacocoTestReport
+    // Actuator for Health Checks
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Optional: Improved observability
+    implementation 'io.micrometer:micrometer-observation'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 }
 
 def coverageExclusions = [
@@ -63,14 +72,25 @@ def coverageExclusions = [
     "**/config/**",
     "**/exception/**",
     "**/*Application*",
-    "**/*MapperImpl*"
+    "**/*MapperImpl*",
+    "org/drools/drl/parser/lang/**"
 ]
+
+tasks.named('test') {
+    useJUnitPlatform()
+
+    jacoco {
+        excludes = ["org/drools/drl/parser/lang/*"]
+    }
+
+    finalizedBy jacocoTestReport
+}
 
 jacocoTestReport {
     dependsOn test
     reports {
         xml.required = true
-        html.required = true // Generates visual report in build/reports/jacoco/test/html
+        html.required = true
     }
     afterEvaluate {
         classDirectories.setFrom(files(classDirectories.files.collect {
@@ -81,7 +101,7 @@ jacocoTestReport {
 
 jacocoTestCoverageVerification {
     violationRules {
-        // Global rule: 85% for the whole project (excluding noise)
+        // Global rule: 85% for the whole project
         rule {
             limit {
                 counter = 'LINE'

@@ -27,6 +27,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
             TenantContextHolder.setBankId(bankId);
             filterChain.doFilter(request, response);
         } catch (IllegalStateException e) {
+            logger.warn("Tenant context setup failed: " + e.getMessage());
             filterChain.doFilter(request, response);
         } finally {
             TenantContextHolder.clear();

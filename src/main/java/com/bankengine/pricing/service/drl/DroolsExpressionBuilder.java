@@ -1,5 +1,6 @@
 package com.bankengine.pricing.service.drl;
 
+import com.bankengine.pricing.model.PricingDataType;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.model.TierCondition.Operator;
@@ -8,90 +9,67 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-/**
- * Utility responsible for generating the Drools Rule Language (DRL) expression fragment
- * for a single TierCondition.
- */
 @Component
 public class DroolsExpressionBuilder {
 
-    /**
-     * Converts a structured TierCondition into a safe Drools expression fragment
-     * using the customAttributes map access syntax and performing necessary type casting.
-     *
-     * @param condition The TierCondition object defining the rule.
-     * @param metadata The PricingInputMetadata for this condition's attributeName.
-     * @return A DRL condition fragment (e.g., "((java.math.BigDecimal) customAttributes["amount"]) > 1000")
-     */
     public String buildExpression(TierCondition condition, PricingInputMetadata metadata) {
-        String attributeValue = condition.getAttributeValue();
-        Operator operator = condition.getOperator();
-        String attributeName = condition.getAttributeName();
+        String val = condition.getAttributeValue();
+        Operator op = condition.getOperator();
 
-        if (attributeValue == null || attributeValue.trim().isEmpty()) {
-            return "true";
-        }
+        if (val == null || val.trim().isEmpty()) return "true";
 
-        String dataType = metadata.getDataType().toUpperCase();
-        String fqnType = metadata.getFqnType();
-        boolean needsQuotes = "STRING".equals(dataType) || "DATE".equals(dataType);
+        PricingDataType type = PricingDataType.fromString(metadata.getDataType());
+        String fqn = type.getFqn();
+        boolean quoted = type.isQuoted();
 
-        // 1. Determine the access path and casting
-        String mapAccess = String.format("customAttributes[\"%s\"]", attributeName);
-        String accessPath = (!"STRING".equals(dataType))
-                ? String.format("((%s) %s)", fqnType, mapAccess)
-                : mapAccess;
+        String access = String.format("customAttributes[\"%s\"]", condition.getAttributeName());
+        String path = (type != PricingDataType.STRING) ? String.format("((%s) %s)", fqn, access) : access;
 
-        // 2. Handle the 'IN' operator (Shared across types)
-        if (operator == Operator.IN) {
-            String quotedValues = Arrays.stream(attributeValue.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(s -> needsQuotes ? String.format("\"%s\"", s) : s)
+        if (op == Operator.IN) {
+            String list = Arrays.stream(val.split(","))
+                    .map(String::trim).filter(s -> !s.isEmpty())
+                    .map(s -> quoted ? "\"" + s + "\"" : s)
                     .collect(Collectors.joining(", "));
-            return String.format("%s in ( %s )", accessPath, quotedValues);
+            return String.format("%s in ( %s )", path, list);
         }
 
-        // 3. Type-Specific Relational Logic
-        if ("java.math.BigDecimal".equals(fqnType)) {
-            String rhs = String.format("new java.math.BigDecimal(\"%s\")", attributeValue.trim());
-            return switch (operator) {
-                case EQ -> String.format("%s.compareTo(%s) == 0", accessPath, rhs);
-                case NE -> String.format("%s.compareTo(%s) != 0", accessPath, rhs);
-                case GT -> String.format("%s.compareTo(%s) > 0", accessPath, rhs);
-                case GE -> String.format("%s.compareTo(%s) >= 0", accessPath, rhs);
-                case LT -> String.format("%s.compareTo(%s) < 0", accessPath, rhs);
-                case LE -> String.format("%s.compareTo(%s) <= 0", accessPath, rhs);
-                default -> throw new IllegalStateException("Unsupported BigDecimal operator: " + operator);
+        if (type == PricingDataType.DECIMAL) {
+            String rhs = "new java.math.BigDecimal(\"" + val.trim() + "\")";
+            return switch (op) {
+                case EQ -> path + ".compareTo(" + rhs + ") == 0";
+                case NE -> path + ".compareTo(" + rhs + ") != 0";
+                case GT -> path + ".compareTo(" + rhs + ") > 0";
+                case GE -> path + ".compareTo(" + rhs + ") >= 0";
+                case LT -> path + ".compareTo(" + rhs + ") < 0";
+                case LE -> path + ".compareTo(" + rhs + ") <= 0";
+                default -> throw new IllegalStateException("Bad Decimal Op: " + op);
             };
         }
 
-        if ("java.time.LocalDate".equals(fqnType)) {
-            // RHS: java.time.LocalDate.parse("2026-01-31")
-            String rhs = String.format("java.time.LocalDate.parse(\"%s\")", attributeValue.trim());
-            return switch (operator) {
-                case EQ -> String.format("%s.isEqual(%s)", accessPath, rhs);
-                case NE -> String.format("!%s.isEqual(%s)", accessPath, rhs);
-                case GT -> String.format("%s.isAfter(%s)", accessPath, rhs);
-                case GE -> String.format("(!%s.isBefore(%s))", accessPath, rhs);
-                case LT -> String.format("%s.isBefore(%s)", accessPath, rhs);
-                case LE -> String.format("(!%s.isAfter(%s))", accessPath, rhs);
-                default -> throw new IllegalStateException("Unsupported Date operator: " + operator);
+        if (type == PricingDataType.DATE) {
+            String rhs = "java.time.LocalDate.parse(\"" + val.trim() + "\")";
+            return switch (op) {
+                case EQ -> path + ".isEqual(" + rhs + ")";
+                case NE -> "!" + path + ".isEqual(" + rhs + ")";
+                case GT -> path + ".isAfter(" + rhs + ")";
+                case GE -> "(!" + path + ".isBefore(" + rhs + "))";
+                case LT -> path + ".isBefore(" + rhs + ")";
+                case LE -> "(!" + path + ".isAfter(" + rhs + "))";
+                default -> throw new IllegalStateException("Bad Date Op: " + op);
             };
         }
 
-        // 4. Default Relational Logic (Long, Boolean, String EQ)
-        String operatorSymbol = switch (operator) {
+        String symbol = switch (op) {
             case EQ -> "==";
             case NE -> "!=";
             case GT -> ">";
             case GE -> ">=";
             case LT -> "<";
             case LE -> "<=";
-            default -> throw new IllegalStateException("Unsupported operator: " + operator);
+            default -> throw new IllegalStateException("Bad Op: " + op);
         };
 
-        String formattedValue = needsQuotes ? String.format("\"%s\"", attributeValue.trim()) : attributeValue.trim();
-        return String.format("%s %s %s", accessPath, operatorSymbol, formattedValue);
+        String finalVal = quoted ? "\"" + val.trim() + "\"" : val.trim();
+        return String.format("%s %s %s", path, symbol, finalVal);
     }
 }

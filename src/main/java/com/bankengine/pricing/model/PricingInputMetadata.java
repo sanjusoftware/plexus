@@ -23,27 +23,20 @@ public class PricingInputMetadata extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // The key used in the PricingInput.customAttributes map and TierCondition.attributeName
     @Column(name = "attribute_key", nullable = false)
     private String attributeKey;
 
-    // The type required for correct DRL generation and runtime casting.
-    // Must be a valid Java class name or a known alias: STRING, DECIMAL, INTEGER, BOOLEAN
     @Column(name = "data_type", nullable = false)
     private String dataType;
 
-    // Friendly name for UI display
     @Column(name = "display_name")
     private String displayName;
 
-    // Helper to get the fully qualified type name for DRL casting
     public String getFqnType() {
-        return switch (dataType.toUpperCase()) {
-            case "DECIMAL" -> "java.math.BigDecimal";
-            case "INTEGER" -> "java.lang.Long";
-            case "BOOLEAN" -> "java.lang.Boolean";
-            case "DATE"    -> "java.time.LocalDate";
-            default -> "java.lang.String";
-        };
+        return PricingDataType.fromString(dataType).getFqn();
+    }
+
+    public boolean needsQuotes() {
+        return PricingDataType.fromString(dataType).isQuoted();
     }
 }

@@ -1,6 +1,7 @@
 package com.bankengine.auth.security;
 
 import com.bankengine.auth.service.PermissionMappingService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
@@ -36,6 +38,7 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         String bankId = jwt.getClaimAsString(BANK_ID_CLAIM_NAME);
 
         if (bankId == null || bankId.trim().isEmpty()) {
+            log.error("Authentication failed: Missing bank_id claim");
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_token"), "Missing bank_id claim in JWT");
         }
 
@@ -61,6 +64,8 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         List<String> roleNames = jwt.getClaimAsStringList(ROLES_CLAIM_NAME);
 
         Set<String> permissions = permissionMappingService.getPermissionsForRoles(roleNames);
+        log.debug("SECURITY-DEBUG: User '{}' with roles {} has been granted permissions: {}",
+                jwt.getClaimAsString("sub"), roleNames, permissions);
 
         return permissions.stream()
                 .map(SimpleGrantedAuthority::new)

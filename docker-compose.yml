@@ -1,8 +1,8 @@
-version: '3.8'
-
 services:
+  # 1. PostgreSQL Database
   db:
     image: postgres:15-alpine
+    container_name: bankengine-db
     environment:
       POSTGRES_DB: bankengine
       POSTGRES_USER: user
@@ -15,15 +15,49 @@ services:
       timeout: 5s
       retries: 5
 
+  # 2. Mock OAuth Server
+  oauth-mock:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    container_name: oauth-mock
+    ports:
+      - "9090:9090" # Debugger available at http://localhost:9090/default/debugger
+    environment:
+      - SERVER_PORT=9090
+    networks:
+      default:
+        aliases:
+          - identity-provider # Internal DNS name for the App
+
+  # 3. Spring Boot Application
   app:
     build: .
+    container_name: bankengine-app
     ports:
       - "8080:8080"
+    extra_hosts:
+      - "identity-provider:host-gateway"
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/bankengine
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
-      SPRING_PROFILES_ACTIVE: docker
+
+      # 1. Internal discovery for the App
+      JWT_ISSUER_URI: http://identity-provider:9090/default
+
+      # 2. External links for your Browser/Swagger
+      SWAGGER_AUTH_URL: http://localhost:9090/default/authorize
+      SWAGGER_TOKEN_URL: http://localhost:9090/default/token
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
       db:
         condition: service_healthy
+      oauth-mock:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 25s

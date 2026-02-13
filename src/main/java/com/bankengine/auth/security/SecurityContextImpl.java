@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class SecurityContextImpl implements SecurityContext {
-
-    // Define the JWT claim key where the bank ID is stored
     private static final String BANK_ID_CLAIM = "bank_id"; // <-- You must configure your OAuth server to issue this claim
 
     @Override
@@ -19,7 +17,6 @@ public class SecurityContextImpl implements SecurityContext {
             throw new IllegalStateException("User is not authenticated or security context is empty.");
         }
 
-        // The principal object for a validated OAuth2 Resource Server request is usually a Jwt object
         if (authentication.getPrincipal() instanceof Jwt jwt) {
 
             // 1. Attempt to get the Bank ID from the custom claim

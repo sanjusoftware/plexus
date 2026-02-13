@@ -5,12 +5,10 @@ import com.bankengine.catalog.dto.ProductResponse;
 import com.bankengine.catalog.dto.ProductVersionRequest;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.mapstruct.factory.Mappers;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -20,13 +18,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@ExtendWith(SpringExtension.class)
-@SpringBootTest
-@ActiveProfiles("test")
 public class ProductMapperTest {
 
-    @Autowired
-    private ProductMapper mapper;
+    private final ProductMapper mapper = Mappers.getMapper(ProductMapper.class);
+
+    @BeforeEach
+    void setUp() {
+        // 1. Manually instantiate the sub-mappers
+        ProductTypeMapper typeMapper = Mappers.getMapper(ProductTypeMapper.class);
+        FeatureLinkMapper featureMapper = Mappers.getMapper(FeatureLinkMapper.class);
+        PricingLinkMapper pricingLinkMapper = Mappers.getMapper(PricingLinkMapper.class);
+
+        // 2. Inject them into the main mapper
+        ReflectionTestUtils.setField(mapper, "productTypeMapper", typeMapper);
+        ReflectionTestUtils.setField(mapper, "featureLinkMapper", featureMapper);
+        ReflectionTestUtils.setField(mapper, "pricingLinkMapper", pricingLinkMapper);
+    }
 
     @Test
     void shouldCorrectlyMapToNewVersion() {
@@ -73,17 +80,17 @@ public class ProductMapperTest {
 
     @Test
     void testToResponseList() {
-        Product entity = new Product();
-        entity.setId(1L);
-        entity.setName("Test Product");
-        entity.setBankId("BANK-001");
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Test Product");
+        product.setBankId("BANK-001");
 
-        List<ProductResponse> dtoList = mapper.toResponseList(Collections.singletonList(entity));
+        List<ProductResponse> dtoList = mapper.toResponseList(Collections.singletonList(product));
 
         assertNotNull(dtoList);
         assertEquals(1, dtoList.size());
-        assertEquals(entity.getId(), dtoList.get(0).getId());
-        assertEquals(entity.getName(), dtoList.get(0).getName());
+        assertEquals(product.getId(), dtoList.get(0).getId());
+        assertEquals(product.getName(), dtoList.get(0).getName());
     }
 
     @Test

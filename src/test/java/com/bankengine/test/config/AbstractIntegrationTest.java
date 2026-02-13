@@ -6,6 +6,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
@@ -14,6 +16,7 @@ import java.util.Set;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@MockBean(JwtDecoder.class)
 public abstract class AbstractIntegrationTest {
 
     public static final String TEST_BANK_ID = "BANK_A";

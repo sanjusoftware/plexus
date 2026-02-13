@@ -5,8 +5,7 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.info.License;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.security.*;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
@@ -16,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
         description = "Comprehensive management of banking products, features, and dynamic pricing rules.",
         version = "v1.0.0",
         contact = @Contact(
+            name = "Sanjeev Mishra",
             email = "sanjusoftware@gmail.com"
         ),
         license = @License(
@@ -23,16 +23,22 @@ import org.springframework.context.annotation.Configuration;
             url = "https://yourcompanywebsite.com/licenses/proprietary"
         )
     ),
-
     security = @SecurityRequirement(name = "bearerAuth")
 )
 @SecurityScheme(
     name = "bearerAuth",
-    type = SecuritySchemeType.HTTP,
-    scheme = "bearer",
-    bearerFormat = "JWT",
-    description = "Enter JWT Bearer token **without** the 'Bearer ' prefix."
+    type = SecuritySchemeType.OAUTH2, // Using OAUTH2 to support both "Paste Token" and "Login Button"
+    description = "You can manually paste a JWT token or use the OAuth2 login flow.",
+    flows = @OAuthFlows(
+        authorizationCode = @OAuthFlow(
+            authorizationUrl = "${swagger.auth-url}",
+            tokenUrl = "${swagger.token-url}",
+            scopes = {
+                @OAuthScope(name = "openid", description = "Standard OIDC"),
+                @OAuthScope(name = "profile", description = "User profile")
+            }
+        )
+    )
 )
 public class OpenApiConfig {
-    // This class remains empty, configuration is done via annotations.
 }

@@ -6,6 +6,8 @@ import com.bankengine.pricing.model.TierCondition.Operator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,7 +25,6 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_BigDecimal_EQ() {
         TierCondition condition = createCondition("amount", Operator.EQ, "500.00");
         PricingInputMetadata metadata = createMetadata("DECIMAL");
-
         String result = builder.buildExpression(condition, metadata);
         assertEquals("((java.math.BigDecimal) customAttributes[\"amount\"]).compareTo(new java.math.BigDecimal(\"500.00\")) == 0", result);
     }
@@ -33,7 +34,6 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_Date_GT() {
         TierCondition condition = createCondition("effectiveDate", Operator.GT, "2026-01-01");
         PricingInputMetadata metadata = createMetadata("DATE");
-
         String result = builder.buildExpression(condition, metadata);
         assertEquals("((java.time.LocalDate) customAttributes[\"effectiveDate\"]).isAfter(java.time.LocalDate.parse(\"2026-01-01\"))", result);
     }
@@ -63,7 +63,6 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_String_IN() {
         TierCondition condition = createCondition("segment", Operator.IN, "RETAIL, PREMIUM");
         PricingInputMetadata metadata = createMetadata("STRING");
-
         String result = builder.buildExpression(condition, metadata);
         assertEquals("customAttributes[\"segment\"] in ( \"RETAIL\", \"PREMIUM\" )", result);
     }
@@ -91,10 +90,8 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_BigDecimal_LT() {
         TierCondition condition = createCondition("limit", Operator.LT, "100.00");
         PricingInputMetadata metadata = createMetadata("DECIMAL");
-
         String result = builder.buildExpression(condition, metadata);
 
-        // Should result in: .compareTo(...) < 0
         assertTrue(result.contains(".compareTo("), "Should use compareTo for BigDecimal");
         assertTrue(result.endsWith("< 0"), "Should end with < 0 for LT operator");
     }
@@ -104,10 +101,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_Date_GE() {
         TierCondition condition = createCondition("effectiveDate", Operator.GE, "2026-01-01");
         PricingInputMetadata metadata = createMetadata("DATE");
-
         String result = builder.buildExpression(condition, metadata);
-
-        // Logic: (Not Before) is equivalent to (Greater than or Equal)
         assertEquals("(!((java.time.LocalDate) customAttributes[\"effectiveDate\"]).isBefore(java.time.LocalDate.parse(\"2026-01-01\")))", result);
     }
 
@@ -188,11 +182,75 @@ class DroolsExpressionBuilderTest {
     @DisplayName("Unsupported Operator - Should throw IllegalStateException")
     void testBuildExpression_UnsupportedOperator() {
         PricingInputMetadata metadata = createMetadata("LONG");
-        TierCondition condition = createCondition("id", null, "10"); // Force default branch
-
-        // Since we can't easily pass a null to the switch, we use a reflection or
-        // a mock if necessary, but usually, a simple null check suffices:
+        TierCondition condition = createCondition("id", null, "10");
         assertThrows(NullPointerException.class, () -> builder.buildExpression(condition, metadata));
+    }
+
+    @Test
+    @DisplayName("Unknown FQN Type - Should throw IllegalStateException")
+    void testBuildExpression_UnknownFqnType() {
+        TierCondition condition = createCondition("mystery", Operator.EQ, "val");
+        PricingInputMetadata metadata = createMetadata("MYSTERY_TYPE");
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> builder.buildExpression(condition, metadata));
+
+        assertTrue(ex.getMessage().contains("Unsupported pricing data type"),
+                "Error message should indicate the type is unsupported");
+    }
+
+    @Test
+    @DisplayName("Integer Alias - Should map to Long cast")
+    void testBuildExpression_IntegerAlias() {
+        TierCondition condition = createCondition("count", Operator.EQ, "5");
+        PricingInputMetadata metadata = createMetadata("INTEGER");
+        String result = builder.buildExpression(condition, metadata);
+        // Even though input was INTEGER, DRL uses Long cast
+        assertEquals("((java.lang.Long) customAttributes[\"count\"]) == 5", result);
+    }
+
+    @Test
+    @DisplayName("Null Operator - Should handle gracefully")
+    void testBuildExpression_NullOperator() {
+        TierCondition condition = createCondition("amount", null, "100");
+        PricingInputMetadata metadata = createMetadata("DECIMAL");
+        assertThrows(RuntimeException.class, () -> builder.buildExpression(condition, metadata));
+    }
+
+    @Test
+    @DisplayName("LocalDate NE - Should cover negated isEqual branch")
+    void testBuildExpression_Date_NE() {
+        TierCondition condition = createCondition("dt", Operator.NE, "2026-01-01");
+        PricingInputMetadata metadata = createMetadata("DATE");
+        String result = builder.buildExpression(condition, metadata);
+        assertEquals("!((java.time.LocalDate) customAttributes[\"dt\"]).isEqual(java.time.LocalDate.parse(\"2026-01-01\"))", result);
+    }
+
+    @Test
+    @DisplayName("BigDecimal GE - Should cover compareTo >= 0 branch")
+    void testBuildExpression_BigDecimal_GE() {
+        TierCondition condition = createCondition("balance", Operator.GE, "1000");
+        PricingInputMetadata metadata = createMetadata("DECIMAL");
+        String result = builder.buildExpression(condition, metadata);
+        assertEquals("((java.math.BigDecimal) customAttributes[\"balance\"]).compareTo(new java.math.BigDecimal(\"1000\")) >= 0", result);
+    }
+
+    @ParameterizedTest
+    @DisplayName("Long/Integer Relational Operators - Coverage for all branches")
+    @CsvSource({
+            "NE, !=, 10",
+            "LT, <, 10",
+            "GE, >=, 10",
+            "LE, <=, 10",
+            "GT, >, 10"
+    })
+
+    void testBuildExpression_Integer_RelationalBranches(Operator op, String expectedSymbol, String value) {
+        TierCondition condition = createCondition("age", op, value);
+        PricingInputMetadata metadata = createMetadata("INTEGER");
+
+        String result = builder.buildExpression(condition, metadata);
+        assertEquals("((java.lang.Long) customAttributes[\"age\"]) " + expectedSymbol + " " + value, result);
     }
 
     private TierCondition createCondition(String name, Operator op, String val) {
