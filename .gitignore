@@ -1,2 +1,11 @@
-/build/*
-/.gradle/*
+# IDE Settings
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Build and Gradle
+build/
+.gradle/
+bin/

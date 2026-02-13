@@ -65,20 +65,32 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder(OAuth2ResourceServerProperties properties) {
-        String issuerUri = properties.getJwt().getIssuerUri();
-        NimbusJwtDecoder jwtDecoder = JwtDecoders.fromIssuerLocation(issuerUri);
+        // 1. Get the issuer exactly as defined in your Environment Variables
+        String configuredIssuer = properties.getJwt().getIssuerUri();
 
-        // We allow BOTH identity-provider and localhost as valid issuers
-        OAuth2TokenValidator<Jwt> audienceValidator = new JwtTimestampValidator();
+        // 2. Initialize the decoder using the OIDC discovery endpoint
+        NimbusJwtDecoder jwtDecoder = JwtDecoders.fromIssuerLocation(configuredIssuer);
+
+        OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
+
+        // 3. DYNAMIC VALIDATOR: Trusts the issuer the app was told to use
         OAuth2TokenValidator<Jwt> issuerValidator = token -> {
-            String issuer = token.getIssuer().toString();
-            if (issuer.contains("localhost:9090") || issuer.contains("identity-provider:9090")) {
+            String tokenIssuer = token.getIssuer().toString();
+
+            // Match if token issuer equals configured issuer
+            // OR handle the Docker 'identity-provider' vs 'localhost' alias quirk
+            if (tokenIssuer.equals(configuredIssuer) ||
+                    (configuredIssuer.contains("localhost") && tokenIssuer.contains("identity-provider"))) {
                 return OAuth2TokenValidatorResult.success();
             }
-            return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_issuer", "Issuer mismatch", null));
+
+            return OAuth2TokenValidatorResult.failure(new OAuth2Error(
+                    "invalid_issuer",
+                    "Token issuer " + tokenIssuer + " does not match configured " + configuredIssuer,
+                    null));
         };
 
-        jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(audienceValidator, issuerValidator));
+        jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(timestampValidator, issuerValidator));
         return jwtDecoder;
     }
 }
