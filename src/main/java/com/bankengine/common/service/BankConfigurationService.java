@@ -31,6 +31,7 @@ public class BankConfigurationService extends BaseService {
     public BankConfigurationResponse createBank(BankConfigurationRequest request) {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(request.getBankId());
+        config.setIssuerUrl(request.getIssuerUrl());
         config.setAllowProductInMultipleBundles(request.isAllowProductInMultipleBundles());
 
         if (request.getCategoryConflictRules() != null) {
@@ -41,8 +42,8 @@ public class BankConfigurationService extends BaseService {
 
         bankConfigurationRepository.save(config);
 
-        // Create SUPER_ADMIN role for the new bank
-        createSuperAdminRole(request.getBankId());
+        // Create BANK_ADMIN role for the new bank
+        createBankAdminRole(request.getBankId());
 
         return mapToResponse(config);
     }
@@ -53,7 +54,9 @@ public class BankConfigurationService extends BaseService {
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
         validateTenantAccess(config.getBankId());
-
+        if (request.getIssuerUrl() != null) {
+            config.setIssuerUrl(request.getIssuerUrl());
+        }
         config.setAllowProductInMultipleBundles(request.isAllowProductInMultipleBundles());
         if (request.getCategoryConflictRules() != null) {
             config.getCategoryConflictRules().clear();
@@ -83,7 +86,7 @@ public class BankConfigurationService extends BaseService {
         }
     }
 
-    private void createSuperAdminRole(String bankId) {
+    private void createBankAdminRole(String bankId) {
         Set<String> allAuthorities = authorityDiscoveryService.discoverAllAuthorities();
 
         // Filter out system-level authorities for bank-level super admins to ensure proper isolation
@@ -96,7 +99,7 @@ public class BankConfigurationService extends BaseService {
         bankAuthorities.add("bank:config:write");
 
         Role superAdmin = new Role();
-        superAdmin.setName("SUPER_ADMIN");
+        superAdmin.setName("BANK_ADMIN");
         superAdmin.setBankId(bankId);
         superAdmin.setAuthorities(new HashSet<>(bankAuthorities));
         roleRepository.save(superAdmin);
@@ -106,12 +109,13 @@ public class BankConfigurationService extends BaseService {
     }
 
     private BankConfigurationResponse mapToResponse(BankConfiguration config) {
-        return new BankConfigurationResponse(
-                config.getBankId(),
-                config.isAllowProductInMultipleBundles(),
-                config.getCategoryConflictRules().stream()
+        return BankConfigurationResponse.builder()
+                .bankId(config.getBankId())
+                .allowProductInMultipleBundles(config.isAllowProductInMultipleBundles())
+                .issuerUrl(config.getIssuerUrl())
+                .categoryConflictRules(config.getCategoryConflictRules().stream()
                         .map(r -> new BankConfigurationRequest.CategoryConflictDto(r.getCategoryA(), r.getCategoryB()))
-                        .collect(Collectors.toList())
-        );
+                        .collect(Collectors.toList()))
+                .build();
     }
 }

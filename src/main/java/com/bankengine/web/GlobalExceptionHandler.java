@@ -109,9 +109,19 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
-        String message = "Data integrity conflict: Unique constraint violation (e.g., duplicate code or name).";
-        HttpStatus status = HttpStatus.CONFLICT;
-        Map<String, Object> body = createErrorBody(status, "Conflict (Data Integrity)", message);
-        return new ResponseEntity<>(body, status);
+    String rootMsg = ex.getRootCause() != null ? ex.getRootCause().getMessage() : "";
+    String message;
+
+    if (rootMsg.contains("uk_bank_issuer_url")) {
+        message = "The provided Issuer URL is already registered with another bank.";
+    } else if (rootMsg.contains("bank_id")) {
+        message = "The provided Bank ID is already in use.";
+    } else {
+        message = "Data integrity conflict: A unique constraint was violated.";
     }
+
+    HttpStatus status = HttpStatus.CONFLICT;
+    Map<String, Object> body = createErrorBody(status, "Conflict", message);
+    return new ResponseEntity<>(body, status);
+}
 }

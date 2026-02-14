@@ -18,7 +18,6 @@ import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.web.exception.NotFoundException;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,8 +67,6 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     private PricingComponentService pricingComponentService;
     @Autowired
     private KieContainerReloadService kieContainerReloadService;
-    @Autowired
-    private EntityManager entityManager;
     @Autowired
     private TransactionTemplate transactionTemplate;
     @Autowired

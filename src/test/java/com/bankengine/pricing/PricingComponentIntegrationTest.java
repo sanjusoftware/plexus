@@ -10,7 +10,6 @@ import com.bankengine.pricing.repository.*;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +42,6 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
     @Autowired private PricingComponentRepository pricingComponentRepository;
     @Autowired private TestTransactionHelper txHelper;
-    @Autowired private EntityManager entityManager;
 
     public static final String ROLE_PREFIX = "PCIT_";
     private static final String ADMIN_ROLE = ROLE_PREFIX + "TEST_ADMIN";

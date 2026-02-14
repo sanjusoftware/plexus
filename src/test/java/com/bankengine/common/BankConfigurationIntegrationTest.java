@@ -4,6 +4,7 @@ import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.repository.BankConfigurationRepository;
+import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,17 +28,20 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private BankConfigurationRepository bankConfigurationRepository;
-    @Autowired private com.bankengine.pricing.TestTransactionHelper txHelper;
-    @Autowired private com.bankengine.auth.service.PermissionMappingService permissionMappingService;
+    @Autowired private TestTransactionHelper txHelper;
 
-    // Pattern: Define Role Constants with unique prefixes
     public static final String ROLE_PREFIX = "BCIT_";
     private static final String SYSTEM_ADMIN_ROLE = ROLE_PREFIX + "SYSTEM_ADMIN";
     private static final String BANK_A_ADMIN_ROLE = ROLE_PREFIX + "BANK_A_ADMIN";
     private static final String UNAUTHORIZED_ROLE = ROLE_PREFIX + "GUEST";
 
+    // Standard test issuers
+    private static final String ISSUER_A = "https://login.microsoftonline.com/tenant-a/v2.0";
+    private static final String ISSUER_B = "https://login.microsoftonline.com/tenant-b/v2.0";
+    private static final String NEW_ISSUER = "https://login.microsoftonline.com/new-tenant/v2.0";
+
     @BeforeAll
-    static void setupCommittedData(@Autowired com.bankengine.pricing.TestTransactionHelper txHelperStatic) {
+    static void setupCommittedData(@Autowired TestTransactionHelper txHelperStatic) {
         seedBaseRoles(txHelperStatic, Map.of(
             SYSTEM_ADMIN_ROLE, Set.of("system:bank:write", "system:bank:read"),
             BANK_A_ADMIN_ROLE, Set.of("bank:config:read", "bank:config:write"),
@@ -47,15 +51,21 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setup() {
-        TenantContextHolder.setSystemMode(true);
-        bankConfigurationRepository.deleteAll();
+        try {
+            TenantContextHolder.setSystemMode(true);
+            bankConfigurationRepository.deleteAllInBatch();
+            bankConfigurationRepository.flush();
+            entityManager.clear();
+        } finally {
+            TenantContextHolder.setSystemMode(false);
+        }
         TenantContextHolder.clear();
     }
 
     @Test
     @WithMockRole(roles = {SYSTEM_ADMIN_ROLE}, bankId = "SYSTEM")
     void systemAdmin_CanCreateAndSeeAllBanks() throws Exception {
-        BankConfigurationRequest request = new BankConfigurationRequest("NEW_BANK", true, List.of());
+        BankConfigurationRequest request = new BankConfigurationRequest("NEW_BANK", true, List.of(), NEW_ISSUER);
 
         // Create a bank
         mockMvc.perform(post("/api/v1/banks")
@@ -67,46 +77,42 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
         // System admin can see the bank configuration
         mockMvc.perform(get("/api/v1/banks/NEW_BANK"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bankId").value("NEW_BANK"));
+                .andExpect(jsonPath("$.bankId").value("NEW_BANK"))
+                .andExpect(jsonPath("$.issuerUrl").value(NEW_ISSUER));
     }
 
-    // --- 2. BANK ADMIN TESTS ---
-
     @Test
-    @WithMockRole(roles = {BANK_A_ADMIN_ROLE})
+    @WithMockRole(roles = {BANK_A_ADMIN_ROLE}, bankId = "BANK_A")
     void bankAdmin_CanOnlySeeOwnBank() throws Exception {
-        // Setup data manually in DB
         txHelper.doInTransaction(() -> {
             TenantContextHolder.setSystemMode(true);
 
             BankConfiguration otherBank = new BankConfiguration();
             otherBank.setBankId("BANK_B");
+            otherBank.setIssuerUrl(ISSUER_B);
             otherBank.setAllowProductInMultipleBundles(false);
 
             BankConfiguration ownBank = new BankConfiguration();
             ownBank.setBankId("BANK_A");
+            ownBank.setIssuerUrl(ISSUER_A);
             ownBank.setAllowProductInMultipleBundles(true);
 
             bankConfigurationRepository.saveAll(List.of(otherBank, ownBank));
             return null;
         });
 
-        // Bank A admin sees their own bank
         mockMvc.perform(get("/api/v1/banks/BANK_A"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bankId").value("BANK_A"));
 
-        // Bank A admin cannot see Bank B
         mockMvc.perform(get("/api/v1/banks/BANK_B"))
                 .andExpect(status().isNotFound());
     }
 
-    // --- 3. NEGATIVE TESTS ---
-
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void unauthorizedUser_CannotCreateBank() throws Exception {
-        BankConfigurationRequest request = new BankConfigurationRequest("FAIL", true, List.of());
+        BankConfigurationRequest request = new BankConfigurationRequest("FAIL", true, List.of(), "https://fail-issuer.com");
 
         mockMvc.perform(post("/api/v1/banks")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -117,31 +123,33 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {BANK_A_ADMIN_ROLE}, bankId = "BANK_A")
     void bankAdmin_UpdatingOtherBank_Returns404Not403() throws Exception {
-        // Obfuscation check: If I try to update BANK_B, don't tell me it exists (403).
-        // Tell me I can't find it (404).
-        BankConfigurationRequest request = new BankConfigurationRequest("BANK_B", true, List.of());
+        BankConfigurationRequest request = new BankConfigurationRequest("BANK_B", true, List.of(), ISSUER_A);
 
         mockMvc.perform(get("/api/v1/banks/BANK_B")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound()); // Hits the validateTenantAccess branch
+                .andExpect(status().isNotFound());
     }
 
     @Test
     @WithMockRole(roles = {SYSTEM_ADMIN_ROLE}, bankId = "SYSTEM")
     void systemAdmin_CanUpdateBank() throws Exception {
-        // 1. Setup - Create a bank first
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setSystemMode(true);
-            BankConfiguration bank = new BankConfiguration();
-            bank.setBankId("UPDATE_TEST");
-            bank.setAllowProductInMultipleBundles(false);
-            bankConfigurationRepository.save(bank);
-            return null;
+            try {
+                TenantContextHolder.setSystemMode(true);
+                BankConfiguration bank = new BankConfiguration();
+                bank.setBankId("UPDATE_TEST");
+                bank.setIssuerUrl(ISSUER_A);
+                bank.setAllowProductInMultipleBundles(false);
+                bankConfigurationRepository.save(bank);
+                return null;
+            } finally {
+                TenantContextHolder.setSystemMode(false);
+            }
         });
 
         // 2. Update via API
-        BankConfigurationRequest updateRequest = new BankConfigurationRequest("UPDATE_TEST", true, List.of());
+        BankConfigurationRequest updateRequest = new BankConfigurationRequest("UPDATE_TEST", true, List.of(), ISSUER_A);
 
         mockMvc.perform(put("/api/v1/banks/UPDATE_TEST")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -153,21 +161,44 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {BANK_A_ADMIN_ROLE}, bankId = "BANK_A")
     void bankAdmin_CanUpdateOwnBank() throws Exception {
-        // Setup own bank
         txHelper.doInTransaction(() -> {
-            TenantContextHolder.setSystemMode(true);
-            BankConfiguration bank = new BankConfiguration();
-            bank.setBankId("BANK_A");
-            bank.setAllowProductInMultipleBundles(false);
-            bankConfigurationRepository.save(bank);
-            return null;
+            try {
+                TenantContextHolder.setSystemMode(true);
+                BankConfiguration bank = new BankConfiguration();
+                bank.setBankId("BANK_A");
+                bank.setIssuerUrl(ISSUER_A);
+                bank.setAllowProductInMultipleBundles(false);
+                bankConfigurationRepository.save(bank);
+                return null;
+            } finally {
+                TenantContextHolder.setSystemMode(false);
+            }
         });
 
-        BankConfigurationRequest request = new BankConfigurationRequest("BANK_A", true, List.of());
+        BankConfigurationRequest request = new BankConfigurationRequest("BANK_A", true, List.of(), ISSUER_A);
 
         mockMvc.perform(put("/api/v1/banks/BANK_A")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockRole(roles = {SYSTEM_ADMIN_ROLE}, bankId = "SYSTEM")
+    void systemAdmin_CannotCreateDuplicateIssuer() throws Exception {
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setSystemMode(true);
+            BankConfiguration bank = new BankConfiguration();
+            bank.setBankId("EXISTING_BANK");
+            bank.setIssuerUrl(ISSUER_A);
+            bankConfigurationRepository.save(bank);
+            return null;
+        });
+
+        BankConfigurationRequest request = new BankConfigurationRequest("DUPLICATE_BANK", true, List.of(), ISSUER_A);
+        mockMvc.perform(post("/api/v1/banks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
     }
 }

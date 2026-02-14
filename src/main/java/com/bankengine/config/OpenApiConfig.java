@@ -1,44 +1,50 @@
 package com.bankengine.config;
 
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.info.Contact;
-import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.info.License;
-import io.swagger.v3.oas.annotations.security.*;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@OpenAPIDefinition(
-    info = @Info(
-        title = "Product Catalog & Pricing Engine",
-        description = "Comprehensive management of banking products, features, and dynamic pricing rules.",
-        version = "v1.0.0",
-        contact = @Contact(
-            name = "Sanjeev Mishra",
-            email = "sanjusoftware@gmail.com"
-        ),
-        license = @License(
-            name = "Proprietary - All Rights Reserved",
-            url = "https://yourcompanywebsite.com/licenses/proprietary"
-        )
-    ),
-    security = @SecurityRequirement(name = "bearerAuth")
-)
-@SecurityScheme(
-    name = "bearerAuth",
-    type = SecuritySchemeType.OAUTH2, // Using OAUTH2 to support both "Paste Token" and "Login Button"
-    description = "You can manually paste a JWT token or use the OAuth2 login flow.",
-    flows = @OAuthFlows(
-        authorizationCode = @OAuthFlow(
-            authorizationUrl = "${swagger.auth-url}",
-            tokenUrl = "${swagger.token-url}",
-            scopes = {
-                @OAuthScope(name = "openid", description = "Standard OIDC"),
-                @OAuthScope(name = "profile", description = "User profile")
-            }
-        )
-    )
-)
 public class OpenApiConfig {
+
+    @Value("${swagger.auth-url}")
+    private String authUrl;
+
+    @Value("${swagger.token-url}")
+    private String tokenUrl;
+
+    @Value("${swagger.api-scope}")
+    private String apiScope;
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Product Catalog & Pricing Engine")
+                        .description("Comprehensive management of banking products, features, and dynamic pricing rules.")
+                        .version("v1.0.0")
+                        .contact(new Contact().name("Sanjeev Mishra").email("sanjusoftware@gmail.com"))
+                        .license(new License().name("Proprietary").url("https://bankengine.ai/licenses/proprietary")))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                .components(new Components()
+                        .addSecuritySchemes("bearerAuth", new SecurityScheme()
+                                .type(SecurityScheme.Type.OAUTH2)
+                                .description("OAuth2 flow for Entra ID or Mock Server.")
+                                .flows(new OAuthFlows()
+                                        .authorizationCode(new OAuthFlow()
+                                                .authorizationUrl(authUrl)
+                                                .tokenUrl(tokenUrl)
+                                                .scopes(new Scopes()
+                                                        .addString("openid", "Standard OIDC")
+                                                        .addString("profile", "User profile info")
+                                                        .addString("offline_access", "Refresh tokens")
+                                                        .addString(apiScope, "API Access Scope")
+                                                )))));
+    }
 }

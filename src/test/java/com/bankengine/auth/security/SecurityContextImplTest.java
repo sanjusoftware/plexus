@@ -84,7 +84,7 @@ class SecurityContextImplTest {
 
         assertThatThrownBy(securityContext::getCurrentBankId)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("does not contain the required 'bank_id' claim");
+                .hasMessageContaining("Authenticated principal (JWT) does not contain bank_id");
     }
 
     private void setupMockAuthentication(Object principal) {

@@ -81,6 +81,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
             config.setCategoryConflictRules(new ArrayList<>(List.of(
                     new CategoryConflictRule("RETAIL", "WEALTH")
             )));
+            config.setIssuerUrl("https://trusted-issuer.com");
             bankConfigRepository.save(config);
 
             // 2. Setup Full Bundle

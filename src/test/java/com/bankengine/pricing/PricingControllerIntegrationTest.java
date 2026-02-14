@@ -15,7 +15,6 @@ import com.bankengine.pricing.service.ProductRuleBuilderService;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +40,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     private ObjectMapper objectMapper;
     @Autowired
     private TestTransactionHelper txHelper;
-    @Autowired
-    private EntityManager entityManager;
     @Autowired
     private ProductTypeRepository productTypeRepository;
     @Autowired

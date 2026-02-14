@@ -18,7 +18,6 @@ import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -46,7 +45,6 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @Autowired private PricingComponentRepository pricingComponentRepository;
     @Autowired private ProductFeatureLinkRepository featureLinkRepository;
     @Autowired private ProductPricingLinkRepository pricingLinkRepository;
-    @Autowired private EntityManager entityManager;
     @Autowired private TestTransactionHelper txHelper;
 
     private static Long EXISTING_PRODUCT_TYPE_ID;

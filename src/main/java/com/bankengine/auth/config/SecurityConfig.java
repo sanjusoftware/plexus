@@ -2,35 +2,44 @@ package com.bankengine.auth.config;
 
 import com.bankengine.auth.security.JwtAuthConverter;
 import com.bankengine.auth.security.TenantContextFilter;
-import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
+import com.bankengine.auth.security.TenantContextHolder;
+import com.bankengine.common.repository.BankConfigurationRepository;
+import com.nimbusds.jwt.SignedJWT;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManagerResolver;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2Error;
-import org.springframework.security.oauth2.core.OAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.JwtDecoders;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+
+import java.text.ParseException;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
 
     private final JwtAuthConverter jwtAuthConverter;
     private final TenantContextFilter tenantContextFilter;
+    private final BankConfigurationRepository bankConfigurationRepository;
 
-    public SecurityConfig(JwtAuthConverter jwtAuthConverter, TenantContextFilter tenantContextFilter) {
+    public SecurityConfig(JwtAuthConverter jwtAuthConverter,
+                          TenantContextFilter tenantContextFilter,
+                          BankConfigurationRepository bankConfigurationRepository) {
         this.jwtAuthConverter = jwtAuthConverter;
         this.tenantContextFilter = tenantContextFilter;
+        this.bankConfigurationRepository = bankConfigurationRepository;
     }
 
     @Bean
@@ -53,9 +62,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
-                        .jwtAuthenticationConverter(jwtAuthConverter)
-                ))
+                // Use the Dynamic Resolver instead of a static JWT Decoder
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .authenticationManagerResolver(tenantAuthenticationManagerResolver())
+                )
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
                 );
@@ -64,33 +74,38 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder(OAuth2ResourceServerProperties properties) {
-        // 1. Get the issuer exactly as defined in your Environment Variables
-        String configuredIssuer = properties.getJwt().getIssuerUri();
+    public AuthenticationManagerResolver<HttpServletRequest> tenantAuthenticationManagerResolver() {
+        return request -> {
+            String issuer = resolveIssuer(request);
 
-        // 2. Initialize the decoder using the OIDC discovery endpoint
-        NimbusJwtDecoder jwtDecoder = JwtDecoders.fromIssuerLocation(configuredIssuer);
-
-        OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
-
-        // 3. DYNAMIC VALIDATOR: Trusts the issuer the app was told to use
-        OAuth2TokenValidator<Jwt> issuerValidator = token -> {
-            String tokenIssuer = token.getIssuer().toString();
-
-            // Match if token issuer equals configured issuer
-            // OR handle the Docker 'identity-provider' vs 'localhost' alias quirk
-            if (tokenIssuer.equals(configuredIssuer) ||
-                    (configuredIssuer.contains("localhost") && tokenIssuer.contains("identity-provider"))) {
-                return OAuth2TokenValidatorResult.success();
+            try {
+                TenantContextHolder.setSystemMode(true);
+                // SECURITY REQUIREMENT: Only trust issuers stored in our DB during onboarding
+                if (!bankConfigurationRepository.existsByIssuerUrl(issuer)) {
+                    log.warn("Access denied: No bank found with Issuer {} in system.", issuer);
+                    throw new IllegalArgumentException("Unknown or untrusted issuer: " + issuer);
+                }
+            } finally {
+                TenantContextHolder.setSystemMode(false);
             }
 
-            return OAuth2TokenValidatorResult.failure(new OAuth2Error(
-                    "invalid_issuer",
-                    "Token issuer " + tokenIssuer + " does not match configured " + configuredIssuer,
-                    null));
+            // Dynamically create a provider that fetches keys from the specific tenant's OIDC metadata
+            var provider = new JwtAuthenticationProvider(JwtDecoders.fromIssuerLocation(issuer));
+            provider.setJwtAuthenticationConverter(jwtAuthConverter);
+            return provider::authenticate;
         };
+    }
 
-        jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(timestampValidator, issuerValidator));
-        return jwtDecoder;
+    private String resolveIssuer(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            try {
+                // Parse the JWT without validating signature yet to find who issued it
+                return SignedJWT.parse(token.substring(7)).getJWTClaimsSet().getIssuer();
+            } catch (ParseException e) {
+                throw new IllegalArgumentException("Invalid JWT format");
+            }
+        }
+        throw new IllegalArgumentException("Missing Bearer token");
     }
 }

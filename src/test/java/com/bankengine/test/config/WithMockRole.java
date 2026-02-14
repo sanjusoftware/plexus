@@ -26,18 +26,14 @@ public @interface WithMockRole {
     String bankId() default "BANK_A";
 
     class SecurityContextFactory implements WithSecurityContextFactory<WithMockRole> {
-        @Autowired private PermissionMappingService permissionMappingService;
+        @Autowired
+        private PermissionMappingService permissionMappingService;
 
         @Override
         public SecurityContext createSecurityContext(WithMockRole annotation) {
-        // 1. TEMPORARILY set the bank ID so the DB query in the next step works
-        // The Aspect requires this to enable the Hibernate filter
-        TenantContextHolder.setBankId(annotation.bankId());
-
-        try {
+            TenantContextHolder.setBankId(annotation.bankId());
             SecurityContext context = SecurityContextHolder.createEmptyContext();
 
-            // 1. Get permissions
             Set<String> authorityNames = permissionMappingService.getPermissionsForRoles(
                     Arrays.asList(annotation.roles()));
 
@@ -45,7 +41,6 @@ public @interface WithMockRole {
                     .map(SimpleGrantedAuthority::new)
                     .collect(Collectors.toSet());
 
-            // 2. Create a Mock JWT
             Jwt jwt = Jwt.withTokenValue("mock-token")
                     .header("alg", "none")
                     .claim("sub", "testUser")
@@ -53,17 +48,9 @@ public @interface WithMockRole {
                     .claim("roles", Arrays.asList(annotation.roles()))
                     .build();
 
-            // 3. Create the specific token type your production code uses
             JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt, authorities, "testUser");
-
             context.setAuthentication(auth);
             return context;
-
-        } finally {
-            // 4. Clear it! The @BeforeEach in AbstractIntegrationTest will
-            // set it again formally for the actual test execution.
-            TenantContextHolder.clear();
         }
-    }
     }
 }

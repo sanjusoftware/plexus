@@ -14,7 +14,6 @@ import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +42,7 @@ public class ProductPricingSyncIntegrationTest extends AbstractIntegrationTest {
     @Autowired private PricingComponentRepository pricingComponentRepository;
     @Autowired private ProductPricingLinkRepository pricingLinkRepository;
     @Autowired private TestTransactionHelper txHelper;
-    @Autowired private EntityManager entityManager;
+//    @Autowired private EntityManager entityManager;
 
     public static final String ROLE_PREFIX = "PPST_";
     public static final String ADMIN_ROLE = ROLE_PREFIX + "CATALOG_ADMIN";

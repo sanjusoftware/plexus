@@ -32,7 +32,10 @@ import java.util.Set;
 public class TestDataSeeder implements CommandLineRunner {
 
     private static final String BANK_A = "GLOBAL-BANK-001";
+    private static final String ISSUER_A = "https://login.microsoftonline.com/5dafae79-1a4c-4aac-b6f4-842a5ba73a33/v2.0";
+
     private static final String BANK_B = "LOCAL-BANK-002";
+    private static final String ISSUER_B = "http://localhost:8081/realms/local-bank-002";
 
     private final ProductTypeRepository productTypeRepository;
     private final FeatureComponentRepository featureComponentRepository;
@@ -87,29 +90,36 @@ public class TestDataSeeder implements CommandLineRunner {
         System.out.println("--- Seeding Comprehensive Development Data ---");
         TestDataSeeder proxy = applicationContext.getBean(TestDataSeeder.class);
 
-        for (String bankId : List.of(BANK_A, BANK_B)) {
-            TenantContextHolder.setSystemMode(true);
-            System.out.println("\n--- Seeding Tenant: " + bankId + " ---");
-            TenantContextHolder.setBankId(bankId);
+        // Define a mapping to pass the correct issuer to the seeder
+        proxy.seedBank(BANK_A, ISSUER_A);
+        proxy.seedBank(BANK_B, ISSUER_B);
 
-            proxy.seedBankConfiguration(bankId);
-            proxy.seedTestRoles(bankId);
-            proxy.seedPricingInputMetadata(bankId);
-            proxy.seedProductTypes(bankId);
-            proxy.seedFeaturesAndProducts(bankId);
-            proxy.seedPricingComponentsAndLinks(bankId);
-            proxy.seedBundles(bankId);
-
-            TenantContextHolder.clear();
-        }
         System.out.println("\n--- Seeding Complete ---");
     }
 
     @Transactional
-    public void seedBankConfiguration(String bankId) {
+    public void seedBank(String bankId, String issuerUrl) {
+        TenantContextHolder.setSystemMode(true);
+        System.out.println("\n--- Seeding Tenant: " + bankId + " ---");
+        TenantContextHolder.setBankId(bankId);
+
+        seedBankConfiguration(bankId, issuerUrl);
+        seedTestRoles(bankId);
+        seedPricingInputMetadata(bankId);
+        seedProductTypes(bankId);
+        seedFeaturesAndProducts(bankId);
+        seedPricingComponentsAndLinks(bankId);
+        seedBundles(bankId);
+
+        TenantContextHolder.clear();
+    }
+
+    @Transactional
+    public void seedBankConfiguration(String bankId, String issuerUrl) {
         if (bankConfigurationRepository.findByBankId(bankId).isEmpty()) {
             BankConfiguration config = new BankConfiguration();
             config.setBankId(bankId);
+            config.setIssuerUrl(issuerUrl);
             config.setAllowProductInMultipleBundles(bankId.equals(BANK_A));
 
             List<CategoryConflictRule> rules = new ArrayList<>();
@@ -117,7 +127,7 @@ public class TestDataSeeder implements CommandLineRunner {
             config.setCategoryConflictRules(rules);
 
             bankConfigurationRepository.save(config);
-            System.out.println("Seeded Bank Configuration for " + bankId);
+            System.out.println("Seeded Bank Configuration for " + bankId + " with Issuer: " + issuerUrl);
         }
     }
 
@@ -126,21 +136,21 @@ public class TestDataSeeder implements CommandLineRunner {
         // 1. Discover all authorities from the code using reflection
         Set<String> allSystemAuthorities = authorityDiscoveryService.discoverAllAuthorities();
 
-        // 2. Check if the SUPER_ADMIN role exists for this bank
-        roleRepository.findByName("SUPER_ADMIN").ifPresentOrElse(
+        // 2. Check if the BANK_ADMIN role exists for this bank
+        roleRepository.findByName("BANK_ADMIN").ifPresentOrElse(
                 existingRole -> {
                     // For dev mode, we update the existing role to ensure it gets NEWLY created permissions
                     existingRole.setAuthorities(new HashSet<>(allSystemAuthorities));
                     roleRepository.save(existingRole);
-                    System.out.println("Updated SUPER_ADMIN for " + bankId + " with " + allSystemAuthorities.size() + " permissions.");
+                    System.out.println("Updated BANK_ADMIN for " + bankId + " with " + allSystemAuthorities.size() + " permissions.");
                 },
                 () -> {
                     Role admin = new Role();
-                    admin.setName("SUPER_ADMIN");
+                    admin.setName("BANK_ADMIN");
                     admin.setAuthorities(new HashSet<>(allSystemAuthorities));
                     admin.setBankId(bankId);
                     roleRepository.save(admin);
-                    System.out.println("Seeded new SUPER_ADMIN for " + bankId + " with " + allSystemAuthorities.size() + " permissions.");
+                    System.out.println("Seeded new BANK_ADMIN for " + bankId + " with " + allSystemAuthorities.size() + " permissions.");
                 }
         );
     }

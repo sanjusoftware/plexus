@@ -80,7 +80,7 @@ class BankConfigurationServiceTest {
         verify(roleRepository).save(roleCaptor.capture());
 
         Role savedRole = roleCaptor.getValue();
-        assertEquals("SUPER_ADMIN", savedRole.getName());
+        assertEquals("BANK_ADMIN", savedRole.getName());
         assertEquals("TEST-BANK", savedRole.getBankId());
         assertTrue(savedRole.getAuthorities().contains("catalog:read"));
         assertFalse(savedRole.getAuthorities().contains("system:admin"), "System authorities should be filtered out");

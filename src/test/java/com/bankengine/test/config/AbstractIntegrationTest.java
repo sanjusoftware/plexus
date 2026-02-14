@@ -2,8 +2,10 @@ package com.bankengine.test.config;
 
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.pricing.TestTransactionHelper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -18,13 +20,11 @@ import java.util.Set;
 @ActiveProfiles("test")
 @MockBean(JwtDecoder.class)
 public abstract class AbstractIntegrationTest {
-
     public static final String TEST_BANK_ID = "BANK_A";
-    protected static final String OTHER_BANK_ID = "BANK_B_FOREIGN";
+    @Autowired protected EntityManager entityManager;
 
     @BeforeEach
     void setupBankContext() {
-        // Essential for the test thread to access TenantRepository/Aspects
         TenantContextHolder.setBankId(TEST_BANK_ID);
     }
 
@@ -33,10 +33,6 @@ public abstract class AbstractIntegrationTest {
         TenantContextHolder.clear();
     }
 
-    /**
-     * Helper for @BeforeAll or @BeforeEach to seed roles.
-     * Uses a Map where Key = Role Name, Value = Set of Authorities.
-     */
     protected static void seedBaseRoles(TestTransactionHelper txHelper, Map<String, Set<String>> roleMappings) {
         try {
             TenantContextHolder.setBankId(TEST_BANK_ID);

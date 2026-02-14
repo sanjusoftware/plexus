@@ -78,7 +78,7 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @WithMockRole(roles = "ADMIN")
+    @WithMockRole(roles = {"ADMIN"})
     void shouldUpdateRoleMappingAndEvictCache() throws Exception {
         String roleName = "TO_BE_UPDATED";
         Set<String> initialAuths = Set.of("auth:role:read");

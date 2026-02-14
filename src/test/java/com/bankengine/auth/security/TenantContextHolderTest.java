@@ -1,6 +1,7 @@
 package com.bankengine.auth.security;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -11,6 +12,9 @@ class TenantContextHolderTest {
     void tearDown() {
         TenantContextHolder.clear();
     }
+
+    @BeforeEach
+    void setUp() { TenantContextHolder.clear(); }
 
     @Test
     void getBankId_ShouldThrowException_WhenNoContextAndNotSystemMode() {

@@ -34,12 +34,12 @@ public class SystemAdminSeeder implements CommandLineRunner {
                 BankConfiguration systemBank = new BankConfiguration();
                 systemBank.setBankId(systemBankId);
                 systemBank.setAllowProductInMultipleBundles(true);
+                systemBank.setIssuerUrl("https://internal.bankengine.system/auth");
+
                 bankConfigurationRepository.save(systemBank);
                 System.out.println("Seeded SYSTEM bank.");
             }
 
-            // RoleRepository findByName might still be filtered if bankId is not set?
-            // Actually TenantFilterAspect only enables filter if bankId != null.
             if (roleRepository.findByName("SYSTEM_ADMIN").isEmpty()) {
                 Role systemAdmin = new Role();
                 systemAdmin.setName("SYSTEM_ADMIN");

@@ -24,7 +24,7 @@ Isolation is enforced at the database level using a shared-schema, row-level fil
 
 ## 2. Core Entities for Management
 - **`BankConfiguration`**: Defines the tenant itself. The `bankId` (String) is the primary key and readable identifier.
-- **`Role`**: Bank-specific roles (e.g., `SUPER_ADMIN` for `BANK_A`) are stored with their mapped permissions.
+- **`Role`**: Bank-specific roles (e.g., `BANK_ADMIN` for `BANK_A`) are stored with their mapped permissions.
 
 ***
 
@@ -70,13 +70,13 @@ Plexus enforces security via an internally managed Role-Based Access Control (RB
 * **Permission Mapping:** It uses the `PermissionMappingService` to fetch the complete set of unique, aggregated **Authorities** (`<domain>:<resource>:<action>`, e.g., `catalog:product:read`) from the internal database based on the roles present in the token.
 
 #### Sample Required JWT Payload
-For a token to be accepted and successfully authorize a user (e.g., a `SUPER_ADMIN`), the payload must include all configured claims:
+For a token to be accepted and successfully authorize a user (e.g., a `BANK_ADMIN`), the payload must include all configured claims:
 
 ```json
 {
   "sub": "dev_user_identifier",
   "bank_id": "GLOBAL-BANK-001",
-  "roles": ["SUPER_ADMIN", "ANALYST"],
+  "roles": ["BANK_ADMIN", "ANALYST"],
   "iss": "http://localhost:8080",
   "aud": "bank-engine-api",
   "iat": 1732540800,
@@ -108,7 +108,7 @@ To ensure consistency and performance, the application discovers all available a
 In an on-premise deployment, typically only one bank is configured.
 1. **Startup**: On initial startup, the `SystemAdminSeeder` automatically creates a `SYSTEM` bank and a `SYSTEM_ADMIN` role.
 2. **Initial Bank Creation**: Use the `SYSTEM_ADMIN` credentials to call the Bank Management API to create your bank (e.g., `MY_BANK`).
-3. **Admin User**: The system automatically creates a `SUPER_ADMIN` role for `MY_BANK` with all available permissions.
+3. **Admin User**: The system automatically creates a `BANK_ADMIN` role for `MY_BANK` with all available permissions.
 
 ### SaaS Deployment
 In a SaaS environment, the platform owner manages multiple banks.
@@ -246,7 +246,7 @@ The Bank Admin for `GLOBAL-BANK-001` can update their bank's configuration.
 ```
 
 ## Step 3: Bank Admin - Configure Roles & Permissions
-The Bank Admin for `GLOBAL-BANK-001` can now define custom roles. Note that a `SUPER_ADMIN` role is automatically created with all bank-level permissions (excluding `system:*` authorities).
+The Bank Admin for `GLOBAL-BANK-001` can now define custom roles. Note that a `BANK_ADMIN` role is automatically created with all bank-level permissions (excluding `system:*` authorities).
 
 **Request:** `POST /api/v1/roles/mapping`
 **Authority:** `auth:role:write`

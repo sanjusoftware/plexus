@@ -7,7 +7,6 @@ import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +39,6 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private PricingInputMetadataRepository metadataRepository;
     @Autowired private TestTransactionHelper txHelper;
-    @Autowired private EntityManager entityManager;
 
     @MockBean
     private KieContainerReloadService reloadService;

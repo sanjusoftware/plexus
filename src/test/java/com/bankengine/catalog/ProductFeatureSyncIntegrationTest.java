@@ -14,7 +14,6 @@ import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +44,6 @@ public class ProductFeatureSyncIntegrationTest extends AbstractIntegrationTest {
     @Autowired private FeatureComponentRepository featureComponentRepository;
     @Autowired private ProductFeatureLinkRepository linkRepository;
     @Autowired private TestTransactionHelper txHelper;
-    @Autowired private EntityManager entityManager;
 
     public static final String ROLE_PREFIX = "PFST_";
     public static final String ADMIN_ROLE = ROLE_PREFIX + "CATALOG_ADMIN";
