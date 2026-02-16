@@ -32,10 +32,10 @@ import java.util.Set;
 public class TestDataSeeder implements CommandLineRunner {
 
     private static final String BANK_A = "GLOBAL-BANK-001";
-    private static final String ISSUER_A = "https://login.microsoftonline.com/5dafae79-1a4c-4aac-b6f4-842a5ba73a33/v2.0";
+    private static final String ISSUER_A = "https://dev-identity.bankengine.com/GLOBAL-BANK-001";
 
     private static final String BANK_B = "LOCAL-BANK-002";
-    private static final String ISSUER_B = "http://localhost:8081/realms/local-bank-002";
+    private static final String ISSUER_B = "https://dev-identity.bankengine.com/LOCAL-BANK-002";
 
     private final ProductTypeRepository productTypeRepository;
     private final FeatureComponentRepository featureComponentRepository;
@@ -116,7 +116,7 @@ public class TestDataSeeder implements CommandLineRunner {
 
     @Transactional
     public void seedBankConfiguration(String bankId, String issuerUrl) {
-        if (bankConfigurationRepository.findByBankId(bankId).isEmpty()) {
+        if (bankConfigurationRepository.findByBankIdUnfiltered(bankId).isEmpty()) {
             BankConfiguration config = new BankConfiguration();
             config.setBankId(bankId);
             config.setIssuerUrl(issuerUrl);

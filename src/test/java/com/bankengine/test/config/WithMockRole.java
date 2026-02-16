@@ -24,6 +24,7 @@ public @interface WithMockRole {
 
     String[] roles() default {};
     String bankId() default "BANK_A";
+    String issuer() default "https://login.microsoftonline.com/common/v2.0";
 
     class SecurityContextFactory implements WithSecurityContextFactory<WithMockRole> {
         @Autowired
@@ -46,6 +47,7 @@ public @interface WithMockRole {
                     .claim("sub", "testUser")
                     .claim("bank_id", annotation.bankId())
                     .claim("roles", Arrays.asList(annotation.roles()))
+                    .issuer(annotation.issuer())
                     .build();
 
             JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt, authorities, "testUser");

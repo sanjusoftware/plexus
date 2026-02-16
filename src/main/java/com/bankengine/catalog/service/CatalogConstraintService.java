@@ -26,9 +26,8 @@ public class CatalogConstraintService extends BaseService {
      * Checks if a Product is already in a bundle.
      */
     public void validateProductCanBeBundled(Long productId) {
-        String currentBankId = getCurrentBankId();
 
-        boolean allowMultiBundle = bankConfigurationRepository.findByBankId(currentBankId)
+        boolean allowMultiBundle = bankConfigurationRepository.findCurrent()
                 .map(BankConfiguration::isAllowProductInMultipleBundles)
                 .orElse(false);
 
@@ -52,7 +51,7 @@ public class CatalogConstraintService extends BaseService {
             throw new ValidationException(
                     String.format("Product ID %d is currently in an %s bundle (%s). " +
                                     "Multi-bundling is disabled for bank %s.",
-                            productId, status, bundleCode, currentBankId)
+                            productId, status, bundleCode, getCurrentBankId())
             );
         }
     }
@@ -61,12 +60,11 @@ public class CatalogConstraintService extends BaseService {
      * Ensures the product being added doesn't conflict with existing products.
      */
     public void validateCategoryCompatibility(Product newProduct, List<Product> existingProducts) {
-        String currentBankId = getCurrentBankId();
         String newCategory = newProduct.getCategory();
 
         // Fetch the specific bank's conflict rules
         List<CategoryConflictRule> conflictRules = bankConfigurationRepository
-                .findByBankId(currentBankId)
+                .findCurrent()
                 .map(BankConfiguration::getCategoryConflictRules)
                 .orElse(List.of());
 
@@ -79,7 +77,7 @@ public class CatalogConstraintService extends BaseService {
             if (isConflicting) {
                 throw new ValidationException(String.format(
                         "Conflict: Category '%s' cannot be bundled with category '%s' for bank %s.",
-                        newCategory, existingCategory, currentBankId));
+                        newCategory, existingCategory, getCurrentBankId()));
             }
         }
     }

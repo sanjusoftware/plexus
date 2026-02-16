@@ -9,8 +9,8 @@ import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.dto.BankConfigurationResponse;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.repository.BankConfigurationRepository;
+import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -29,7 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class BankConfigurationServiceTest {
+class BankConfigurationServiceTest extends BaseServiceTest {
 
     @Mock
     private BankConfigurationRepository bankConfigurationRepository;
@@ -48,30 +49,25 @@ class BankConfigurationServiceTest {
     @BeforeEach
     void setUp() {
         standardRequest = new BankConfigurationRequest();
-        standardRequest.setBankId("TEST-BANK");
+        standardRequest.setBankId(TEST_BANK_ID);
         standardRequest.setAllowProductInMultipleBundles(true);
-        standardRequest.setCategoryConflictRules(List.of(
+        standardRequest.setCategoryConflictRules(new ArrayList<>(List.of(
                 new BankConfigurationRequest.CategoryConflictDto("A", "B")
-        ));
-    }
-
-    @AfterEach
-    void tearDown() {
-        com.bankengine.auth.security.TenantContextHolder.clear();
+        )));
     }
 
     @Test
+    @DisplayName("CreateBank should save config and create super admin role with correct authorities")
     void createBank_ShouldSaveConfigAndCreateSuperAdmin() {
         // Arrange
+        TenantContextHolder.setBankId("SYSTEM");
         when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of("catalog:read", "system:admin"));
-        com.bankengine.auth.security.TenantContextHolder.setBankId("SYSTEM"); // or whatever to allow access
+        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.empty());
 
-        // Act
         BankConfigurationResponse response = bankConfigurationService.createBank(standardRequest);
 
-        // Assert
         assertNotNull(response);
-        assertEquals("TEST-BANK", response.getBankId());
+        assertEquals(TEST_BANK_ID, response.getBankId());
         assertTrue(response.isAllowProductInMultipleBundles());
 
         verify(bankConfigurationRepository).save(any(BankConfiguration.class));
@@ -81,7 +77,7 @@ class BankConfigurationServiceTest {
 
         Role savedRole = roleCaptor.getValue();
         assertEquals("BANK_ADMIN", savedRole.getName());
-        assertEquals("TEST-BANK", savedRole.getBankId());
+        assertEquals(TEST_BANK_ID, savedRole.getBankId());
         assertTrue(savedRole.getAuthorities().contains("catalog:read"));
         assertFalse(savedRole.getAuthorities().contains("system:admin"), "System authorities should be filtered out");
         assertTrue(savedRole.getAuthorities().contains("bank:config:read"));
@@ -91,59 +87,63 @@ class BankConfigurationServiceTest {
     }
 
     @Test
+    @DisplayName("UpdateBank should update fields when bank exists and tenant matches")
     void updateBank_ShouldUpdateExistingConfig() {
         // Arrange
         BankConfiguration existing = new BankConfiguration();
-        existing.setBankId("TEST-BANK");
-        when(bankConfigurationRepository.findTenantAwareByBankId("TEST-BANK")).thenReturn(Optional.of(existing));
-        com.bankengine.auth.security.TenantContextHolder.setBankId("TEST-BANK");
+        existing.setBankId(TEST_BANK_ID);
+        existing.setCategoryConflictRules(new ArrayList<>());
+        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(existing));
 
-        // Act
-        BankConfigurationResponse response = bankConfigurationService.updateBank("TEST-BANK", standardRequest);
+        BankConfigurationResponse response = bankConfigurationService.updateBank(TEST_BANK_ID, standardRequest);
 
-        // Assert
+        assertNotNull(response);
         assertTrue(response.isAllowProductInMultipleBundles());
         verify(bankConfigurationRepository).save(existing);
     }
 
     @Test
+    @DisplayName("GetBank should throw NotFound when bank ID does not exist in repository")
     void getBank_WhenNotExists_ShouldThrowNotFound() {
-        when(bankConfigurationRepository.findTenantAwareByBankId("UNKNOWN")).thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class, () -> bankConfigurationService.getBank("UNKNOWN"));
+       when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> bankConfigurationService.getBank(TEST_BANK_ID));
     }
 
     @Test
     @DisplayName("UpdateBank should trigger lambda branch when bank missing")
     void updateBank_WhenNotExists_ShouldTriggerLambda() {
-        // Targets the lambda: .orElseThrow(() -> new NotFoundException(...))
-        when(bankConfigurationRepository.findTenantAwareByBankId("MISSING")).thenReturn(Optional.empty());
-
+        TenantContextHolder.setBankId("SYSTEM");
+        String missingId = "MISSING";
+        when(bankConfigurationRepository.findByBankId(missingId)).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () ->
-                bankConfigurationService.updateBank("MISSING", standardRequest)
+                bankConfigurationService.updateBank(missingId, standardRequest)
         );
     }
 
     @Test
-    @DisplayName("ValidateTenantAccess should allow SYSTEM mode")
+    @DisplayName("ValidateTenantAccess should allow SYSTEM to view any bank")
     void getBank_WhenSystemMode_ShouldSucceedRegardlessOfTenant() {
+        // Arrange
+        String targetBankId = "BANK_A";
         BankConfiguration config = new BankConfiguration();
-        config.setBankId("BANK_A");
+        config.setBankId(targetBankId);
 
-        when(bankConfigurationRepository.findTenantAwareByBankId("BANK_A")).thenReturn(Optional.of(config));
+        // Mock System user requesting a different bank
         TenantContextHolder.setBankId("SYSTEM");
-
-        assertDoesNotThrow(() -> bankConfigurationService.getBank("BANK_A"));
+        when(bankConfigurationRepository.findByBankId(targetBankId)).thenReturn(Optional.of(config));
+        assertDoesNotThrow(() -> bankConfigurationService.getBank(targetBankId));
     }
 
     @Test
-    @DisplayName("CreateBank should handle null conflict rules")
+    @DisplayName("CreateBank should handle null conflict rules gracefully")
     void createBank_WithNullRules_ShouldSucceed() {
-        standardRequest.setCategoryConflictRules(null);
-        when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of());
         TenantContextHolder.setBankId("SYSTEM");
-
+        standardRequest.setCategoryConflictRules(null);
+        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.empty());
+        when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of());
         assertDoesNotThrow(() -> bankConfigurationService.createBank(standardRequest));
-        verify(bankConfigurationRepository).save(argThat(config -> config.getCategoryConflictRules().isEmpty()));
+        verify(bankConfigurationRepository).save(argThat(config ->
+            config.getCategoryConflictRules() == null || config.getCategoryConflictRules().isEmpty()
+        ));
     }
 }

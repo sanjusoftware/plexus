@@ -41,7 +41,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
         config.setBankId(TEST_BANK_ID);
         config.setCategoryConflictRules(List.of(rule));
 
-        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.of(config));
 
         Product newProduct = new Product();
         newProduct.setCategory("RETAIL");
@@ -60,7 +60,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Should pass when no conflict rules exist for the bank")
     void validateCategoryCompatibility_ShouldPass_WhenNoRulesDefined() {
-        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.empty());
+        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.empty());
         Product newProduct = new Product();
         newProduct.setCategory("WEALTH");
         List<Product> existingProducts = List.of(new Product());
@@ -75,7 +75,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
         // Setup Mock: Bank prohibits multi-bundling
         BankConfiguration config = new BankConfiguration();
         config.setAllowProductInMultipleBundles(false);
-        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.of(config));
 
         // Setup Mock: Product has a link, but the bundle is ARCHIVED
         ProductBundle archivedBundle = new ProductBundle();
@@ -97,7 +97,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
 
         BankConfiguration config = new BankConfiguration();
         config.setAllowProductInMultipleBundles(false);
-        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.of(config));
 
         ProductBundle activeBundle = new ProductBundle();
         activeBundle.setCode("BNDL-ACTIVE");
@@ -121,7 +121,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
 
         BankConfiguration config = new BankConfiguration();
         config.setAllowProductInMultipleBundles(true); // Flag is ON
-        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.of(config));
 
         // Even if there are links, the method should return early
         assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(productId));

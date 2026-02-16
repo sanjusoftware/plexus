@@ -48,7 +48,7 @@ class JwtAuthConverterTest {
         config.setBankId(bankId);
         config.setIssuerUrl(issuer);
 
-        when(bankConfigurationRepository.findByBankId(bankId)).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findByBankIdUnfiltered(bankId)).thenReturn(Optional.of(config));
         when(permissionMappingService.getPermissionsForRoles(List.of("ADMIN")))
                 .thenReturn(Set.of("READ_PRODUCT"));
 
@@ -73,7 +73,7 @@ class JwtAuthConverterTest {
         config.setBankId("BANK_A");
         config.setIssuerUrl("https://trusted-issuer.com");
 
-        when(bankConfigurationRepository.findByBankId("BANK_A")).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A")).thenReturn(Optional.of(config));
 
         assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
     }

@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface RoleRepository extends TenantRepository<Role, Long> {
     List<Role> findByNameIn(Collection<String> names);
     Optional<Role> findByName(String name);
+    Optional<Role> findByNameAndBankId(String name, String bankId);
 }

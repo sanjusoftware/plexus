@@ -6,6 +6,7 @@ import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -15,43 +16,60 @@ import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
-@Order(1) // Run before other seeders
+@Order(1)
 public class SystemAdminSeeder implements CommandLineRunner {
 
     private final BankConfigurationRepository bankConfigurationRepository;
     private final RoleRepository roleRepository;
 
+    @Value("${app.security.system-bank-id}")
+    private String systemBankId;
+
+    @Value("${app.security.system-issuer}")
+    private String systemIssuer;
+
     @Override
     @Transactional
     public void run(String... args) {
-        System.out.println("--- Seeding System Admin Data ---");
+        System.out.println("--- Seeding System Admin: " + systemBankId + " ---");
 
-        String systemBankId = "SYSTEM";
+        // Normalize issuer to ensure matching with JwtAuthConverter
+        String normalizedIssuer = systemIssuer.replaceAll("/$", "");
 
         TenantContextHolder.setSystemMode(true);
         try {
-            if (bankConfigurationRepository.findTenantAwareByBankId(systemBankId).isEmpty()) {
-                BankConfiguration systemBank = new BankConfiguration();
-                systemBank.setBankId(systemBankId);
-                systemBank.setAllowProductInMultipleBundles(true);
-                systemBank.setIssuerUrl("https://internal.bankengine.system/auth");
+            // 1. Manage System Bank Configuration
+            bankConfigurationRepository.findByBankIdUnfiltered(systemBankId).ifPresentOrElse(
+                config -> {
+                    if (!normalizedIssuer.equalsIgnoreCase(config.getIssuerUrl())) {
+                        config.setIssuerUrl(normalizedIssuer);
+                        bankConfigurationRepository.save(config);
+                        System.out.println("Updated issuer for " + systemBankId);
+                    }
+                },
+                () -> {
+                    BankConfiguration config = new BankConfiguration();
+                    config.setBankId(systemBankId);
+                    config.setIssuerUrl(normalizedIssuer);
+                    config.setAllowProductInMultipleBundles(true);
+                    bankConfigurationRepository.save(config);
+                    System.out.println("Created root bank: " + systemBankId);
+                }
+            );
 
-                bankConfigurationRepository.save(systemBank);
-                System.out.println("Seeded SYSTEM bank.");
-            }
-
-            if (roleRepository.findByName("SYSTEM_ADMIN").isEmpty()) {
-                Role systemAdmin = new Role();
-                systemAdmin.setName("SYSTEM_ADMIN");
-                systemAdmin.setBankId(systemBankId);
-                systemAdmin.setAuthorities(Set.of(
-                        "system:bank:write",
-                        "system:bank:read",
-                        "auth:role:write",
-                        "auth:role:read"
+            // 2. Manage SYSTEM_ADMIN Role
+            if (roleRepository.findByNameAndBankId("SYSTEM_ADMIN", systemBankId).isEmpty()) {
+                Role admin = new Role();
+                admin.setName("SYSTEM_ADMIN");
+                admin.setBankId(systemBankId);
+                admin.setAuthorities(Set.of(
+                    "system:bank:write",
+                    "system:bank:read",
+                    "auth:role:write",
+                    "auth:role:read"
                 ));
-                roleRepository.save(systemAdmin);
-                System.out.println("Seeded SYSTEM_ADMIN role.");
+                roleRepository.save(admin);
+                System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);
             }
         } finally {
             TenantContextHolder.clear();

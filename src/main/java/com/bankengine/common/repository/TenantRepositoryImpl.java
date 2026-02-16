@@ -33,10 +33,6 @@ public class TenantRepositoryImpl<T extends AuditableEntity, ID extends Serializ
                 .and((root, query, cb) -> cb.equal(root.get("bankId"), bankId)));
     }
 
-    @Override
-    public Optional<T> findTenantAwareByBankId(String bankId) {
-        return findByBankId(bankId);
-    }
 
     // 2. Existence Check
     @Override
@@ -58,7 +54,7 @@ public class TenantRepositoryImpl<T extends AuditableEntity, ID extends Serializ
     private Specification<T> bankSpec() {
         return (root, query, cb) -> {
             String bankId = TenantContextHolder.getBankId();
-            if ("SYSTEM".equals(bankId)) {
+            if (TenantContextHolder.getSystemBankId().equals(bankId)) {
                 return cb.conjunction();
             }
             return cb.equal(root.get("bankId"), bankId);
@@ -68,7 +64,7 @@ public class TenantRepositoryImpl<T extends AuditableEntity, ID extends Serializ
     private Specification<T> idAndBankSpec(ID id) {
         return (root, query, cb) -> {
             String bankId = TenantContextHolder.getBankId();
-            if ("SYSTEM".equals(bankId)) {
+            if (TenantContextHolder.getSystemBankId().equals(bankId)) {
                 return cb.equal(root.get("id"), id);
             }
             return cb.and(cb.equal(root.get("id"), id),

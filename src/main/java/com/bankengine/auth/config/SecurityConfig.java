@@ -1,5 +1,6 @@
 package com.bankengine.auth.config;
 
+import com.bankengine.auth.security.CustomAuthenticationEntryPoint;
 import com.bankengine.auth.security.JwtAuthConverter;
 import com.bankengine.auth.security.TenantContextFilter;
 import com.bankengine.auth.security.TenantContextHolder;
@@ -17,6 +18,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
@@ -33,13 +36,15 @@ public class SecurityConfig {
     private final JwtAuthConverter jwtAuthConverter;
     private final TenantContextFilter tenantContextFilter;
     private final BankConfigurationRepository bankConfigurationRepository;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     public SecurityConfig(JwtAuthConverter jwtAuthConverter,
                           TenantContextFilter tenantContextFilter,
-                          BankConfigurationRepository bankConfigurationRepository) {
+                          BankConfigurationRepository bankConfigurationRepository, CustomAuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtAuthConverter = jwtAuthConverter;
         this.tenantContextFilter = tenantContextFilter;
         this.bankConfigurationRepository = bankConfigurationRepository;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Bean
@@ -65,6 +70,7 @@ public class SecurityConfig {
                 // Use the Dynamic Resolver instead of a static JWT Decoder
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(tenantAuthenticationManagerResolver())
+                        .authenticationEntryPoint(authenticationEntryPoint)
                 )
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
@@ -83,7 +89,7 @@ public class SecurityConfig {
                 // SECURITY REQUIREMENT: Only trust issuers stored in our DB during onboarding
                 if (!bankConfigurationRepository.existsByIssuerUrl(issuer)) {
                     log.warn("Access denied: No bank found with Issuer {} in system.", issuer);
-                    throw new IllegalArgumentException("Unknown or untrusted issuer: " + issuer);
+                    throw new OAuth2AuthenticationException(new OAuth2Error("access_denied"), "Untrusted issuer: " + issuer);
                 }
             } finally {
                 TenantContextHolder.setSystemMode(false);

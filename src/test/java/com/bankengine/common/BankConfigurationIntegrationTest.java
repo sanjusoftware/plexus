@@ -7,6 +7,7 @@ import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
+import com.bankengine.test.config.WithSystemAdminRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,10 +26,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-    @Autowired private BankConfigurationRepository bankConfigurationRepository;
-    @Autowired private TestTransactionHelper txHelper;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private BankConfigurationRepository bankConfigurationRepository;
+    @Autowired
+    private TestTransactionHelper txHelper;
 
     public static final String ROLE_PREFIX = "BCIT_";
     private static final String SYSTEM_ADMIN_ROLE = ROLE_PREFIX + "SYSTEM_ADMIN";
@@ -42,10 +47,11 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeAll
     static void setupCommittedData(@Autowired TestTransactionHelper txHelperStatic) {
+        txHelperStatic.saveBankConfiguration("SYSTEM", "https://login.microsoftonline.com/system-tenant/v2.0");
         seedBaseRoles(txHelperStatic, Map.of(
-            SYSTEM_ADMIN_ROLE, Set.of("system:bank:write", "system:bank:read"),
-            BANK_A_ADMIN_ROLE, Set.of("bank:config:read", "bank:config:write"),
-            UNAUTHORIZED_ROLE, Set.of("catalog:read")
+                SYSTEM_ADMIN_ROLE, Set.of("system:bank:write", "system:bank:read"),
+                BANK_A_ADMIN_ROLE, Set.of("bank:config:read", "bank:config:write"),
+                UNAUTHORIZED_ROLE, Set.of("catalog:read")
         ));
     }
 
@@ -63,7 +69,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @WithMockRole(roles = {SYSTEM_ADMIN_ROLE}, bankId = "SYSTEM")
+    @WithSystemAdminRole
     void systemAdmin_CanCreateAndSeeAllBanks() throws Exception {
         BankConfigurationRequest request = new BankConfigurationRequest("NEW_BANK", true, List.of(), NEW_ISSUER);
 
@@ -132,7 +138,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @WithMockRole(roles = {SYSTEM_ADMIN_ROLE}, bankId = "SYSTEM")
+    @WithSystemAdminRole
     void systemAdmin_CanUpdateBank() throws Exception {
         txHelper.doInTransaction(() -> {
             try {
@@ -184,7 +190,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @WithMockRole(roles = {SYSTEM_ADMIN_ROLE}, bankId = "SYSTEM")
+    @WithSystemAdminRole
     void systemAdmin_CannotCreateDuplicateIssuer() throws Exception {
         txHelper.doInTransaction(() -> {
             TenantContextHolder.setSystemMode(true);

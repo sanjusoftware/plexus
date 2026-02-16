@@ -10,6 +10,7 @@ public abstract class BaseServiceTest {
     @BeforeEach
     void setUpTenantContext() {
         TenantContextHolder.setBankId(TEST_BANK_ID);
+        TenantContextHolder.setSystemBankId("SYSTEM");
     }
 
     @AfterEach

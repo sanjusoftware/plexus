@@ -13,6 +13,4 @@ public interface TenantRepository<T, ID> extends JpaRepository<T, ID>, JpaSpecif
     Optional<T> findById(ID id);
 
     Optional<T> findByBankId(String bankId);
-
-    Optional<T> findTenantAwareByBankId(String bankId);
 }

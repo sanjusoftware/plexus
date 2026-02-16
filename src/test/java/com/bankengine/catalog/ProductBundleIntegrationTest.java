@@ -72,7 +72,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void setupData() {
         txHelper.doInTransaction(() -> {
-            BankConfiguration config = bankConfigRepository.findByBankId(TEST_BANK_ID)
+            BankConfiguration config = bankConfigRepository.findByBankIdUnfiltered(TEST_BANK_ID)
                     .orElseGet(() -> {
                         BankConfiguration newConfig = new BankConfiguration();
                         newConfig.setBankId(TEST_BANK_ID);

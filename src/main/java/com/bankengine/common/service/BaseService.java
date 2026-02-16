@@ -11,6 +11,10 @@ public abstract class BaseService {
         return TenantContextHolder.getBankId();
     }
 
+    protected String getSystemBankId() {
+        return TenantContextHolder.getSystemBankId();
+    }
+
     /**
      * Generic helper to fetch an entity, check for existence, and validate tenant ownership.
      * @param repository The JPA repository for the entity

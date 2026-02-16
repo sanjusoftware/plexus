@@ -4,6 +4,7 @@ import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.PermissionMappingService;
+import com.bankengine.common.annotation.SystemAdminBypass;
 import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.dto.BankConfigurationResponse;
 import com.bankengine.common.model.BankConfiguration;
@@ -11,6 +12,7 @@ import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BankConfigurationService extends BaseService {
 
     private final BankConfigurationRepository bankConfigurationRepository;
@@ -28,7 +31,12 @@ public class BankConfigurationService extends BaseService {
     private final PermissionMappingService permissionMappingService;
 
     @Transactional
+    @SystemAdminBypass // Allows SYSTEM to create/update across tenants
     public BankConfigurationResponse createBank(BankConfigurationRequest request) {
+        if (bankConfigurationRepository.findByBankId(request.getBankId()).isPresent()) {
+             throw new IllegalStateException("Bank already exists: " + request.getBankId());
+        }
+
         BankConfiguration config = new BankConfiguration();
         config.setBankId(request.getBankId());
         config.setIssuerUrl(request.getIssuerUrl());
@@ -41,23 +49,23 @@ public class BankConfigurationService extends BaseService {
         }
 
         bankConfigurationRepository.save(config);
-
-        // Create BANK_ADMIN role for the new bank
         createBankAdminRole(request.getBankId());
 
         return mapToResponse(config);
     }
 
     @Transactional
+    @SystemAdminBypass
     public BankConfigurationResponse updateBank(String bankId, BankConfigurationRequest request) {
-        BankConfiguration config = bankConfigurationRepository.findTenantAwareByBankId(bankId)
+        validateTenantAccess(bankId);
+        BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
-        validateTenantAccess(config.getBankId());
         if (request.getIssuerUrl() != null) {
             config.setIssuerUrl(request.getIssuerUrl());
         }
         config.setAllowProductInMultipleBundles(request.isAllowProductInMultipleBundles());
+
         if (request.getCategoryConflictRules() != null) {
             config.getCategoryConflictRules().clear();
             config.getCategoryConflictRules().addAll(request.getCategoryConflictRules().stream()
@@ -70,19 +78,21 @@ public class BankConfigurationService extends BaseService {
     }
 
     @Transactional(readOnly = true)
+    @SystemAdminBypass
     public BankConfigurationResponse getBank(String bankId) {
-        BankConfiguration config = bankConfigurationRepository.findTenantAwareByBankId(bankId)
+        validateTenantAccess(bankId);
+        BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
-
-        validateTenantAccess(config.getBankId());
 
         return mapToResponse(config);
     }
 
-    private void validateTenantAccess(String bankId) {
+    private void validateTenantAccess(String requestedBankId) {
         String currentBankId = getCurrentBankId();
-        if (!"SYSTEM".equals(currentBankId) && !currentBankId.equals(bankId)) {
-            throw new NotFoundException("Bank configuration not found for: " + bankId);
+        // If not SYSTEM and not the owner, it's a 404
+        if (!getSystemBankId().equals(currentBankId) && !currentBankId.equals(requestedBankId)) {
+            log.warn("[SECURITY] Tenant mismatch! User {} tried to access {}", currentBankId, requestedBankId);
+            throw new NotFoundException("Bank configuration not found for: " + requestedBankId);
         }
     }
 

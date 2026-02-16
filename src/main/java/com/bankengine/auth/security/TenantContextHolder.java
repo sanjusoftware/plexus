@@ -8,6 +8,8 @@ public class TenantContextHolder {
     private static final ThreadLocal<String> CONTEXT = new InheritableThreadLocal<>();
     private static final ThreadLocal<Boolean> SYSTEM_MODE = InheritableThreadLocal.withInitial(() -> false);
 
+    private static String systemBankId;
+
     public static void setBankId(String bankId) {
         CONTEXT.set(bankId);
     }
@@ -18,6 +20,18 @@ public class TenantContextHolder {
             throw new IllegalStateException("Bank ID is not set in the context. Access Denied.");
         }
         return bankId;
+    }
+
+    public static void setSystemBankId(String systemBankId) {
+        TenantContextHolder.systemBankId = systemBankId;
+    }
+
+    public static String getSystemBankId() {
+        if (systemBankId == null) {
+            // This acts as a circuit breaker if the app is misconfigured
+            throw new IllegalStateException("System Bank ID has not been initialized from environment variables. Please set env variable: app.security.system-bank-id ");
+        }
+        return systemBankId;
     }
 
     public static void setSystemMode(boolean isSystem) {

@@ -11,6 +11,8 @@ import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.*;
 import jakarta.persistence.EntityManager;
@@ -57,6 +59,8 @@ public class TestTransactionHelper {
     private BundlePricingLinkRepository bundlePricingLinkRepository;
     @Autowired
     private BundleProductLinkRepository bundleProductLinkRepository;
+    @Autowired
+    private BankConfigurationRepository bankConfigurationRepository;
 
     // =================================================================
     // Find-or-Create DSL for Catalog Entities (DRY)
@@ -294,6 +298,28 @@ public class TestTransactionHelper {
     public void flushAndClear() {
         entityManager.flush();
         entityManager.clear();
+    }
+
+    /**
+     * Saves or updates a bank configuration in the database.
+     * Sets SystemMode to true to ensure the record can be written regardless of current context.
+     */
+    @Transactional
+    public BankConfiguration saveBankConfiguration(String bankId, String issuerUrl) {
+        try {
+            TenantContextHolder.setSystemMode(true);
+            BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                    .orElse(new BankConfiguration());
+
+            config.setBankId(bankId);
+            config.setIssuerUrl(issuerUrl);
+            config.setAllowProductInMultipleBundles(true);
+
+            return bankConfigurationRepository.save(config);
+        } finally {
+            TenantContextHolder.setSystemMode(false);
+            flushAndClear();
+        }
     }
 
     @Transactional
