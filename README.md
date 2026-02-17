@@ -23,7 +23,10 @@ Isolation is enforced at the database level using a shared-schema, row-level fil
 - **Context Management**: The `TenantContextHolder` (ThreadLocal) stores the current request's `bankId`, which is extracted from the JWT by the `JwtAuthConverter`.
 
 ## 2. Core Entities for Management
-- **`BankConfiguration`**: Defines the tenant itself. The `bankId` (String) is the primary key and readable identifier.
+- **`BankConfiguration`**: Defines the tenant itself.
+  - `bankId`: Unique readable identifier (e.g., `GLOBAL-BANK-001`).
+  - `issuerUrl`: The OIDC Issuer URI for this specific tenant (e.g., `https://login.microsoftonline.com/{tenantId}/v2.0`). This is used to validate incoming JWTs.
+  - `allowProductInMultipleBundles`: Business rule flag.
 - **`Role`**: Bank-specific roles (e.g., `BANK_ADMIN` for `BANK_A`) are stored with their mapped permissions.
 
 ***
@@ -95,31 +98,124 @@ To ensure consistency and performance, the application discovers all available a
 
 ***
 
+# Identity Provider (IDP) Integration
+
+Plexus works with any OIDC-compatible IDP (EntraID, Keycloak, Auth0, etc.). The application requires two custom claims in the JWT:
+1.  **`bank_id`**: A string identifying the tenant (e.g., `SYSTEM` or `MY-BANK-001`).
+2.  **`roles`**: An array of strings representing the user's roles (e.g., `["BANK_ADMIN"]`).
+
+### 1. Microsoft EntraID (Azure AD) Setup
+To add custom claims at the organization level without modifying individual user records:
+1.  **App Registration**: Register Plexus in EntraID.
+2.  **Token Configuration**:
+    - Go to **Token configuration** > **Add optional claim**.
+    - Choose **ID** or **Access** token.
+3.  **Custom Claim (Claims Transformation)**:
+    - Go to **Enterprise Applications** > Select your app > **Single sign-on** > **Attributes & Claims**.
+    - Click **Add new claim**.
+    - **Name**: `bank_id`.
+    - **Source**: `Attribute` or `Transformation`.
+    - **Value**: For a fixed-value tenant, enter the bank ID as a constant string (e.g., `"GLOBAL-BANK-001"`).
+    - Repeat for `roles`, mapping it to the user's security groups or a constant value.
+
+### 2. Keycloak Setup
+1.  **Client Scopes**: Create a new Client Scope (e.g., `plexus-scope`).
+2.  **Mappers**: Add a "User Attribute" or "Hardcoded Claim" mapper.
+    - **Mapper Type**: `Hardcoded claim`.
+    - **Token Claim Name**: `bank_id`.
+    - **Claim Value**: `MY-BANK-001`.
+3.  **Assign**: Assign this scope to your Plexus client.
+
+***
+
 # Setup & Deployment
 
 ## 1. Prerequisites
-- Java 17+
-- PostgreSQL (or H2 for local development)
-- Gradle 8+
+- **Java 21**: The application is built using Java 21.
+- **Docker & Docker Compose**: Required for running the full stack locally.
+- **Gradle 8.x**: (Optional) The project includes a Gradle wrapper (`./gradlew`).
 
-## 2. On-Premise vs SaaS Setup
+## 2. Local Development
 
-### On-Premise / Private Cloud
-In an on-premise deployment, typically only one bank is configured.
-1. **Startup**: On initial startup, the `SystemAdminSeeder` automatically creates a `SYSTEM` bank and a `SYSTEM_ADMIN` role.
-2. **Initial Bank Creation**: Use the `SYSTEM_ADMIN` credentials to call the Bank Management API to create your bank (e.g., `MY_BANK`).
-3. **Admin User**: The system automatically creates a `BANK_ADMIN` role for `MY_BANK` with all available permissions.
+### A. Quick Start with Docker Compose
+The fastest way to get the entire stack (App, Database, Mock OAuth) running:
+
+```bash
+docker-compose up --build -d
+```
+
+- **App**: `http://localhost:8080`
+- **PostgreSQL**: `localhost:5432` (User: `user`, Pass: `password`, DB: `bankengine`)
+- **Mock OAuth Server**: `http://localhost:9090/default`
+  - Debugger: `http://localhost:9090/default/debugger`
+
+### B. Running Locally (IDE/CLI)
+For active development with hot-reloading (via H2 database):
+
+1. **Set Profile**: Ensure `SPRING_PROFILES_ACTIVE=dev` is set.
+2. **Run App**:
+   ```bash
+   ./gradlew bootRun
+   ```
+- **H2 Console**: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:plexusdb`)
+
+## 3. Deployment to Azure
+
+The application is configured for deployment to **Azure Web App for Containers** using **GitHub Actions**.
+
+### A. CI/CD Pipeline
+The workflow in `.github/workflows/deploy-azure.yml` handles:
+1. **Build & Test**: Running `./gradlew build`.
+2. **Dockerize**: Building the image and pushing it to **Azure Container Registry (ACR)**.
+3. **Deploy**: Updating the Azure Web App (Staging/Production).
+
+### B. Required GitHub Secrets
+To use the provided pipeline, configure these secrets in your GitHub repository:
+- `ACR_LOGIN_SERVER`: Your ACR login server (e.g., `myregistry.azurecr.io`).
+- `ACR_USERNAME`: ACR service principal or admin username.
+- `ACR_PASSWORD`: ACR service principal or admin password.
+- `AZURE_WEBAPP_PUBLISH_PROFILE`: The publish profile XML from your Azure Web App.
+
+## 4. Environment Configuration Reference
+Key properties that can be overridden via environment variables:
+
+| Property | Environment Variable | Default (Dev) |
+| :--- | :--- | :--- |
+| `app.security.system-bank-id` | `SYSTEM_BANK_ID` | `SYSTEM` |
+| `app.security.system-issuer` | `SYSTEM_JWT_ISSUER_URI` | *Azure AD Default* |
+| `spring.datasource.url` | `SPRING_DATASOURCE_URL` | `jdbc:h2:mem:testdb` |
+| `spring.profiles.active` | `SPRING_PROFILES_ACTIVE` | `dev` |
+
+## 5. Deployment Models: SaaS vs On-Premise
+
+Plexus runs the **same code** for both models. The difference is purely operational.
+
+```mermaid
+graph TD
+    subgraph "SaaS / Multi-Tenant"
+        SA[SYSTEM_ADMIN] -->|Onboards| B1[Bank A]
+        SA -->|Onboards| B2[Bank B]
+        B1 --> BA1[BANK_ADMIN A]
+        B2 --> BA2[BANK_ADMIN B]
+        BA1 --> D1[(Bank A Data)]
+        BA2 --> D2[(Bank B Data)]
+    end
+    subgraph "On-Premise / Single-Tenant"
+        SA2[SYSTEM_ADMIN / BANK_ADMIN] -->|Manages| B3[Single Bank]
+        B3 --> D3[(Bank Data)]
+    end
+```
 
 ### SaaS Deployment
-In a SaaS environment, the platform owner manages multiple banks.
-1. **System Admin**: The platform owner uses the `SYSTEM_ADMIN` role to onboard new bank clients via the `/api/v1/banks` endpoint.
-2. **Tenant Isolation**: Each bank client receives their own `bank_id`. When their users log in, their JWT must contain their specific `bank_id` claim to ensure data isolation.
+- **Platform Owner**: Acts as `SYSTEM_ADMIN`.
+- **Capability**: Can onboard multiple banks (tenants).
+- **Data Isolation**: The `SYSTEM_ADMIN` can **only** onboard banks and manage global roles. They **cannot** see or modify actual bank data (products, pricing) due to granular authorities and Hibernate filters.
+- **Handover**: After onboarding, the `SYSTEM_ADMIN` creates the first `BANK_ADMIN` for that tenant, who then takes over.
 
-## 3. Environment Configuration
-Key environment variables / properties:
-- `SPRING_PROFILES_ACTIVE`: `dev` (H2) or `prod` (Postgres)
-- `SECURITY_JWT_SECRET_KEY`: 32+ character secret for JWT signing.
-- `SECURITY_JWT_ISSUER_URI`: The issuer URI for JWT validation.
+### On-Premise / Private Cloud
+- **Ownership**: The bank owns the entire instance.
+- **Setup**: `SYSTEM_ADMIN` and `BANK_ADMIN` roles might be held by the same individuals.
+- **Tenant**: Typically only one tenant is ever created.
 
 ***
 
@@ -216,14 +312,22 @@ The test suite utilizes a `TestTransactionHelper` to perform idempotent data see
 
 This guide walks through the end-to-end setup of a new bank and its products.
 
-## Step 1: System Admin - Create a New Bank
-The System Admin initializes the bank and its administrative role.
+## Step 0: Initial System Onboarding (One-time)
+Before any bank can be onboarded, the system itself must be initialized.
+1. **IDP Setup**: Configure your Identity Provider to issue a token with:
+   - `bank_id`: `SYSTEM`
+   - `roles`: `["SYSTEM_ADMIN"]`
+2. **Startup**: When the app starts, the `SystemAdminSeeder` reads `SYSTEM_BANK_ID` and `SYSTEM_JWT_ISSUER_URI` from environment variables and creates the root record.
+
+## Step 1: System Admin - Onboard a New Bank
+The System Admin (Platform Owner) initializes the bank. This action creates the tenant record and automatically seeds a `BANK_ADMIN` role for that bank.
 
 **Request:** `POST /api/v1/banks`
 **Authority:** `system:bank:write`
 ```json
 {
   "bankId": "GLOBAL-BANK-001",
+  "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
   "allowProductInMultipleBundles": true,
   "categoryConflictRules": [
     { "categoryA": "RETAIL", "categoryB": "WEALTH" }
@@ -231,8 +335,10 @@ The System Admin initializes the bank and its administrative role.
 }
 ```
 
-## Step 2: Bank Admin - Configure Bank Settings
-The Bank Admin for `GLOBAL-BANK-001` can update their bank's configuration.
+> **Note on Isolation**: Even though the `SYSTEM_ADMIN` creates the bank, they cannot see the bank's products or pricing data. Their authorities are restricted to `system:*` and `auth:*`.
+
+## Step 2: Bank Admin - Handover & Configuration
+Once the bank is created, the IDP admin for `GLOBAL-BANK-001` must configure their users to have the `bank_id: GLOBAL-BANK-001` and `roles: ["BANK_ADMIN"]` claims. This user then takes over and can update their bank's configuration.
 
 **Request:** `PUT /api/v1/banks/GLOBAL-BANK-001`
 **Authority:** `bank:config:write`
