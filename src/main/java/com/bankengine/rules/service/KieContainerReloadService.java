@@ -4,6 +4,7 @@ import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.config.drools.DroolsKieModuleBuilder;
 import com.bankengine.pricing.service.BundleRuleBuilderService;
 import com.bankengine.pricing.service.ProductRuleBuilderService;
+import lombok.extern.slf4j.Slf4j;
 import org.kie.api.KieServices;
 import org.kie.api.builder.ReleaseId;
 import org.kie.api.runtime.KieContainer;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service
+@Slf4j
 public class KieContainerReloadService {
 
     private final AtomicReference<KieContainer> activeKieContainer;
@@ -63,10 +65,10 @@ public class KieContainerReloadService {
             KieContainer newContainer = kieServices.newKieContainer(releaseId);
             activeKieContainer.set(newContainer);
 
-            System.out.println("✅ Drools KieContainer successfully reloaded.");
+            log.info("✅ Drools KieContainer successfully reloaded.");
 
         } catch (RuntimeException e) {
-            System.err.println("❌ DROOLS COMPILATION ERROR during reload!");
+            log.error("❌ DROOLS COMPILATION ERROR during reload!");
             throw e;
         }
     }

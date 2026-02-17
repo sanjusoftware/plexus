@@ -123,7 +123,11 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/v1/banks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Access Denied")))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test
@@ -206,5 +210,22 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void whenUntrustedIssuer_shouldReturn401Json() throws Exception {
+        // A structurally valid but untrusted JWT (Header.Payload.Signature)
+        // Payload contains "iss": "https://untrusted-issuer.com"
+        String validLookingJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+                "eyJpc3MiOiJodHRwczovL3VudHJ1c3RlZC1pc3N1ZXIuY29tIn0." +
+                "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
+        mockMvc.perform(get("/api/v1/banks/SOME_BANK")
+                        .header("Authorization", "Bearer " + validLookingJwt))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                // This validates your specific log/error message logic
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Untrusted issuer")));
     }
 }

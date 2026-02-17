@@ -9,6 +9,7 @@ import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.service.drl.DroolsExpressionBuilder;
 import com.bankengine.rules.service.KieContainerReloadService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 
@@ -16,6 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 public abstract class AbstractRuleBuilderService extends BaseService {
 
     protected final PricingComponentRepository componentRepository;
@@ -75,11 +77,11 @@ public abstract class AbstractRuleBuilderService extends BaseService {
     }
 
     private void logGeneratedDrl(String drl) {
-        System.out.println("========================================================");
-        System.out.println("GENERATED DRL FOR PACKAGE: " + getPackageSubPath());
-        System.out.println("========================================================");
-        System.out.println(drl);
-        System.out.println("========================================================");
+        log.info("========================================================");
+        log.info("GENERATED DRL FOR PACKAGE: " + getPackageSubPath());
+        log.info("========================================================");
+        log.info(drl);
+        log.info("========================================================");
     }
 
     private String buildSingleRule(PricingComponent component, PricingTier tier) {

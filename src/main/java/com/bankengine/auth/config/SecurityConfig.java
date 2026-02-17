@@ -1,9 +1,6 @@
 package com.bankengine.auth.config;
 
-import com.bankengine.auth.security.CustomAuthenticationEntryPoint;
-import com.bankengine.auth.security.JwtAuthConverter;
-import com.bankengine.auth.security.TenantContextFilter;
-import com.bankengine.auth.security.TenantContextHolder;
+import com.bankengine.auth.security.*;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,14 +34,16 @@ public class SecurityConfig {
     private final TenantContextFilter tenantContextFilter;
     private final BankConfigurationRepository bankConfigurationRepository;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
 
     public SecurityConfig(JwtAuthConverter jwtAuthConverter,
                           TenantContextFilter tenantContextFilter,
-                          BankConfigurationRepository bankConfigurationRepository, CustomAuthenticationEntryPoint authenticationEntryPoint) {
+                          BankConfigurationRepository bankConfigurationRepository, CustomAuthenticationEntryPoint authenticationEntryPoint, CustomAccessDeniedHandler accessDeniedHandler) {
         this.jwtAuthConverter = jwtAuthConverter;
         this.tenantContextFilter = tenantContextFilter;
         this.bankConfigurationRepository = bankConfigurationRepository;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
     }
 
     @Bean
@@ -71,6 +70,7 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(tenantAuthenticationManagerResolver())
                         .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
                 )
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
@@ -108,10 +108,14 @@ public class SecurityConfig {
             try {
                 // Parse the JWT without validating signature yet to find who issued it
                 return SignedJWT.parse(token.substring(7)).getJWTClaimsSet().getIssuer();
-            } catch (ParseException e) {
-                throw new IllegalArgumentException("Invalid JWT format");
+            } catch (ParseException | IllegalArgumentException e) {
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error("invalid_token", "Invalid JWT format", null)
+                );
             }
         }
-        throw new IllegalArgumentException("Missing Bearer token");
+        throw new OAuth2AuthenticationException(
+                new OAuth2Error("missing_token", "Missing Bearer token", null)
+        );
     }
 }

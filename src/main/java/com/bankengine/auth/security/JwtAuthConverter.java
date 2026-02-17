@@ -44,8 +44,6 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         String issuer = jwt.getIssuer().toString();
 
         log.info("[AUTH] Token received for Bank: {} | Issuer: {}", bankId, issuer);
-        System.out.println("bankId = " + bankId);
-        System.out.println("issuer = " + issuer);
 
         // 1. Extract bank_id
         if (bankId == null || bankId.trim().isEmpty()) {
@@ -57,16 +55,12 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         BankConfiguration bankConfig;
         try {
             TenantContextHolder.setSystemMode(true);
-            System.out.println(">>>>> going to get bank configuration");
-
             log.debug("[AUTH] Verifying bank configuration in DB for: {}", bankId);
             bankConfig = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
                     .orElseThrow(() -> {
                         log.error("[AUTH-FAIL] Bank configuration missing for: {}", bankId);
                         return new OAuth2AuthenticationException(new OAuth2Error("access_denied"), "Bank " + bankId + " is not onboarded");
                     });
-
-            System.out.println(">>>>> Got to get bank configuration: " + bankConfig);
 
             String normalizedJwtIss = issuer.replaceAll("/$", "");
             String normalizedDbIss = bankConfig.getIssuerUrl().replaceAll("/$", "");
@@ -101,8 +95,6 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         Set<String> permissions = permissionMappingService.getPermissionsForRoles(roleNames);
         log.info("[AUTH] User '{}' with roles {} has been granted permissions: {}",
                 jwt.getClaimAsString("sub"), roleNames, permissions);
-
-        System.out.println(">>> AUTH CHECK: " + roleNames + " -> " + permissions);
 
         return permissions.stream()
                 .map(SimpleGrantedAuthority::new)
