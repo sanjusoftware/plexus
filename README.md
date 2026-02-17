@@ -1,4 +1,7 @@
 # Plexus
+[![CI/CD Pipeline](https://github.com/sanjusoftware/plexus/actions/workflows/deploy-azure.yml/badge.svg)](https://github.com/sanjusoftware/plexus/actions/workflows/deploy-azure.yml)
+[![codecov](https://codecov.io/gh/sanjusoftware/plexus/graph/badge.svg?token=VUBI1YTP2B)](https://codecov.io/gh/sanjusoftware/plexus)
+
 Configurable Banking Product & Pricing Engine. A flexible microservice built on Spring Boot for defining, managing, and calculating complex global banking products, features, and pricing rules.
 
 Plexus is a scalable banking platform built with Java and Spring Boot. It implements a component-based architecture to provide complete flexibility for product managers.
