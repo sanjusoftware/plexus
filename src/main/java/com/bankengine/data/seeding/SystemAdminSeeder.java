@@ -31,7 +31,7 @@ public class SystemAdminSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        System.out.println("--- Seeding System Admin: " + systemBankId + " ---");
+        System.out.println("--- Seeding System Admin: " + systemBankId + " with ISSUER: "+ systemIssuer +" ---");
 
         // Normalize issuer to ensure matching with JwtAuthConverter
         String normalizedIssuer = systemIssuer.replaceAll("/$", "");

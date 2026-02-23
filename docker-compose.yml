@@ -1,3 +1,11 @@
+# ==============================================================================
+# LOCAL DEVELOPMENT REQUIREMENT:
+# Before running 'docker-compose up', you MUST add the following to your
+# system's hosts file (C:\Windows\System32\drivers\etc\hosts):
+#
+# 127.0.0.1 identity-provider
+# ==============================================================================
+
 services:
   # 1. PostgreSQL Database
   db:
@@ -20,13 +28,9 @@ services:
     image: ghcr.io/navikt/mock-oauth2-server:2.1.10
     container_name: oauth-mock
     ports:
-      - "9090:9090" # Debugger available at http://localhost:9090/default/debugger
+      - "9090:9090"
     environment:
       - SERVER_PORT=9090
-    networks:
-      default:
-        aliases:
-          - identity-provider # Internal DNS name for the App
 
   # 3. Spring Boot Application
   app:
@@ -37,19 +41,7 @@ services:
     extra_hosts:
       - "identity-provider:host-gateway"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/bankengine
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-
-      # 1. Internal discovery for the App
-      JWT_ISSUER_URI: http://identity-provider:9090/default
-
-      # 2. External links for your Browser/Swagger
-      SWAGGER_AUTH_URL: http://localhost:9090/default/authorize
-      SWAGGER_TOKEN_URL: http://localhost:9090/default/token
-
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      - SPRING_PROFILES_ACTIVE=docker
     depends_on:
       db:
         condition: service_healthy

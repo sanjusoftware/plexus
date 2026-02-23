@@ -139,9 +139,21 @@ To add custom claims at the organization level without modifying individual user
 - **Gradle 8.x**: (Optional) The project includes a Gradle wrapper (`./gradlew`).
 
 ## 2. Local Development
-
-### A. Quick Start with Docker Compose
 The fastest way to get the entire stack (App, Database, Mock OAuth) running:
+
+### A. Network Configuration (Required)
+Plexus uses a consistent hostname (`identity-provider`) to ensure that OAuth2 tokens issued in the browser match the validation records in the database.
+
+**Add the following entry to your system's hosts file:**
+- **Windows:** `C:\Windows\System32\drivers\etc\hosts` (Run Notepad as Administrator)
+- **Linux/Mac:** `/etc/hosts`
+
+```text
+127.0.0.1  identity-provider
+```
+
+### B. Quick Start with Docker Compose
+Once your hosts file is configured, launch the entire stack:
 
 ```bash
 docker-compose up --build -d
@@ -149,10 +161,10 @@ docker-compose up --build -d
 
 - **App**: `http://localhost:8080`
 - **PostgreSQL**: `localhost:5432` (User: `user`, Pass: `password`, DB: `bankengine`)
-- **Mock OAuth Server**: `http://localhost:9090/default`
-  - Debugger: `http://localhost:9090/default/debugger`
+- **Mock OAuth Server**: `http://identity-provider:9090/default`
+  - Debugger: `http://identity-provider:9090/default/debugger`
 
-### B. Running Locally (IDE/CLI)
+### C. Running Locally (IDE/CLI)
 For active development with hot-reloading (via H2 database):
 
 1. **Set Profile**: Ensure `SPRING_PROFILES_ACTIVE=dev` is set.
@@ -182,12 +194,15 @@ To use the provided pipeline, configure these secrets in your GitHub repository:
 ## 4. Environment Configuration Reference
 Key properties that can be overridden via environment variables:
 
-| Property | Environment Variable | Default (Dev) |
-| :--- | :--- | :--- |
-| `app.security.system-bank-id` | `SYSTEM_BANK_ID` | `SYSTEM` |
-| `app.security.system-issuer` | `SYSTEM_JWT_ISSUER_URI` | *Azure AD Default* |
-| `spring.datasource.url` | `SPRING_DATASOURCE_URL` | `jdbc:h2:mem:testdb` |
-| `spring.profiles.active` | `SPRING_PROFILES_ACTIVE` | `dev` |
+| Property | Environment Variable | Default (Dev)                                        |
+| :--- | :--- |:-----------------------------------------------------|
+| `app.security.system-bank-id` | `APP_SECURITY_SYSTEM_BANK_ID` | `SYSTEM`                                             |
+| `app.security.system-issuer` | `APP_SECURITY_SYSTEM_ISSUER` | https://login.microsoftonline.com/...                |
+| `spring.security.oauth2.resourceserver.jwt.issuer-uri` | `JWT_ISSUER_URI` | https://login.microsoftonline.com/organizations/v2.0 |
+| `swagger.auth-url` | `SWAGGER_AUTH_URL` | https://login.microsoftonline.com/.../authorize      |
+| `swagger.token-url` | `SWAGGER_TOKEN_URL` | https://login.microsoftonline.com/.../token           |
+| `spring.datasource.url` | `SPRING_DATASOURCE_URL` | `jdbc:h2:mem:testdb`                                 |
+| `spring.profiles.active` | `SPRING_PROFILES_ACTIVE` | `dev`                                                |
 
 ## 5. Deployment Models: SaaS vs On-Premise
 
@@ -320,7 +335,7 @@ Before any bank can be onboarded, the system itself must be initialized.
 1. **IDP Setup**: Configure your Identity Provider to issue a token with:
    - `bank_id`: `SYSTEM`
    - `roles`: `["SYSTEM_ADMIN"]`
-2. **Startup**: When the app starts, the `SystemAdminSeeder` reads `SYSTEM_BANK_ID` and `SYSTEM_JWT_ISSUER_URI` from environment variables and creates the root record.
+2. **Startup**: When the app starts, the `SystemAdminSeeder` reads `APP_SECURITY_SYSTEM_BANK_ID` and `APP_SECURITY_SYSTEM_ISSUER` from environment variables and creates the root record.
 
 ## Step 1: System Admin - Onboard a New Bank
 The System Admin (Platform Owner) initializes the bank. This action creates the tenant record and automatically seeds a `BANK_ADMIN` role for that bank.
