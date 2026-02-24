@@ -129,7 +129,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @DisplayName("PUT /id - Should create a new version of the bundle")
     void updateBundle_ShouldSucceed() throws Exception {
         ProductBundleRequest updateRequest = createBaseRequest("B-VER-2", "Updated Bundle Name");
-        updateRequest.setItems(List.of(createItem(retailProductId, true)));
+        updateRequest.setProducts(List.of(createItem(retailProductId, true)));
 
         mockMvc.perform(put("/api/v1/bundles/{id}", existingBundleId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -193,7 +193,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
 
         // 2. Build the request using the local, unique products
         ProductBundleRequest request = createBaseRequest("B-CONFLICT-UNIQUE", "Conflict Bundle");
-        request.setItems(List.of(
+        request.setProducts(List.of(
                 createItem(localProducts[0], true),
                 createItem(localProducts[1], false)
         ));
@@ -210,7 +210,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @DisplayName("POST - Should reject bundle creation when multiple products are marked as main")
     void createBundle_ShouldFail_WhenMultipleMainProductsExist() throws Exception {
         ProductBundleRequest request = createBaseRequest("B-MULTI-MAIN", "Invalid Multi Main Bundle");
-        request.setItems(List.of(
+        request.setProducts(List.of(
                 createItem(retailProductId, true),
                 createItem(wealthProductId, true)
         ));
@@ -231,8 +231,8 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         return request;
     }
 
-    private ProductBundleRequest.BundleItemRequest createItem(Long id, boolean main) {
-        ProductBundleRequest.BundleItemRequest item = new ProductBundleRequest.BundleItemRequest();
+    private ProductBundleRequest.BundleProduct createItem(Long id, boolean main) {
+        ProductBundleRequest.BundleProduct item = new ProductBundleRequest.BundleProduct();
         item.setProductId(id);
         item.setMainAccount(main);
         return item;

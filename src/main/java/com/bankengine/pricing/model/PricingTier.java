@@ -2,7 +2,6 @@ package com.bankengine.pricing.model;
 
 import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,7 +29,6 @@ public class PricingTier extends AuditableEntity {
     private PricingComponent pricingComponent;
 
     @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    @JsonIgnore
     private Set<PriceValue> priceValues = new HashSet<>();
 
     @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)

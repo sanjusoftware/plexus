@@ -123,9 +123,9 @@ public class ProductBundleService extends BaseService {
 
     private ProductBundle saveBundleWithLinks(ProductBundleRequest dto) {
         // 1. Structural Validation: Check Main Account constraint
-        if (dto.getItems() != null) {
-            long mainCount = dto.getItems().stream()
-                    .filter(ProductBundleRequest.BundleItemRequest::isMainAccount)
+        if (dto.getProducts() != null) {
+            long mainCount = dto.getProducts().stream()
+                    .filter(ProductBundleRequest.BundleProduct::isMainAccount)
                     .count();
             if (mainCount > 1) {
                 throw new IllegalArgumentException("A bundle can only have 1 Main Account item.");
@@ -144,10 +144,10 @@ public class ProductBundleService extends BaseService {
 
         ProductBundle savedBundle = productBundleRepository.save(bundle);
 
-        if (dto.getItems() != null) {
+        if (dto.getProducts() != null) {
             List<Product> processedProducts = new ArrayList<>();
 
-            dto.getItems().forEach(item -> {
+            dto.getProducts().forEach(item -> {
                 // SECURE: Fetch product using our secure pattern.
                 // If the productId belongs to another bank, this throws 404.
                 Product product = getByIdSecurely(productRepository, item.getProductId(), "Product");

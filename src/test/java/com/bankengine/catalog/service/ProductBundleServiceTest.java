@@ -65,7 +65,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
 
         ProductBundleRequest request = new ProductBundleRequest();
         request.setName("New Version");
-        request.setItems(List.of());
+        request.setProducts(List.of());
 
         when(bundleRepository.findById(oldId)).thenReturn(Optional.of(oldBundle));
         when(bundleRepository.save(any(ProductBundle.class))).thenAnswer(invocation -> {
@@ -139,11 +139,11 @@ class ProductBundleServiceTest extends BaseServiceTest {
     @DisplayName("Create Bundle - Fail when multiple Main Accounts provided")
     void createBundle_ShouldThrowException_WhenMultipleMainAccounts() {
         ProductBundleRequest request = new ProductBundleRequest();
-        ProductBundleRequest.BundleItemRequest item1 = new ProductBundleRequest.BundleItemRequest();
+        ProductBundleRequest.BundleProduct item1 = new ProductBundleRequest.BundleProduct();
         item1.setMainAccount(true);
-        ProductBundleRequest.BundleItemRequest item2 = new ProductBundleRequest.BundleItemRequest();
+        ProductBundleRequest.BundleProduct item2 = new ProductBundleRequest.BundleProduct();
         item2.setMainAccount(true);
-        request.setItems(List.of(item1, item2));
+        request.setProducts(List.of(item1, item2));
 
         assertThrows(IllegalArgumentException.class, () -> bundleService.createBundle(request));
     }
@@ -179,14 +179,14 @@ class ProductBundleServiceTest extends BaseServiceTest {
         request.setCode("B-001");
         request.setName("Test Bundle");
 
-        ProductBundleRequest.BundleItemRequest item1 = new ProductBundleRequest.BundleItemRequest();
+        ProductBundleRequest.BundleProduct item1 = new ProductBundleRequest.BundleProduct();
         item1.setProductId(101L);
-        ProductBundleRequest.BundleItemRequest item2 = new ProductBundleRequest.BundleItemRequest();
+        ProductBundleRequest.BundleProduct item2 = new ProductBundleRequest.BundleProduct();
         item2.setProductId(102L);
-        ProductBundleRequest.BundleItemRequest item3 = new ProductBundleRequest.BundleItemRequest();
+        ProductBundleRequest.BundleProduct item3 = new ProductBundleRequest.BundleProduct();
         item3.setProductId(103L);
 
-        request.setItems(List.of(item1, item2, item3));
+        request.setProducts(List.of(item1, item2, item3));
 
         Product p1 = new Product();
         p1.setId(101L);
@@ -227,11 +227,11 @@ class ProductBundleServiceTest extends BaseServiceTest {
         ProductBundleRequest request = new ProductBundleRequest();
         request.setName("Conflicting Bundle");
 
-        ProductBundleRequest.BundleItemRequest item1 = new ProductBundleRequest.BundleItemRequest();
+        ProductBundleRequest.BundleProduct item1 = new ProductBundleRequest.BundleProduct();
         item1.setProductId(101L);
-        ProductBundleRequest.BundleItemRequest item2 = new ProductBundleRequest.BundleItemRequest();
+        ProductBundleRequest.BundleProduct item2 = new ProductBundleRequest.BundleProduct();
         item2.setProductId(102L);
-        request.setItems(List.of(item1, item2));
+        request.setProducts(List.of(item1, item2));
 
         Product p1 = new Product();
         p1.setId(101L);
@@ -346,7 +346,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
     void createBundle_ShouldHandleNullItems() {
         ProductBundleRequest request = new ProductBundleRequest();
         request.setName("Empty Request Bundle");
-        request.setItems(null);
+        request.setProducts(null);
 
         when(bundleRepository.save(any(ProductBundle.class))).thenAnswer(i -> {
             ProductBundle b = i.getArgument(0);

@@ -30,21 +30,13 @@ public class ProductBundleRequest {
 
     @Valid
     @NotEmpty(message = "A bundle must contain at least one product.")
-    private List<BundleItemRequest> items;
+    private List<BundleProduct> products;
 
-    /**
-     * Nested DTO for defining product relationships within the bundle.
-     */
     @Data
-    public static class BundleItemRequest {
-
+    public static class BundleProduct {
         @NotNull(message = "Product ID is required for linking.")
         private Long productId;
-
-        // Defines if the product is designated as the primary account in the bundle
         private boolean isMainAccount = false;
-
-        // Defines if the product is required to be taken with the bundle
         private boolean isMandatory = true;
     }
 }
