@@ -1,10 +1,7 @@
 package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.ProductMapper;
-import com.bankengine.catalog.dto.ProductFeature;
-import com.bankengine.catalog.dto.ProductRequest;
-import com.bankengine.catalog.dto.ProductResponse;
-import com.bankengine.catalog.dto.ProductSearchRequest;
+import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -12,8 +9,11 @@ import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,9 +47,11 @@ public class ProductServiceTest extends BaseServiceTest {
     @Mock
     private FeatureComponentService featureComponentService;
     @Mock
+    private PricingComponentService pricingComponentService;
+    @Mock
     private ProductMapper productMapper;
     @Mock
-    private jakarta.persistence.EntityManager entityManager;
+    private EntityManager entityManager;
 
     @InjectMocks
     private ProductService productService;
@@ -69,18 +71,28 @@ public class ProductServiceTest extends BaseServiceTest {
     }
 
     @Test
-    @DisplayName("Create Product - Should initialize product and assign bankId from context")
-    void testCreateProduct() {
+    @DisplayName("Create Product - Should initialize product and assign bankId from context and default status to DRAFT if not provided")
+    void testCreateProduct_DefaultStatus() {
         ProductRequest dto = new ProductRequest();
         dto.setProductTypeId(1L);
         dto.setName("New Product");
+        dto.setStatus(null);
+
+        Product mappedProduct = new Product();
+        mappedProduct.setName(dto.getName());
+        mappedProduct.setStatus("DRAFT");
 
         when(productTypeRepository.findById(1L)).thenReturn(Optional.of(new ProductType()));
-        when(productRepository.save(argThat(p -> TEST_BANK_ID.equals(p.getBankId())))).thenReturn(new Product());
-        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
+        when(productMapper.toEntity(any(ProductRequest.class), any(ProductType.class)))
+                .thenReturn(mappedProduct);
 
-        assertNotNull(productService.createProduct(dto));
-        verify(productRepository, times(1)).save(any(Product.class));
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        when(productRepository.save(captor.capture())).thenReturn(new Product());
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        productService.createProduct(dto);
+
+        assertEquals("DRAFT", captor.getValue().getStatus());
     }
 
     @Test
@@ -339,10 +351,9 @@ public class ProductServiceTest extends BaseServiceTest {
 
         FeatureComponent comp = new FeatureComponent();
         comp.setId(2L);
-        comp.setDataType(FeatureComponent.DataType.INTEGER); // Not STRING
+        comp.setDataType(FeatureComponent.DataType.INTEGER);
         when(featureComponentService.getFeatureComponentById(2L)).thenReturn(comp);
 
-        // Blank value
         ProductFeature dto = ProductFeature.builder().featureComponentId(2L).featureValue(" ").build();
 
         Exception ex = assertThrows(IllegalArgumentException.class,
@@ -374,7 +385,8 @@ public class ProductServiceTest extends BaseServiceTest {
         Product product = new Product();
         product.setId(1L);
         FeatureComponent comp = new FeatureComponent();
-        comp.setId(10L); comp.setDataType(FeatureComponent.DataType.STRING);
+        comp.setId(10L);
+        comp.setDataType(FeatureComponent.DataType.STRING);
 
         ProductFeatureLink existingLink = new ProductFeatureLink();
         existingLink.setFeatureComponent(comp);
@@ -388,7 +400,6 @@ public class ProductServiceTest extends BaseServiceTest {
         ProductFeature dto = ProductFeature.builder().featureComponentId(10L).featureValue("SameValue").build();
         productService.syncProductFeatures(1L, List.of(dto));
 
-        // verify save was NOT called for the update branch
         verify(linkRepository, never()).save(existingLink);
     }
 
@@ -421,12 +432,10 @@ public class ProductServiceTest extends BaseServiceTest {
         comp.setId(2L);
         when(featureComponentService.getFeatureComponentById(2L)).thenReturn(comp);
 
-        // DECIMAL format failure (Line 436/439)
         comp.setDataType(FeatureComponent.DataType.DECIMAL);
         ProductFeature decDto = ProductFeature.builder().featureComponentId(2L).featureValue("not.a.number").build();
         assertThrows(IllegalArgumentException.class, () -> productService.linkFeatureToProduct(1L, decDto));
 
-        // Empty value for Boolean (Line 421)
         comp.setDataType(FeatureComponent.DataType.BOOLEAN);
         ProductFeature emptyBoolDto = ProductFeature.builder().featureComponentId(2L).featureValue("").build();
         assertThrows(IllegalArgumentException.class, () -> productService.linkFeatureToProduct(1L, emptyBoolDto));
@@ -438,7 +447,8 @@ public class ProductServiceTest extends BaseServiceTest {
         Product product = new Product();
         product.setId(1L);
         FeatureComponent comp = new FeatureComponent();
-        comp.setId(10L); comp.setDataType(FeatureComponent.DataType.STRING);
+        comp.setId(10L);
+        comp.setDataType(FeatureComponent.DataType.STRING);
 
         ProductFeatureLink existingLink = new ProductFeatureLink();
         existingLink.setFeatureComponent(comp);
@@ -452,7 +462,6 @@ public class ProductServiceTest extends BaseServiceTest {
         ProductFeature dto = ProductFeature.builder().featureComponentId(10L).featureValue("NoChange").build();
         productService.syncProductFeatures(1L, List.of(dto));
 
-        // verify save was NEVER called because values matched
         verify(linkRepository, never()).save(existingLink);
     }
 
@@ -481,5 +490,37 @@ public class ProductServiceTest extends BaseServiceTest {
 
         Exception ex = assertThrows(IllegalArgumentException.class, () -> productService.linkFeatureToProduct(1L, dto));
         assertTrue(ex.getMessage().contains("Feature value cannot be empty"));
+    }
+
+    @Test
+    @DisplayName("Sync Pricing: Should copy fixed values and rules engine flags to link table")
+    void syncProductPricing_ShouldCopyPricingDetails() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setBankId("TEST_BANK");
+
+        ProductPricing dto = new ProductPricing();
+        dto.setPricingComponentId(100L);
+        dto.setFixedValue(new java.math.BigDecimal("15.50"));
+        dto.setFixedValueType(com.bankengine.pricing.model.PriceValue.ValueType.FEE_ABSOLUTE);
+        dto.setUseRulesEngine(true);
+        dto.setTargetComponentCode("TXN_FEE");
+
+        PricingComponent comp = new PricingComponent();
+        comp.setId(100L);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(pricingComponentService.getPricingComponentById(100L)).thenReturn(comp);
+        when(productRepository.save(any())).thenReturn(product);
+
+        productService.syncProductPricing(1L, List.of(dto));
+
+        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productRepository).save(productCaptor.capture());
+
+        var savedLink = productCaptor.getValue().getProductPricingLinks().get(0);
+        assertEquals(new java.math.BigDecimal("15.50"), savedLink.getFixedValue());
+        assertTrue(savedLink.isUseRulesEngine());
+        assertEquals("TXN_FEE", savedLink.getTargetComponentCode());
     }
 }

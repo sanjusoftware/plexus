@@ -5,6 +5,7 @@ import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,19 +18,23 @@ import java.util.stream.Collectors;
 public class RoleManagementService extends BaseService {
 
     private final RoleRepository roleRepository;
-    private final PermissionMappingService permissionMappingService; // Needed for cache eviction
+    private final PermissionMappingService permissionMappingService;
 
     @Transactional
     public void saveRoleMapping(String roleName, Set<String> authorities) {
-        Role role = roleRepository.findByName(roleName).orElse(new Role());
+        boolean containsSystemAuth = authorities.stream().anyMatch(a -> a.startsWith("system:"));
+        if (containsSystemAuth && !"SYSTEM".equals(getCurrentBankId())) {
+            throw new AccessDeniedException("Only SYSTEM bank admins can assign system:* authorities.");
+        }
 
+        Role role = roleRepository.findByName(roleName).orElse(new Role());
         role.setName(roleName);
-        role.setBankId(getCurrentBankId()); // Update or set the bank ID
-        role.setAuthorities(authorities); // Set the new authorities
+        role.setBankId(getCurrentBankId());
+        role.setAuthorities(authorities);
 
         roleRepository.save(role);
 
-        // CRITICAL: Evict the cache since the role mapping has changed.
+        // Evict the cache since the role mapping has changed.
         permissionMappingService.evictAllRolePermissionsCache();
     }
 

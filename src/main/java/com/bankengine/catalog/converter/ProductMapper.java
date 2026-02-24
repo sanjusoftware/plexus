@@ -18,7 +18,6 @@ import java.util.List;
         uses = {ProductTypeMapper.class, FeatureLinkMapper.class, PricingLinkMapper.class})
 public interface ProductMapper {
 
-    @Mapping(target = "productType", source = "product.productType")
     @Mapping(target = "features", source = "product.productFeatureLinks")
     @Mapping(target = "pricing", source = "product.productPricingLinks")
     ProductResponse toResponse(Product product);
@@ -28,15 +27,14 @@ public interface ProductMapper {
     @ToAuditableEntity
     @Mapping(target = "productType", source = "productType")
     @Mapping(target = "name", source = "dto.name")
-    @Mapping(target = "featured", source = "dto.featured")
     @Mapping(target = "productFeatureLinks", ignore = true)
     @Mapping(target = "productPricingLinks", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)
+    @Mapping(target = "status", source = "dto.status", defaultValue = "DRAFT")
     Product toEntity(ProductRequest dto, ProductType productType);
 
     @ToAuditableEntity
     @Mapping(target = "productType", ignore = true)
-    @Mapping(target = "featured", source = "dto.featured")
     @Mapping(target = "productFeatureLinks", ignore = true)
     @Mapping(target = "productPricingLinks", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)

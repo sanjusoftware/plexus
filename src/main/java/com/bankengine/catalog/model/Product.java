@@ -36,7 +36,7 @@ public class Product extends AuditableEntity {
     private LocalDate expirationDate;
 
     private LocalDate effectiveDate;
-    private String status; // e.g., "ACTIVE", "DRAFT", "INACTIVE"
+    private String status = "DRAFT"; // e.g., "ACTIVE", "DRAFT", "INACTIVE"
 
     @Column(name = "category", nullable = false)
     @NotBlank(message = "Product category is mandatory for compatibility validation.")
@@ -68,7 +68,7 @@ public class Product extends AuditableEntity {
     private Integer displayOrder; // For sorting in catalog
 
     @Column(name = "is_featured")
-    private boolean isFeatured; // For homepage highlights
+    private boolean featured; // For homepage highlights
 
     @Column(name = "target_customer_segments")
     private String targetCustomerSegments; // Comma-separated: "RETAIL,PREMIUM"

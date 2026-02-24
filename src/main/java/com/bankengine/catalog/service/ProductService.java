@@ -43,7 +43,9 @@ public class ProductService extends BaseService {
     private final ProductMapper productMapper;
 
     public ProductService(ProductRepository productRepository, ProductFeatureLinkRepository featureLinkRepository,
-                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository, EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository, PricingComponentService pricingComponentService, ProductMapper productMapper) {
+                          FeatureComponentService featureComponentService, ProductTypeRepository productTypeRepository,
+                          EntityManager entityManager, ProductPricingLinkRepository pricingLinkRepository,
+                          PricingComponentService pricingComponentService, ProductMapper productMapper) {
         this.productRepository = productRepository;
         this.featureLinkRepository = featureLinkRepository;
         this.featureComponentService = featureComponentService;
@@ -70,57 +72,41 @@ public class ProductService extends BaseService {
 
     /**
      * Synchronizes the features linked to a product based on the provided list.
-     * This method handles creation of new links, deletion of missing links, and updates to existing ones.
      */
     @Transactional
     public ProductResponse syncProductFeatures(Long productId, List<ProductFeature> syncDtos) {
-        // 1. Validate Product existence and fetch the entity
         Product product = getProductEntityById(productId);
-
-        // 2. Fetch current links and map them by FeatureComponent ID for fast lookup
         List<ProductFeatureLink> currentLinks = featureLinkRepository.findByProductId(productId);
 
-        // Map: { FeatureComponentId -> ProductFeatureLink }
         Map<Long, ProductFeatureLink> currentLinksMap = currentLinks.stream()
                 .collect(Collectors.toMap(
                         link -> link.getFeatureComponent().getId(),
                         link -> link
                 ));
 
-        // Collect the set of incoming FeatureComponent IDs
         Set<Long> incomingFeatureIds = syncDtos.stream()
                 .map(ProductFeature::getFeatureComponentId)
                 .collect(Collectors.toSet());
 
-        // 3. IDENTIFY and DELETE links that are no longer present (Cleanup)
         List<ProductFeatureLink> linksToDelete = currentLinks.stream()
                 .filter(link -> !incomingFeatureIds.contains(link.getFeatureComponent().getId()))
                 .collect(Collectors.toList());
 
         featureLinkRepository.deleteAll(linksToDelete);
-        featureLinkRepository.flush(); // Flush 1: Ensures deletions hit the DB immediately
+        featureLinkRepository.flush();
 
-        // 4. IDENTIFY and CREATE/UPDATE links that are incoming
         for (ProductFeature dto : syncDtos) {
             Long featureId = dto.getFeatureComponentId();
-
-            // Validate FeatureComponent existence once here
             FeatureComponent component = featureComponentService.getFeatureComponentById(featureId);
-
-            // Validate the value against the required data type
             validateFeatureValue(dto.getFeatureValue(), component.getDataType());
 
             if (currentLinksMap.containsKey(featureId)) {
-                // UPDATE: Link exists, check if featureValue changed
                 ProductFeatureLink existingLink = currentLinksMap.get(featureId);
-
                 if (!existingLink.getFeatureValue().equals(dto.getFeatureValue())) {
                     existingLink.setFeatureValue(dto.getFeatureValue());
-                    featureLinkRepository.save(existingLink); // Explicit save for update
+                    featureLinkRepository.save(existingLink);
                 }
-                // If value is the same, do nothing.
             } else {
-                // CREATE: Link is new
                 ProductFeatureLink newLink = new ProductFeatureLink();
                 newLink.setProduct(product);
                 newLink.setFeatureComponent(component);
@@ -137,23 +123,19 @@ public class ProductService extends BaseService {
     }
 
     /**
-     * Synchronizes the pricing components linked to a product based on the provided list.
-     * Synchronization is based on the composite key: (PricingComponentId, Context).
+     * Synchronizes the pricing components linked to a product.
      */
     @Transactional
     public ProductResponse syncProductPricing(Long productId, List<ProductPricing> syncDtos) {
         Product product = getProductEntityById(productId);
 
-        // 1. Identify what should stay or be updated
         Set<Long> incomingIds = syncDtos.stream()
                 .map(ProductPricing::getPricingComponentId)
                 .collect(Collectors.toSet());
 
-        // 2. Remove orphans by modifying the collection directly
         product.getProductPricingLinks().removeIf(link ->
                 !incomingIds.contains(link.getPricingComponent().getId()));
 
-        // 3. Add new links
         Set<Long> existingIds = product.getProductPricingLinks().stream()
                 .map(link -> link.getPricingComponent().getId())
                 .collect(Collectors.toSet());
@@ -161,42 +143,40 @@ public class ProductService extends BaseService {
         for (ProductPricing dto : syncDtos) {
             if (!existingIds.contains(dto.getPricingComponentId())) {
                 PricingComponent component = pricingComponentService.getPricingComponentById(dto.getPricingComponentId());
-
-                ProductPricingLink newLink = new ProductPricingLink();
-                newLink.setProduct(product);
-                newLink.setPricingComponent(component);
-                newLink.setBankId(product.getBankId());
-
-                product.getProductPricingLinks().add(newLink);
+                product.getProductPricingLinks().add(createNewLink(dto, product, component));
             }
         }
 
-        // 4. Save parent (cascades to children) and flush
         productRepository.save(product);
         productRepository.flush();
-
-        // Clear to ensure the next fetch is fresh from DB
         entityManager.clear();
 
         return getProductResponseById(productId);
     }
 
+    private static ProductPricingLink createNewLink(ProductPricing dto, Product product, PricingComponent component) {
+        ProductPricingLink newLink = new ProductPricingLink();
+        newLink.setProduct(product);
+        newLink.setPricingComponent(component);
+        newLink.setBankId(product.getBankId());
+        newLink.setFixedValue(dto.getFixedValue());
+        newLink.setFixedValueType(dto.getFixedValueType());
+        newLink.setUseRulesEngine(dto.isUseRulesEngine());
+        newLink.setTargetComponentCode(dto.getTargetComponentCode());
+        newLink.setEffectiveDate(dto.getEffectiveDate());
+        newLink.setExpiryDate(dto.getExpiryDate());
+        return newLink;
+    }
+
     /**
-     * Creates a new Product from a DTO, converting to Entity and performing lookups.
+     * Creates a new Product using the Mapper to ensure default statuses and marketing fields are set.
      */
     @Transactional
     public ProductResponse createProduct(ProductRequest requestDto) {
-        // 1. Validate the ProductType belongs to the bank
         ProductType productType = getProductTypeById(requestDto.getProductTypeId());
 
-        Product product = new Product();
-        product.setName(requestDto.getName());
+        Product product = productMapper.toEntity(requestDto, productType);
         product.setBankId(getCurrentBankId());
-        product.setEffectiveDate(requestDto.getEffectiveDate());
-        product.setExpirationDate(requestDto.getExpirationDate());
-        product.setStatus(requestDto.getStatus());
-        product.setProductType(productType);
-        product.setCategory(requestDto.getCategory());
 
         Product savedProduct = productRepository.save(product);
         return productMapper.toResponse(savedProduct);
@@ -216,16 +196,11 @@ public class ProductService extends BaseService {
      */
     @Transactional
     public ProductResponse linkFeatureToProduct(Long productId, ProductFeature dto) {
-        // 1. Validate Product exists
         Product product = getProductEntityById(productId);
-
-        // 2. Validate FeatureComponent exists
         FeatureComponent component = featureComponentService.getFeatureComponentById(dto.getFeatureComponentId());
 
-        // 3. Validate dto.featureValue against component.dataType
         validateFeatureValue(dto.getFeatureValue(), component.getDataType());
 
-        // 4. Create and save the Link
         ProductFeatureLink link = new ProductFeatureLink();
         link.setProduct(product);
         link.setFeatureComponent(component);
@@ -235,40 +210,29 @@ public class ProductService extends BaseService {
         return getProductResponseById(product.getId());
     }
 
-    /**
-     * Helper method to retrieve a Product entity by ID, throwing NotFoundException on failure (404).
-     */
     public Product getProductEntityById(Long id) {
         return getByIdSecurely(productRepository, id, "Product");
     }
 
-    /**
-     * Helper method to retrieve a ProductType entity by ID, throwing NotFoundException on failure (404).
-     */
     private ProductType getProductTypeById(Long id) {
         return getByIdSecurely(productTypeRepository, id, "Product Type");
     }
 
     /**
-     * Performs a metadata-only update on an existing Product entity IF it is in DRAFT status.
-     * Used for administrative updates before launch.
+     * Performs a metadata-only update on an existing DRAFT Product.
      */
     @Transactional
     public ProductResponse updateProduct(Long productId, ProductRequest dto) {
         Product product = getProductEntityById(productId);
 
-        // Don't allow update to INACTIVE/ARCHIVED product
         if ("INACTIVE".equals(product.getStatus()) || "ARCHIVED".equals(product.getStatus())) {
             throw new IllegalStateException("Cannot update an INACTIVE or ARCHIVED product version.");
         }
 
-        // Only allow general metadata update if DRAFT (Otherwise, must use Copy-and-Update)
         if (!"DRAFT".equals(product.getStatus())) {
             throw new IllegalStateException("Metadata update requires a new version. Product must be DRAFT.");
         }
 
-        // Status, Effective Date, and Expiration Date handled by direct methods.
-        // Only update administrative metadata:
         product.setName(dto.getName());
         product.setBankId(getCurrentBankId());
 
@@ -277,7 +241,7 @@ public class ProductService extends BaseService {
     }
 
     /**
-     * Sets the product status to ACTIVE and updates the effective date if provided.
+     * Sets the product status to ACTIVE.
      */
     @Transactional
     public ProductResponse activateProduct(Long id, LocalDate effectiveDate) {
@@ -288,7 +252,6 @@ public class ProductService extends BaseService {
         }
 
         product.setStatus("ACTIVE");
-        // Only update effectiveDate if a value is provided, otherwise leave the one set at creation.
         if (effectiveDate != null) {
             product.setEffectiveDate(effectiveDate);
         }
@@ -316,7 +279,7 @@ public class ProductService extends BaseService {
     }
 
     /**
-     * Updates only the expiration date (Extending life).
+     * Updates only the expiration date.
      */
     @Transactional
     public ProductResponse extendProductExpiration(Long id, LocalDate newExpirationDate) {
@@ -325,30 +288,21 @@ public class ProductService extends BaseService {
         if (newExpirationDate == null) {
             throw new IllegalArgumentException("New expiration date cannot be null.");
         }
-
-        // Check if the new date is before the CURRENT date (only if CURRENT date exists)
         if (product.getExpirationDate() != null && newExpirationDate.isBefore(product.getExpirationDate())) {
             throw new IllegalArgumentException("New expiration date must be after the current expiration date.");
         }
-
-        // Also, ensure the new date is not in the past
         if (newExpirationDate.isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("New expiration date must be in the future.");
         }
 
         product.setExpirationDate(newExpirationDate);
-
         Product savedProduct = productRepository.save(product);
         return productMapper.toResponse(savedProduct);
     }
 
     /**
-     * Creates a new version of a product. This involves archiving the old version
-     * and creating a new entity that inherits all previous features and pricing links.
-     *
-     * @param oldProductId The ID of the product version to be replaced.
-     * @param requestDto   The metadata for the new version.
-     * @return The response DTO for the newly created product.
+     * Creates a new version by cloning the old product using the Mapper.
+     * This ensures all marketing fields (taglines, descriptions, icons) are preserved.
      */
     @Transactional
     public ProductResponse createNewVersion(Long oldProductId, ProductVersionRequest requestDto) {
@@ -365,18 +319,13 @@ public class ProductService extends BaseService {
         oldProduct.setExpirationDate(requestDto.getNewEffectiveDate().minusDays(1));
         productRepository.save(oldProduct);
 
-        // 2. Create New Base
-        Product newProduct = new Product();
-        newProduct.setProductType(oldProduct.getProductType());
-        newProduct.setBankId(bankId);
-        newProduct.setName(requestDto.getNewName());
-        newProduct.setEffectiveDate(requestDto.getNewEffectiveDate());
-        newProduct.setCategory(oldProduct.getCategory());
-        newProduct.setStatus("DRAFT");
+        // 2. Map and Save New Version (Cloning metadata from oldProduct)
+        Product newProduct = productMapper.createNewVersionFrom(oldProduct, requestDto);
+        newProduct.setBankId(bankId); // Maintain tenant isolation
 
         Product savedNewProduct = productRepository.save(newProduct);
 
-        // 3. Clone Features
+        // 3. Clone Feature Links
         List<ProductFeatureLink> newFeatureLinks = oldProduct.getProductFeatureLinks().stream()
                 .map(oldLink -> {
                     ProductFeatureLink newLink = new ProductFeatureLink();
@@ -388,7 +337,7 @@ public class ProductService extends BaseService {
                 }).toList();
         featureLinkRepository.saveAll(newFeatureLinks);
 
-        // 4. Clone Pricing (Ensuring values are copied)
+        // 4. Clone Pricing Links
         List<ProductPricingLink> oldPricingLinks = pricingLinkRepository.findByProductId(oldProductId);
         List<ProductPricingLink> newPricingLinks = oldPricingLinks.stream()
                 .map(oldLink -> {
@@ -396,13 +345,15 @@ public class ProductService extends BaseService {
                     newLink.setProduct(savedNewProduct);
                     newLink.setPricingComponent(oldLink.getPricingComponent());
                     newLink.setFixedValue(oldLink.getFixedValue());
+                    newLink.setFixedValueType(oldLink.getFixedValueType());
                     newLink.setUseRulesEngine(oldLink.isUseRulesEngine());
+                    newLink.setTargetComponentCode(oldLink.getTargetComponentCode());
                     newLink.setBankId(bankId);
                     return newLink;
                 }).toList();
         pricingLinkRepository.saveAll(newPricingLinks);
 
-        // 5. Sync and Refresh
+        // 5. Finalize state
         productRepository.flush();
         featureLinkRepository.flush();
         pricingLinkRepository.flush();
@@ -411,10 +362,6 @@ public class ProductService extends BaseService {
         return productMapper.toResponse(savedNewProduct);
     }
 
-    /**
-     * Helper method to validate the feature value type.
-     * Throws IllegalArgumentException (maps to 400 Bad Request) on failure.
-     */
     private void validateFeatureValue(String value, FeatureComponent.DataType requiredType) {
         if (value == null || value.trim().isEmpty()) {
             if (requiredType != FeatureComponent.DataType.STRING) {
@@ -423,33 +370,22 @@ public class ProductService extends BaseService {
         }
 
         switch (requiredType) {
-            case INTEGER:
-                try {
-                    Integer.parseInt(value);
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Feature value '" + value + "' must be a valid INTEGER.");
-                }
-                break;
-            case DECIMAL:
-                try {
-                    Double.parseDouble(value);
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Feature value '" + value + "' must be a valid DECIMAL.");
-                }
-                break;
-            case BOOLEAN:
+            case INTEGER -> {
+                try { Integer.parseInt(value); }
+                catch (NumberFormatException e) { throw new IllegalArgumentException("Feature value '" + value + "' must be a valid INTEGER."); }
+            }
+            case DECIMAL -> {
+                try { Double.parseDouble(value); }
+                catch (NumberFormatException e) { throw new IllegalArgumentException("Feature value '" + value + "' must be a valid DECIMAL."); }
+            }
+            case BOOLEAN -> {
                 String lowerValue = value.toLowerCase();
                 if (!("true".equals(lowerValue) || "false".equals(lowerValue))) {
                     throw new IllegalArgumentException("Feature value '" + value + "' must be 'true' or 'false' for BOOLEAN.");
                 }
-                break;
-            case STRING:
-                // No specific format validation is needed for strings.
-                break;
-            default:
-                // Should not happen, but defensive programming is good.
-                throw new IllegalArgumentException("Unsupported data type for validation: " + requiredType);
+            }
+            case STRING -> {}
+            default -> throw new IllegalArgumentException("Unsupported data type: " + requiredType);
         }
     }
-
 }

@@ -6,6 +6,7 @@ import com.bankengine.catalog.dto.ProductVersionRequest;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -24,43 +25,63 @@ public class ProductMapperTest {
 
     @BeforeEach
     void setUp() {
-        // 1. Manually instantiate the sub-mappers
         ProductTypeMapper typeMapper = Mappers.getMapper(ProductTypeMapper.class);
         FeatureLinkMapper featureMapper = Mappers.getMapper(FeatureLinkMapper.class);
         PricingLinkMapper pricingLinkMapper = Mappers.getMapper(PricingLinkMapper.class);
 
-        // 2. Inject them into the main mapper
         ReflectionTestUtils.setField(mapper, "productTypeMapper", typeMapper);
         ReflectionTestUtils.setField(mapper, "featureLinkMapper", featureMapper);
         ReflectionTestUtils.setField(mapper, "pricingLinkMapper", pricingLinkMapper);
     }
 
     @Test
+    @DisplayName("Version Cloning: Should carry over marketing metadata from old product")
     void shouldCorrectlyMapToNewVersion() {
         // Arrange
         ProductType productType = new ProductType();
         productType.setName("Test Product Type");
 
         Product oldProduct = new Product();
+        oldProduct.setId(99L); // Original ID
         oldProduct.setProductType(productType);
         oldProduct.setBankId("BANK-001");
+        oldProduct.setCategory("RETAIL");
+        oldProduct.setTagline("Original Tagline");
+        oldProduct.setFullDescription("Original Description");
+        oldProduct.setIconUrl("http://old-icon.png");
+        oldProduct.setFeatured(true);
 
         ProductVersionRequest requestDto = new ProductVersionRequest();
-        requestDto.setNewName("New Product Name");
-        requestDto.setNewEffectiveDate(LocalDate.now().plusDays(1));
+        requestDto.setNewName("Improved Savings V2");
+        requestDto.setNewEffectiveDate(LocalDate.now().plusDays(7));
 
         // Act
         Product newProduct = mapper.createNewVersionFrom(oldProduct, requestDto);
 
         // Assert
         assertThat(newProduct).isNotNull();
-        assertThat(newProduct.getId()).isNull(); // Should not copy ID
-        assertThat(newProduct.getName()).isEqualTo("New Product Name");
-        assertThat(newProduct.getBankId()).isEqualTo("BANK-001");
-        assertThat(newProduct.getProductType().getName()).isEqualTo("Test Product Type");
-        assertThat(newProduct.getEffectiveDate()).isEqualTo(requestDto.getNewEffectiveDate());
+        assertThat(newProduct.getId()).isNull(); // Crucial: ID must be null for new record
+        assertThat(newProduct.getName()).isEqualTo("Improved Savings V2");
         assertThat(newProduct.getStatus()).isEqualTo("DRAFT");
-        assertThat(newProduct.getExpirationDate()).isNull();
+
+        // Inherited Fields
+        assertThat(newProduct.getBankId()).isEqualTo("BANK-001");
+        assertThat(newProduct.getCategory()).isEqualTo("RETAIL");
+        assertThat(newProduct.getTagline()).isEqualTo("Original Tagline");
+        assertThat(newProduct.getFullDescription()).isEqualTo("Original Description");
+        assertThat(newProduct.getIconUrl()).isEqualTo("http://old-icon.png");
+        assertThat(newProduct.isFeatured()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Defaults: Should set status to DRAFT when request status is null")
+    void shouldDefaultToDraftWhenStatusIsNull() {
+        // Arrange
+        ProductRequest dto = new ProductRequest();
+        dto.setName("New Product");
+        dto.setStatus(null);
+        Product entity = mapper.toEntity(dto, new ProductType());
+        assertThat(entity.getStatus()).isEqualTo("DRAFT");
     }
 
     @Test
@@ -94,15 +115,44 @@ public class ProductMapperTest {
     }
 
     @Test
+    @DisplayName("Update: Should map isFeatured correctly (Boolean naming check)")
     void testUpdateFromDto() {
         ProductRequest dto = new ProductRequest();
         dto.setName("Updated Product");
+        dto.setFeatured(true);
 
         Product entity = new Product();
         entity.setName("Original Product");
+        entity.setFeatured(false);
 
         mapper.updateFromDto(dto, entity);
 
-        assertEquals(dto.getName(), entity.getName());
+        assertThat(entity.getName()).isEqualTo("Updated Product");
+        assertThat(entity.isFeatured()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Marketing: Should map all marketing fields from Request DTO")
+    void shouldMapMarketingFields_WhenConvertingRequestToEntity() {
+        ProductRequest dto = new ProductRequest();
+        dto.setName("Global Savings");
+        dto.setTagline("Best Savings");
+        dto.setFullDescription("Rich text description here");
+        dto.setIconUrl("http://image.png");
+        dto.setDisplayOrder(5);
+        dto.setFeatured(true);
+        dto.setTargetCustomerSegments("RETAIL");
+        dto.setTermsAndConditions("T&C content");
+
+        ProductType type = new ProductType();
+        Product entity = mapper.toEntity(dto, type);
+
+        assertThat(entity.getTagline()).isEqualTo("Best Savings");
+        assertThat(entity.getFullDescription()).isEqualTo("Rich text description here");
+        assertThat(entity.getIconUrl()).isEqualTo("http://image.png");
+        assertThat(entity.getDisplayOrder()).isEqualTo(5);
+        assertThat(entity.isFeatured()).isTrue();
+        assertThat(entity.getTargetCustomerSegments()).isEqualTo("RETAIL");
+        assertThat(entity.getTermsAndConditions()).isEqualTo("T&C content");
     }
 }
