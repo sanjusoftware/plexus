@@ -7,7 +7,6 @@ import com.bankengine.pricing.converter.TierConditionMapper;
 import com.bankengine.pricing.dto.PriceValueRequest;
 import com.bankengine.pricing.dto.PricingComponentRequest;
 import com.bankengine.pricing.dto.PricingTierRequest;
-import com.bankengine.pricing.dto.TieredPriceRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
@@ -76,21 +75,19 @@ class PricingComponentServiceTest extends BaseServiceTest {
         when(componentRepository.findById(cId)).thenReturn(Optional.of(new PricingComponent()));
 
         PriceValue value = new PriceValue();
-        TieredPriceRequest dto = new TieredPriceRequest();
         PricingTierRequest tierDto = new PricingTierRequest();
         tierDto.setConditions(null);
-        dto.setTier(tierDto);
 
         PriceValueRequest valDto = new PriceValueRequest();
         valDto.setValueType("FEE_ABSOLUTE");
         valDto.setPriceAmount(java.math.BigDecimal.TEN);
-        dto.setValue(valDto);
+        tierDto.setPriceValue(valDto);
 
         when(tierRepository.findById(tId)).thenReturn(Optional.of(tier));
         when(valueRepository.findByPricingTierId(tId)).thenReturn(Optional.of(value));
 
         // Act
-        componentService.updateTierAndValue(cId, tId, dto);
+        componentService.updateTierAndValue(cId, tId, tierDto);
 
         // Assert
         assertTrue(tier.getConditions().isEmpty());
@@ -132,6 +129,6 @@ class PricingComponentServiceTest extends BaseServiceTest {
         when(valueRepository.findByPricingTierId(tierId)).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () ->
-                componentService.updateTierAndValue(componentId, tierId, new TieredPriceRequest()));
+                componentService.updateTierAndValue(componentId, tierId, new PricingTierRequest()));
     }
 }

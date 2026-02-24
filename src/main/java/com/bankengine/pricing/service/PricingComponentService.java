@@ -75,24 +75,23 @@ public class PricingComponentService extends BaseService {
     public ProductPricingCalculationResult.PriceComponentDetail updateTierAndValue(
             Long componentId,
             Long tierId,
-            TieredPriceRequest dto) {
+            PricingTierRequest dto) {
 
         getPricingComponentById(componentId);
         PricingTier tier = getPricingTierById(tierId);
         PriceValue value = valueRepository.findByPricingTierId(tierId)
                 .orElseThrow(() -> new NotFoundException("Price Value not found for Tier ID: " + tierId));
 
-        pricingTierMapper.updateFromDto(dto.getTier(), tier);
-        updateTierConditions(tier, dto.getTier().getConditions());
-        priceValueMapper.updateFromDto(dto.getValue(), value);
+        pricingTierMapper.updateFromDto(dto, tier);
+        updateTierConditions(tier, dto.getConditions());
+        priceValueMapper.updateFromDto(dto.getPriceValue(), value);
 
-        setValueType(dto.getValue(), value);
+        setValueType(dto.getPriceValue(), value);
 
         tierRepository.save(tier);
         PriceValue savedValue = valueRepository.save(value);
 
         reloadService.reloadKieContainer();
-
         return priceValueMapper.toDetailDto(savedValue);
     }
 
@@ -127,19 +126,65 @@ public class PricingComponentService extends BaseService {
     }
 
     @Transactional
-    public PricingComponentResponse createComponent(PricingComponentRequest requestDto) {
-        PricingComponent component = pricingComponentMapper.toEntity(requestDto);
-        component.setBankId(getCurrentBankId());
+public PricingComponentResponse createComponent(PricingComponentRequest requestDto) {
+    // 1. Map the base entity
+    PricingComponent component = pricingComponentMapper.toEntity(requestDto);
+    String bankId = getCurrentBankId();
+    component.setBankId(bankId);
 
-        try {
-            component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid component type provided: " + requestDto.getType());
-        }
-        PricingComponent savedComponent = componentRepository.save(component);
-        reloadService.reloadKieContainer();
-        return pricingComponentMapper.toResponseDto(savedComponent);
+    // 2. Validate Component Type
+    try {
+        component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
+    } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("Invalid component type provided: " + requestDto.getType());
     }
+
+    // 3. Process Nested Tiers (Manual Wiring)
+    if (requestDto.getPricingTiers() != null && !requestDto.getPricingTiers().isEmpty()) {
+        List<PricingTier> tiers = requestDto.getPricingTiers().stream().map(tierDto -> {
+            // Map Tier
+            PricingTier tier = pricingTierMapper.toEntity(tierDto);
+            tier.setPricingComponent(component); // Set parent
+            tier.setBankId(bankId);
+
+            // Map Conditions
+            if (tierDto.getConditions() != null) {
+                Set<TierCondition> conditions = tierDto.getConditions().stream().map(condDto -> {
+                    TierCondition condition = tierConditionMapper.toEntity(condDto);
+                    condition.setPricingTier(tier); // Set parent
+                    condition.setBankId(bankId);
+                    return condition;
+                }).collect(Collectors.toSet());
+                tier.setConditions(conditions);
+            }
+
+            // Map Price Value (Mandatory in our new FAT DTO logic)
+            PriceValue value = priceValueMapper.toEntity(tierDto.getPriceValue());
+            value.setPricingTier(tier); // Set parent
+            value.setBankId(bankId);
+
+            // Set value type with same validation pattern
+            try {
+                value.setValueType(PriceValue.ValueType.valueOf(tierDto.getPriceValue().getValueType().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid value type provided: " + tierDto.getPriceValue().getValueType());
+            }
+
+            tier.setPriceValues(Set.of(value));
+            return tier;
+        }).collect(Collectors.toList());
+
+        component.setPricingTiers(tiers);
+    }
+
+    // 4. Save entire aggregate
+    PricingComponent savedComponent = componentRepository.save(component);
+
+    // 5. Sync with Rules Engine
+    reloadService.reloadKieContainer();
+
+    return pricingComponentMapper.toResponseDto(savedComponent);
+}
 
     @Transactional(readOnly = true)
     public List<PricingComponentResponse> findAllComponents() {

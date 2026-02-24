@@ -16,10 +16,6 @@ import java.util.List;
 @Mapper(config = MapStructConfig.class, uses = {PricingTierMapper.class})
 public interface PricingComponentMapper {
 
-    /**
-     * Maps PricingComponent -> PricingComponentResponse.
-     * Delegates tiers mapping to PricingTierMapper.
-     */
     PricingComponentResponse toResponseDto(PricingComponent entity);
 
     List<PricingComponentResponse> toResponseDtoList(List<PricingComponent> entities);

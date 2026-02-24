@@ -1,6 +1,8 @@
 package com.bankengine.pricing.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,21 +18,19 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PricingTierRequest {
-
     @NotBlank(message = "Tier name is required.")
     private String tierName;
-
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
-
-    // Temporal versioning fields
-    private LocalDate effectiveDate;
+    private LocalDate effectiveDate = LocalDate.now();
     private LocalDate expiryDate;
-
-    // Calculation logic flags
     private boolean proRataApplicable;
     private boolean applyChargeOnFullBreach;
 
     @Builder.Default
     private List<TierConditionDto> conditions = new ArrayList<>();
+
+    @NotNull(message = "Price value is required for the tier.")
+    @Valid
+    private PriceValueRequest priceValue;
 }

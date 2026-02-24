@@ -1,7 +1,7 @@
 package com.bankengine.pricing.controller;
 
+import com.bankengine.pricing.dto.PricingTierRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
-import com.bankengine.pricing.dto.TieredPriceRequest;
 import com.bankengine.pricing.service.PricingComponentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Pricing Tier Management", description = "Manages conditional tiers and associated price values within a Pricing Component.")
+@Tag(name = "Pricing Tier Management", description = "Manages tiers and price values for pricing components.")
 @RestController
 @RequestMapping("/api/v1/pricing-components/{componentId}/tiers")
 public class PricingTierController {
@@ -30,7 +30,7 @@ public class PricingTierController {
      * POST /api/v1/pricing-components/{componentId}/tiers
      * Adds a Tier and its Value to an existing Pricing Component.
      */
-    @Operation(summary = "Add a new pricing tier and value to a component",
+    @Operation(summary = "Add a new tier and price value to a component",
             description = "Defines a PricingTier and its associated PriceValue (e.g., condition, threshold, and amount) under a specified component.")
     @ApiResponse(responseCode = "201", description = "Pricing Tier and Value successfully created and linked.",
             content = @Content(schema = @Schema(implementation = ProductPricingCalculationResult.PriceComponentDetail.class)))
@@ -40,13 +40,12 @@ public class PricingTierController {
     public ResponseEntity<ProductPricingCalculationResult.PriceComponentDetail> addTieredPricing(
             @Parameter(description = "The ID of the existing Pricing Component.", required = true)
             @PathVariable Long componentId,
-            @Valid @RequestBody TieredPriceRequest dto) {
+            @Valid @RequestBody PricingTierRequest dto) {
 
-        // FIX: Return type updated to PriceComponentDetail
         ProductPricingCalculationResult.PriceComponentDetail responseDto = pricingComponentService.addTierAndValue(
                 componentId,
-                dto.getTier(),
-                dto.getValue());
+                dto,
+                dto.getPriceValue());
 
         return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
     }
@@ -67,7 +66,7 @@ public class PricingTierController {
             @PathVariable Long componentId,
             @Parameter(description = "ID of the existing Pricing Tier.", required = true)
             @PathVariable Long tierId,
-            @Valid @RequestBody TieredPriceRequest dto) {
+            @Valid @RequestBody PricingTierRequest dto) {
 
         ProductPricingCalculationResult.PriceComponentDetail responseDto = pricingComponentService.updateTierAndValue(
                 componentId,

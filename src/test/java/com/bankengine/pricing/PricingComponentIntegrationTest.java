@@ -2,7 +2,10 @@ package com.bankengine.pricing;
 
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
-import com.bankengine.pricing.dto.*;
+import com.bankengine.pricing.dto.PriceValueRequest;
+import com.bankengine.pricing.dto.PricingComponentRequest;
+import com.bankengine.pricing.dto.PricingTierRequest;
+import com.bankengine.pricing.dto.TierConditionDto;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
@@ -98,32 +101,25 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         return req;
     }
 
-    private TieredPriceRequest getValidTierValueDto() {
+    private PricingTierRequest getValidTierDto() {
         TierConditionDto cond = new TierConditionDto();
         cond.setAttributeName("customerSegment");
         cond.setOperator(TierCondition.Operator.EQ);
         cond.setAttributeValue("DEFAULT_SEGMENT");
 
-        PricingTierRequest tier = new PricingTierRequest();
-        tier.setTierName("Default Tier");
-        tier.setMinThreshold(BigDecimal.ZERO);
-        tier.setEffectiveDate(LocalDate.now());
-        tier.setConditions(List.of(cond));
-
+        // 1. Create the PriceValue DTO
         PriceValueRequest val = new PriceValueRequest();
         val.setPriceAmount(new BigDecimal("5.00"));
         val.setValueType("FEE_ABSOLUTE");
 
-        TieredPriceRequest req = new TieredPriceRequest();
-        req.setTier(tier);
-        req.setValue(val);
-
-        return req;
+        return PricingTierRequest.builder()
+                .tierName("Default Tier")
+                .minThreshold(BigDecimal.ZERO)
+                .effectiveDate(LocalDate.now())
+                .conditions(List.of(cond))
+                .priceValue(val)
+                .build();
     }
-
-    // =================================================================
-    // 1. CREATE (POST) TESTS
-    // =================================================================
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
@@ -204,7 +200,6 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldDeleteComponentAndReturn204() throws Exception {
         PricingComponent saved = createComponent("Deletable");
-
         mockMvc.perform(delete("/api/v1/pricing-components/{id}", saved.getId()))
                 .andExpect(status().isNoContent());
     }
@@ -231,7 +226,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(post("/api/v1/pricing-components/{id}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getValidTierValueDto())))
+                        .content(objectMapper.writeValueAsString(getValidTierDto())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.rawValue", is(5.00)))
                 .andExpect(jsonPath("$.componentCode").value("TieredComponent"))
@@ -243,7 +238,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     void shouldReturn404WhenAddingTierToNonExistentComponent() throws Exception {
         mockMvc.perform(post("/api/v1/pricing-components/99999/tiers")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getValidTierValueDto())))
+                        .content(objectMapper.writeValueAsString(getValidTierDto())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)));
     }
@@ -255,10 +250,10 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         Long tierId = getTierFromComponentId(componentId).getId();
 
         // ARRANGE: Set the valueType to PERCENTAGE to match the test assertion
-        TieredPriceRequest updateReq = getValidTierValueDto();
-        updateReq.getTier().setTierName("UpdatedTierName");
-        updateReq.getValue().setPriceAmount(new BigDecimal("15.50"));
-        updateReq.getValue().setValueType("FEE_PERCENTAGE");
+        PricingTierRequest updateReq = getValidTierDto();
+        updateReq.setTierName("UpdatedTierName");
+        updateReq.getPriceValue().setPriceAmount(new BigDecimal("15.50"));
+        updateReq.getPriceValue().setValueType("FEE_PERCENTAGE");
 
         // ACT
         mockMvc.perform(put("/api/v1/pricing-components/{cId}/tiers/{tId}", componentId, tierId)
@@ -290,7 +285,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     void shouldReturn404ForNonExistentTierOrComponent() throws Exception {
         Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("Comp404", "Tier404"));
         Long tierId = getTierFromComponentId(componentId).getId();
-        TieredPriceRequest dto = getValidTierValueDto();
+        PricingTierRequest dto = getValidTierDto();
 
         // 1. Bad Component
         mockMvc.perform(put("/api/v1/pricing-components/99999/tiers/{tId}", tierId)
@@ -313,8 +308,8 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ClearCondComp", "InitialTier"));
         Long tierId = getTierFromComponentId(componentId).getId();
 
-        TieredPriceRequest updateReq = getValidTierValueDto();
-        updateReq.getTier().setConditions(List.of());
+        PricingTierRequest updateReq = getValidTierDto();
+        updateReq.setConditions(List.of());
 
         mockMvc.perform(put("/api/v1/pricing-components/{cId}/tiers/{tId}", componentId, tierId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -331,8 +326,8 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn400WhenAddingTierWithInvalidValueType() throws Exception {
         PricingComponent component = createComponent("ValueTypeFail");
-        TieredPriceRequest req = getValidTierValueDto();
-        req.getValue().setValueType("NOT_A_VALID_TYPE");
+        PricingTierRequest req = getValidTierDto();
+        req.getPriceValue().setValueType("NOT_A_VALID_TYPE");
 
         mockMvc.perform(post("/api/v1/pricing-components/{id}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
