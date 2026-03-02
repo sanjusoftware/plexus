@@ -15,8 +15,12 @@ import java.util.List;
 @AllArgsConstructor
 public class PricingComponentRequest {
 
+    @NotBlank(message = "Component code is required.")
+    private String code;
+
     @NotBlank(message = "Component name is required.")
     private String name;
+
     @NotBlank(message = "Component type is required (e.g., FEE, RATE).")
     private String type;
     private String description;

@@ -9,7 +9,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(config = MapStructConfig.class, uses = {PriceValueMapper.class, TierConditionMapper.class})
+@Mapper(config = MapStructConfig.class, componentModel = "spring", uses = {PriceValueMapper.class, TierConditionMapper.class})
 public interface PricingTierMapper {
 
     PricingTierResponse toResponse(PricingTier entity);
@@ -25,4 +25,10 @@ public interface PricingTierMapper {
     @Mapping(target = "priceValues", ignore = true)
     @Mapping(target = "conditions", ignore = true)
     void updateFromDto(PricingTierRequest pricingTierRequest, @MappingTarget PricingTier entity);
+
+    @ToAuditableEntity
+    @Mapping(target = "pricingComponent", ignore = true)
+    @Mapping(target = "priceValues", source = "old.priceValues")
+    @Mapping(target = "conditions", source = "old.conditions")
+    PricingTier clone(PricingTier old);
 }

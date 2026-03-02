@@ -1,6 +1,6 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.ProductFeature;
+import com.bankengine.catalog.dto.ProductFeatureDto;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.common.mapping.ToAuditableEntity;
 import com.bankengine.config.MapStructConfig;
@@ -10,26 +10,27 @@ import org.mapstruct.MappingTarget;
 
 import java.util.List;
 
-@Mapper(config = MapStructConfig.class)
+@Mapper(config = MapStructConfig.class, componentModel = "spring")
 public interface FeatureLinkMapper {
 
     @Mapping(target = "featureName", source = "link.featureComponent.name")
     @Mapping(target = "featureComponentId", source = "link.featureComponent.id")
-    ProductFeature toResponse(ProductFeatureLink link);
+    ProductFeatureDto toResponse(ProductFeatureLink link);
 
-    List<ProductFeature> toResponseList(List<ProductFeatureLink> links);
+    List<ProductFeatureDto> toResponseList(List<ProductFeatureLink> links);
 
-    @Mapping(target = "id", ignore = true)
+    @ToAuditableEntity
     @Mapping(target = "product", ignore = true)
+    @Mapping(target = "featureComponent", source = "oldLink.featureComponent")
     ProductFeatureLink clone(ProductFeatureLink oldLink);
 
     @ToAuditableEntity
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "featureComponent", ignore = true)
-    ProductFeatureLink toEntity(ProductFeature dto);
+    ProductFeatureLink toEntity(ProductFeatureDto dto);
 
     @ToAuditableEntity
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "featureComponent", ignore = true)
-    void updateFromDto(ProductFeature dto, @MappingTarget ProductFeatureLink entity);
+    void updateFromDto(ProductFeatureDto dto, @MappingTarget ProductFeatureLink entity);
 }

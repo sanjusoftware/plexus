@@ -1,29 +1,26 @@
 package com.bankengine.catalog.model;
 
 import com.bankengine.common.annotation.TenantEntity;
-import com.bankengine.common.model.AuditableEntity;
+import com.bankengine.common.model.VersionableEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "feature_component", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"bank_id", "name"})
+        @UniqueConstraint(columnNames = {"bank_id", "code", "version"})
 })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@RequiredArgsConstructor
+@SuperBuilder
 @TenantEntity
-public class FeatureComponent extends AuditableEntity {
+public class FeatureComponent extends VersionableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false)
-    @NonNull
-    private String name; // e.g., "Max_Tenure", "Has_Overdraft"
 
     @Enumerated(EnumType.STRING)
     @NonNull

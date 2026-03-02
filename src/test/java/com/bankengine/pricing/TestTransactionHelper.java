@@ -12,6 +12,7 @@ import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.*;
@@ -22,10 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 import static com.bankengine.test.config.AbstractIntegrationTest.TEST_BANK_ID;
@@ -75,14 +73,41 @@ public class TestTransactionHelper {
         flushAndClear();
     }
 
+    // Add this to TestTransactionHelper.java
+
+    /**
+     * High-level helper that guarantees a fully persisted Product
+     * with a valid ProductType and Bank ID.
+     */
+    @Transactional
+    public Product createValidProduct(String productName, String typeName, VersionableEntity.EntityStatus status) {
+        ProductType type = getOrCreateProductType(typeName);
+
+        // We use a unique code to avoid constraint violations in parallel tests
+        String uniqueCode = "PROD_" + UUID.randomUUID().toString().substring(0, 8);
+
+        Product product = Product.builder()
+                .name(productName)
+                .code(uniqueCode)
+                .productType(type)
+                .category("RETAIL")
+                .status(status)
+                .bankId(TEST_BANK_ID)
+                .activationDate(LocalDate.now().minusDays(1))
+                .build();
+
+        return productRepository.save(product);
+    }
+
     @Transactional
     public PricingComponent createPricingComponentInDb(String name) {
         return pricingComponentRepository.findByName(name)
                 .orElseGet(() -> {
                     PricingComponent component = new PricingComponent();
                     component.setName(name);
+                    component.setCode("MONTHLY_MIAN_FEE_"+ UUID.randomUUID());
                     component.setBankId(TenantContextHolder.getBankId());
-                    component.setType(PricingComponent.ComponentType.FEE); // or set a default
+                    component.setType(PricingComponent.ComponentType.FEE);
                     return pricingComponentRepository.save(component);
                 });
     }
@@ -162,10 +187,8 @@ public class TestTransactionHelper {
 
         PricingTier tier = new PricingTier();
         tier.setPricingComponent(component);
-        tier.setTierName(tierName);
+        tier.setName(tierName);
         tier.setMinThreshold(BigDecimal.ZERO);
-        tier.setEffectiveDate(LocalDate.now().minusDays(1));
-        tier.setExpiryDate(LocalDate.now().plusYears(10));
         tier.setProRataApplicable(false);
         tier.setApplyChargeOnFullBreach(false);
 
@@ -215,11 +238,12 @@ public class TestTransactionHelper {
                 .orElseGet(() -> {
                     Product p = new Product();
                     p.setName(name);
+                    p.setCode("CASA_01_" + UUID.randomUUID() );
                     p.setProductType(type);
                     p.setCategory(category);
-                    p.setStatus("ACTIVE");
+                    p.setStatus(VersionableEntity.EntityStatus.ACTIVE);
                     p.setBankId(TenantContextHolder.getBankId());
-                    p.setEffectiveDate(LocalDate.now().minusDays(1));
+                    p.setActivationDate(LocalDate.now().minusDays(1));
                     return productRepository.save(p);
                 });
     }
@@ -256,11 +280,7 @@ public class TestTransactionHelper {
     @Transactional
     public PricingInputMetadata createAndSaveMetadata(String key, String dataType) {
         return metadataRepository.findByAttributeKey(key).orElseGet(() -> {
-            PricingInputMetadata metadata = new PricingInputMetadata();
-            metadata.setAttributeKey(key);
-            metadata.setDataType(dataType);
-            metadata.setDisplayName(key);
-            return metadataRepository.save(metadata);
+            return metadataRepository.save(PricingInputMetadata.builder().attributeKey(key).dataType(dataType).displayName(key).build());
         });
     }
 
@@ -282,7 +302,7 @@ public class TestTransactionHelper {
             TenantContextHolder.setBankId(TEST_BANK_ID);
             return action.get();
         } finally {
-             TenantContextHolder.clear();
+            TenantContextHolder.clear();
         }
     }
 
@@ -336,7 +356,8 @@ public class TestTransactionHelper {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
 
-        BundleProductLink link = new BundleProductLink(bundle, product, true, isMain);
+        BundleProductLink link = BundleProductLink.builder().productBundle(bundle).product(product)
+                .mandatory(true).mainAccount(isMain).build();
         link.setBankId(bundle.getBankId());
         bundleProductLinkRepository.save(link);
 
@@ -361,14 +382,14 @@ public class TestTransactionHelper {
         link.setFixedValueType(type);
         link.setUseRulesEngine(false);
         link.setBankId(product.getBankId());
-        link.setEffectiveDate(LocalDate.now().minusDays(1)); // Ensures visibility today
+        link.setEffectiveDate(LocalDate.now().minusDays(1));
         link.setExpiryDate(LocalDate.now().plusYears(10));
 
         return productPricingLinkRepository.save(link);
     }
 
     @Transactional
-    public ProductBundle createBundleInDb(String name, ProductBundle.BundleStatus bundleStatus) {
+    public ProductBundle createBundleInDb(String name, VersionableEntity.EntityStatus bundleStatus) {
         ProductBundle bundle = new ProductBundle();
         bundle.setName(name);
         bundle.setCode("BNDL_" + System.currentTimeMillis());
@@ -384,29 +405,15 @@ public class TestTransactionHelper {
      * Creates a complete Bundle graph: Bundle -> Linked Product -> Bundle Pricing Adjustment
      */
     @Transactional
-    public ProductBundle setupFullBundleWithPricing(String bundleName, String productName, BigDecimal discountValue, PriceValue.ValueType discountType, ProductBundle.BundleStatus bundleStatus) {
+    public ProductBundle setupFullBundleWithPricing(String bundleName, String productName, BigDecimal discountValue, PriceValue.ValueType discountType, VersionableEntity.EntityStatus bundleStatus) {
         ProductType defaultType = getOrCreateProductType("SAVINGS");
-
-        // 1. Ensure product exists
         Product product = getOrCreateProduct(productName, defaultType, "RETAIL");
-
-        // 2. Ensure the product HAS an active pricing link.
-        // The PricingCalculationService throws 404 if a product in a bundle has no price.
         PricingComponent productBaseFee = createPricingComponentInDb("Standard Base Fee");
-
-        // We use a specific method to ensure the link is saved and flushed
         linkProductToPricingComponent(product.getId(), productBaseFee.getId(), BigDecimal.ZERO);
-
-        // 3. Create bundle
         ProductBundle bundle = createBundleInDb(bundleName, bundleStatus);
-
-        // 4. Link product to bundle
         linkProductToBundle(bundle.getId(), product.getId(), true);
-
-        // 5. Link the benefit (discount)
         linkBundleToPricingComponent(bundle.getId(), createPricingComponentInDb(bundleName + " Benefit").getId(), discountValue, discountType);
 
-        // 6. Flush to disk and clear cache so the Service sees clean DB state
         entityManager.flush();
         entityManager.clear();
 

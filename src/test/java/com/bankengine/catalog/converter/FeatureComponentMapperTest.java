@@ -28,9 +28,7 @@ public class FeatureComponentMapperTest {
 
     @Test
     void testToResponseDto() {
-        FeatureComponent entity = new FeatureComponent();
-        entity.setId(1L);
-        entity.setName("Test Feature");
+        FeatureComponent entity = FeatureComponent.builder().name("Test Feature").dataType(FeatureComponent.DataType.STRING).build();
 
         FeatureComponentResponse dto = mapper.toResponseDto(entity);
 
@@ -45,9 +43,7 @@ public class FeatureComponentMapperTest {
         dto.setName("Updated Feature");
         dto.setDataType("BOOLEAN");
 
-        FeatureComponent entity = new FeatureComponent();
-        entity.setName("Original Feature");
-        entity.setDataType(FeatureComponent.DataType.STRING);
+        FeatureComponent entity = FeatureComponent.builder().name("Original Feature").dataType(FeatureComponent.DataType.STRING).build();
 
         mapper.updateFromDto(dto, entity);
 

@@ -14,8 +14,7 @@ public class FeatureLinkMapperTest {
     @Test
     void shouldCorrectlyCloneFeatureLink() {
         // Arrange
-        FeatureComponent featureComponent = new FeatureComponent();
-        featureComponent.setName("Test Feature");
+        FeatureComponent featureComponent = FeatureComponent.builder().name("Test Feature").dataType(FeatureComponent.DataType.STRING).build();
 
         ProductFeatureLink oldLink = new ProductFeatureLink();
         oldLink.setFeatureComponent(featureComponent);

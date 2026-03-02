@@ -19,9 +19,11 @@ import java.util.List;
 @AllArgsConstructor
 public class PricingTierRequest {
     @NotBlank(message = "Tier name is required.")
-    private String tierName;
+    private String name;
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
+
+    @Builder.Default
     private LocalDate effectiveDate = LocalDate.now();
     private LocalDate expiryDate;
     private boolean proRataApplicable;

@@ -24,7 +24,7 @@ public class ProductRuleBuilderService extends AbstractRuleBuilderService {
 
     @Override
     protected List<PricingComponent> fetchComponents() {
-        return componentRepository.findAll();
+        return pricingComponentRepository.findAllWithDetailsBy();
     }
 
     @Override

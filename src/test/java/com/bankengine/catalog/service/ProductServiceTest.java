@@ -1,15 +1,18 @@
 package com.bankengine.catalog.service;
 
+import com.bankengine.catalog.converter.FeatureLinkMapper;
+import com.bankengine.catalog.converter.PricingLinkMapper;
 import com.bankengine.catalog.converter.ProductMapper;
 import com.bankengine.catalog.dto.*;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.model.ProductType;
-import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
@@ -17,7 +20,6 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,9 +27,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,489 +41,356 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class ProductServiceTest extends BaseServiceTest {
 
-    @Mock
-    private ProductRepository productRepository;
-    @Mock
-    private ProductTypeRepository productTypeRepository;
-    @Mock
-    private ProductFeatureLinkRepository linkRepository;
-    @Mock
-    private FeatureComponentService featureComponentService;
-    @Mock
-    private PricingComponentService pricingComponentService;
-    @Mock
-    private ProductMapper productMapper;
-    @Mock
-    private EntityManager entityManager;
+    @Mock private ProductRepository productRepository;
+    @Mock private ProductTypeRepository productTypeRepository;
+    @Mock private FeatureComponentService featureComponentService;
+    @Mock private PricingComponentService pricingComponentService;
+    @Mock private ProductMapper productMapper;
+    @Mock private FeatureLinkMapper featureLinkMapper;
+    @Mock private PricingLinkMapper pricingLinkMapper;
+    @Mock private EntityManager entityManager;
 
     @InjectMocks
     private ProductService productService;
 
+    // --- HELPERS ---
+
+    private Product createValidProduct(VersionableEntity.EntityStatus status) {
+        Product product = new Product();
+        product.setId(1L);
+        product.setBankId(TEST_BANK_ID);
+        product.setCode("PROD-001");
+        product.setVersion(1);
+        product.setStatus(status);
+        product.setProductFeatureLinks(new ArrayList<>());
+        product.setProductPricingLinks(new ArrayList<>());
+        return product;
+    }
+
+    private ProductType createValidProductType() {
+        ProductType type = new ProductType();
+        type.setId(1L);
+        type.setBankId(TEST_BANK_ID); // CRITICAL: Must match for getByIdSecurely
+        return type;
+    }
+
+    private ProductRequest createFeatureRequest(Long componentId, String value) {
+        ProductRequest req = new ProductRequest();
+        req.setFeatures(List.of(ProductFeatureDto.builder()
+                .featureComponentId(componentId)
+                .featureValue(value)
+                .build()));
+        return req;
+    }
+
+    // --- READ OPERATIONS ---
+
     @Test
-    @DisplayName("Search Products - Should return paged responses based on search criteria")
+    @DisplayName("Search: Should return paged results based on criteria")
     void testSearchProducts() {
         ProductSearchRequest criteria = new ProductSearchRequest();
-        Page<Product> productPage = new PageImpl<>(Collections.singletonList(new Product()));
-        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(productPage);
-        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
+        criteria.setSortBy("name");
+        criteria.setSortDirection("ASC");
+
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(createValidProduct(VersionableEntity.EntityStatus.ACTIVE))));
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
 
         Page<ProductResponse> result = productService.searchProducts(criteria);
 
-        assertEquals(1, result.getTotalElements());
-        verify(productRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+        assertFalse(result.isEmpty());
+        verify(productRepository).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
-    @DisplayName("Create Product - Should initialize product and assign bankId from context and default status to DRAFT if not provided")
-    void testCreateProduct_DefaultStatus() {
+    @DisplayName("Read: Should throw NotFoundException for non-existent ID")
+    void testGetProductResponseById_notFound() {
+        when(productRepository.findById(99L)).thenReturn(Optional.empty());
+
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> productService.getProductResponseById(99L));
+        assertEquals("Product not found with ID: 99", ex.getMessage());
+    }
+
+    // --- WRITE & LIFECYCLE ---
+
+    @Test
+    @DisplayName("Create: Should initialize product as Version 1 in DRAFT status")
+    void testCreateProduct_initialization() {
         ProductRequest dto = new ProductRequest();
         dto.setProductTypeId(1L);
         dto.setName("New Product");
-        dto.setStatus(null);
 
-        Product mappedProduct = new Product();
-        mappedProduct.setName(dto.getName());
-        mappedProduct.setStatus("DRAFT");
+        Product product = createValidProduct(null);
 
-        when(productTypeRepository.findById(1L)).thenReturn(Optional.of(new ProductType()));
-        when(productMapper.toEntity(any(ProductRequest.class), any(ProductType.class)))
-                .thenReturn(mappedProduct);
+        when(productRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
+        when(productRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(productTypeRepository.findById(1L)).thenReturn(Optional.of(createValidProductType()));
 
-        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
-        when(productRepository.save(captor.capture())).thenReturn(new Product());
+        when(productMapper.toEntity(any(), any())).thenReturn(product);
+        when(productRepository.save(any())).thenReturn(product);
         when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
 
         productService.createProduct(dto);
 
-        assertEquals("DRAFT", captor.getValue().getStatus());
+        verify(productRepository).save(argThat(p ->
+            p.getStatus() == VersionableEntity.EntityStatus.DRAFT && p.getVersion() == 1
+        ));
     }
 
     @Test
-    @DisplayName("Activate Product - Should transition status from DRAFT to ACTIVE")
-    void testActivateProduct() {
-        Product product = new Product();
-        product.setStatus("DRAFT");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
+    @DisplayName("Create: Should reject duplicate names and codes")
+    void testCreateProduct_UniquenessChecks() {
+        ProductRequest dto = new ProductRequest();
+        dto.setName("Duplicate Name");
+        dto.setCode("EXISTING");
 
-        productService.activateProduct(1L, LocalDate.now());
+        // Case 1: Name exists
+        when(productRepository.existsByNameAndBankId("Duplicate Name", TEST_BANK_ID)).thenReturn(true);
+        assertThrows(IllegalArgumentException.class, () -> productService.createProduct(dto));
 
-        assertEquals("ACTIVE", product.getStatus());
+        // Case 2: Code version 1 exists
+        when(productRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
+        when(productRepository.existsByBankIdAndCodeAndVersion(TEST_BANK_ID, "EXISTING", 1)).thenReturn(true);
+        assertThrows(IllegalArgumentException.class, () -> productService.createProduct(dto));
     }
 
     @Test
-    @DisplayName("Update Product - Should throw exception if product is already ACTIVE")
-    void testUpdateProduct_notDraft() {
-        Product product = new Product();
-        product.setStatus("ACTIVE");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        assertThrows(IllegalStateException.class, () -> productService.updateProduct(1L, new ProductRequest()));
-    }
-
-    @Test
-    void testDeactivateProduct() {
-        Product product = new Product();
-        product.setStatus("ACTIVE");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
-
-        productService.deactivateProduct(1L);
-
-        assertEquals("INACTIVE", product.getStatus());
-    }
-
-    @Test
-    @DisplayName("Link Feature - Should validate data type and save link")
-    void testLinkFeatureToProduct() {
-        // 1. Arrange
-        ProductFeature dto = new ProductFeature();
-        dto.setFeatureComponentId(1L);
-        dto.setFeatureValue("100");
-
-        Product product = new Product();
-        product.setId(1L);
-//        product.setBankId(TEST_BANK_ID);
-
-        FeatureComponent component = new FeatureComponent();
-        component.setId(1L);
-        component.setDataType(FeatureComponent.DataType.INTEGER);
+    @DisplayName("Update: Should reject expiration dates in the past or before current")
+    void testUpdateProduct_InvalidExpiry() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        product.setExpiryDate(LocalDate.now().plusDays(10));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(featureComponentService.getFeatureComponentById(1L)).thenReturn(component);
-        when(productMapper.toResponse(any(Product.class))).thenReturn(new ProductResponse());
 
-        // 2. Act
-        productService.linkFeatureToProduct(1L, dto);
+        // Date is valid relative to NOW, but invalid relative to CURRENT EXPIRY (e.g., today + 5)
+        ProductRequest reqBeforeCurrent = ProductRequest.builder()
+                .expiryDate(LocalDate.now().plusDays(5))
+                .build();
 
-        // 3. Assert - Use ArgumentCaptor for clearer debugging
-        ArgumentCaptor<ProductFeatureLink> linkCaptor = ArgumentCaptor.forClass(ProductFeatureLink.class);
-        verify(linkRepository).save(linkCaptor.capture());
+        IllegalArgumentException ex1 = assertThrows(IllegalArgumentException.class,
+                () -> productService.updateProduct(1L, reqBeforeCurrent));
+        assertEquals("New expiration date cannot be before current expiration date.", ex1.getMessage());
 
-        ProductFeatureLink savedLink = linkCaptor.getValue();
+        // Date is in the past (e.g., yesterday)
+        product.setExpiryDate(null);
 
-        assertAll("Verify saved link properties",
-                () -> assertEquals(1L, savedLink.getProduct().getId(), "Product ID mismatch"),
-                () -> assertEquals("100", savedLink.getFeatureValue(), "Feature value mismatch"),
-                () -> assertEquals(component, savedLink.getFeatureComponent(), "Feature component mismatch")
-        );
+        ProductRequest reqPast = ProductRequest.builder()
+                .expiryDate(LocalDate.now().minusDays(1))
+                .build();
+
+        IllegalArgumentException ex2 = assertThrows(IllegalArgumentException.class,
+                () -> productService.updateProduct(1L, reqPast));
+        assertEquals("Expiration date must be in the future.", ex2.getMessage());
+    }
+
+    // --- UPDATED & CONSOLIDATED VERSIONING ---
+
+    @Test
+    @DisplayName("Clone: Revision (Same Code) should increment version, inherit ACTIVE status, and archive source")
+    void testCloneProduct_Revision_Success() {
+        // Arrange
+        Product source = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        source.setCode("PROD-001");
+        source.setVersion(1);
+
+        Product clone = createValidProduct(null);
+        LocalDate futureDate = LocalDate.now().plusDays(10);
+        VersionRequest request = new VersionRequest("New Version", null, futureDate);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(productRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(productMapper.createNewVersionFrom(any(), any())).thenReturn(clone);
+        when(productRepository.save(any())).thenReturn(clone);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        // Act
+        productService.cloneProduct(1L, request);
+
+        // Assert
+        assertEquals(VersionableEntity.EntityStatus.ACTIVE, clone.getStatus());
+        assertEquals(2, clone.getVersion());
+        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, source.getStatus());
+        assertEquals(futureDate, clone.getActivationDate()); // Replaces testHandleTemporalVersioning
+
+        verify(entityManager).refresh(clone);
+        verify(productRepository).flush();
     }
 
     @Test
-    @DisplayName("Get Product - Should throw NotFoundException for missing IDs")
-    void testGetProductResponseById_notFound() {
-        when(productRepository.findById(1L)).thenReturn(Optional.empty());
-        assertThrows(NotFoundException.class, () -> productService.getProductResponseById(1L));
+    @DisplayName("Clone: Branching (New Code) should reset version to 1 and default to DRAFT")
+    void testCloneProduct_Branching_Success() {
+        Product source = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        source.setCode("OLD-CODE");
+
+        Product branch = createValidProduct(null);
+        VersionRequest request = new VersionRequest("New Branch", "NEW-CODE", null);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(productRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(productMapper.createNewVersionFrom(any(), any())).thenReturn(branch);
+        when(productRepository.save(any())).thenReturn(branch);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        productService.cloneProduct(1L, request);
+
+        assertEquals("NEW-CODE", branch.getCode());
+        assertEquals(1, branch.getVersion());
+        assertEquals(VersionableEntity.EntityStatus.DRAFT, branch.getStatus());
+        assertEquals(VersionableEntity.EntityStatus.ACTIVE, source.getStatus());
     }
 
     @Test
-    @DisplayName("Product Lifecycle: Should throw exception when activating a non-DRAFT product")
-    void activateProduct_shouldThrowIfAlreadyActive() {
-        Product product = new Product();
-        product.setStatus("ACTIVE");
+    @DisplayName("Clone: Should throw IllegalStateException if version collision occurs")
+    void testCloneProduct_VersionCollision() {
+        Product source = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        source.setCode("COLLIDE");
+        source.setVersion(1);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(source));
+        // Mock that version 2 already exists
+        when(productRepository.existsByBankIdAndCodeAndVersion(TEST_BANK_ID, "COLLIDE", 2)).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> productService.cloneProduct(1L, new VersionRequest()));
+    }
+
+    @Test
+    @DisplayName("Clone: Should throw AccessDeniedException if bankId mismatches")
+    void testCloneProduct_securityBreach() {
+        Product source = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        source.setBankId("ATTACKER_BANK");
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(source));
+
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class, () -> productService.cloneProduct(1L, new VersionRequest()));
+        assertEquals("You do not have permission to access this Product", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Activate: Should transition DRAFT to ACTIVE and adjust past dates")
+    void testActivateProduct_adjustsPastDate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        product.setActivationDate(LocalDate.now().minusMonths(1));
+
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
 
-        Exception exception = assertThrows(IllegalStateException.class,
-                () -> productService.activateProduct(1L, null));
+        productService.activateProduct(1L, null);
 
-        assertEquals("Only DRAFT products can be directly ACTIVATED.", exception.getMessage());
+        assertEquals(VersionableEntity.EntityStatus.ACTIVE, product.getStatus());
+        assertEquals(LocalDate.now(), product.getActivationDate());
     }
 
     @Test
-    @DisplayName("Product Lifecycle: Should throw exception when deactivating an already INACTIVE/ARCHIVED product")
-    void deactivateProduct_shouldThrowIfAlreadyInactive() {
-        Product product = new Product();
-        product.setStatus("INACTIVE");
+    @DisplayName("Lifecycle Guards: Should prevent invalid status transitions")
+    void testLifecycleGuards() {
+        Product active = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(active));
+
+        IllegalStateException ex1 = assertThrows(IllegalStateException.class, () -> productService.updateProduct(1L, new ProductRequest()));
+        assertEquals("Operation allowed only on DRAFT status.", ex1.getMessage());
+
+        Product inactive = createValidProduct(VersionableEntity.EntityStatus.INACTIVE);
+        when(productRepository.findById(2L)).thenReturn(Optional.of(inactive));
+
+        IllegalStateException ex2 = assertThrows(IllegalStateException.class, () -> productService.deactivateProduct(2L));
+        assertEquals("Product is already inactive.", ex2.getMessage());
+    }
+
+    // --- INTERNAL RECONCILIATION ---
+
+    @Test
+    @DisplayName("Sync Features: Should remove orphaned links")
+    void testSyncFeatures_orphanedLinks() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        FeatureComponent comp1 = FeatureComponent.builder().id(10L).dataType(FeatureComponent.DataType.STRING).build();
+        product.getProductFeatureLinks().add(ProductFeatureLink.builder().featureComponent(comp1).build());
+
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
 
-        Exception exception = assertThrows(IllegalStateException.class,
-                () -> productService.deactivateProduct(1L));
+        // Update with an empty list of features
+        productService.updateProduct(1L, ProductRequest.builder().features(new ArrayList<>()).build());
 
-        assertEquals("Product is already inactive or archived.", exception.getMessage());
+        assertTrue(product.getProductFeatureLinks().isEmpty(), "Feature links should be cleared if not in request");
     }
 
     @Test
-    @DisplayName("Expiration: Should assert on all validation error messages")
-    void extendProductExpiration_shouldValidateInputsWithMessages() {
-        Product product = new Product();
-        product.setExpirationDate(LocalDate.now().plusDays(10));
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        // 1. Null date check
-        Exception ex1 = assertThrows(IllegalArgumentException.class,
-                () -> productService.extendProductExpiration(1L, null));
-        assertEquals("New expiration date cannot be null.", ex1.getMessage());
-
-        // 2. Date before current expiration check
-        Exception ex2 = assertThrows(IllegalArgumentException.class,
-                () -> productService.extendProductExpiration(1L, LocalDate.now().plusDays(5)));
-        assertEquals("New expiration date must be after the current expiration date.", ex2.getMessage());
-
-        // 3. Date in the past check
-        product.setExpirationDate(null);
-        Exception ex3 = assertThrows(IllegalArgumentException.class,
-                () -> productService.extendProductExpiration(1L, LocalDate.now().minusDays(1)));
-        assertEquals("New expiration date must be in the future.", ex3.getMessage());
-    }
-
-    @Test
-    @DisplayName("Feature Validation: Should verify data type specific error messages")
-    void validateFeatureValue_shouldVerifyErrorMessages() {
-        Product product = new Product();
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
+    @DisplayName("Validation: Should reject feature values that mismatch DataType")
+    void testFeatureDataTypeValidation() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
         FeatureComponent comp = new FeatureComponent();
-        comp.setId(2L);
-        when(featureComponentService.getFeatureComponentById(2L)).thenReturn(comp);
+        comp.setBankId(TEST_BANK_ID);
 
-        // INTEGER message check
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(featureComponentService.getFeatureComponentById(anyLong())).thenReturn(comp);
+
         comp.setDataType(FeatureComponent.DataType.INTEGER);
-        ProductFeature intDto = ProductFeature.builder().featureComponentId(2L).featureValue("ABC").build();
-        Exception exInt = assertThrows(IllegalArgumentException.class, () -> productService.linkFeatureToProduct(1L, intDto));
-        assertEquals("Feature value 'ABC' must be a valid INTEGER.", exInt.getMessage());
+        IllegalArgumentException ex1 = assertThrows(IllegalArgumentException.class, () ->
+            productService.updateProduct(1L, createFeatureRequest(1L, "abc")));
+        assertEquals("Value 'abc' must be an INTEGER.", ex1.getMessage());
 
-        // BOOLEAN message check
         comp.setDataType(FeatureComponent.DataType.BOOLEAN);
-        ProductFeature boolDto = ProductFeature.builder().featureComponentId(2L).featureValue("maybe").build();
-        Exception exBool = assertThrows(IllegalArgumentException.class, () -> productService.linkFeatureToProduct(1L, boolDto));
-        assertEquals("Feature value 'maybe' must be 'true' or 'false' for BOOLEAN.", exBool.getMessage());
+        IllegalArgumentException ex2 = assertThrows(IllegalArgumentException.class, () ->
+            productService.updateProduct(1L, createFeatureRequest(1L, "not-bool")));
+        assertEquals("Value 'not-bool' must be 'true' or 'false'.", ex2.getMessage());
+
+        comp.setDataType(FeatureComponent.DataType.DECIMAL);
+        IllegalArgumentException ex3 = assertThrows(IllegalArgumentException.class, () ->
+            productService.updateProduct(1L, createFeatureRequest(1L, "12.xx")));
+        assertEquals("Value '12.xx' must be a DECIMAL.", ex3.getMessage());
     }
 
     @Test
-    @DisplayName("Sync Features: Should handle deletion of orphans and value updates")
-    void syncProductFeatures_shouldHandleUpdatesAndDeletes() {
-        Product product = new Product();
-        product.setId(1L);
-        product.setBankId("TEST_BANK");
+    @DisplayName("Sync Features: Should update value if changed, bypass if identical")
+    void testSyncFeatures_smartUpdate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        FeatureComponent comp = FeatureComponent.builder().id(10L).dataType(FeatureComponent.DataType.STRING).build();
 
-        FeatureComponent comp1 = new FeatureComponent();
-        comp1.setId(10L);
-        comp1.setDataType(FeatureComponent.DataType.STRING);
-        FeatureComponent comp2 = new FeatureComponent();
-        comp2.setId(20L);
-        comp2.setDataType(FeatureComponent.DataType.STRING);
-
-        ProductFeatureLink link1 = new ProductFeatureLink();
-        link1.setFeatureComponent(comp1);
-        link1.setFeatureValue("OldValue");
+        ProductFeatureLink existingLink = spy(ProductFeatureLink.builder()
+                .featureComponent(comp).featureValue("Original").build());
+        product.getProductFeatureLinks().add(existingLink);
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(linkRepository.findByProductId(1L)).thenReturn(java.util.List.of(link1));
-        when(featureComponentService.getFeatureComponentById(20L)).thenReturn(comp2);
+        when(featureComponentService.getFeatureComponentById(10L)).thenReturn(comp);
+        when(productRepository.save(any())).thenReturn(product);
         when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
 
-        // Sync list: remove comp1, add comp2
-        ProductFeature dto = ProductFeature.builder()
-                .featureComponentId(20L)
-                .featureValue("NewValue")
-                .build();
-        productService.syncProductFeatures(1L, List.of(dto));
+        productService.updateProduct(1L, createFeatureRequest(10L, "Original"));
+        verify(existingLink, never()).setFeatureValue(anyString());
 
-        // 1. Verify Deletion of Orphans
-        ArgumentCaptor<Iterable<ProductFeatureLink>> deleteCaptor = ArgumentCaptor.forClass(Iterable.class);
-        verify(linkRepository).deleteAll(deleteCaptor.capture());
-
-        List<ProductFeatureLink> deletedLinks = (List<ProductFeatureLink>) deleteCaptor.getValue();
-        assertEquals(1, deletedLinks.size());
-        assertEquals(10L, deletedLinks.get(0).getFeatureComponent().getId()); // Ensure comp1 was deleted
-
-        // 2. Verify Creation of New Link
-        verify(linkRepository).save(argThat(l -> l.getFeatureValue().equals("NewValue")));
-    }
-
-    @Test
-    @DisplayName("Version Control: Should only allow versioning of ACTIVE products")
-    void createNewVersion_shouldThrowIfProductNotActive() {
-        Product product = new Product();
-        product.setStatus("DRAFT");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        assertThrows(IllegalStateException.class, () -> productService.createNewVersion(1L, null));
-    }
-
-    @Test
-    @DisplayName("Sync Features: Should update existing link when feature value changes")
-    void syncProductFeatures_shouldUpdateExistingLink() {
-        Product product = new Product();
-        product.setId(1L);
-
-        FeatureComponent comp = new FeatureComponent();
-        comp.setId(50L);
-        comp.setDataType(FeatureComponent.DataType.STRING);
-
-        ProductFeatureLink existingLink = new ProductFeatureLink();
-        existingLink.setFeatureComponent(comp);
-        existingLink.setFeatureValue("OldValue");
-
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(linkRepository.findByProductId(1L)).thenReturn(List.of(existingLink));
-        when(featureComponentService.getFeatureComponentById(50L)).thenReturn(comp);
-        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
-
-        // incoming DTO has same ID but NEW value
-        ProductFeature dto = ProductFeature.builder()
-                .featureComponentId(50L)
-                .featureValue("NewValue")
-                .build();
-
-        productService.syncProductFeatures(1L, List.of(dto));
-
-        // Verify the existing link was updated and saved
-        verify(linkRepository).save(existingLink);
+        productService.updateProduct(1L, createFeatureRequest(10L, "NewValue"));
         assertEquals("NewValue", existingLink.getFeatureValue());
     }
 
     @Test
-    @DisplayName("Update Product: Should throw exception for ARCHIVED products")
-    void updateProduct_shouldThrowForArchived() {
-        Product product = new Product();
-        product.setStatus("ARCHIVED");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        Exception ex = assertThrows(IllegalStateException.class,
-                () -> productService.updateProduct(1L, new ProductRequest()));
-        assertEquals("Cannot update an INACTIVE or ARCHIVED product version.", ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("Validation: Should throw exception for empty value on non-string type")
-    void validateFeatureValue_shouldThrowForEmptyNonString() {
-        Product product = new Product();
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        FeatureComponent comp = new FeatureComponent();
-        comp.setId(2L);
-        comp.setDataType(FeatureComponent.DataType.INTEGER);
-        when(featureComponentService.getFeatureComponentById(2L)).thenReturn(comp);
-
-        ProductFeature dto = ProductFeature.builder().featureComponentId(2L).featureValue(" ").build();
-
-        Exception ex = assertThrows(IllegalArgumentException.class,
-                () -> productService.linkFeatureToProduct(1L, dto));
-        assertTrue(ex.getMessage().contains("Feature value cannot be empty"));
-    }
-
-    @Test
-    @DisplayName("Validation: Should throw exception for invalid DECIMAL format")
-    void validateFeatureValue_shouldThrowForInvalidDecimal() {
-        Product product = new Product();
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        FeatureComponent comp = new FeatureComponent();
-        comp.setId(3L);
-        comp.setDataType(FeatureComponent.DataType.DECIMAL);
-        when(featureComponentService.getFeatureComponentById(3L)).thenReturn(comp);
-
-        ProductFeature dto = ProductFeature.builder().featureComponentId(3L).featureValue("invalid-price").build();
-
-        Exception ex = assertThrows(IllegalArgumentException.class,
-                () -> productService.linkFeatureToProduct(1L, dto));
-        assertTrue(ex.getMessage().contains("must be a valid DECIMAL"));
-    }
-
-    @Test
-    @DisplayName("Sync Features: Should NOT update if value is identical")
-    void syncProductFeatures_noUpdateIfValueSame() {
-        Product product = new Product();
-        product.setId(1L);
-        FeatureComponent comp = new FeatureComponent();
-        comp.setId(10L);
-        comp.setDataType(FeatureComponent.DataType.STRING);
-
-        ProductFeatureLink existingLink = new ProductFeatureLink();
-        existingLink.setFeatureComponent(comp);
-        existingLink.setFeatureValue("SameValue");
+    @DisplayName("Sync Pricing: Should map all pricing fields correctly")
+    void testSyncPricing_mapping() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        PricingComponent pc = new PricingComponent();
+        pc.setBankId(TEST_BANK_ID);
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(linkRepository.findByProductId(1L)).thenReturn(List.of(existingLink));
-        when(featureComponentService.getFeatureComponentById(10L)).thenReturn(comp);
-        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
-
-        ProductFeature dto = ProductFeature.builder().featureComponentId(10L).featureValue("SameValue").build();
-        productService.syncProductFeatures(1L, List.of(dto));
-
-        verify(linkRepository, never()).save(existingLink);
-    }
-
-    @Test
-    @DisplayName("Update Product: Explicitly test ARCHIVED branch")
-    void updateProduct_archivedStatus() {
-        Product product = new Product();
-        product.setStatus("ARCHIVED");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        assertThrows(IllegalStateException.class, () -> productService.updateProduct(1L, new ProductRequest()));
-    }
-
-    @Test
-    @DisplayName("Deactivate Product: Explicitly test ARCHIVED branch")
-    void deactivateProduct_archivedStatus() {
-        Product product = new Product();
-        product.setStatus("ARCHIVED");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        assertThrows(IllegalStateException.class, () -> productService.deactivateProduct(1L));
-    }
-
-    @Test
-    @DisplayName("Validation: Edge cases for formatting and default branch")
-    void validateFeatureValue_edgeCases() {
-        Product product = new Product();
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        FeatureComponent comp = new FeatureComponent();
-        comp.setId(2L);
-        when(featureComponentService.getFeatureComponentById(2L)).thenReturn(comp);
-
-        comp.setDataType(FeatureComponent.DataType.DECIMAL);
-        ProductFeature decDto = ProductFeature.builder().featureComponentId(2L).featureValue("not.a.number").build();
-        assertThrows(IllegalArgumentException.class, () -> productService.linkFeatureToProduct(1L, decDto));
-
-        comp.setDataType(FeatureComponent.DataType.BOOLEAN);
-        ProductFeature emptyBoolDto = ProductFeature.builder().featureComponentId(2L).featureValue("").build();
-        assertThrows(IllegalArgumentException.class, () -> productService.linkFeatureToProduct(1L, emptyBoolDto));
-    }
-
-    @Test
-    @DisplayName("Sync Features: Should bypass update when values are identical")
-    void syncProductFeatures_shouldNotSaveIfValueIsSame() {
-        Product product = new Product();
-        product.setId(1L);
-        FeatureComponent comp = new FeatureComponent();
-        comp.setId(10L);
-        comp.setDataType(FeatureComponent.DataType.STRING);
-
-        ProductFeatureLink existingLink = new ProductFeatureLink();
-        existingLink.setFeatureComponent(comp);
-        existingLink.setFeatureValue("NoChange");
-
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(linkRepository.findByProductId(1L)).thenReturn(List.of(existingLink));
-        when(featureComponentService.getFeatureComponentById(10L)).thenReturn(comp);
-        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
-
-        ProductFeature dto = ProductFeature.builder().featureComponentId(10L).featureValue("NoChange").build();
-        productService.syncProductFeatures(1L, List.of(dto));
-
-        verify(linkRepository, never()).save(existingLink);
-    }
-
-    @Test
-    @DisplayName("Deactivate Guard: Should throw exception for already ARCHIVED product")
-    void deactivateProduct_shouldThrowForArchived() {
-        Product product = new Product();
-        product.setStatus("ARCHIVED");
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        Exception ex = assertThrows(IllegalStateException.class, () -> productService.deactivateProduct(1L));
-        assertEquals("Product is already inactive or archived.", ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("Validation: Handle null check for non-string types")
-    void validateFeatureValue_shouldHandleNullForNonString() {
-        Product product = new Product();
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        FeatureComponent comp = new FeatureComponent();
-        comp.setId(5L);
-        comp.setDataType(FeatureComponent.DataType.BOOLEAN);
-        when(featureComponentService.getFeatureComponentById(5L)).thenReturn(comp);
-
-        ProductFeature dto = ProductFeature.builder().featureComponentId(5L).featureValue(null).build();
-
-        Exception ex = assertThrows(IllegalArgumentException.class, () -> productService.linkFeatureToProduct(1L, dto));
-        assertTrue(ex.getMessage().contains("Feature value cannot be empty"));
-    }
-
-    @Test
-    @DisplayName("Sync Pricing: Should copy fixed values and rules engine flags to link table")
-    void syncProductPricing_ShouldCopyPricingDetails() {
-        Product product = new Product();
-        product.setId(1L);
-        product.setBankId("TEST_BANK");
-
-        ProductPricing dto = new ProductPricing();
-        dto.setPricingComponentId(100L);
-        dto.setFixedValue(new java.math.BigDecimal("15.50"));
-        dto.setFixedValueType(com.bankengine.pricing.model.PriceValue.ValueType.FEE_ABSOLUTE);
-        dto.setUseRulesEngine(true);
-        dto.setTargetComponentCode("TXN_FEE");
-
-        PricingComponent comp = new PricingComponent();
-        comp.setId(100L);
-
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(pricingComponentService.getPricingComponentById(100L)).thenReturn(comp);
+        when(pricingComponentService.getPricingComponentById(anyLong())).thenReturn(pc);
         when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
 
-        productService.syncProductPricing(1L, List.of(dto));
+        ProductPricingDto dto = new ProductPricingDto();
+        dto.setPricingComponentId(50L);
+        dto.setFixedValue(new java.math.BigDecimal("99.99"));
+        dto.setUseRulesEngine(true);
 
-        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
-        verify(productRepository).save(productCaptor.capture());
+        ProductRequest req = new ProductRequest();
+        req.setPricing(List.of(dto));
 
-        var savedLink = productCaptor.getValue().getProductPricingLinks().get(0);
-        assertEquals(new java.math.BigDecimal("15.50"), savedLink.getFixedValue());
-        assertTrue(savedLink.isUseRulesEngine());
-        assertEquals("TXN_FEE", savedLink.getTargetComponentCode());
+        productService.updateProduct(1L, req);
+
+        ProductPricingLink saved = product.getProductPricingLinks().getFirst();
+        assertAll("Verify pricing link fields integrity",
+                () -> assertEquals(new java.math.BigDecimal("99.99"), saved.getFixedValue()),
+                () -> assertTrue(saved.isUseRulesEngine()),
+                () -> assertEquals(TEST_BANK_ID, saved.getBankId())
+        );
     }
 }

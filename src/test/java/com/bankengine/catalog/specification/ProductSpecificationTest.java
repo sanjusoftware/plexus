@@ -55,24 +55,24 @@ class ProductSpecificationTest {
         request.setStatus("ACTIVE");
         request.setCategory("RETAIL");
         request.setProductTypeId(1L);
-        request.setEffectiveDateFrom(LocalDate.now());
-        request.setEffectiveDateTo(LocalDate.now());
+        request.setActivationDateFrom(LocalDate.now());
+        request.setActivationDateTo(LocalDate.now());
 
-        Path bankIdPath = mock(Path.class);
-        Path namePath = mock(Path.class);
-        Path statusPath = mock(Path.class);
-        Path categoryPath = mock(Path.class);
-        Path productTypePath = mock(Path.class);
-        Path productTypeIdPath = mock(Path.class);
-        Path effectiveDatePath = mock(Path.class);
+        Path<String> bankIdPath = mock(Path.class, "bankIdPath");
+        Path<String> namePath = mock(Path.class, "namePath");
+        Path<String> statusPath = mock(Path.class, "statusPath");
+        Path<String> categoryPath = mock(Path.class, "categoryPath");
+        Path<Object> productTypePath = mock(Path.class, "productTypePath");
+        Path<Long> productTypeIdPath = mock(Path.class, "productTypeIdPath");
+        Path<LocalDate> activationDatePath = mock(Path.class, "activationDatePath");
 
-        when(root.get("bankId")).thenReturn(bankIdPath);
-        when(root.get("name")).thenReturn(namePath);
-        when(root.get("status")).thenReturn(statusPath);
-        when(root.get("category")).thenReturn(categoryPath);
+        when(root.<String>get("bankId")).thenReturn(bankIdPath);
+        when(root.<String>get("name")).thenReturn(namePath);
+        when(root.<String>get("status")).thenReturn(statusPath);
+        when(root.<String>get("category")).thenReturn(categoryPath);
         when(root.get("productType")).thenReturn(productTypePath);
-        when(productTypePath.get("id")).thenReturn(productTypeIdPath);
-        when(root.get("effectiveDate")).thenReturn(effectiveDatePath);
+        when(productTypePath.<Long>get("id")).thenReturn(productTypeIdPath);
+        when(root.<LocalDate>get("activationDate")).thenReturn(activationDatePath);
 
         Specification<Product> spec = ProductSpecification.filterBy(request);
         spec.toPredicate(root, query, builder);
@@ -82,15 +82,15 @@ class ProductSpecificationTest {
         verify(builder).equal(statusPath, "ACTIVE");
         verify(builder).equal(categoryPath, "RETAIL");
         verify(builder).equal(productTypeIdPath, 1L);
-        verify(builder).greaterThanOrEqualTo(eq(effectiveDatePath), any(LocalDate.class));
-        verify(builder).lessThanOrEqualTo(eq(effectiveDatePath), any(LocalDate.class));
+        verify(builder).greaterThanOrEqualTo(eq(activationDatePath), any(LocalDate.class));
+        verify(builder).lessThanOrEqualTo(eq(activationDatePath), any(LocalDate.class));
     }
 
     @Test
     void testFilterBy_EmptyFilters() {
         ProductSearchRequest request = new ProductSearchRequest();
-        Path bankIdPath = mock(Path.class, "bankIdPath");
-        when(root.get("bankId")).thenReturn(bankIdPath);
+        Path<String> bankIdPath = mock(Path.class, "bankIdPath");
+        when(root.<String>get("bankId")).thenReturn(bankIdPath);
 
         Specification<Product> spec = ProductSpecification.filterBy(request);
         spec.toPredicate(root, query, builder);

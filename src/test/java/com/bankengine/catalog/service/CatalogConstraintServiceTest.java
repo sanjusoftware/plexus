@@ -6,6 +6,7 @@ import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.CategoryConflictRule;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.ValidationException;
@@ -18,8 +19,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,97 +37,146 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
     @InjectMocks
     private CatalogConstraintService constraintService;
 
+    // --- CATEGORY COMPATIBILITY TESTS ---
+
     @Test
-    @DisplayName("Should throw exception when product categories conflict based on bank config")
-    void validateCategoryCompatibility_ShouldThrowException_WhenConflictExists() {
-        CategoryConflictRule rule = new CategoryConflictRule("WEALTH", "RETAIL");
+    @DisplayName("validateCategoryCompatibility: Should throw exact message when conflict exists")
+    void validateCategoryCompatibility_Conflict_ThrowsExactMessage() {
+        // Given
+        setupBankConfig(false, List.of(new CategoryConflictRule("WEALTH", "RETAIL")));
+        Product newProduct = createProduct("RETAIL", "Retail Loan");
+        Product existingProduct = createProduct("WEALTH", "Wealth Investment");
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> constraintService.validateCategoryCompatibility(newProduct, List.of(existingProduct)));
+
+        String expectedMessage = String.format(
+                "Conflict: Category 'RETAIL' cannot be bundled with category 'WEALTH' for bank %s.",
+                TEST_BANK_ID);
+        assertEquals(expectedMessage, ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("validateCategoryCompatibility: Should pass when no rules are defined")
+    void validateCategoryCompatibility_NoRules_Passes() {
+        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.empty());
+        assertDoesNotThrow(() -> constraintService.validateCategoryCompatibility(
+                createProduct("WEALTH", "Any"), List.of(createProduct("RETAIL", "Any"))));
+    }
+
+    // --- MULTI-BUNDLE VALIDATION TESTS ---
+
+    @Test
+    @DisplayName("validateProductCanBeBundled: Should throw exact message when product is in ACTIVE bundle")
+    void validateProductCanBeBundled_ActiveLink_ThrowsExactMessage() {
+        Product product = createProduct("RETAIL", "Savings product");
+        product.setId(100l);
+        setupBankConfig(false, List.of());
+        ProductBundle activeBundle = createBundle("BNDL-ACTIVE", VersionableEntity.EntityStatus.ACTIVE);
+        when(bundleProductLinkRepository.findAllByProductId(product.getId())).thenReturn(List.of(createLink(activeBundle, product.getId())));
+
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> constraintService.validateProductCanBeBundled(product.getId()));
+
+        assertThat(exception.getMessage())
+                .contains("[BUNDLE_CONSTRAINT_VIOLATION]")
+                .contains("Bundling a product in more than 1 bundles is disabled")
+                .contains("ID: 100");
+    }
+
+    @Test
+    @DisplayName("validateProductCanBeBundled: Should pass when existing bundle is INACTIVE (Archived)")
+    void validateProductCanBeBundled_InactiveLink_Passes() {
+        Long productId = 100L;
+        setupBankConfig(false, List.of());
+        ProductBundle archivedBundle = createBundle("BNDL-OLD", VersionableEntity.EntityStatus.INACTIVE);
+        when(bundleProductLinkRepository.findAllByProductId(productId)).thenReturn(List.of(createLink(archivedBundle, productId)));
+        assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(productId));
+    }
+
+    @Test
+    @DisplayName("validateProductCanBeBundled: Should pass regardless of links when bank allows multi-bundling")
+    void validateProductCanBeBundled_MultiBundleAllowed_Passes() {
+        setupBankConfig(true, List.of());
+        assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(999L));
+    }
+
+    @Test
+    @DisplayName("Multi-Bundle: Should FAIL when product is in DRAFT bundle and multi-bundle is OFF")
+    void validateProductCanBeBundled_DraftLink_MultiBundleOff_ThrowsException() {
+        Product product = createProduct("RETAIL", "Savings product");
+        product.setId(100L);
+        setupBankConfig(false, List.of());
+
+        ProductBundle draftBundle = createBundle("BNDL-DRAFT", VersionableEntity.EntityStatus.DRAFT);
+        when(bundleProductLinkRepository.findAllByProductId(product.getId()))
+                .thenReturn(List.of(createLink(draftBundle, product.getId())));
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> constraintService.validateProductCanBeBundled(product.getId()));
+
+        assertThat(ex.getMessage())
+                .contains("[BUNDLE_CONSTRAINT_VIOLATION]")
+                .contains("DRAFT")
+                .contains("BNDL-DRAFT")
+                .contains("ID: 100")
+                .contains(TEST_BANK_ID);
+    }
+
+    @Test
+    @DisplayName("Multi-Bundle: Should PASS when product is in ACTIVE bundle but multi-bundle is ON")
+    void validateProductCanBeBundled_ActiveLink_MultiBundleOn_Passes() {
+        setupBankConfig(true, List.of());
+        assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(100L));
+        verifyNoInteractions(bundleProductLinkRepository);
+    }
+
+    @Test
+    @DisplayName("Multi-Bundle: Should PASS when bundle is ARCHIVED even if multi-bundle is OFF")
+    void validateProductCanBeBundled_ArchivedLink_MultiBundleOff_Passes() {
+        Long productId = 100L;
+        setupBankConfig(false, List.of());
+
+        ProductBundle archivedBundle = createBundle("BNDL-OLD", VersionableEntity.EntityStatus.ARCHIVED);
+        when(bundleProductLinkRepository.findAllByProductId(productId)).thenReturn(List.of(createLink(archivedBundle, productId)));
+        assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(productId));
+    }
+
+    // --- HELPERS ---
+
+    private void setupBankConfig(boolean allowMulti, List<CategoryConflictRule> rules) {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(TEST_BANK_ID);
-        config.setCategoryConflictRules(List.of(rule));
-
+        config.setAllowProductInMultipleBundles(allowMulti);
+        config.setCategoryConflictRules(rules);
         when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.of(config));
-
-        Product newProduct = new Product();
-        newProduct.setCategory("RETAIL");
-
-        Product existingProduct = new Product();
-        existingProduct.setCategory("WEALTH");
-        List<Product> existingProducts = List.of(existingProduct);
-
-        ValidationException ex = assertThrows(ValidationException.class,
-                () -> constraintService.validateCategoryCompatibility(newProduct, existingProducts));
-
-        assertTrue(ex.getMessage().contains("Conflict: Category 'RETAIL' cannot be bundled with category 'WEALTH'"));
-        assertTrue(ex.getMessage().contains(TEST_BANK_ID));
     }
 
-    @Test
-    @DisplayName("Should pass when no conflict rules exist for the bank")
-    void validateCategoryCompatibility_ShouldPass_WhenNoRulesDefined() {
-        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.empty());
-        Product newProduct = new Product();
-        newProduct.setCategory("WEALTH");
-        List<Product> existingProducts = List.of(new Product());
-        assertDoesNotThrow(() -> constraintService.validateCategoryCompatibility(newProduct, existingProducts));
+    private Product createProduct(String category, String name) {
+        Product product = new Product();
+        product.setCategory(category);
+        product.setName(name);
+        product.setCode(name + UUID.randomUUID());
+        return product;
     }
 
-    @Test
-    @DisplayName("Should pass when product is in an ARCHIVED bundle (Audit-Safe)")
-    void validateProductCanBeBundled_ShouldPass_WhenLinkIsArchived() {
-        Long productId = 100L;
+    private ProductBundle createBundle(String code, VersionableEntity.EntityStatus status) {
+        ProductBundle productBundle = new ProductBundle();
+        productBundle.setCode(code);
+        productBundle.setStatus(status);
+        return productBundle;
+    }
 
-        // Setup Mock: Bank prohibits multi-bundling
-        BankConfiguration config = new BankConfiguration();
-        config.setAllowProductInMultipleBundles(false);
-        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.of(config));
-
-        // Setup Mock: Product has a link, but the bundle is ARCHIVED
-        ProductBundle archivedBundle = new ProductBundle();
-        archivedBundle.setStatus(ProductBundle.BundleStatus.ARCHIVED);
-
+    private BundleProductLink createLink(ProductBundle bundle, Long productId) {
         BundleProductLink link = new BundleProductLink();
-        link.setProductBundle(archivedBundle);
+        link.setProductBundle(bundle);
 
-        // Use the NEW list-based method we created
-        when(bundleProductLinkRepository.findAllByProductId(productId)).thenReturn(List.of(link));
+        // FIX: Attach a mock or dummy product to the link
+        Product dummyProduct = new Product();
+        dummyProduct.setId(productId);
+        dummyProduct.setCode("PROD-" + productId);
+        dummyProduct.setName("Test Product " + productId);
 
-        assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(productId));
-    }
-
-    @Test
-    @DisplayName("Should throw exception when product is in an ACTIVE bundle")
-    void validateProductCanBeBundled_ShouldFail_WhenLinkIsActive() {
-        Long productId = 100L;
-
-        BankConfiguration config = new BankConfiguration();
-        config.setAllowProductInMultipleBundles(false);
-        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.of(config));
-
-        ProductBundle activeBundle = new ProductBundle();
-        activeBundle.setCode("BNDL-ACTIVE");
-        activeBundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
-
-        BundleProductLink link = new BundleProductLink();
-        link.setProductBundle(activeBundle);
-
-        when(bundleProductLinkRepository.findAllByProductId(productId)).thenReturn(List.of(link));
-
-        ValidationException ex = assertThrows(ValidationException.class,
-                () -> constraintService.validateProductCanBeBundled(productId));
-
-        assertTrue(ex.getMessage().contains("currently in an ACTIVE bundle"));
-    }
-
-    @Test
-    @DisplayName("Should pass regardless of links if bank allows multi-bundling")
-    void validateProductCanBeBundled_ShouldPass_WhenBankAllowsIt() {
-        Long productId = 100L;
-
-        BankConfiguration config = new BankConfiguration();
-        config.setAllowProductInMultipleBundles(true); // Flag is ON
-        when(bankConfigurationRepository.findCurrent()).thenReturn(Optional.of(config));
-
-        // Even if there are links, the method should return early
-        assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(productId));
+        link.setProduct(dummyProduct);
+        return link;
     }
 }

@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 
 public class ProductRuleBuilderServiceTest extends BaseServiceTest {
 
-    @Mock private PricingComponentRepository componentRepository;
+    @Mock private PricingComponentRepository pricingComponentRepository;
     @Mock private PricingInputMetadataService metadataService;
     @Mock private DroolsExpressionBuilder droolsExpressionBuilder;
 
@@ -70,7 +70,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(component.getName()).thenReturn("TestFee");
         when(component.getPricingTiers()).thenReturn(List.of(tier1, tier2));
 
-        when(componentRepository.findAll()).thenReturn(List.of(component));
+        when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(component));
         when(metadataService.getMetadataEntityByKey(any())).thenReturn(metadata);
         when(droolsExpressionBuilder.buildExpression(any(), any())).thenReturn(MOCKED_DRL_EXPRESSION);
 
@@ -114,7 +114,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(component.getName()).thenReturn("TestFee");
         when(component.getPricingTiers()).thenReturn(List.of(tier));
 
-        when(componentRepository.findAll()).thenReturn(List.of(component));
+        when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(component));
         when(metadataService.getMetadataEntityByKey("transactionAmount")).thenReturn(metadata);
         when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class)))
                 .thenReturn(MOCKED_DRL_EXPRESSION);
@@ -138,7 +138,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
 
     @Test
     void buildRules_shouldReturnPlaceholderRulesWhenNoComponentsExist() {
-        when(componentRepository.findAll()).thenReturn(Collections.emptyList());
+        when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(Collections.emptyList());
 
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
 
@@ -167,7 +167,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(tierB.getPriceValues()).thenReturn(Set.of(new PriceValue()));
         when(compB.getPricingTiers()).thenReturn(List.of(tierB));
 
-        when(componentRepository.findAll()).thenReturn(List.of(compA, compB));
+        when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(compA, compB));
 
         // ACT
         String drl = productRuleBuilderService.buildAllRulesForCompilation();

@@ -24,7 +24,7 @@ public class BundleRuleBuilderService extends AbstractRuleBuilderService {
 
     @Override
     protected List<PricingComponent> fetchComponents() {
-        return componentRepository.findByTypeIn(
+        return pricingComponentRepository.findByTypeIn(
                 List.of(PricingComponent.ComponentType.WAIVER, PricingComponent.ComponentType.DISCOUNT)
         );
     }

@@ -6,6 +6,7 @@ import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.CategoryConflictRule;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.web.exception.ValidationException;
@@ -22,11 +23,7 @@ public class CatalogConstraintService extends BaseService {
     private final BankConfigurationRepository bankConfigurationRepository;
     private final BundleProductLinkRepository bundleProductLinkRepository;
 
-    /**
-     * Checks if a Product is already in a bundle.
-     */
     public void validateProductCanBeBundled(Long productId) {
-
         boolean allowMultiBundle = bankConfigurationRepository.findCurrent()
                 .map(BankConfiguration::isAllowProductInMultipleBundles)
                 .orElse(false);
@@ -35,24 +32,24 @@ public class CatalogConstraintService extends BaseService {
             return;
         }
 
-        // 1. Fetch all historical links
         List<BundleProductLink> allLinks = bundleProductLinkRepository.findAllByProductId(productId);
+        List<VersionableEntity.EntityStatus> blockingStatuses = List.of(
+                VersionableEntity.EntityStatus.DRAFT,
+                VersionableEntity.EntityStatus.ACTIVE
+        );
 
-        // 2. Filter: Only count links that are in DRAFT or ACTIVE bundles
-        // ARCHIVED bundles are considered "historical" and do not block new bundling
         Optional<BundleProductLink> activeConflict = allLinks.stream()
-                .filter(link -> link.getProductBundle().getStatus() != ProductBundle.BundleStatus.ARCHIVED)
+                .filter(link -> blockingStatuses.contains(link.getProductBundle().getStatus()))
                 .findFirst();
 
         if (activeConflict.isPresent()) {
-            String bundleCode = activeConflict.get().getProductBundle().getCode();
-            ProductBundle.BundleStatus status = activeConflict.get().getProductBundle().getStatus();
-
-            throw new ValidationException(
-                    String.format("Product ID %d is currently in an %s bundle (%s). " +
-                                    "Multi-bundling is disabled for bank %s.",
-                            productId, status, bundleCode, getCurrentBankId())
-            );
+            BundleProductLink conflict = activeConflict.get();
+            ProductBundle bundle = activeConflict.get().getProductBundle();
+            Product product = conflict.getProduct();
+            String errorMessage = String.format("[BUNDLE_CONSTRAINT_VIOLATION] Product '%s' (ID: %d) is currently in an %s bundle (%s). " +
+                            "Bundling a product in more than 1 bundles is disabled for bank %s.",
+                    product.getCode(), productId, bundle.getStatus(), bundle.getCode(), getCurrentBankId());
+            throw new ValidationException(errorMessage);
         }
     }
 

@@ -16,17 +16,9 @@ public class CoreMetadataSeeder {
         this.pricingInputMetadataRepository = pricingInputMetadataRepository;
     }
 
-    private PricingInputMetadata createMetadata(String key, String displayName, String dataType, String bankId) {
-        PricingInputMetadata metadata = new PricingInputMetadata();
-        metadata.setAttributeKey(key);
-        metadata.setDisplayName(displayName);
-        metadata.setDataType(dataType);
-        metadata.setBankId(bankId);
-        return metadata;
-    }
-
     /**
      * Seeds the minimum required core input metadata for DRL compilation for a specific bank.
+     *
      * @param bankId the tenant identifier
      */
     @Transactional
@@ -41,4 +33,10 @@ public class CoreMetadataSeeder {
             ));
         }
     }
+
+    private PricingInputMetadata createMetadata(String key, String displayName, String dataType, String bankId) {
+        return PricingInputMetadata.builder()
+                .attributeKey(key).displayName(displayName).dataType(dataType).bankId(bankId).build();
+    }
+
 }

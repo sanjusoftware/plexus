@@ -11,6 +11,5 @@ public interface TenantRepository<T, ID> extends JpaRepository<T, ID>, JpaSpecif
     // We override the standard findById to ensure it's always tenant-aware
     @Override
     Optional<T> findById(ID id);
-
     Optional<T> findByBankId(String bankId);
 }

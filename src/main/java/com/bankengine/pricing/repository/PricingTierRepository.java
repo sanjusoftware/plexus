@@ -12,4 +12,5 @@ public interface PricingTierRepository extends TenantRepository<PricingTier, Lon
             @QueryHint(name = "jakarta.persistence.cache.retrieveMode", value = "BYPASS")
     })
     long countByPricingComponentId(Long componentId);
+    void deleteByPricingComponentId(Long componentId);
 }

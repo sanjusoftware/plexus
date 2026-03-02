@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @NoArgsConstructor
+@SuperBuilder
 @TenantEntity
 public class PriceValue extends AuditableEntity {
 
@@ -38,12 +40,6 @@ public class PriceValue extends AuditableEntity {
         DISCOUNT_PERCENTAGE,
         DISCOUNT_ABSOLUTE,
         FREE_COUNT
-    }
-
-    public PriceValue(PricingTier pricingTier, BigDecimal rawValue, ValueType valueType) {
-        this.pricingTier = pricingTier;
-        this.rawValue = rawValue;
-        this.valueType = valueType;
     }
 
     // ------------------------------------------------

@@ -1,24 +1,23 @@
 package com.bankengine.pricing.model;
 
 import com.bankengine.common.annotation.TenantEntity;
-import com.bankengine.common.model.AuditableEntity;
+import com.bankengine.common.model.VersionableEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "pricing_component", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"bank_id", "name"})
+        @UniqueConstraint(columnNames = {"bank_id", "code", "version"})
 })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 @NamedEntityGraph(
         name = "component-with-tiers-values-conditions",
         attributeNodes = {
@@ -35,14 +34,11 @@ import java.util.List;
         }
 )
 @TenantEntity
-public class PricingComponent extends AuditableEntity {
+public class PricingComponent extends VersionableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false)
-    private String name; // e.g., "Annual Fee", "Base Interest Rate", "ATM Withdrawal Fee"
 
     private String description;
 
@@ -50,14 +46,10 @@ public class PricingComponent extends AuditableEntity {
     private ComponentType type;
 
     @OneToMany(mappedBy = "pricingComponent", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<PricingTier> pricingTiers = new ArrayList<>();
 
     public enum ComponentType {
-        FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE
-    }
-
-    public PricingComponent(String name, ComponentType type) {
-        this.name = name;
-        this.type = type;
+        FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, TAX
     }
 }

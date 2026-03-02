@@ -1,5 +1,7 @@
 package com.bankengine.pricing.service;
 
+import com.bankengine.catalog.dto.VersionRequest;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.converter.PriceValueMapper;
 import com.bankengine.pricing.converter.PricingComponentMapper;
@@ -8,13 +10,15 @@ import com.bankengine.pricing.converter.TierConditionMapper;
 import com.bankengine.pricing.dto.*;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
-import com.bankengine.pricing.model.PricingComponent.ComponentType;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
-import com.bankengine.pricing.repository.*;
+import com.bankengine.pricing.repository.PricingComponentRepository;
+import com.bankengine.pricing.repository.PricingTierRepository;
+import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,12 +28,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class PricingComponentService extends BaseService {
 
-    private final PricingComponentRepository componentRepository;
+    private final PricingComponentRepository pricingComponentRepository;
     private final PricingTierRepository tierRepository;
-    private final PriceValueRepository valueRepository;
-    private final TierConditionRepository tierConditionRepository;
     private final PricingComponentMapper pricingComponentMapper;
     private final PricingTierMapper pricingTierMapper;
     private final PriceValueMapper priceValueMapper;
@@ -37,246 +40,288 @@ public class PricingComponentService extends BaseService {
     private final ProductPricingLinkRepository productPricingLinkRepository;
     private final KieContainerReloadService reloadService;
 
-    public PricingComponentService(
-            PricingComponentRepository componentRepository,
-            PricingTierRepository tierRepository,
-            PriceValueRepository valueRepository,
-            TierConditionRepository tierConditionRepository,
-            PricingComponentMapper pricingComponentMapper,
-            PricingTierMapper pricingTierMapper,
-            PriceValueMapper priceValueMapper,
-            TierConditionMapper tierConditionMapper,
-            ProductPricingLinkRepository productPricingLinkRepository,
-            KieContainerReloadService reloadService) {
-        this.componentRepository = componentRepository;
-        this.tierRepository = tierRepository;
-        this.valueRepository = valueRepository;
-        this.tierConditionRepository = tierConditionRepository;
-        this.pricingComponentMapper = pricingComponentMapper;
-        this.pricingTierMapper = pricingTierMapper;
-        this.priceValueMapper = priceValueMapper;
-        this.tierConditionMapper = tierConditionMapper;
-        this.productPricingLinkRepository = productPricingLinkRepository;
-        this.reloadService = reloadService;
-    }
-
-    /**
-     * Retrieves a PricingTier entity by ID.
-     */
-    public PricingTier getPricingTierById(Long id) {
-        return getByIdSecurely(tierRepository, id, "Pricing Tier");
-    }
-
-    /**
-     * Updates an existing Pricing Tier and its associated Price Value.
-     */
-    @Transactional
-    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
-    public ProductPricingCalculationResult.PriceComponentDetail updateTierAndValue(
-            Long componentId,
-            Long tierId,
-            PricingTierRequest dto) {
-
-        getPricingComponentById(componentId);
-        PricingTier tier = getPricingTierById(tierId);
-        PriceValue value = valueRepository.findByPricingTierId(tierId)
-                .orElseThrow(() -> new NotFoundException("Price Value not found for Tier ID: " + tierId));
-
-        pricingTierMapper.updateFromDto(dto, tier);
-        updateTierConditions(tier, dto.getConditions());
-        priceValueMapper.updateFromDto(dto.getPriceValue(), value);
-
-        setValueType(dto.getPriceValue(), value);
-
-        tierRepository.save(tier);
-        PriceValue savedValue = valueRepository.save(value);
-
-        reloadService.reloadKieContainer();
-        return priceValueMapper.toDetailDto(savedValue);
-    }
-
-    private void updateTierConditions(PricingTier tier, List<TierConditionDto> conditionDtos) {
-        tier.getConditions().clear();
-        if (conditionDtos != null && !conditionDtos.isEmpty()) {
-            Set<TierCondition> newConditions = conditionDtos.stream()
-                .map(dto -> {
-                    TierCondition condition = tierConditionMapper.toEntity(dto);
-                    condition.setPricingTier(tier);
-                    condition.setBankId(getCurrentBankId());
-                    return condition;
-                })
-                .collect(Collectors.toSet());
-            tier.getConditions().addAll(newConditions);
-        }
-    }
-
-    @Transactional
-    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
-    public void deleteTierAndValue(Long componentId, Long tierId) {
-        getPricingComponentById(componentId);
-        getPricingTierById(tierId);
-        tierConditionRepository.deleteByPricingTierId(tierId);
-        valueRepository.deleteByPricingTierId(tierId);
-        tierRepository.deleteById(tierId);
-        reloadService.reloadKieContainer();
-    }
-
-    public PricingComponent getPricingComponentById(Long id) {
-        return getByIdSecurely(componentRepository, id, "Pricing Component");
-    }
-
-    @Transactional
-public PricingComponentResponse createComponent(PricingComponentRequest requestDto) {
-    // 1. Map the base entity
-    PricingComponent component = pricingComponentMapper.toEntity(requestDto);
-    String bankId = getCurrentBankId();
-    component.setBankId(bankId);
-
-    // 2. Validate Component Type
-    try {
-        component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
-    } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException("Invalid component type provided: " + requestDto.getType());
-    }
-
-    // 3. Process Nested Tiers (Manual Wiring)
-    if (requestDto.getPricingTiers() != null && !requestDto.getPricingTiers().isEmpty()) {
-        List<PricingTier> tiers = requestDto.getPricingTiers().stream().map(tierDto -> {
-            // Map Tier
-            PricingTier tier = pricingTierMapper.toEntity(tierDto);
-            tier.setPricingComponent(component); // Set parent
-            tier.setBankId(bankId);
-
-            // Map Conditions
-            if (tierDto.getConditions() != null) {
-                Set<TierCondition> conditions = tierDto.getConditions().stream().map(condDto -> {
-                    TierCondition condition = tierConditionMapper.toEntity(condDto);
-                    condition.setPricingTier(tier); // Set parent
-                    condition.setBankId(bankId);
-                    return condition;
-                }).collect(Collectors.toSet());
-                tier.setConditions(conditions);
-            }
-
-            // Map Price Value (Mandatory in our new FAT DTO logic)
-            PriceValue value = priceValueMapper.toEntity(tierDto.getPriceValue());
-            value.setPricingTier(tier); // Set parent
-            value.setBankId(bankId);
-
-            // Set value type with same validation pattern
-            try {
-                value.setValueType(PriceValue.ValueType.valueOf(tierDto.getPriceValue().getValueType().toUpperCase()));
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Invalid value type provided: " + tierDto.getPriceValue().getValueType());
-            }
-
-            tier.setPriceValues(Set.of(value));
-            return tier;
-        }).collect(Collectors.toList());
-
-        component.setPricingTiers(tiers);
-    }
-
-    // 4. Save entire aggregate
-    PricingComponent savedComponent = componentRepository.save(component);
-
-    // 5. Sync with Rules Engine
-    reloadService.reloadKieContainer();
-
-    return pricingComponentMapper.toResponseDto(savedComponent);
-}
+    // --- READ OPERATIONS ---
 
     @Transactional(readOnly = true)
     public List<PricingComponentResponse> findAllComponents() {
-        List<PricingComponent> components = componentRepository.findAll();
-        return pricingComponentMapper.toResponseDtoList(components);
+        return pricingComponentMapper.toResponseDtoList(pricingComponentRepository.findAllWithDetailsBy());
     }
 
     @Transactional(readOnly = true)
     public PricingComponentResponse getComponentById(Long id) {
-        PricingComponent component = getPricingComponentById(id);
-        return pricingComponentMapper.toResponseDto(component);
+        return pricingComponentMapper.toResponseDto(getPricingComponentById(id));
+    }
+
+    public PricingComponent getPricingComponentById(Long id) {
+        return getByIdSecurely(pricingComponentRepository, id, "Pricing Component");
+    }
+
+    // --- WRITE OPERATIONS ---
+
+    @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
+    public PricingComponentResponse createComponent(PricingComponentRequest requestDto) {
+        validateNewVersionable(pricingComponentRepository, requestDto.getName(), requestDto.getCode());
+        validateComponentType(requestDto.getType());
+        PricingComponent component = pricingComponentMapper.toEntity(requestDto);
+        component.setBankId(getCurrentBankId());
+        component.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        component.setVersion(1);
+
+        attachTiersToComponent(component, requestDto.getPricingTiers());
+
+        PricingComponent saved = pricingComponentRepository.save(component);
+        reloadService.reloadKieContainer();
+        return pricingComponentMapper.toResponseDto(saved);
+    }
+
+    /**
+     * Versions a Pricing Component (Deep Clone).
+     * Evicts cache because the catalog needs to recognize the new version availability.
+     */
+    @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
+    public Long versionComponent(Long oldId, VersionRequest request) {
+        PricingComponent source = getPricingComponentById(oldId);
+        PricingComponent newVersion = pricingComponentMapper.clone(source);
+        prepareNewVersion(newVersion, source, request, pricingComponentRepository);
+        cloneTiersInternal(source, newVersion);
+        PricingComponent saved = pricingComponentRepository.save(newVersion);
+        reloadService.reloadKieContainer();
+        return saved.getId();
     }
 
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public PricingComponentResponse updateComponent(Long id, PricingComponentRequest requestDto) {
         PricingComponent component = getPricingComponentById(id);
-        pricingComponentMapper.updateFromDto(requestDto, component);
-        try {
-            component.setType(ComponentType.valueOf(requestDto.getType().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid component type provided: " + requestDto.getType());
+        validateDraft(component);
+        if (requestDto.getType() != null) {
+            validateComponentType(requestDto.getType());
         }
-        PricingComponent updatedComponent = componentRepository.save(component);
-        return pricingComponentMapper.toResponseDto(updatedComponent);
+
+        pricingComponentMapper.updateFromDto(requestDto, component);
+        PricingComponent updated = pricingComponentRepository.save(component);
+        reloadService.reloadKieContainer();
+        return pricingComponentMapper.toResponseDto(updated);
+    }
+
+    // --- LIFECYCLE OPERATIONS ---
+
+    @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
+    public void activateComponent(Long id) {
+        PricingComponent component = getPricingComponentById(id);
+        validateDraft(component);
+        component.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        pricingComponentRepository.save(component);
+        reloadService.reloadKieContainer();
     }
 
     @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public void deletePricingComponent(Long id) {
         PricingComponent component = getPricingComponentById(id);
-        long tierCount = tierRepository.countByPricingComponentId(id);
-        if (tierCount > 0) {
-            throw new DependencyViolationException(String.format("Cannot delete component %d: association with %d tiers exists.", id, tierCount));
-        }
+
         long linkCount = productPricingLinkRepository.countByPricingComponentId(id);
         if (linkCount > 0) {
             throw new DependencyViolationException(String.format("Cannot delete component %d: linked to %d products.", id, linkCount));
         }
-        componentRepository.delete(component);
+
+        long tierCount = tierRepository.countByPricingComponentId(id);
+        if (tierCount > 0) {
+            throw new DependencyViolationException(String.format("Cannot delete component %d: association with %d tiers exists.", id, tierCount));
+        }
+
+        pricingComponentRepository.delete(component);
         reloadService.reloadKieContainer();
     }
 
-    /**
-     * Links a new Tier and its Price Value to an existing Pricing Component.
-     */
+    // --- INTERNAL CLONING & MAPPING LOGIC ---
+
+    private void attachTiersToComponent(PricingComponent component, List<PricingTierRequest> tierDtos) {
+        if (tierDtos == null) return;
+
+        List<PricingTier> tiers = tierDtos.stream().map(tierDto -> {
+            PricingTier tier = pricingTierMapper.toEntity(tierDto);
+            tier.setPricingComponent(component);
+            tier.setBankId(component.getBankId());
+
+            if (tierDto.getConditions() != null) {
+                Set<TierCondition> conditions = tierDto.getConditions().stream().map(cDto -> {
+                    TierCondition condition = tierConditionMapper.toEntity(cDto);
+                    condition.setPricingTier(tier);
+                    condition.setBankId(component.getBankId());
+                    return condition;
+                }).collect(Collectors.toSet());
+                tier.setConditions(conditions);
+            }
+
+            PriceValue value = priceValueMapper.toEntity(tierDto.getPriceValue());
+            value.setPricingTier(tier);
+            value.setBankId(component.getBankId());
+            tier.setPriceValues(Set.of(value));
+
+            return tier;
+        }).toList();
+
+        component.setPricingTiers(tiers);
+    }
+
+    private void cloneTiersInternal(PricingComponent source, PricingComponent target) {
+        if (source.getPricingTiers() == null) return;
+
+        List<PricingTier> clonedTiers = source.getPricingTiers().stream().map(oldTier -> {
+            PricingTier newTier = pricingTierMapper.clone(oldTier);
+            newTier.setPricingComponent(target);
+            newTier.setBankId(target.getBankId());
+
+            if (oldTier.getPriceValues() != null) {
+                Set<PriceValue> newValues = oldTier.getPriceValues().stream().map(oldVal -> {
+                    PriceValue newVal = priceValueMapper.clone(oldVal);
+                    newVal.setPricingTier(newTier);
+                    newVal.setBankId(target.getBankId());
+                    return newVal;
+                }).collect(Collectors.toSet());
+                newTier.setPriceValues(newValues);
+            }
+
+            if (oldTier.getConditions() != null) {
+                Set<TierCondition> newConditions = oldTier.getConditions().stream().map(oldCond -> {
+                    TierCondition newCond = tierConditionMapper.toEntity(tierConditionMapper.toDto(oldCond));
+                    newCond.setPricingTier(newTier);
+                    newCond.setBankId(target.getBankId());
+                    return newCond;
+                }).collect(Collectors.toSet());
+                newTier.setConditions(newConditions);
+            }
+
+            return newTier;
+        }).toList();
+
+        target.setPricingTiers(clonedTiers);
+    }
+
+    // --- GRANULAR TIER OPERATIONS (Required by PricingTierController) ---
+
     @Transactional
-    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public ProductPricingCalculationResult.PriceComponentDetail addTierAndValue(
             Long componentId,
             PricingTierRequest tierDto,
             PriceValueRequest valueDto) {
+
         PricingComponent component = getPricingComponentById(componentId);
-        String bankId = getCurrentBankId();
+        validateDraft(component);
+        validatePriceValueType(valueDto.getValueType());
 
         PricingTier tier = pricingTierMapper.toEntity(tierDto);
         tier.setPricingComponent(component);
-        tier.setBankId(bankId);
+        tier.setBankId(component.getBankId());
 
         PriceValue value = priceValueMapper.toEntity(valueDto);
-        value.setBankId(bankId);
-
-        setValueType(valueDto, value);
-
         value.setPricingTier(tier);
+        value.setBankId(component.getBankId());
         tier.setPriceValues(Set.of(value));
 
-        if (tierDto.getConditions() != null && !tierDto.getConditions().isEmpty()) {
-            Set<TierCondition> conditions = tierDto.getConditions().stream()
-                    .map(dto -> {
-                        TierCondition condition = tierConditionMapper.toEntity(dto);
-                        condition.setPricingTier(tier);
-                        condition.setBankId(bankId);
-                        return condition;
-                    })
-                    .collect(Collectors.toSet());
-            tier.setConditions(conditions);
-        }
+        mapConditions(tierDto, tier);
 
-        PricingTier savedTier = tierRepository.save(tier);
-        Long tierId = savedTier.getId();
-        PriceValue savedValue = valueRepository.findByPricingTierId(tierId)
-                .orElseThrow(() -> new RuntimeException("Price Value not found for Tier: " + tierId));
-
+        PricingTier saved = tierRepository.save(tier);
         reloadService.reloadKieContainer();
-        return priceValueMapper.toDetailDto(savedValue);
+
+        return priceValueMapper.toDetailDto(saved.getPriceValues().iterator().next());
     }
 
-    private static void setValueType(PriceValueRequest valueDto, PriceValue value) {
+    @Transactional
+    public ProductPricingCalculationResult.PriceComponentDetail updateTierAndValue(
+            Long componentId,
+            Long tierId,
+            PricingTierRequest tierDto) {
+
+        // 1. Fetch and validate Component first (Ensures tenancy and state)
+        PricingComponent component = getPricingComponentById(componentId);
+        validateDraft(component);
+
+        // 2. Fetch Tier and verify ownership
+        PricingTier tier = tierRepository.findById(tierId)
+                .orElseThrow(() -> new NotFoundException("Tier not found with ID: " + tierId));
+
+        if (!tier.getPricingComponent().getId().equals(componentId)) {
+            throw new NotFoundException("Tier " + tierId + " does not belong to component " + componentId);
+        }
+
+        // 3. Validate ValueType if present
+        if (tierDto.getPriceValue() != null) {
+            validatePriceValueType(tierDto.getPriceValue().getValueType());
+        }
+
+        // 4. Update core fields
+        pricingTierMapper.updateFromDto(tierDto, tier);
+
+        // 5. Handle Conditions explicitly (Clear if empty list provided)
+        if (tierDto.getConditions() != null) {
+            tier.getConditions().clear();
+            if (!tierDto.getConditions().isEmpty()) {
+                mapConditions(tierDto, tier);
+            }
+        }
+
+        // 6. Update PriceValue
+        if (tierDto.getPriceValue() != null && !tier.getPriceValues().isEmpty()) {
+            priceValueMapper.updateFromDto(tierDto.getPriceValue(), tier.getPriceValues().iterator().next());
+        }
+
+        PricingTier updated = tierRepository.save(tier);
+        reloadService.reloadKieContainer();
+
+        return priceValueMapper.toDetailDto(updated.getPriceValues().iterator().next());
+    }
+
+    @Transactional
+    public void deleteTierAndValue(Long componentId, Long tierId) {
+        PricingComponent component = getPricingComponentById(componentId);
+        validateDraft(component);
+
+        PricingTier tier = tierRepository.findById(tierId)
+                .filter(t -> t.getPricingComponent().getId().equals(componentId))
+                .orElseThrow(() -> new NotFoundException("Tier " + tierId + " not found for component " + componentId));
+
+        tierRepository.delete(tier);
+        reloadService.reloadKieContainer();
+    }
+
+    // --- HELPER VALIDATIONS ---
+
+    private void mapConditions(PricingTierRequest tierDto, PricingTier tier) {
+        if (tierDto.getConditions() == null) return;
+
+        Set<TierCondition> conditions = tierDto.getConditions().stream()
+                .map(cDto -> {
+                    TierCondition c = tierConditionMapper.toEntity(cDto);
+                    c.setPricingTier(tier);
+                    c.setBankId(tier.getBankId());
+                    return c;
+                }).collect(Collectors.toSet());
+
+        if (tier.getConditions() == null) {
+            tier.setConditions(conditions);
+        } else {
+            tier.getConditions().addAll(conditions);
+        }
+    }
+
+    private void validatePriceValueType(String type) {
         try {
-            value.setValueType(PriceValue.ValueType.valueOf(valueDto.getValueType().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid value type provided: " + valueDto.getValueType());
+            PriceValue.ValueType.valueOf(type.toUpperCase());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid value type provided: " + type);
+        }
+    }
+
+    private void validateComponentType(String type) {
+        try {
+            PricingComponent.ComponentType.valueOf(type.toUpperCase());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid component type provided: " + type);
         }
     }
 }

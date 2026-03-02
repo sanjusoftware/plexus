@@ -26,8 +26,8 @@ public class DroolsValidationIntegrationTest extends AbstractIntegrationTest {
     @DisplayName("Critical: Ensure generated DRL compiles with LocalDate and Decimal comparisons")
     void shouldCompileComplexDrlWithoutErrors() {
         // Arrange: Create a component with a Date-based rule and a BigDecimal rule
-        PricingComponent comp = new PricingComponent("ComplexComp", PricingComponent.ComponentType.FEE);
-        PricingTier tier = new PricingTier(comp, "Complex Tier", BigDecimal.ZERO, null);
+        PricingComponent comp = PricingComponent.builder().name("ComplexComp").code("ComplexComp").type(PricingComponent.ComponentType.FEE).build();
+        PricingTier tier = PricingTier.builder().pricingComponent(comp).name("Complex Tier").minThreshold(BigDecimal.ZERO).build();
 
         // Rule 1: BigDecimal comparison (Uses compareTo)
         TierCondition cond1 = new TierCondition();
@@ -45,7 +45,7 @@ public class DroolsValidationIntegrationTest extends AbstractIntegrationTest {
         cond2.setAttributeValue("2026-01-01");
         tier.getConditions().add(cond2);
 
-        PriceValue val = new PriceValue(tier, new BigDecimal("50.00"), PriceValue.ValueType.FEE_ABSOLUTE);
+        PriceValue val = PriceValue.builder().pricingTier(tier).rawValue(new BigDecimal("50.00")).valueType(PriceValue.ValueType.FEE_ABSOLUTE).build();
         tier.getPriceValues().add(val);
 
         componentRepository.save(comp);

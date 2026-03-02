@@ -3,9 +3,11 @@ package com.bankengine.catalog.model;
 import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "bundle_product_link", uniqueConstraints = {
@@ -18,6 +20,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@SuperBuilder
 @TenantEntity
 public class BundleProductLink extends AuditableEntity {
 
@@ -35,16 +38,11 @@ public class BundleProductLink extends AuditableEntity {
     private Product product;
 
     @Column(name = "is_main_account", nullable = false)
-    private boolean isMainAccount = false; // Used for fee collection
+    @Builder.Default
+    private boolean mainAccount = false; // Used for fee collection
 
     @Column(name = "is_mandatory", nullable = false)
-    private boolean isMandatory = true; // Defines if the product must be included
+    @Builder.Default
+    private boolean mandatory = true; // Defines if the product must be included
 
-    // Custom constructor updated
-    public BundleProductLink(ProductBundle productBundle, Product product, boolean isMainAccount, boolean isMandatory) {
-        this.productBundle = productBundle;
-        this.product = product;
-        this.isMainAccount = isMainAccount;
-        this.isMandatory = isMandatory;
-    }
 }

@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductFeature {
+public class ProductFeatureDto {
 
     @NotNull(message = "Feature Component ID is required")
     private Long featureComponentId; // Used for Request

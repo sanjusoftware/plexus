@@ -11,25 +11,27 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface ProductPricingLinkRepository extends TenantRepository<ProductPricingLink, Long> {
+
+    // Logic: A link is valid if the request date falls within the Link's own schedule
     @Query("SELECT l FROM ProductPricingLink l " +
             "JOIN l.pricingComponent c " +
-            "LEFT JOIN c.pricingTiers t " +
             "WHERE l.product.id = :productId " +
-            "AND (t IS NULL OR (t.effectiveDate <= :targetDate " +
-            "AND (t.expiryDate IS NULL OR t.expiryDate >= :targetDate)))")
+            "AND l.effectiveDate <= :targetDate " +
+            "AND (l.expiryDate IS NULL OR l.expiryDate >= :targetDate)")
     List<ProductPricingLink> findByProductIdAndDate(@Param("productId") Long productId,
                                                     @Param("targetDate") LocalDate targetDate);
 
-    @Query("SELECT t.id FROM PricingTier t " +
-            "JOIN ProductPricingLink l ON l.pricingComponent.id = t.pricingComponent.id " +
+    // Logic: Find IDs of tiers belonging to components that have an ACTIVE link to this product
+    @Query("SELECT t.id FROM ProductPricingLink l " +
+            "JOIN l.pricingComponent c " +
+            "JOIN c.pricingTiers t " +
             "WHERE l.product.id = :productId " +
-            "AND t.effectiveDate <= :targetDate " +
-            "AND (t.expiryDate IS NULL OR t.expiryDate >= :targetDate)")
+            "AND l.effectiveDate <= :targetDate " +
+            "AND (l.expiryDate IS NULL OR l.expiryDate >= :targetDate)")
     List<Long> findActiveTierIds(@Param("productId") Long productId, @Param("targetDate") LocalDate targetDate);
 
     List<ProductPricingLink> findByProductId(Long productId);
     long countByPricingComponentId(Long pricingComponentId);
-    boolean existsByPricingComponentIdAndProductId(Long pricingComponentId, Long productId);
 
     @Modifying
     @Transactional

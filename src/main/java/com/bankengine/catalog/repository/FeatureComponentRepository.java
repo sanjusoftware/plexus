@@ -1,13 +1,12 @@
 package com.bankengine.catalog.repository;
 
 import com.bankengine.catalog.model.FeatureComponent;
-import com.bankengine.common.repository.TenantRepository;
+import com.bankengine.common.repository.VersionableRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface FeatureComponentRepository extends TenantRepository<FeatureComponent, Long> {
-    boolean existsByName(String name);
+public interface FeatureComponentRepository extends VersionableRepository<FeatureComponent> {
     Optional<FeatureComponent> findByName(String name);
 }

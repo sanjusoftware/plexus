@@ -1,14 +1,12 @@
 package com.bankengine.catalog.model;
 
 import com.bankengine.common.annotation.TenantEntity;
-import com.bankengine.common.model.AuditableEntity;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.model.ProductPricingLink;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -16,62 +14,62 @@ import java.util.List;
 
 @Entity
 @Table(name = "product", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"bank_id", "name"})
+        @UniqueConstraint(columnNames = {"bank_id", "code", "version"})
 })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 @TenantEntity
-public class Product extends AuditableEntity {
-
+public class Product extends VersionableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name; // e.g., "Premier Home Loan"
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
 
-    @Column(name = "expiration_date")
-    private LocalDate expirationDate;
-
-    private LocalDate effectiveDate;
-    private String status = "DRAFT"; // e.g., "ACTIVE", "DRAFT", "INACTIVE"
+    @Column(name = "activation_date")
+    private LocalDate activationDate;
 
     @Column(name = "category", nullable = false)
     @NotBlank(message = "Product category is mandatory for compatibility validation.")
     private String category; // e.g., "RETAIL", "WEALTH", "ISLAMIC"
 
-    @ManyToOne // Many Products belong to one ProductType
+    @ManyToOne
     @JoinColumn(name = "product_type_id", nullable = false)
     private ProductType productType;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<ProductFeatureLink> productFeatureLinks = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<ProductPricingLink> productPricingLinks = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<BundleProductLink> bundleLinks = new ArrayList<>();
 
     @Column(length = 100)
-    private String tagline; // Marketing headline
+    private String tagline;
 
     @Column(length = 2000)
-    private String fullDescription; // Rich text description
+    private String fullDescription;
 
     @Column(length = 500)
-    private String iconUrl; // Icon for UI display
+    private String iconUrl;
 
     @Column(name = "display_order")
-    private Integer displayOrder; // For sorting in catalog
+    private Integer displayOrder;
 
     @Column(name = "is_featured")
-    private boolean featured; // For homepage highlights
+    private boolean featured;
 
     @Column(name = "target_customer_segments")
-    private String targetCustomerSegments; // Comma-separated: "RETAIL,PREMIUM"
+    private String targetCustomerSegments;
 
     @Column(name = "terms_and_conditions", columnDefinition = "TEXT")
     private String termsAndConditions;

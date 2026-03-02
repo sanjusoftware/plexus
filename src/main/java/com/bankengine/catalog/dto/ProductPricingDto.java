@@ -12,7 +12,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductPricing {
+public class ProductPricingDto {
 
     @NotNull(message = "Pricing Component ID is required.")
     private Long pricingComponentId;

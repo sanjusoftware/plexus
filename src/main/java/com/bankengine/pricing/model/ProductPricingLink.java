@@ -4,10 +4,8 @@ import com.bankengine.catalog.model.Product;
 import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,6 +14,7 @@ import java.time.LocalDate;
 @Table(name = "product_pricing_link")
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @TenantEntity
@@ -51,50 +50,14 @@ public class ProductPricingLink extends AuditableEntity {
     @Column(name = "target_component_code")
     private String targetComponentCode;
 
-    /**
-     * If true, the pricing is determined by the Drools Rules Engine.
-     * If false, the price is the fixedValue.
-     */
+    @Builder.Default
     @Column(name = "use_rules_engine", nullable = false)
     private boolean useRulesEngine = false;
 
-    /**
-     * Effective date when the pricing configuration becomes active.
-     */
-    @Column(name = "effective_date", nullable = false)
+    @Column(name = "effective_date")
     private LocalDate effectiveDate;
 
-    /**
-     * Date on which the pricing configuration ceases to exist.
-     * Defaults to 9999-12-31 to represent an open-ended link.
-     */
-    @Column(name = "expiry_date", nullable = false)
+    @Column(name = "expiry_date")
     private LocalDate expiryDate;
 
-    /**
-     * JPA Lifecycle hook to ensure defaults are set if not provided.
-     * Sets effective date to today and expiry to exactly 1 year from now.
-     */
-    @PrePersist
-    protected void onCreate() {
-        if (this.effectiveDate == null) {
-            this.effectiveDate = LocalDate.now();
-        }
-        if (this.expiryDate == null) {
-            this.expiryDate = this.effectiveDate.plusYears(1);
-        }
-    }
-
-    public ProductPricingLink(Product product, PricingComponent pricingComponent,
-                              BigDecimal fixedValue, PriceValue.ValueType fixedValueType,
-                              String targetComponentCode, boolean useRulesEngine) {
-        this.product = product;
-        this.pricingComponent = pricingComponent;
-        this.fixedValue = fixedValue;
-        this.fixedValueType = fixedValueType;
-        this.targetComponentCode = targetComponentCode;
-        this.useRulesEngine = useRulesEngine;
-        this.effectiveDate = LocalDate.now();
-        this.expiryDate = this.effectiveDate.plusYears(1);
-    }
 }

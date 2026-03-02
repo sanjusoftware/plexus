@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "tier_condition")
@@ -14,6 +15,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 @TenantEntity
 public class TierCondition extends AuditableEntity {
 
@@ -45,14 +47,6 @@ public class TierCondition extends AuditableEntity {
     // e.g., AND, OR (only applicable if there is a next condition)
     @Enumerated(EnumType.STRING)
     private LogicalConnector connector;
-
-    public TierCondition(PricingTier pricingTier, String attributeName, Operator operator, String attributeValue, LogicalConnector connector) {
-        this.pricingTier = pricingTier;
-        this.attributeName = attributeName;
-        this.operator = operator;
-        this.attributeValue = attributeValue;
-        this.connector = connector;
-    }
 
     public enum Operator {
         EQ, // == (Equal)

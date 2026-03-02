@@ -2,9 +2,10 @@ package com.bankengine.catalog.converter;
 
 import com.bankengine.catalog.dto.ProductRequest;
 import com.bankengine.catalog.dto.ProductResponse;
-import com.bankengine.catalog.dto.ProductVersionRequest;
+import com.bankengine.catalog.dto.VersionRequest;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductType;
+import com.bankengine.common.model.VersionableEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ public class ProductMapperTest {
         productType.setName("Test Product Type");
 
         Product oldProduct = new Product();
-        oldProduct.setId(99L); // Original ID
+        oldProduct.setId(99L);
         oldProduct.setProductType(productType);
         oldProduct.setBankId("BANK-001");
         oldProduct.setCategory("RETAIL");
@@ -51,21 +52,19 @@ public class ProductMapperTest {
         oldProduct.setIconUrl("http://old-icon.png");
         oldProduct.setFeatured(true);
 
-        ProductVersionRequest requestDto = new ProductVersionRequest();
+        VersionRequest requestDto = new VersionRequest();
         requestDto.setNewName("Improved Savings V2");
-        requestDto.setNewEffectiveDate(LocalDate.now().plusDays(7));
+        requestDto.setNewActivationDate(LocalDate.now().plusDays(7));
 
-        // Act
         Product newProduct = mapper.createNewVersionFrom(oldProduct, requestDto);
 
-        // Assert
         assertThat(newProduct).isNotNull();
-        assertThat(newProduct.getId()).isNull(); // Crucial: ID must be null for new record
+        assertThat(newProduct.getId()).isNull();
         assertThat(newProduct.getName()).isEqualTo("Improved Savings V2");
-        assertThat(newProduct.getStatus()).isEqualTo("DRAFT");
+        assertThat(newProduct.getStatus()).isEqualTo(VersionableEntity.EntityStatus.DRAFT);
 
         // Inherited Fields
-        assertThat(newProduct.getBankId()).isEqualTo("BANK-001");
+        assertThat(newProduct.getBankId()).isNull();
         assertThat(newProduct.getCategory()).isEqualTo("RETAIL");
         assertThat(newProduct.getTagline()).isEqualTo("Original Tagline");
         assertThat(newProduct.getFullDescription()).isEqualTo("Original Description");
@@ -79,9 +78,8 @@ public class ProductMapperTest {
         // Arrange
         ProductRequest dto = new ProductRequest();
         dto.setName("New Product");
-        dto.setStatus(null);
         Product entity = mapper.toEntity(dto, new ProductType());
-        assertThat(entity.getStatus()).isEqualTo("DRAFT");
+        assertThat(entity.getStatus()).isEqualTo(VersionableEntity.EntityStatus.DRAFT);
     }
 
     @Test

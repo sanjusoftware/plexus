@@ -2,10 +2,8 @@ package com.bankengine.common.model;
 
 import com.bankengine.common.annotation.TenantEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +26,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 @TenantEntity
 public class BankConfiguration extends AuditableEntity {
 
@@ -36,10 +35,12 @@ public class BankConfiguration extends AuditableEntity {
     private Long id;
 
     @Column(name = "allow_multi_bundle_product", nullable = false)
+    @Builder.Default
     private boolean allowProductInMultipleBundles = false;
 
     @ElementCollection
     @CollectionTable(name = "bank_category_conflicts", joinColumns = @JoinColumn(name = "config_id"))
+    @Builder.Default
     private List<CategoryConflictRule> categoryConflictRules = new ArrayList<>();
 
     @Column(name = "issuer_url", nullable = false)

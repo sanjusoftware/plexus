@@ -4,17 +4,18 @@ import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
-import com.bankengine.pricing.repository.PricingComponentRepository;
-import com.bankengine.pricing.repository.ProductPricingLinkRepository;
+import com.bankengine.pricing.repository.*;
 import com.bankengine.pricing.service.ProductRuleBuilderService;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,9 +48,17 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private PricingComponentRepository pricingComponentRepository;
     @Autowired
+    private PricingTierRepository pricingTierRepository;
+    @Autowired
     private ProductPricingLinkRepository productPricingLinkRepository;
     @Autowired
+    private BundlePricingLinkRepository bundlePricingLinkRepository;
+    @Autowired
     private ProductRuleBuilderService productRuleBuilderService;
+    @Autowired
+    private PriceValueRepository priceValueRepository;
+    @Autowired
+    private TierConditionRepository tierConditionRepository;
 
     public static final String ROLE_PREFIX = "PC_";
     private static final String PRICING_READER_ROLE = ROLE_PREFIX + "TEST_READER";
@@ -68,6 +77,29 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             txHelper.setupCommittedMetadata();
         });
         entityManager.clear();
+    }
+
+    @AfterEach
+    void tearDown() {
+        txHelper.doInTransaction(() -> {
+            // 1. Delete links first (they point to products and components)
+            productPricingLinkRepository.deleteAllInBatch();
+            bundlePricingLinkRepository.deleteAllInBatch();
+
+            // 2. Delete the lowest level children of Tiers
+            priceValueRepository.deleteAllInBatch();
+            tierConditionRepository.deleteAllInBatch();
+
+            // 3. Now delete the Tiers
+            pricingTierRepository.deleteAllInBatch();
+
+            // 4. Delete the Components and Bundles/Products
+            pricingComponentRepository.deleteAllInBatch();
+            productRepository.deleteAllInBatch();
+
+            // Optional: clear product types if you want a totally fresh slate
+            productTypeRepository.deleteAllInBatch();
+        });
     }
 
     @Test
@@ -94,7 +126,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setCustomAttributes(Map.of("transactionAmount", new BigDecimal("1000")));
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
-                        .header("X-Bank-Id", TEST_BANK_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -118,7 +149,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             txHelper.linkProductToPricingComponent(p1Id, component.getId(), new BigDecimal("10.00"));
             txHelper.linkProductToPricingComponent(p2Id, component.getId(), new BigDecimal("5.00"));
 
-            ProductBundle bundle = txHelper.createBundleInDb("Super Salary Package", ProductBundle.BundleStatus.ACTIVE);
+            ProductBundle bundle = txHelper.createBundleInDb("Super Salary Package", VersionableEntity.EntityStatus.ACTIVE);
 
             return Map.of("p1", p1Id, "p2", p2Id, "bundle", bundle.getId());
         });
@@ -133,7 +164,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setProducts(List.of(pr1, pr2));
 
         mockMvc.perform(post(BASE_URL + "/calculate/bundle")
-                        .header("X-Bank-Id", TEST_BANK_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -155,7 +185,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             txHelper.linkProductToPricingComponent(p1Id, productFee.getId(), new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE);
             txHelper.linkProductToPricingComponent(p2Id, productFee.getId(), new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE);
 
-            ProductBundle bundle = txHelper.createBundleInDb("Multi-Adjustment Bundle", ProductBundle.BundleStatus.ACTIVE);
+            ProductBundle bundle = txHelper.createBundleInDb("Multi-Adjustment Bundle", VersionableEntity.EntityStatus.ACTIVE);
 
             // Adjustment 1: Fixed Bundle Discount (Negative)
             PricingComponent bundleDisc = txHelper.createPricingComponentInDb("Bundle Discount");
@@ -181,7 +211,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         // 2. ACT & ASSERT
         mockMvc.perform(post(BASE_URL + "/calculate/bundle")
-                        .header("X-Bank-Id", TEST_BANK_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -236,7 +265,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         // 2. ACT & ASSERT
         mockMvc.perform(post(BASE_URL + "/calculate/product")
-                        .header("X-Bank-Id", TEST_BANK_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -265,15 +293,11 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         Long productId = txHelper.doInTransaction(() -> {
             Long compId = txHelper.createLinkedTierAndValue(componentName, tierName);
-
             ProductType type = txHelper.getOrCreateProductType("Tiered Type");
             Long pId = txHelper.createProductInDb("Tiered Account", type.getId(), "RETAIL");
 
-            ProductPricingLink link = new ProductPricingLink();
-            link.setProduct(productRepository.getReferenceById(pId));
-            link.setPricingComponent(pricingComponentRepository.getReferenceById(compId));
+            ProductPricingLink link = txHelper.linkProductToPricingComponentReturn(pId, compId, null, null);
             link.setUseRulesEngine(true);
-            link.setBankId(TEST_BANK_ID);
             productPricingLinkRepository.save(link);
 
             return pId;
@@ -350,7 +374,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         PricingRequest request = new PricingRequest();
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
-                        .header("X-Bank-Id", TEST_BANK_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -362,7 +385,6 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         PricingRequest request = new PricingRequest();
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
-                        .header("X-Bank-Id", TEST_BANK_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());

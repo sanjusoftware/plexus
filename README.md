@@ -411,7 +411,30 @@ Define the foundation for products.
 ```json
 {
   "name": "Monthly_Maintenance_Fee",
-  "type": "FEE"
+  "type": "FEE",
+  "description": "Standard fee with segment waivers",
+  "pricingTiers": [
+    {
+      "tierName": "Premium Waiver",
+      "conditions": [
+        { "attributeName": "segment", "operator": "EQ", "attributeValue": "PREMIUM" }
+      ],
+      "priceValue": {
+        "priceAmount": 0.00,
+        "valueType": "WAIVED"
+      }
+    },
+    {
+      "tierName": "Standard Retail",
+      "conditions": [
+        { "attributeName": "segment", "operator": "EQ", "attributeValue": "RETAIL" }
+      ],
+      "priceValue": {
+        "priceAmount": 15.00,
+        "valueType": "ABSOLUTE"
+      }
+    }
+  ]
 }
 ```
 *Assuming ID returned is `100`.*
@@ -425,7 +448,12 @@ Define the foundation for products.
   "name": "Global Savings",
   "productTypeId": 1,
   "category": "RETAIL",
-  "effectiveDate": "2024-01-01"
+  "effectiveDate": "2026-03-01",
+  "tagline": "Grow your wealth faster",
+  "fullDescription": "A high-yield savings account with no hidden fees.",
+  "iconUrl": "https://cdn.plexus.com/icons/savings.png",
+  "displayOrder": 1,
+  "featured": true
 }
 ```
 *Assuming ID returned is `500`.*
@@ -448,7 +476,10 @@ Define the foundation for products.
 ```json
 [
   {
-    "pricingComponentId": 100
+    "pricingComponentId": 100,
+    "fixedValue": 12.00,
+    "fixedValueType": "ABSOLUTE",
+    "useRulesEngine": false
   }
 ]
 ```
@@ -458,7 +489,7 @@ Define the foundation for products.
 **Authority:** `catalog:product:activate`
 
 ## Step 6: Bank Admin - Create Product Bundle
-**Request:** `POST /api/v1/product-bundles`
+**Request:** `POST /api/v1/bundles`
 **Authority:** `catalog:bundle:create`
 ```json
 {
@@ -473,5 +504,17 @@ Define the foundation for products.
       "mainAccount": true
     }
   ]
+}
+```
+## Step 7: Bank Admin - Verify via Calculation
+**Request:** `POST /api/v1/pricing/calculate/product`
+**Authority:** `pricing:calculate:read`
+```json
+{
+  "productId": 500,
+  "inputs": {
+    "customer_segment": "RETAIL",
+    "balance": 5000
+  }
 }
 ```

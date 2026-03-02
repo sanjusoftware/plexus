@@ -14,46 +14,45 @@ import java.util.List;
 
 public class ProductSpecification {
 
-    /**
-     * Builds a composite Specification based on the provided search criteria DTO.
-     */
     public static Specification<Product> filterBy(ProductSearchRequest criteria) {
         return (Root<Product> root, CriteriaQuery<?> query, CriteriaBuilder builder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-        // 1. MANDATORY: Tenant Isolation (The Safety Net)
-        predicates.add(builder.equal(root.get("bankId"), TenantContextHolder.getBankId()));
+            // 1. Tenant Security (Bank ID)
+            predicates.add(builder.equal(root.get("bankId"), TenantContextHolder.getBankId()));
 
-        // 2. Name Search (Case-Insensitive LIKE)
-        if (criteria.getName() != null && !criteria.getName().isBlank()) {
-            predicates.add(builder.like(builder.lower(root.get("name")),
-                "%" + criteria.getName().toLowerCase() + "%"));
-        }
+            // 2. Metadata Filters
+            if (criteria.getCode() != null && !criteria.getCode().isBlank()) {
+                predicates.add(builder.equal(root.get("code"), criteria.getCode()));
+            }
 
-        // 3. Status
-        if (criteria.getStatus() != null && !criteria.getStatus().isBlank()) {
-            predicates.add(builder.equal(root.get("status"), criteria.getStatus()));
-        }
+            if (criteria.getName() != null && !criteria.getName().isBlank()) {
+                predicates.add(builder.like(builder.lower(root.get("name")),
+                    "%" + criteria.getName().toLowerCase() + "%"));
+            }
 
-        // 4. Category (If added to DTO)
-        if (criteria.getCategory() != null && !criteria.getCategory().isBlank()) {
-            predicates.add(builder.equal(root.get("category"), criteria.getCategory()));
-        }
+            if (criteria.getStatus() != null && !criteria.getStatus().isBlank()) {
+                predicates.add(builder.equal(root.get("status"), criteria.getStatus()));
+            }
 
-        // 5. Product Type
-        if (criteria.getProductTypeId() != null) {
-            predicates.add(builder.equal(root.get("productType").get("id"), criteria.getProductTypeId()));
-        }
+            if (criteria.getCategory() != null && !criteria.getCategory().isBlank()) {
+                predicates.add(builder.equal(root.get("category"), criteria.getCategory()));
+            }
 
-        // 6. Date Range Logic
-        if (criteria.getEffectiveDateFrom() != null) {
-            predicates.add(builder.greaterThanOrEqualTo(root.get("effectiveDate"), criteria.getEffectiveDateFrom()));
-        }
-        if (criteria.getEffectiveDateTo() != null) {
-            predicates.add(builder.lessThanOrEqualTo(root.get("effectiveDate"), criteria.getEffectiveDateTo()));
-        }
+            // 3. Product Type Join
+            if (criteria.getProductTypeId() != null) {
+                predicates.add(builder.equal(root.get("productType").get("id"), criteria.getProductTypeId()));
+            }
 
-        return builder.and(predicates.toArray(new Predicate[0]));
-    };
-}
+            // 4. Date Range
+            if (criteria.getActivationDateFrom() != null) {
+                predicates.add(builder.greaterThanOrEqualTo(root.get("activationDate"), criteria.getActivationDateFrom()));
+            }
+            if (criteria.getActivationDateTo() != null) {
+                predicates.add(builder.lessThanOrEqualTo(root.get("activationDate"), criteria.getActivationDateTo()));
+            }
+
+            return builder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
 }

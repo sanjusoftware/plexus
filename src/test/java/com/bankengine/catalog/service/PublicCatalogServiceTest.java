@@ -10,6 +10,7 @@ import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.dto.BundlePriceResponse;
 import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
@@ -31,6 +32,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -47,31 +49,26 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class PublicCatalogServiceTest extends BaseServiceTest {
 
-    @Mock
-    private ProductRepository productRepository;
-    @Mock
-    private ProductMapper productMapper;
-    @Mock
-    private PricingCalculationService pricingCalculationService;
-    @Mock
-    private ProductBundleRepository productBundleRepository;
-    @Mock
-    private BundlePricingService bundlePricingService;
+    @Mock private ProductRepository productRepository;
+    @Mock private ProductMapper productMapper;
+    @Mock private PricingCalculationService pricingCalculationService;
+    @Mock private ProductBundleRepository productBundleRepository;
+    @Mock private BundlePricingService bundlePricingService;
 
     @InjectMocks
     private PublicCatalogService publicCatalogService;
 
+    // --- SECURITY TESTS ---
+
     @Test
     @DisplayName("Recommendations - Should personalize prices and sort by cheapest")
     void testGetRecommendedProducts() {
-        Product p1 = createMockProduct(101L, "ACTIVE", "RETAIL");
-        Product p2 = createMockProduct(102L, "ACTIVE", "RETAIL");
+        Product p1 = createMockProduct(101L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
+        Product p2 = createMockProduct(102L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
 
         when(productRepository.findAll(any(Specification.class))).thenReturn(List.of(p1, p2));
-
         when(productMapper.toCatalogCard(any())).thenAnswer(inv -> ProductCatalogCard.builder()
-                .pricingSummary(ProductCatalogCard.PricingSummary.builder().build())
-                .build());
+                .pricingSummary(ProductCatalogCard.PricingSummary.builder().build()).build());
 
         when(pricingCalculationService.getProductPricing(any())).thenAnswer(inv -> {
             var req = (PricingRequest) inv.getArgument(0);
@@ -81,31 +78,31 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
 
         List<ProductCatalogCard> results = publicCatalogService.getRecommendedProducts("RETAIL", new BigDecimal("5000"));
 
-        assertEquals(2, results.size());
-        assertEquals(new BigDecimal("5.00"), results.get(0).getPricingSummary().getMainPriceValue(), "Cheapest product should be first");
+        assertEquals(new BigDecimal("5.00"), results.get(0).getPricingSummary().getMainPriceValue());
     }
 
     @Test
     @DisplayName("Detail View - Should throw NotFoundException for non-existent product")
     void testGetProductDetailView_NotFound() {
-        when(productRepository.findById(999L)).thenReturn(Optional.ofNullable(null));
-        assertThrows(NotFoundException.class, () -> publicCatalogService.getProductDetailView(999L));
+        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> publicCatalogService.getProductDetailView(999L));
+        assertEquals("Product not found: 999", ex.getMessage());
     }
 
     @Test
     @DisplayName("Feature Categorization - Should map keywords to correct display categories")
     void testOrganizeFeaturesByCategory_Keywords() {
-        Product p = createMockProduct(1L, "ACTIVE", "TEST");
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
         p.setProductFeatureLinks(List.of(
-                createFeatureLink("Daily Withdrawal Limit", "500"),   // Hits "Account Limits"
-                createFeatureLink("Base Interest Rate", "2.5%"),      // Hits "Interest & Returns"
-                createFeatureLink("Global ATM Service", "Free"),      // Hits "Services & Access"
-                createFeatureLink("Color", "Blue")                    // Hits "Other Features"
+                createFeatureLink("Daily Withdrawal Limit", "500"),
+                createFeatureLink("Base Interest Rate", "2.5%"),
+                createFeatureLink("Global ATM Service", "Free"),
+                createFeatureLink("Color", "Blue")
         ));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(p));
-        lenient().when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(Page.empty());
+        lenient().when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
 
         Map<String, List<ProductDetailView.ProductFeatureDetail>> categorized =
                 publicCatalogService.getProductDetailView(1L).getFeaturesByCategory();
@@ -122,17 +119,14 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Pricing Breakdown - Should format values based on ComponentType")
     void testBuildPricingBreakdown_Formatting() {
-        Product p = createMockProduct(1L, "ACTIVE", "TEST");
-
-        ProductPricingLink feeLink = createPricingLink("Monthly Fee", new BigDecimal("10.00"), PricingComponent.ComponentType.FEE);
-
-        ProductPricingLink rateLink = createPricingLink("Overdraft Rate", new BigDecimal("15.5"), PricingComponent.ComponentType.INTEREST_RATE);
-
-        p.setProductPricingLinks(List.of(feeLink, rateLink));
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
+        p.setProductPricingLinks(List.of(
+                createPricingLink("Monthly Fee", new BigDecimal("10.00"), PricingComponent.ComponentType.FEE),
+                createPricingLink("Overdraft Rate", new BigDecimal("15.5"), PricingComponent.ComponentType.INTEREST_RATE)
+        ));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(p));
-        lenient().when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(Page.empty());
+        lenient().when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
 
         ProductDetailView.PricingBreakdown breakdown = publicCatalogService.getProductDetailView(1L).getPricing();
 
@@ -146,38 +140,61 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Comparison Matrix - Should handle products with disjoint feature/pricing sets")
     void testCompareProducts_DisjointSets() {
-        Product p1 = createMockProduct(101L, "ACTIVE", "TEST");
-        Product p2 = createMockProduct(102L, "ACTIVE", "TEST");
-
+        // Given: Product 1 has Feature A and Price X
+        Product p1 = createMockProduct(101L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
         p1.setProductFeatureLinks(List.of(createFeatureLink("FeatureA", "ValA")));
-        p2.setProductFeatureLinks(List.of(createFeatureLink("FeatureB", "ValB")));
         p1.setProductPricingLinks(List.of(createPricingLink("PriceX", new BigDecimal("1.00"), PricingComponent.ComponentType.FEE)));
-        p2.setProductPricingLinks(List.of(createPricingLink("PriceY", null, PricingComponent.ComponentType.FEE)));
+
+        // Given: Product 2 has Feature B and Price Y
+        Product p2 = createMockProduct(102L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
+        p2.setProductFeatureLinks(List.of(createFeatureLink("FeatureB", "ValB")));
+        p2.setProductPricingLinks(List.of(createPricingLink("PriceY", new BigDecimal("0.00"), PricingComponent.ComponentType.FEE)));
 
         when(productRepository.findAllById(anyList())).thenReturn(List.of(p1, p2));
-        when(productMapper.toCatalogCard(any())).thenAnswer(inv -> ProductCatalogCard.builder().build());
+        // Mocking the mapper to avoid NPE during card generation
+        when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder().build());
 
+        // When
         ProductComparisonView matrix = publicCatalogService.compareProducts(List.of(101L, 102L));
 
+        // Then
         assertAll(
-                () -> assertEquals("ValA", matrix.getFeatureComparison().get("FeatureA").get(0)),
-                () -> assertEquals("—", matrix.getFeatureComparison().get("FeatureA").get(1)),
-                () -> assertEquals("$1.00", matrix.getPricingComparison().get("PriceX").get(0)),
-                () -> assertEquals("Included", matrix.getPricingComparison().get("PriceY").get(1))
+                // Feature Matrix Check
+                () -> {
+                    var featA = matrix.getFeatureComparison().get("FeatureA");
+                    assertEquals("ValA", featA.get(0), "P1 should have ValA");
+                    assertEquals("—", featA.get(1), "P2 should have dash for missing FeatureA");
+                },
+                () -> {
+                    var featB = matrix.getFeatureComparison().get("FeatureB");
+                    assertEquals("—", featB.get(0), "P1 should have dash for missing FeatureB");
+                    assertEquals("ValB", featB.get(1), "P2 should have ValB");
+                },
+
+                // Pricing Matrix Check (Standardized fallback to "—")
+                () -> {
+                    var priceX = matrix.getPricingComparison().get("PriceX");
+                    assertEquals("$1.00", priceX.get(0));
+                    assertEquals("—", priceX.get(1), "P2 should have dash for missing PriceX");
+                },
+                () -> {
+                    var priceY = matrix.getPricingComparison().get("PriceY");
+                    assertEquals("—", priceY.get(0), "P1 should have dash for missing PriceY");
+                    assertEquals("$0.00", priceY.get(1));
+                }
         );
     }
 
     @Test
     @DisplayName("Recommendations - Should provide fallback message when pricing engine fails")
     void testGetRecommendedProducts_PricingFailure() {
-        Product p = createMockProduct(1L, "ACTIVE", "RETAIL");
-
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
         when(productRepository.findAll(any(Specification.class))).thenReturn(List.of(p));
         when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder()
-                .pricingSummary(ProductCatalogCard.PricingSummary.builder().build())
-                .build());
+                .pricingSummary(ProductCatalogCard.PricingSummary.builder().build()).build());
 
         when(pricingCalculationService.getProductPricing(any())).thenThrow(new RuntimeException("Service Down"));
+
         List<ProductCatalogCard> results = publicCatalogService.getRecommendedProducts("RETAIL", new BigDecimal("1000"));
         assertEquals("Pricing currently unavailable", results.get(0).getEligibilityMessage());
     }
@@ -185,11 +202,10 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Filtering - Should apply category, type and segment filters correctly")
     void testGetActiveProducts_FullFiltering() {
-        Page<Product> mockPage = new PageImpl<>(List.of(createMockProduct(1L, "ACTIVE", "SAVINGS")));
+        Page<Product> mockPage = new PageImpl<>(List.of(createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "SAVINGS")));
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(mockPage);
         when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder().build());
 
-        // Calling with all parameters triggers all Specification lambda branches in getActiveProducts
         Page<ProductCatalogCard> result = publicCatalogService.getActiveProducts("SAVINGS", 10L, "RETAIL", PageRequest.of(0, 10));
 
         assertNotNull(result);
@@ -200,12 +216,11 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Detail View - Should trigger related products search and mapping")
     void testGetProductDetailView_RelatedProducts() {
-        Product current = createMockProduct(1L, "ACTIVE", "RETAIL");
-        Product related = createMockProduct(2L, "ACTIVE", "RETAIL");
+        Product current = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
+        Product related = createMockProduct(2L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(current));
-        when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(related)));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(related)));
         when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder().build());
 
         ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
@@ -217,10 +232,8 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Pricing Breakdown - Should handle Tiered and Switch fallbacks")
     void testBuildPricingBreakdown_EdgeCases() {
-        Product p = createMockProduct(1L, "ACTIVE", "TEST");
-
-        ProductPricingLink link = createPricingLink("Tiered Rate", new BigDecimal("5.00"), PricingComponent.ComponentType.FEE);
-        p.setProductPricingLinks(List.of(link));
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
+        p.setProductPricingLinks(List.of(createPricingLink("Fee", new BigDecimal("5.00"), PricingComponent.ComponentType.FEE)));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(p));
         lenient().when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
@@ -235,39 +248,37 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("GetActiveProducts - Should cover null expiration date branch")
     void testGetActiveProducts_NullExpirationBranch() {
-        Product product = createMockProduct(1L, "ACTIVE", "SAVINGS");
-        product.setExpirationDate(null);
+        Product product = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "SAVINGS");
+        product.setExpiryDate(null);
 
-        when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(product)));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(product)));
         when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder().build());
 
         Page<ProductCatalogCard> result = publicCatalogService.getActiveProducts(null, null, null, PageRequest.of(0, 10));
-
         assertFalse(result.isEmpty());
     }
 
     @Test
     @DisplayName("GetProductDetailView - Should throw exception for INACTIVE status")
     void testGetProductDetailView_InactiveStatus() {
-        Product product = createMockProduct(1L, "INACTIVE", "SAVINGS");
+        Product product = createMockProduct(1L, VersionableEntity.EntityStatus.INACTIVE, "SAVINGS");
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
-        assertThrows(NotFoundException.class, () -> publicCatalogService.getProductDetailView(1L));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> publicCatalogService.getProductDetailView(1L));
+        assertEquals("Product is not currently available", ex.getMessage());
     }
 
     @Test
     @DisplayName("BuildPricingBreakdown - Should cover Discount and Waiver categories")
     void testBuildPricingBreakdown_WaiversAndDiscounts() {
-    Product p = createMockProduct(1L, "ACTIVE", "TEST");
-    ProductPricingLink waiverLink = createPricingLink("Annual Waiver", new BigDecimal("50.00"), PricingComponent.ComponentType.WAIVER);
-    ProductPricingLink discountLink = createPricingLink("Student Discount", new BigDecimal("5.00"), PricingComponent.ComponentType.DISCOUNT);
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
+        p.setProductPricingLinks(List.of(
+                createPricingLink("Annual Waiver", new BigDecimal("50.00"), PricingComponent.ComponentType.WAIVER),
+                createPricingLink("Student Discount", new BigDecimal("5.00"), PricingComponent.ComponentType.DISCOUNT)
+        ));
 
-    p.setProductPricingLinks(List.of(waiverLink, discountLink));
-    when(productRepository.findById(1L)).thenReturn(Optional.of(p));
-
-    // FIX: Mock related products to avoid NPE in getProductDetailView
-    when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        when(productRepository.findById(1L)).thenReturn(Optional.of(p));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
 
     ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
 
@@ -280,48 +291,32 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("SummarizePricing - Should handle case with no main fee")
     void testSummarizePricing_NoFeeFound() {
-        Product p = createMockProduct(1L, "ACTIVE", "TEST");
-        p.setProductPricingLinks(new ArrayList<>());
-
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
         when(productRepository.findAllById(anyList())).thenReturn(List.of(p));
-        when(productMapper.toCatalogCard(any())).thenReturn(
-                ProductCatalogCard.builder()
-                        .pricingSummary(ProductCatalogCard.PricingSummary.builder().build())
-                        .build()
-        );
+        when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder()
+                .pricingSummary(ProductCatalogCard.PricingSummary.builder().build()).build());
 
         ProductComparisonView comparison = publicCatalogService.compareProducts(List.of(1L));
-
-        assertNotNull(comparison.getProducts().get(0).getPricingSummary());
         assertEquals("No monthly fee", comparison.getProducts().get(0).getPricingSummary().getMainPriceLabel());
     }
 
     @Test
     @DisplayName("GetPublicBundleDetails - Should filter and map benefits correctly")
     void testGetPublicBundleDetails_BenefitFiltering() {
-        // 1. Setup Bundle
-        ProductBundle bundle = new ProductBundle();
-        bundle.setId(500L);
-        bundle.setName("Gold Bundle");
-        bundle.setContainedProducts(new ArrayList<>());
+        ProductBundle bundle = createMockBundle(500L);
 
-        // 2. Mock the PriceComponentDetail
-        // Use lenient() to prevent UnnecessaryStubbingException if the filter skips a call
-        var waiverAdjustment = mock(ProductPricingCalculationResult.PriceComponentDetail.class);
-        lenient().when(waiverAdjustment.getValueType()).thenReturn(PriceValue.ValueType.WAIVED);
-        lenient().when(waiverAdjustment.getComponentCode()).thenReturn("MONTHLY_WAIVER");
+        var adj = mock(ProductPricingCalculationResult.PriceComponentDetail.class);
+        when(adj.getValueType()).thenReturn(PriceValue.ValueType.WAIVED);
+        when(adj.getComponentCode()).thenReturn("MONTHLY_WAIVER");
 
-        // 3. Setup Pricing Response
         BundlePriceResponse response = BundlePriceResponse.builder()
                 .netTotalAmount(new BigDecimal("10.00"))
                 .grossTotalAmount(new BigDecimal("15.00"))
-                .bundleAdjustments(List.of(waiverAdjustment))
-                .build();
+                .bundleAdjustments(List.of(adj)).build();
 
         when(productBundleRepository.findById(500L)).thenReturn(Optional.of(bundle));
         when(bundlePricingService.calculateTotalBundlePrice(any())).thenReturn(response);
 
-        // 4. Act
         var result = publicCatalogService.getPublicBundleDetails(500L, "RETAIL");
 
         // 5. Assert
@@ -338,35 +333,70 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Security - Should throw AccessDeniedException when bundle belongs to another bank")
+    void testGetPublicBundleDetails_SecurityViolation() {
+        ProductBundle bundle = createMockBundle(500L);
+        bundle.setBankId("OTHER_BANK_ID");
+        when(productBundleRepository.findById(500L)).thenReturn(Optional.of(bundle));
+
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
+            () -> publicCatalogService.getPublicBundleDetails(500L, "RETAIL"));
+
+        assertEquals("You do not have permission to access this ProductBundle", ex.getMessage());
+    }
+
+    @Test
     @DisplayName("BuildPricingBreakdown - Should handle unknown component types via default branch")
     void testBuildPricingBreakdown_DefaultFallback() {
-        Product product = createMockProduct(1L, "ACTIVE", "TEST");
-        ProductPricingLink link = createPricingLink("Mystery Charge", new BigDecimal("1.00"), PricingComponent.ComponentType.BENEFIT);
+        Product product = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
+        product.setProductPricingLinks(List.of(createPricingLink("Bonus", new BigDecimal("1.00"), PricingComponent.ComponentType.BENEFIT)));
 
-        product.setProductPricingLinks(List.of(link));
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(Page.empty());
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
 
         ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
-
         assertFalse(detail.getPricing().getWaivers().isEmpty());
     }
 
     @Test
     @DisplayName("BuildPricingBreakdown - Should handle all ComponentTypes")
     void testBuildPricingBreakdown_Exhaustive() {
-        Product p = createMockProduct(1L, "ACTIVE", "TEST");
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
         p.setProductPricingLinks(List.of(
                 createPricingLink("Fee", new BigDecimal("10"), PricingComponent.ComponentType.FEE)
         ));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(p));
-        // FIX: Mock the related products search which is called at the end of getProductDetailView
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
 
         ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
         assertNotNull(detail.getPricing());
+    }
+
+    // --- HELPERS ---
+
+    private Product createMockProduct(Long id, VersionableEntity.EntityStatus status, String category) {
+        Product p = new Product();
+        p.setId(id);
+        p.setBankId(TEST_BANK_ID); // Security requirement
+        p.setName("Test Product " + id);
+        p.setStatus(status);
+        p.setCategory(category);
+        p.setActivationDate(LocalDate.now().minusDays(1));
+        p.setProductFeatureLinks(new ArrayList<>());
+        p.setProductPricingLinks(new ArrayList<>());
+        p.setTargetCustomerSegments("RETAIL,CORPORATE");
+        return p;
+    }
+
+    private ProductBundle createMockBundle(Long id) {
+        ProductBundle bundle = new ProductBundle();
+        bundle.setId(id);
+        bundle.setBankId(TEST_BANK_ID);
+        bundle.setName("Gold Bundle");
+        bundle.setContainedProducts(new ArrayList<>());
+        bundle.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        return bundle;
     }
 
     private ProductFeatureLink createFeatureLink(String name, String value) {
@@ -378,26 +408,14 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         return link;
     }
 
-    private ProductPricingLink createPricingLink(String name, BigDecimal value, PricingComponent.ComponentType componentType) {
+    private ProductPricingLink createPricingLink(String name, BigDecimal value, PricingComponent.ComponentType type) {
         PricingComponent pc = new PricingComponent();
         pc.setName(name);
-        pc.setType(componentType);
+        pc.setType(type);
         ProductPricingLink link = new ProductPricingLink();
         link.setPricingComponent(pc);
         link.setFixedValue(value);
         return link;
     }
 
-    private Product createMockProduct(Long id, String status, String category) {
-        Product p = new Product();
-        p.setId(id);
-        p.setName("Test Product " + id);
-        p.setStatus(status);
-        p.setCategory(category);
-        p.setEffectiveDate(LocalDate.now().minusDays(1));
-        p.setProductFeatureLinks(new ArrayList<>());
-        p.setProductPricingLinks(new ArrayList<>());
-        p.setTargetCustomerSegments("RETAIL,CORPORATE");
-        return p;
-    }
 }

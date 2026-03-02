@@ -4,6 +4,7 @@ import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
@@ -99,7 +100,7 @@ class PublicCatalogIntegrationTest extends AbstractIntegrationTest {
                     "Basic Savings",
                     new BigDecimal("-2.00"),
                     PriceValue.ValueType.DISCOUNT_ABSOLUTE,
-                    ProductBundle.BundleStatus.ACTIVE
+                    VersionableEntity.EntityStatus.ACTIVE
             );
 
             PricingComponent bundleFee = txHelper.createPricingComponentInDb("Monthly Package Fee");

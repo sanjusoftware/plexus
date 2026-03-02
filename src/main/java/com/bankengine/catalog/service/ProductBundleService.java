@@ -1,20 +1,27 @@
 package com.bankengine.catalog.service;
 
+import com.bankengine.catalog.converter.ProductBundleMapper;
 import com.bankengine.catalog.dto.ProductBundleRequest;
+import com.bankengine.catalog.dto.ProductBundleResponse;
+import com.bankengine.catalog.dto.ProductPricingDto;
+import com.bankengine.catalog.dto.VersionRequest;
 import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
-import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
+import com.bankengine.pricing.model.BundlePricingLink;
+import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.service.PricingComponentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,33 +29,111 @@ public class ProductBundleService extends BaseService {
 
     private final ProductBundleRepository productBundleRepository;
     private final ProductRepository productRepository;
-    private final BundleProductLinkRepository bundleProductLinkRepository;
     private final CatalogConstraintService constraintService;
+    private final PricingComponentService pricingComponentService;
+    private final ProductBundleMapper bundleMapper;
+
+    @Override
+    protected <T extends VersionableEntity> void handleTemporalVersioning(T newEntity, T oldEntity, VersionRequest request) {
+        if (newEntity instanceof ProductBundle bundle && oldEntity instanceof ProductBundle oldBundle) {
+            LocalDate date = request.getNewActivationDate() != null
+                    ? request.getNewActivationDate()
+                    : oldBundle.getActivationDate();
+            bundle.setActivationDate(date);
+        }
+    }
+
+    // --- READ OPERATIONS ---
+
+    @Transactional(readOnly = true)
+    public ProductBundleResponse getBundleResponseById(Long id) {
+        ProductBundle bundle = getByIdSecurely(productBundleRepository, id, "Bundle");
+        return bundleMapper.toResponse(bundle);
+    }
+
+    // --- WRITE OPERATIONS ---
 
     @Transactional
-    public Long createBundle(ProductBundleRequest dto) {
-        return saveBundleWithLinks(dto).getId();
+    public ProductBundleResponse createBundle(ProductBundleRequest request) {
+        validateNewVersionable(productBundleRepository, request.getName(), request.getCode());
+
+        // Use Mapper to create DRAFT entity
+        ProductBundle bundle = bundleMapper.toEntity(request);
+        bundle.setBankId(getCurrentBankId());
+        bundle.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        bundle.setVersion(1);
+
+        // Link and validate products
+        if (request.getProducts() != null) {
+            attachProductsToBundle(bundle, request.getProducts());
+        }
+
+        // Handle Bundle-Level Pricing
+        if (request.getPricing() != null) {
+            syncBundlePricingInternal(bundle, request.getPricing());
+        }
+
+        return bundleMapper.toResponse(productBundleRepository.save(bundle));
     }
 
     @Transactional
-    public void activateBundle(Long bundleId) {
-        ProductBundle bundle = getByIdSecurely(productBundleRepository, bundleId, "Bundle");
+    public ProductBundleResponse updateBundle(Long id, ProductBundleRequest dto) {
+        ProductBundle bundle = getByIdSecurely(productBundleRepository, id, "Bundle");
+        validateDraft(bundle);
 
-        if (bundle.getStatus() != ProductBundle.BundleStatus.DRAFT) {
-            throw new IllegalStateException("Only DRAFT bundles can be activated. Current: " + bundle.getStatus());
+        // Partial updates for metadata
+        if (dto.getName() != null) bundle.setName(dto.getName());
+        if (dto.getDescription() != null) bundle.setDescription(dto.getDescription());
+        if (dto.getEligibilitySegment() != null) bundle.setEligibilitySegment(dto.getEligibilitySegment());
+
+        // Sync products if the list is provided in the request
+        if (dto.getProducts() != null) {
+            bundle.getContainedProducts().clear();
+            attachProductsToBundle(bundle, dto.getProducts());
         }
+
+        // Sync pricing if the list is provided in the request
+        if (dto.getPricing() != null) {
+            syncBundlePricingInternal(bundle, dto.getPricing());
+        }
+
+        return bundleMapper.toResponse(productBundleRepository.save(bundle));
+    }
+
+    /**
+     * Scenario: Versioning/Upgrading an existing bundle (Deep Clone).
+     */
+    @Transactional
+    public ProductBundleResponse versionBundle(Long oldBundleId, VersionRequest request) {
+        ProductBundle source = getByIdSecurely(productBundleRepository, oldBundleId, "Bundle");
+        ProductBundle newVersion = bundleMapper.clone(source);
+
+        prepareNewVersion(newVersion, source, request, productBundleRepository);
+
+        cloneProductLinks(source, newVersion);
+        cloneBundlePricingLinks(source, newVersion); // Ensures pricing is deep-copied
+
+        return bundleMapper.toResponse(productBundleRepository.save(newVersion));
+    }
+
+    /**
+     * Scenario: Activating a DRAFT bundle for production use.
+     */
+    @Transactional
+    public ProductBundleResponse activateBundle(Long bundleId) {
+        ProductBundle bundle = getByIdSecurely(productBundleRepository, bundleId, "Bundle");
+        validateDraft(bundle);
 
         if (bundle.getContainedProducts().isEmpty()) {
             throw new IllegalStateException("Cannot activate a bundle with no products.");
         }
 
-        // Logic check for business integrity
         validateMainAccountConstraint(bundle.getContainedProducts());
 
-        // Validate Product States (The products are already filtered by bankId due to Hibernate Filters)
+        // Ensure all constituent products are ACTIVE
         List<String> inactiveProducts = bundle.getContainedProducts().stream()
                 .map(BundleProductLink::getProduct)
-                .filter(p -> !"ACTIVE".equalsIgnoreCase(p.getStatus()))
+                .filter(p -> !p.getStatus().equals(VersionableEntity.EntityStatus.ACTIVE))
                 .map(Product::getName)
                 .toList();
 
@@ -57,120 +142,129 @@ public class ProductBundleService extends BaseService {
                     String.join(", ", inactiveProducts));
         }
 
-        if (bundle.getActivationDate().isBefore(LocalDate.now())) {
+        if (bundle.getActivationDate() == null || bundle.getActivationDate().isBefore(LocalDate.now())) {
             bundle.setActivationDate(LocalDate.now());
         }
 
-        bundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
-        productBundleRepository.save(bundle);
-    }
-
-    @Transactional
-    public Long updateBundle(Long oldBundleId, ProductBundleRequest dto) {
-        ProductBundle oldBundle = getByIdSecurely(productBundleRepository, oldBundleId, "Bundle");
-
-        // 1. Mark as archived
-        oldBundle.setStatus(ProductBundle.BundleStatus.ARCHIVED);
-        oldBundle.setExpiryDate(LocalDate.now());
-        productBundleRepository.saveAndFlush(oldBundle);
-
-        // 2. Create the new version
-        return saveBundleWithLinks(dto).getId();
-    }
-
-    @Transactional
-    public Long cloneBundle(Long bundleId, String newName) {
-        ProductBundle source = getByIdSecurely(productBundleRepository, bundleId, "Bundle");
-        validateMainAccountConstraint(source.getContainedProducts());
-        String bankId = getCurrentBankId();
-
-        ProductBundle cloned = new ProductBundle();
-        cloned.setBankId(bankId);
-        cloned.setName(newName);
-        cloned.setCode(source.getCode() + "_COPY_" + System.currentTimeMillis());
-        cloned.setDescription(source.getDescription());
-        cloned.setEligibilitySegment(source.getEligibilitySegment());
-        cloned.setActivationDate(source.getActivationDate());
-        cloned.setExpiryDate(source.getExpiryDate());
-        cloned.setStatus(ProductBundle.BundleStatus.DRAFT);
-
-        ProductBundle savedClone = productBundleRepository.save(cloned);
-
-        source.getContainedProducts().forEach(oldLink -> {
-            BundleProductLink newLink = new BundleProductLink(
-                savedClone,
-                oldLink.getProduct(),
-                oldLink.isMainAccount(),
-                oldLink.isMandatory()
-            );
-            newLink.setBankId(bankId);
-            bundleProductLinkRepository.save(newLink);
-        });
-
-        return savedClone.getId();
+        bundle.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        return bundleMapper.toResponse(productBundleRepository.save(bundle));
     }
 
     @Transactional
     public void archiveBundle(Long bundleId) {
         ProductBundle bundle = getByIdSecurely(productBundleRepository, bundleId, "Bundle");
-        bundle.setStatus(ProductBundle.BundleStatus.ARCHIVED);
-        // Ensure the expiry date is set to now if it wasn't already expired
+        bundle.setStatus(VersionableEntity.EntityStatus.ARCHIVED);
         if (bundle.getExpiryDate() == null || bundle.getExpiryDate().isAfter(LocalDate.now())) {
             bundle.setExpiryDate(LocalDate.now());
         }
         productBundleRepository.save(bundle);
     }
 
-    private ProductBundle saveBundleWithLinks(ProductBundleRequest dto) {
-        // 1. Structural Validation: Check Main Account constraint
-        if (dto.getProducts() != null) {
-            long mainCount = dto.getProducts().stream()
-                    .filter(ProductBundleRequest.BundleProduct::isMainAccount)
-                    .count();
-            if (mainCount > 1) {
-                throw new IllegalArgumentException("A bundle can only have 1 Main Account item.");
+    private void syncBundlePricingInternal(ProductBundle bundle, List<ProductPricingDto> pricingDtos) {
+        Map<Long, BundlePricingLink> existingMap = bundle.getBundlePricingLinks().stream()
+                .collect(Collectors.toMap(l -> l.getPricingComponent().getId(), l -> l));
+
+        Set<Long> incomingIds = pricingDtos.stream()
+                .map(ProductPricingDto::getPricingComponentId)
+                .collect(Collectors.toSet());
+
+        // Orphan Removal
+        bundle.getBundlePricingLinks().removeIf(link -> !incomingIds.contains(link.getPricingComponent().getId()));
+
+        for (ProductPricingDto dto : pricingDtos) {
+            if (existingMap.containsKey(dto.getPricingComponentId())) {
+                mapBundlePricingFields(existingMap.get(dto.getPricingComponentId()), dto);
+            } else {
+                PricingComponent comp = pricingComponentService.getPricingComponentById(dto.getPricingComponentId());
+                BundlePricingLink link = new BundlePricingLink();
+                link.setProductBundle(bundle);
+                link.setPricingComponent(comp);
+                link.setBankId(bundle.getBankId());
+                mapBundlePricingFields(link, dto);
+                bundle.getBundlePricingLinks().add(link);
             }
         }
+    }
 
-        ProductBundle bundle = new ProductBundle();
-        bundle.setBankId(getCurrentBankId());
-        bundle.setCode(dto.getCode());
-        bundle.setName(dto.getName());
-        bundle.setDescription(dto.getDescription());
-        bundle.setEligibilitySegment(dto.getEligibilitySegment());
-        bundle.setActivationDate(dto.getActivationDate());
-        bundle.setExpiryDate(dto.getExpiryDate());
-        bundle.setStatus(ProductBundle.BundleStatus.DRAFT);
-
-        ProductBundle savedBundle = productBundleRepository.save(bundle);
-
-        if (dto.getProducts() != null) {
-            List<Product> processedProducts = new ArrayList<>();
-
-            dto.getProducts().forEach(item -> {
-                // SECURE: Fetch product using our secure pattern.
-                // If the productId belongs to another bank, this throws 404.
-                Product product = getByIdSecurely(productRepository, item.getProductId(), "Product");
-
-                constraintService.validateProductCanBeBundled(item.getProductId());
-                constraintService.validateCategoryCompatibility(product, List.copyOf(processedProducts));
-
-                BundleProductLink link = new BundleProductLink(savedBundle, product, item.isMainAccount(), item.isMandatory());
-                link.setBankId(getCurrentBankId());
-                bundleProductLinkRepository.save(link);
-
-                processedProducts.add(product);
-            });
+    private void mapBundlePricingFields(BundlePricingLink link, ProductPricingDto dto) {
+        // Equality checks for performance/audit
+        if (!Objects.equals(link.getFixedValue(), dto.getFixedValue())) {
+            link.setFixedValue(dto.getFixedValue());
         }
-        return savedBundle;
+        if (!Objects.equals(link.getFixedValueType(), dto.getFixedValueType())) {
+            link.setFixedValueType(dto.getFixedValueType());
+        }
+        if (link.isUseRulesEngine() != dto.isUseRulesEngine()) {
+            link.setUseRulesEngine(dto.isUseRulesEngine());
+        }
+
+        // Validations: If dates are provided, they must be logical
+        if (!Objects.equals(link.getEffectiveDate(), dto.getEffectiveDate())) {
+            if (dto.getEffectiveDate() != null && dto.getEffectiveDate().isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException("Effective date cannot be in the past.");
+            }
+            link.setEffectiveDate(dto.getEffectiveDate());
+        }
+
+        if (!Objects.equals(link.getExpiryDate(), dto.getExpiryDate())) {
+            if (dto.getExpiryDate() != null && link.getEffectiveDate() != null
+                    && dto.getExpiryDate().isBefore(link.getEffectiveDate())) {
+                throw new IllegalArgumentException("Expiry date must be after the effective date.");
+            }
+            link.setExpiryDate(dto.getExpiryDate());
+        }
+    }
+
+    private void attachProductsToBundle(ProductBundle bundle, List<ProductBundleRequest.BundleProduct> productDtos) {
+        if (productDtos == null || productDtos.isEmpty()) return;
+
+        // Validation: Main account check
+        long mainCount = productDtos.stream().filter(ProductBundleRequest.BundleProduct::isMainAccount).count();
+        if (mainCount > 1) throw new IllegalArgumentException("A bundle can only have 1 Main Account item.");
+
+        List<Product> processedProducts = new ArrayList<>();
+
+        productDtos.forEach(item -> {
+            Product product = getByIdSecurely(productRepository, item.getProductId(), "Product");
+
+            constraintService.validateProductCanBeBundled(item.getProductId());
+            constraintService.validateCategoryCompatibility(product, List.copyOf(processedProducts));
+
+            BundleProductLink link = bundleMapper.toLink(item);
+            link.setProductBundle(bundle);
+            link.setProduct(product);
+            link.setBankId(getCurrentBankId());
+
+            bundle.getContainedProducts().add(link);
+            processedProducts.add(product);
+        });
+    }
+
+    private void cloneProductLinks(ProductBundle source, ProductBundle target) {
+        source.getContainedProducts().forEach(oldLink -> {
+            BundleProductLink newLink = new BundleProductLink();
+            newLink.setProductBundle(target);
+            newLink.setProduct(oldLink.getProduct());
+            newLink.setMainAccount(oldLink.isMainAccount());
+            newLink.setMandatory(oldLink.isMandatory());
+            newLink.setBankId(target.getBankId());
+            target.getContainedProducts().add(newLink);
+        });
+    }
+
+    private void cloneBundlePricingLinks(ProductBundle source, ProductBundle target) {
+        source.getBundlePricingLinks().forEach(oldLink -> {
+            BundlePricingLink newLink = bundleMapper.clonePricing(oldLink);
+            newLink.setProductBundle(target);
+            newLink.setBankId(target.getBankId());
+            target.getBundlePricingLinks().add(newLink);
+        });
     }
 
     private void validateMainAccountConstraint(List<BundleProductLink> links) {
-        long mainAccountCount = links.stream()
-                .filter(BundleProductLink::isMainAccount)
-                .count();
-        if (mainAccountCount > 1) {
-            throw new IllegalStateException("Data Integrity Error: Bundle has more than 1 Main Account.");
+        long mainAccountCount = links.stream().filter(BundleProductLink::isMainAccount).count();
+        if (mainAccountCount != 1) {
+            throw new IllegalStateException("Bundle must have exactly 1 Main Account.");
         }
     }
 }

@@ -6,7 +6,9 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.FilterDef;
 import org.hibernate.annotations.ParamDef;
@@ -21,6 +23,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @MappedSuperclass
+@SuperBuilder
+@NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @FilterDef(name = "bankTenantFilter", parameters = @ParamDef(name = "bankId", type = String.class))
 @Filter(name = "bankTenantFilter", condition = "bank_id = :bankId")

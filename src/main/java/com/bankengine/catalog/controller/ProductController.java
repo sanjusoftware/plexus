@@ -1,7 +1,11 @@
 package com.bankengine.catalog.controller;
 
-import com.bankengine.catalog.dto.*;
+import com.bankengine.catalog.dto.ProductRequest;
+import com.bankengine.catalog.dto.ProductResponse;
+import com.bankengine.catalog.dto.ProductSearchRequest;
+import com.bankengine.catalog.dto.VersionRequest;
 import com.bankengine.catalog.service.ProductService;
+import com.bankengine.web.dto.ApiError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -9,52 +13,41 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 
-@Tag(name = "Product Management", description = "Operations for creating and managing product definitions.")
+@Tag(name = "Product Management", description = "Operations for creating and managing lifecycle-versioned product definitions.")
 @RestController
 @RequestMapping("/api/v1/products")
+@RequiredArgsConstructor
 public class ProductController {
 
     private final ProductService productService;
 
-    public ProductController(ProductService productService) {
-        this.productService = productService;
-    }
-
-    /**
-     * POST /api/v1/products
-     * Creates a new core Product entry in the catalog.
-     */
     @Operation(summary = "Create a new product definition",
-            description = "Creates a new Product entity using a DTO and returns the details.")
+            description = "Creates a new Product entity in DRAFT status. This is an aggregate creation: include all Feature and Pricing links in the Request DTO to initialize the product fully.")
     @ApiResponse(responseCode = "201", description = "Product successfully created",
             content = @Content(schema = @Schema(implementation = ProductResponse.class)))
-    @ApiResponse(responseCode = "400", description = "Validation or business logic error.",
-            content = @Content(schema = @Schema(implementation = String.class)))
+    @ApiResponse(responseCode = "400", description = "Validation or business logic error.")
+    @ApiResponse(responseCode = "401", description = "Authentication required.")
+    @ApiResponse(responseCode = "403", description = "Insufficient permissions to create products.")
+    @ApiResponse(responseCode = "409", description = "Conflict: A product with this code already exists for the current bank.",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
     @PostMapping
     @PreAuthorize("hasAuthority('catalog:product:create')")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductRequest requestDto) {
-        ProductResponse responseDto = productService.createProduct(requestDto);
-        return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
+        return new ResponseEntity<>(productService.createProduct(requestDto), HttpStatus.CREATED);
     }
 
-    /**
-     * GET /api/v1/products
-     * Retrieves a list of products, allowing for dynamic filtering, pagination, and sorting.
-     */
     @Operation(summary = "Search and filter products",
-            description = "Retrieves products based on metadata, date ranges, status, with pagination.")
+            description = "Retrieves a paginated list of products. Supports filtering by metadata, status, and date ranges. Ideal for catalog browsing.")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved list of products.")
     @GetMapping
     @PreAuthorize("hasAuthority('catalog:product:read')")
@@ -62,15 +55,10 @@ public class ProductController {
         return ResponseEntity.ok(productService.searchProducts(criteria));
     }
 
-    /**
-     * GET /api/v1/products/{productId}
-     * Retrieves a Product and its associated features/pricing.
-     */
     @Operation(summary = "Retrieve a product by its unique ID",
-            description = "Fetches the full details of a product, including associated features and pricing links.")
-    @ApiResponse(responseCode = "200", description = "Product successfully retrieved.",
-                 content = @Content(schema = @Schema(implementation = ProductResponse.class)))
-    @ApiResponse(responseCode = "404", description = "Product not found with the given ID.")
+            description = "Fetches complete product details including its current version, status, and the deep-tree of features and pricing components.")
+    @ApiResponse(responseCode = "200", description = "Product details successfully retrieved.")
+    @ApiResponse(responseCode = "404", description = "Product not found for the provided ID.")
     @GetMapping("/{productId}")
     @PreAuthorize("hasAuthority('catalog:product:read')")
     public ResponseEntity<ProductResponse> getProductById(
@@ -79,68 +67,58 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductResponseById(productId));
     }
 
-    /**
-     * POST /api/v1/products/{id}/features
-     * Links a defined FeatureComponent to a specific Product instance.
-     */
-    @Operation(summary = "Link a FeatureComponent to a Product",
-               description = "Establishes a connection between a Product and an existing FeatureComponent.")
-    @ApiResponse(responseCode = "200", description = "Feature successfully linked to the product",
-                 content = @Content(schema = @Schema(implementation = ProductResponse.class)))
-    @ApiResponse(responseCode = "400", description = "Error linking feature.",
-                 content = @Content(schema = @Schema(implementation = String.class)))
-    @PostMapping("/{id}/features")
+    @Operation(summary = "Partial update of a DRAFT product (Simplified Aggregate Update)",
+            description = "The consolidated entry point for all modifications. Send only the fields you wish to change. " +
+                    "To extend life, send only the 'expirationDate'. To sync features/pricing, send the respective lists. " +
+                    "Only allowed while status is DRAFT.")
+    @ApiResponse(responseCode = "200", description = "Product aggregate successfully updated.",
+            content = @Content(schema = @Schema(implementation = ProductResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Validation error (e.g., invalid date or value type mismatch).")
+    @ApiResponse(responseCode = "403", description = "Modification blocked: Product is ACTIVE or ARCHIVED.")
+    @ApiResponse(responseCode = "404", description = "Product not found.")
+    @PatchMapping("/{productId}")
     @PreAuthorize("hasAuthority('catalog:product:update')")
-    public ResponseEntity<ProductResponse> linkFeatureToProduct(
-            @Parameter(description = "The unique ID of the product", required = true)
-            @PathVariable Long id,
-            @Valid @RequestBody ProductFeature dto) {
-        return ResponseEntity.ok(productService.linkFeatureToProduct(id, dto));
-    }
-
-    /**
-     * PUT /api/v1/products/{productId}
-     * Updates administrative fields only if product is in DRAFT.
-     */
-    @Operation(summary = "Update product metadata (DRAFT status only)",
-            description = "Allows updates to administrative fields (name, bankId) only if the product status is DRAFT. Critical changes require versioning.")
-    @ApiResponse(responseCode = "200", description = "Product successfully updated.")
-    @ApiResponse(responseCode = "400", description = "Validation or business logic error.")
-    @ApiResponse(responseCode = "403", description = "Update not allowed for current product status (ACTIVE/INACTIVE).")
-    @PutMapping("/{productId}")
-    @PreAuthorize("hasAuthority('catalog:product:update')")
-    public ResponseEntity<ProductResponse> updateProduct(
-            @Parameter(description = "The unique ID of the product to update", required = true)
+    public ResponseEntity<ProductResponse> patchProduct(
+            @Parameter(description = "The unique ID of the DRAFT product to update", required = true)
             @PathVariable Long productId,
-            @Valid @RequestBody ProductRequest requestDto) {
+            @RequestBody ProductRequest requestDto) {
         return ResponseEntity.ok(productService.updateProduct(productId, requestDto));
     }
 
-    /**
-     * POST /api/v1/products/{id}/activate
-     */
+    @Operation(summary = "Version or Branch a product",
+            description = "Deep-clones the product into a new DRAFT. Use this to modify ACTIVE products. " +
+                    "If 'newCode' is provided, it starts a new lineage (Branch). If omitted, it increments the version (Revision).")
+    @ApiResponse(responseCode = "201", description = "New product version/branch successfully created.",
+            content = @Content(schema = @Schema(implementation = ProductResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid version request.")
+    @ApiResponse(responseCode = "404", description = "Source product not found.")
+    @PostMapping("/{id}/version")
+    @PreAuthorize("hasAuthority('catalog:product:create')")
+    public ResponseEntity<ProductResponse> versionProduct(
+            @Parameter(description = "ID of the source product to use as a template", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody VersionRequest requestDto) {
+        return new ResponseEntity<>(productService.cloneProduct(id, requestDto), HttpStatus.CREATED);
+    }
+
     @Operation(summary = "Activate a DRAFT product",
-            description = "Sets the product status to ACTIVE and optionally sets/overrides the effective date.")
+            description = "Transitions status to ACTIVE. Triggers cache eviction for the public catalog. Product becomes immutable for direct updates.")
     @ApiResponse(responseCode = "200", description = "Product successfully activated.")
-    @ApiResponse(responseCode = "400", description = "Product is not in DRAFT status.")
+    @ApiResponse(responseCode = "400", description = "Activation failed (e.g., status is not DRAFT).")
     @PostMapping("/{id}/activate")
     @PreAuthorize("hasAuthority('catalog:product:activate')")
     public ResponseEntity<ProductResponse> activateProduct(
             @Parameter(description = "ID of the product to activate", required = true)
             @PathVariable Long id,
-            @Parameter(description = "Optional override for the effective date (ISO format: yyyy-MM-dd)")
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate effectiveDate) {
-
-        ProductResponse responseDto = productService.activateProduct(id, effectiveDate);
-        return ResponseEntity.ok(responseDto);
+            @Parameter(description = "Optional override for the effective date (ISO: yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate activationDate) {
+        return ResponseEntity.ok(productService.activateProduct(id, activationDate));
     }
 
-    /**
-     * POST /api/v1/products/{id}/deactivate
-     */
-    @Operation(summary = "Deactivate an ACTIVE product",
-            description = "Sets the product status to INACTIVE and sets the expiration date to today.")
-    @ApiResponse(responseCode = "200", description = "Product successfully deactivated.")
+    @Operation(summary = "Archive/Deactivate an ACTIVE product",
+            description = "Moves product to ARCHIVED status. This is a terminal state. Sets the expiration date to today.")
+    @ApiResponse(responseCode = "200", description = "Product successfully archived.")
+    @ApiResponse(responseCode = "403", description = "Unauthorized or invalid state transition.")
     @PostMapping("/{id}/deactivate")
     @PreAuthorize("hasAuthority('catalog:product:deactivate')")
     public ResponseEntity<ProductResponse> deactivateProduct(
@@ -149,76 +127,11 @@ public class ProductController {
         return ResponseEntity.ok(productService.deactivateProduct(id));
     }
 
-    /**
-     * PUT /api/v1/products/{id}/expiration
-     */
-    @Operation(summary = "Extend product life",
-            description = "Updates the expiration date of an ACTIVE/DRAFT product.")
-    @ApiResponse(responseCode = "200", description = "Product expiration date successfully extended.")
-    @PutMapping("/{id}/expiration")
+    @PostMapping("/{id}/extend-expiry")
     @PreAuthorize("hasAuthority('catalog:product:update')")
-    public ResponseEntity<ProductResponse> extendProductExpiration(
-            @Parameter(description = "ID of the product to extend", required = true)
+    public ResponseEntity<ProductResponse> extendExpiry(
             @PathVariable Long id,
-            @RequestBody Map<String, LocalDate> payload) {
-        LocalDate expirationDate = payload.get("expirationDate");
-        if (expirationDate == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "expirationDate is required");
-        }
-        return ResponseEntity.ok(productService.extendProductExpiration(id, expirationDate));
-    }
-
-    /**
-     * PUT /api/v1/products/{id}/features
-     */
-    @Operation(summary = "Synchronize product features",
-            description = "Sets the complete list of features for a product. Deletes removed features, updates existing, and creates new ones.")
-    @ApiResponse(responseCode = "200", description = "Product features successfully synchronized.",
-            content = @Content(schema = @Schema(implementation = ProductResponse.class)))
-    @ApiResponse(responseCode = "400", description = "Validation or value type error.")
-    @ApiResponse(responseCode = "404", description = "Product or Feature Component not found.")
-    @PutMapping("/{id}/features")
-    @PreAuthorize("hasAuthority('catalog:product:update')")
-    public ResponseEntity<ProductResponse> syncProductFeatures(
-            @Parameter(description = "The unique ID of the product to update", required = true)
-            @PathVariable Long id,
-            @Valid @RequestBody List<ProductFeature> requests) {
-        return ResponseEntity.ok(productService.syncProductFeatures(id, requests));
-    }
-
-    /**
-     * PUT /api/v1/products/{id}/pricing
-     */
-    @Operation(summary = "Synchronize product pricing components",
-            description = "Sets the complete list of pricing components for a product. Deletes removed links and creates new ones.")
-    @ApiResponse(responseCode = "200", description = "Product pricing successfully synchronized.",
-            content = @Content(schema = @Schema(implementation = ProductResponse.class)))
-    @ApiResponse(responseCode = "404", description = "Product or Pricing Component not found.")
-    @PutMapping("/{id}/pricing")
-    @PreAuthorize("hasAuthority('catalog:product:update')")
-    public ResponseEntity<ProductResponse> syncProductPricing(
-            @Parameter(description = "The unique ID of the product to update", required = true)
-            @PathVariable Long id,
-            @Valid @RequestBody List<ProductPricing> requests) {
-        ProductResponse response = productService.syncProductPricing(id, requests);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * POST /api/v1/products/{id}/new-version
-     */
-    @Operation(summary = "Create a new version of an ACTIVE product",
-            description = "Archives the current product and creates a new DRAFT product inheriting its configuration. Used for structural changes.")
-    @ApiResponse(responseCode = "201", description = "New product version successfully created.",
-            content = @Content(schema = @Schema(implementation = ProductResponse.class)))
-    @ApiResponse(responseCode = "400", description = "Validation error.")
-    @ApiResponse(responseCode = "403", description = "Product is not in ACTIVE status.")
-    @PostMapping("/{id}/new-version")
-    @PreAuthorize("hasAuthority('catalog:product:create')")
-    public ResponseEntity<ProductResponse> createNewVersion(
-            @Parameter(description = "The ID of the currently ACTIVE product to be versioned/replaced.", required = true)
-            @PathVariable Long id,
-            @Valid @RequestBody ProductVersionRequest requestDto) {
-        return new ResponseEntity<>(productService.createNewVersion(id, requestDto), HttpStatus.CREATED);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate newExpiryDate) {
+        return ResponseEntity.ok(productService.extendProductExpiry(id, newExpiryDate));
     }
 }

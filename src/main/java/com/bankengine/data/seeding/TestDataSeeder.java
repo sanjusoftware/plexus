@@ -9,6 +9,7 @@ import com.bankengine.catalog.model.FeatureComponent.DataType;
 import com.bankengine.catalog.repository.*;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.CategoryConflictRule;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PricingComponent.ComponentType;
@@ -22,10 +23,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Component
 @Profile("dev")
@@ -187,11 +185,12 @@ public class TestDataSeeder implements CommandLineRunner {
     public void seedPricingComponentsAndLinks(String bankId) {
         String name = "Monthly_Maintenance_Fee";
         PricingComponent fee = pricingComponentRepository.findByName(name).orElseGet(() -> {
-            PricingComponent c = new PricingComponent();
-            c.setName(name);
-            c.setType(ComponentType.FEE);
-            c.setBankId(bankId);
-            return pricingComponentRepository.save(c);
+            PricingComponent pricingComponent = new PricingComponent();
+            pricingComponent.setName(name);
+            pricingComponent.setCode(name + UUID.randomUUID());
+            pricingComponent.setType(ComponentType.FEE);
+            pricingComponent.setBankId(bankId);
+            return pricingComponentRepository.save(pricingComponent);
         });
 
         PricingTier tier = createTier("Standard Tier", fee, bankId);
@@ -219,7 +218,7 @@ public class TestDataSeeder implements CommandLineRunner {
         bundle.setCode(bankId + "-BNDL-01");
         bundle.setName(bankId.equals(BANK_A) ? "Gold Elite Bundle" : "Standard Starter Pack");
         bundle.setDescription("Comprehensive bundle for " + bankId);
-        bundle.setStatus(ProductBundle.BundleStatus.ACTIVE);
+        bundle.setStatus(VersionableEntity.EntityStatus.ACTIVE);
         bundle.setActivationDate(LocalDate.now());
         bundle.setEligibilitySegment("RETAIL");
 
@@ -250,13 +249,25 @@ public class TestDataSeeder implements CommandLineRunner {
 
     private Product createProduct(String name, ProductType type, String bankId, String cat) {
         Product p = new Product();
-        p.setName(name); p.setProductType(type); p.setBankId(bankId);
-        p.setCategory(cat); p.setEffectiveDate(LocalDate.now()); p.setStatus("ACTIVE");
+        p.setName(name);
+        p.setCode(name +"_"+ UUID.randomUUID());
+        p.setProductType(type);
+        p.setBankId(bankId);
+        p.setCategory(cat);
+        p.setActivationDate(LocalDate.now());
+        p.setStatus(VersionableEntity.EntityStatus.ACTIVE);
         return p;
     }
 
     private FeatureComponent createFeature(String name, DataType type, String bankId) {
-        FeatureComponent f = new FeatureComponent(); f.setName(name); f.setDataType(type); f.setBankId(bankId); return f;
+        return FeatureComponent.builder()
+                .name(name)
+                .dataType(type)
+                .bankId(bankId)
+                .code(name.toUpperCase())
+                .status(VersionableEntity.EntityStatus.ACTIVE)
+                .version(1)
+                .build();
     }
 
     private ProductFeatureLink createLink(Product p, FeatureComponent f, String v, String bankId) {
@@ -264,7 +275,7 @@ public class TestDataSeeder implements CommandLineRunner {
     }
 
     private PricingTier createTier(String name, PricingComponent c, String bankId) {
-        PricingTier t = new PricingTier(); t.setTierName(name + " " + bankId); t.setPricingComponent(c); t.setBankId(bankId); return pricingTierRepository.save(t);
+        PricingTier t = new PricingTier(); t.setName(name + " " + bankId); t.setPricingComponent(c); t.setBankId(bankId); return pricingTierRepository.save(t);
     }
 
     private TierCondition createCondition(PricingTier t, String a, Operator o, String v, String bankId) {

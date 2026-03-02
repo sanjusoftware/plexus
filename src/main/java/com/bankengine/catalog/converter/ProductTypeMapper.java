@@ -5,14 +5,19 @@ import com.bankengine.catalog.model.ProductType;
 import com.bankengine.common.mapping.ToAuditableEntity;
 import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 
 import java.util.List;
 
-@Mapper(config = MapStructConfig.class)
+@Mapper(config = MapStructConfig.class, componentModel = "spring")
 public interface ProductTypeMapper {
+
     ProductTypeDto toResponse(ProductType entity);
     List<ProductTypeDto> toResponseList(List<ProductType> entities);
 
     @ToAuditableEntity
     ProductType toEntity(ProductTypeDto dto);
+
+    @ToAuditableEntity
+    void updateFromDto(ProductTypeDto dto, @MappingTarget ProductType entity);
 }

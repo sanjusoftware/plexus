@@ -8,6 +8,9 @@ import lombok.Setter;
 @Setter
 public class FeatureComponentRequest {
 
+    @NotBlank(message = "Feature code is required.")
+    private String code;
+
     @NotBlank(message = "Feature name is required.")
     private String name;
 

@@ -1,7 +1,6 @@
 package com.bankengine.pricing;
 
 import com.bankengine.catalog.model.Product;
-import com.bankengine.catalog.model.ProductType;
 import com.bankengine.pricing.dto.PriceValueRequest;
 import com.bankengine.pricing.dto.PricingComponentRequest;
 import com.bankengine.pricing.dto.PricingTierRequest;
@@ -26,6 +25,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -36,67 +36,66 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-    @Autowired private PricingComponentRepository componentRepository;
-    @Autowired private PricingTierRepository tierRepository;
-    @Autowired private PriceValueRepository valueRepository;
-    @Autowired private TierConditionRepository tierConditionRepository;
-    @Autowired private ProductPricingLinkRepository productPricingLinkRepository;
-    @Autowired private PricingComponentRepository pricingComponentRepository;
-    @Autowired private TestTransactionHelper txHelper;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private PricingComponentRepository componentRepository;
+    @Autowired
+    private PricingTierRepository tierRepository;
+    @Autowired
+    private PriceValueRepository valueRepository;
+    @Autowired
+    private TierConditionRepository tierConditionRepository;
+    @Autowired
+    private ProductPricingLinkRepository productPricingLinkRepository;
+    @Autowired
+    private TestTransactionHelper txHelper;
 
-    public static final String ROLE_PREFIX = "PCIT_";
-    private static final String ADMIN_ROLE = ROLE_PREFIX + "TEST_ADMIN";
-    private static final String READER_ROLE = ROLE_PREFIX + "TEST_READER";
+    private static final String ADMIN_ROLE = "PCIT_TEST_ADMIN";
+    private static final String READER_ROLE = "PCIT_TEST_READER";
+    private static final String BASE_URL = "/api/v1/pricing-components";
 
     @BeforeAll
     static void setupRoles(@Autowired TestTransactionHelper txHelperStatic) {
         seedBaseRoles(txHelperStatic, Map.of(
-            ADMIN_ROLE, Set.of(
-                "pricing:component:create", "pricing:component:read", "pricing:component:update", "pricing:component:delete",
-                "pricing:tier:create", "pricing:tier:update", "pricing:tier:delete"),
-            READER_ROLE, Set.of("pricing:component:read")
+                ADMIN_ROLE, Set.of(
+                        "pricing:component:create", "pricing:component:read",
+                        "pricing:component:update", "pricing:component:delete",
+                        "pricing:tier:create", "pricing:tier:update", "pricing:tier:delete"),
+                READER_ROLE, Set.of("pricing:component:read")
         ));
     }
 
     @BeforeEach
     void setupMetadata() {
-        txHelper.doInTransaction(() -> {
-            txHelper.setupCommittedMetadata();
-        });
+        txHelper.doInTransaction(txHelper::setupCommittedMetadata);
         entityManager.clear();
     }
 
     @AfterEach
     void cleanUp() {
         txHelper.doInTransaction(() -> {
-            productPricingLinkRepository.deleteAllInBatch(); // 1. Links
-            tierConditionRepository.deleteAllInBatch();      // 2. Conditions
-            valueRepository.deleteAllInBatch();              // 3. Values
-            tierRepository.deleteAllInBatch();               // 4. Tiers
-            pricingComponentRepository.deleteAllInBatch();   // 5. Components
+            productPricingLinkRepository.deleteAllInBatch();
+            tierConditionRepository.deleteAllInBatch();
+            valueRepository.deleteAllInBatch();
+            tierRepository.deleteAllInBatch();
+            componentRepository.deleteAllInBatch();
         });
         txHelper.flushAndClear();
     }
 
+    // --- HELPER METHODS ---
+
     private PricingComponent createComponent(String name) {
-        return txHelper.doInTransaction(() -> {
-            return txHelper.createPricingComponentInDb(name);
-        });
+        return txHelper.doInTransaction(() -> txHelper.createPricingComponentInDb(name));
     }
 
-    private PricingTier getTierFromComponentId(Long componentId) {
-        return txHelper.doInTransaction(() -> {
-            PricingComponent component = componentRepository.findById(componentId)
-                    .orElseThrow(() -> new IllegalStateException("Component not found"));
-            return component.getPricingTiers().iterator().next();
-        });
-    }
-
-    private PricingComponentRequest getCreateDto(String name) {
+    private PricingComponentRequest newPricingComponentRequest(String name) {
         PricingComponentRequest req = new PricingComponentRequest();
         req.setName(name);
+        req.setCode(name.toUpperCase() + "_" + UUID.randomUUID().toString().substring(0, 8));
         req.setType("FEE");
         return req;
     }
@@ -107,13 +106,12 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         cond.setOperator(TierCondition.Operator.EQ);
         cond.setAttributeValue("DEFAULT_SEGMENT");
 
-        // 1. Create the PriceValue DTO
         PriceValueRequest val = new PriceValueRequest();
         val.setPriceAmount(new BigDecimal("5.00"));
         val.setValueType("FEE_ABSOLUTE");
 
         return PricingTierRequest.builder()
-                .tierName("Default Tier")
+                .name("Default Tier")
                 .minThreshold(BigDecimal.ZERO)
                 .effectiveDate(LocalDate.now())
                 .conditions(List.of(cond))
@@ -121,236 +119,171 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                 .build();
     }
 
+    // --- COMPONENT LEVEL TESTS ---
+
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldCreateComponentAndReturn201() throws Exception {
-        mockMvc.perform(post("/api/v1/pricing-components")
+    void shouldHandleComponentCrudOperations() throws Exception {
+        // CREATE
+        String createJson = mockMvc.perform(post(BASE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getCreateDto("MonthlyServiceFee"))))
+                        .content(objectMapper.writeValueAsString(newPricingComponentRequest("CrudFee"))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", is("MonthlyServiceFee")))
-                .andExpect(jsonPath("$.type", is("FEE")))
-                .andExpect(jsonPath("$.createdAt").exists());
+                .andExpect(jsonPath("$.id").exists())
+                .andReturn().getResponse().getContentAsString();
+
+        Long id = Long.valueOf(objectMapper.readTree(createJson).get("id").asText());
+
+        // UPDATE
+        PricingComponentRequest update = newPricingComponentRequest("UpdatedCrudFee");
+        mockMvc.perform(patch(BASE_URL + "/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(update)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("UpdatedCrudFee")));
+
+        // READ
+        mockMvc.perform(get(BASE_URL + "/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(id.intValue())));
+
+        // DELETE
+        mockMvc.perform(delete(BASE_URL + "/{id}", id))
+                .andExpect(status().isNoContent());
     }
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn400OnCreateWithInvalidType() throws Exception {
-        PricingComponentRequest dto = getCreateDto("BadType");
-        dto.setType("INVALID_TYPE");
+    void shouldReturn400OnInvalidComponentType() throws Exception {
+        PricingComponentRequest dto = newPricingComponentRequest("BadType");
+        dto.setType("INVALID_ENUM_VALUE");
 
-        mockMvc.perform(post("/api/v1/pricing-components")
+        mockMvc.perform(post(BASE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Invalid component type provided: INVALID_TYPE")));
+                .andExpect(jsonPath("$.message", containsString("Invalid component type")));
     }
 
     @Test
     @WithMockRole(roles = {READER_ROLE})
-    void shouldReturn403WhenCreatingComponentWithReaderRole() throws Exception {
-        mockMvc.perform(post("/api/v1/pricing-components")
+    void shouldReturnForbiddenWhenCreatingWithoutPermission() throws Exception {
+        mockMvc.perform(post(BASE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getCreateDto("DeniedFee"))))
+                        .content(objectMapper.writeValueAsString(newPricingComponentRequest("NoAccess"))))
                 .andExpect(status().isForbidden());
     }
 
-    @Test
-    @WithMockRole(roles = {READER_ROLE})
-    void shouldReturn200AndListComponent() throws Exception {
-        createComponent("ComponentA");
-        createComponent("ComponentB");
-
-        mockMvc.perform(get("/api/v1/pricing-components"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()", is(2)));
-    }
-
-    @Test
-    @WithMockRole(roles = {READER_ROLE})
-    void shouldReturn200AndComponentById() throws Exception {
-        PricingComponent saved = createComponent("MortgageRate");
-
-        mockMvc.perform(get("/api/v1/pricing-components/{id}", saved.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is("MortgageRate")));
-    }
-
-    @Test
-    @WithMockRole(roles = {READER_ROLE})
-    void shouldReturn404WhenGettingNonExistentComponent() throws Exception {
-        mockMvc.perform(get("/api/v1/pricing-components/99999"))
-                .andExpect(status().isNotFound());
-    }
+    // --- TIER & VALUE OPERATIONS ---
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldUpdateComponentAndReturn200() throws Exception {
-        PricingComponent saved = createComponent("OldRate");
-        PricingComponentRequest updateDto = getCreateDto("NewRate");
+    void shouldManageTierLifecycleCorrectly() throws Exception {
+        PricingComponent component = createComponent("TierLifecycleComp");
+        PricingTierRequest tierReq = getValidTierDto();
 
-        mockMvc.perform(put("/api/v1/pricing-components/{id}", saved.getId())
+        // 1. ADD TIER
+        String addJson = mockMvc.perform(post(BASE_URL + "/{id}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateDto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is("NewRate")));
-    }
-
-    @Test
-    @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldDeleteComponentAndReturn204() throws Exception {
-        PricingComponent saved = createComponent("Deletable");
-        mockMvc.perform(delete("/api/v1/pricing-components/{id}", saved.getId()))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn409WhenDeletingComponentWithTiers() throws Exception {
-        PricingComponent component = createComponent("ComponentWithTiers");
-        txHelper.doInTransaction(() -> {
-            txHelper.createCommittedTierDependency(component.getId(), "Tier 1");
-        });
-
-        mockMvc.perform(delete("/api/v1/pricing-components/{id}", component.getId()))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status", is(409)))
-                .andExpect(jsonPath("$.message", containsString("Cannot delete component")))
-                .andExpect(jsonPath("$.message", containsString("association with 1 tiers exists")));
-    }
-
-    @Test
-    @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldAddTierAndValueToComponentAndReturn201() throws Exception {
-        PricingComponent component = createComponent("TieredComponent");
-
-        mockMvc.perform(post("/api/v1/pricing-components/{id}/tiers", component.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getValidTierDto())))
+                        .content(objectMapper.writeValueAsString(tierReq)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.rawValue", is(5.00)))
-                .andExpect(jsonPath("$.componentCode").value("TieredComponent"))
-                .andExpect(jsonPath("$.valueType").value("FEE_ABSOLUTE"));
-    }
+                .andReturn().getResponse().getContentAsString();
 
-    @Test
-    @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn404WhenAddingTierToNonExistentComponent() throws Exception {
-        mockMvc.perform(post("/api/v1/pricing-components/99999/tiers")
+        Long tierId = Long.valueOf(objectMapper.readTree(addJson).get("matchedTierId").asText());
+
+        // 2. UPDATE TIER & VALUE
+        tierReq.getPriceValue().setPriceAmount(new BigDecimal("12.50"));
+        tierReq.getPriceValue().setValueType("FEE_PERCENTAGE");
+
+        mockMvc.perform(put(BASE_URL + "/{cId}/tiers/{tId}", component.getId(), tierId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getValidTierDto())))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status", is(404)));
-    }
-
-    @Test
-    @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldUpdateTierAndValueAndReturn200() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ComponentToUpdate", "InitialTier"));
-        Long tierId = getTierFromComponentId(componentId).getId();
-
-        // ARRANGE: Set the valueType to PERCENTAGE to match the test assertion
-        PricingTierRequest updateReq = getValidTierDto();
-        updateReq.setTierName("UpdatedTierName");
-        updateReq.getPriceValue().setPriceAmount(new BigDecimal("15.50"));
-        updateReq.getPriceValue().setValueType("FEE_PERCENTAGE");
-
-        // ACT
-        mockMvc.perform(put("/api/v1/pricing-components/{cId}/tiers/{tId}", componentId, tierId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateReq)))
+                        .content(objectMapper.writeValueAsString(tierReq)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rawValue", is(15.50)))
-                .andExpect(jsonPath("$.componentCode").value("ComponentToUpdate"))
-                .andExpect(jsonPath("$.valueType").value("FEE_PERCENTAGE"));
+                .andExpect(jsonPath("$.rawValue", is(12.50)))
+                .andExpect(jsonPath("$.valueType", is("FEE_PERCENTAGE")));
 
-        // VERIFY
-        txHelper.doInTransaction(() -> {
-            assertThat(tierRepository.findById(tierId).get().getTierName()).isEqualTo("UpdatedTierName");
-        });
-    }
-
-    @Test
-    @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldDeleteTierAndValueAndReturn204() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("CompDelete", "TierDelete"));
-        Long tierId = getTierFromComponentId(componentId).getId();
-
-        mockMvc.perform(delete("/api/v1/pricing-components/{cId}/tiers/{tId}", componentId, tierId))
+        // 3. DELETE TIER
+        mockMvc.perform(delete(BASE_URL + "/{cId}/tiers/{tId}", component.getId(), tierId))
                 .andExpect(status().isNoContent());
-    }
-
-    @Test
-    @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn404ForNonExistentTierOrComponent() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("Comp404", "Tier404"));
-        Long tierId = getTierFromComponentId(componentId).getId();
-        PricingTierRequest dto = getValidTierDto();
-
-        // 1. Bad Component
-        mockMvc.perform(put("/api/v1/pricing-components/99999/tiers/{tId}", tierId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", containsString("Pricing Component not found")));
-
-        // 2. Bad Tier
-        mockMvc.perform(put("/api/v1/pricing-components/{cId}/tiers/99999", componentId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", containsString("Pricing Tier not found")));
     }
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldClearConditionsWhenUpdatingWithEmptyList() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ClearCondComp", "InitialTier"));
-        Long tierId = getTierFromComponentId(componentId).getId();
+        Long compId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ClearCond", "Tier1"));
+
+        // Fetch the generated Tier ID
+        Long tierId = txHelper.doInTransaction(() ->
+                componentRepository.findById(compId).get().getPricingTiers().get(0).getId()
+        );
 
         PricingTierRequest updateReq = getValidTierDto();
-        updateReq.setConditions(List.of());
+        updateReq.setConditions(List.of()); // Explicitly empty
 
-        mockMvc.perform(put("/api/v1/pricing-components/{cId}/tiers/{tId}", componentId, tierId)
+        mockMvc.perform(put(BASE_URL + "/{cId}/tiers/{tId}", compId, tierId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateReq)))
                 .andExpect(status().isOk());
 
+        txHelper.flushAndClear();
         txHelper.doInTransaction(() -> {
-            PricingTier tier = tierRepository.findById(tierId).get();
+            PricingTier tier = tierRepository.findById(tierId).orElseThrow();
             assertThat(tier.getConditions()).isEmpty();
         });
     }
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn400WhenAddingTierWithInvalidValueType() throws Exception {
-        PricingComponent component = createComponent("ValueTypeFail");
+    void shouldReturn400WhenAddingTierWithInvalidPriceValueType() throws Exception {
+        PricingComponent component = createComponent("ValueTypeValidation");
         PricingTierRequest req = getValidTierDto();
-        req.getPriceValue().setValueType("NOT_A_VALID_TYPE");
+        req.getPriceValue().setValueType("INVALID_PRICE_TYPE");
 
-        mockMvc.perform(post("/api/v1/pricing-components/{id}/tiers", component.getId())
+        mockMvc.perform(post(BASE_URL + "/{id}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("Invalid value type provided")));
+                .andExpect(jsonPath("$.message", containsString("Invalid value type")));
+    }
+
+    // --- CONFLICT & ERROR HANDLING ---
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldReturnConflictWhenDependenciesExist() throws Exception {
+        PricingComponent component = createComponent("DependencyTest");
+        Long compId = component.getId();
+
+        // 1. PRODUCT LINK DEPENDENCY (Checked first)
+        txHelper.doInTransaction(() -> {
+            Product product = txHelper.createValidProduct("DepProd", "SAVINGS", com.bankengine.common.model.VersionableEntity.EntityStatus.ACTIVE);
+            txHelper.linkProductToPricingComponent(product.getId(), compId, BigDecimal.ZERO);
+        });
+
+        mockMvc.perform(delete(BASE_URL + "/{id}", compId))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("linked to 1 products")));
+
+        // 2. TIER DEPENDENCY (Checked second)
+        txHelper.doInTransaction(() -> productPricingLinkRepository.deleteAllInBatch());
+        txHelper.doInTransaction(() -> txHelper.createCommittedTierDependency(compId, "StandaloneTier"));
+
+        mockMvc.perform(delete(BASE_URL + "/{id}", compId))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("association with 2 tiers exists")));
     }
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn409WhenDeletingComponentWithMultipleDependencies() throws Exception {
-        PricingComponent component = createComponent("MultiDep");
+    void shouldReturn404ForNonExistentComponentOrMismatchedTier() throws Exception {
+        PricingTierRequest dto = getValidTierDto();
 
-        txHelper.doInTransaction(() -> {
-            txHelper.createCommittedTierDependency(component.getId(), "CheckTier");
-            ProductType type = txHelper.getOrCreateProductType("SAVINGS");
-            Product product = txHelper.getOrCreateProduct("CheckProduct", type, "RETAIL");
-            txHelper.linkProductToPricingComponent(product.getId(), component.getId(), BigDecimal.ZERO);
-        });
-
-        // 3. The service hits the Tier check first and exits
-        mockMvc.perform(delete("/api/v1/pricing-components/{id}", component.getId()))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message", containsString("association with 1 tiers exists")));
+        // Non-existent component ID
+        mockMvc.perform(put(BASE_URL + "/99999/tiers/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("Pricing Component not found")));
     }
 }

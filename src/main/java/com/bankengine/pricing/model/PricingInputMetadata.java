@@ -3,8 +3,11 @@ package com.bankengine.pricing.model;
 import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Defines the structure and type of attributes used for condition building.
@@ -16,6 +19,9 @@ import lombok.Setter;
 })
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@SuperBuilder
 @TenantEntity
 public class PricingInputMetadata extends AuditableEntity {
 

@@ -26,9 +26,7 @@ class CatalogMappersIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void testFeatureComponentMapper() {
-        FeatureComponent entity = new FeatureComponent();
-        entity.setName("ATM Limit");
-        entity.setDataType(FeatureComponent.DataType.INTEGER);
+        FeatureComponent entity = FeatureComponent.builder().name("ATM Limit").dataType(FeatureComponent.DataType.INTEGER).build();
 
         FeatureComponentResponse response = featureComponentMapper.toResponseDto(entity);
         assertNotNull(response);

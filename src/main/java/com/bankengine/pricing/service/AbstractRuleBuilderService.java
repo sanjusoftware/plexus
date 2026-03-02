@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public abstract class AbstractRuleBuilderService extends BaseService {
 
-    protected final PricingComponentRepository componentRepository;
+    protected final PricingComponentRepository pricingComponentRepository;
     protected final PricingInputMetadataService metadataService;
     protected final DroolsExpressionBuilder droolsExpressionBuilder;
 
@@ -29,10 +29,10 @@ public abstract class AbstractRuleBuilderService extends BaseService {
     protected KieContainerReloadService kieContainerReloadService;
 
     public AbstractRuleBuilderService(
-            PricingComponentRepository componentRepository,
+            PricingComponentRepository pricingComponentRepository,
             PricingInputMetadataService metadataService,
             DroolsExpressionBuilder droolsExpressionBuilder) {
-        this.componentRepository = componentRepository;
+        this.pricingComponentRepository = pricingComponentRepository;
         this.metadataService = metadataService;
         this.droolsExpressionBuilder = droolsExpressionBuilder;
     }

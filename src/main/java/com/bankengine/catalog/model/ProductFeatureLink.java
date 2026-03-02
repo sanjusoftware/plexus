@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "product_feature_link", uniqueConstraints = {
@@ -19,6 +20,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 @TenantEntity
 /*
  For non-monetary configuration (e.g., "Color: Gold", "Max Tenure: 360").
@@ -43,9 +45,4 @@ public class ProductFeatureLink extends AuditableEntity {
     @Column(name = "feature_value", nullable = false, length = 1000)
     private String featureValue;
 
-    public ProductFeatureLink(Product product, FeatureComponent featureComponent, String featureValue) {
-        this.product = product;
-        this.featureComponent = featureComponent;
-        this.featureValue = featureValue;
-    }
 }

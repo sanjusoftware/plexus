@@ -10,14 +10,25 @@ import java.util.List;
 public class ProductResponse {
     private Long id;
     private String name;
+    private String code;
+    private Integer version;
     private String bankId;
-    private LocalDate effectiveDate;
+    private LocalDate activationDate;
+    private LocalDate expiryDate;
     private String status;
+    private String category;
     private ProductTypeDto productType;
-    private LocalDate expirationDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private String category;
-    private List<ProductFeature> features;
-    private List<ProductPricing> pricing;
+
+    // Marketing/Display fields
+    private String tagline;
+    private String fullDescription;
+    private String iconUrl;
+    private Integer displayOrder;
+    private boolean featured;
+
+    // Nested Collections (FAT DTO)
+    private List<ProductFeatureDto> features;
+    private List<ProductPricingDto> pricing;
 }

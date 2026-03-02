@@ -1,6 +1,7 @@
 package com.bankengine.pricing.converter;
 
-import com.bankengine.common.mapping.ToAuditableEntity;
+import com.bankengine.common.mapping.ToNewEntity;
+import com.bankengine.common.mapping.ToVersionableEntity;
 import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.dto.PricingComponentRequest;
 import com.bankengine.pricing.dto.PricingComponentResponse;
@@ -13,26 +14,31 @@ import org.mapstruct.Named;
 
 import java.util.List;
 
-@Mapper(config = MapStructConfig.class, uses = {PricingTierMapper.class})
+@Mapper(config = MapStructConfig.class, componentModel = "spring", uses = {PricingTierMapper.class})
 public interface PricingComponentMapper {
 
     PricingComponentResponse toResponseDto(PricingComponent entity);
 
     List<PricingComponentResponse> toResponseDtoList(List<PricingComponent> entities);
 
-    @ToAuditableEntity
+    @ToNewEntity
     @Mapping(target = "type", source = "type", qualifiedByName = "mapComponentType")
     @Mapping(target = "pricingTiers", ignore = true)
     PricingComponent toEntity(PricingComponentRequest dto);
 
-    @ToAuditableEntity
+    @ToVersionableEntity
+    @Mapping(target = "status", ignore = true)
     @Mapping(target = "type", source = "type", qualifiedByName = "mapComponentType")
     @Mapping(target = "pricingTiers", ignore = true)
     void updateFromDto(PricingComponentRequest dto, @MappingTarget PricingComponent entity);
 
+    @ToNewEntity
+    @Mapping(target = "pricingTiers", source = "old.pricingTiers")
+    PricingComponent clone(PricingComponent old);
+
     @Named("mapComponentType")
     default ComponentType mapComponentType(String type) {
-        if (type == null) return null;
+        if (type == null) throw new IllegalArgumentException("Component type is required.");
         try {
             return ComponentType.valueOf(type.toUpperCase());
         } catch (IllegalArgumentException e) {

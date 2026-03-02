@@ -6,6 +6,7 @@ import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.data.seeding.CoreMetadataSeeder;
+import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
@@ -17,23 +18,23 @@ import com.bankengine.pricing.service.PricingCalculationService;
 import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.test.config.AbstractIntegrationTest;
+import com.bankengine.test.config.WithMockRole;
 import com.bankengine.web.exception.NotFoundException;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@WithMockRole(roles = {"PRICING_ADMIN"})
 public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
     private static final String TEST_COMPONENT_NAME = "AnnualFeeComponent";
@@ -41,10 +42,10 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     private static final BigDecimal TEST_AMOUNT = new BigDecimal("1000.00");
     private static final BigDecimal EXPECTED_PRICE_INITIAL = new BigDecimal("10.00");
 
-    private Product persistedProduct;
-    private ProductType persistedProductType;
-    private Long existingTierId;
-
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ProductTypeRepository productTypeRepository;
     @Autowired
     private PricingTierRepository pricingTierRepository;
     @Autowired
@@ -52,15 +53,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private TierConditionRepository tierConditionRepository;
     @Autowired
-    private ProductRepository productRepository;
-    @Autowired
-    private ProductTypeRepository productTypeRepository;
-    @Autowired
     private PricingComponentRepository pricingComponentRepository;
     @Autowired
     private ProductPricingLinkRepository productPricingLinkRepository;
-    @Autowired
-    private PricingInputMetadataRepository pricingInputMetadataRepository;
     @Autowired
     private PricingCalculationService pricingCalculationService;
     @Autowired
@@ -68,61 +63,82 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private KieContainerReloadService kieContainerReloadService;
     @Autowired
-    private TransactionTemplate transactionTemplate;
-    @Autowired
     private CoreMetadataSeeder coreMetadataSeeder;
+    @Autowired
+    private TestTransactionHelper txHelper;
     @Autowired
     private MockMvc mockMvc;
 
+    private Product persistedProduct;
+    private Long existingTierId;
+
+    @BeforeAll
+    static void setupRoles(@Autowired TestTransactionHelper txHelperStatic) {
+        seedBaseRoles(txHelperStatic, Map.of(
+                "PRICING_ADMIN", Set.of(
+                        "pricing:calculation:read",
+                        "pricing:component:write",
+                        "pricing:component:delete",
+                        "rules:management:reload"
+                )
+        ));
+    }
+
     @BeforeEach
     void setup() {
-        cleanupData();
-        transactionTemplate.execute(status -> {
-            coreMetadataSeeder.seedCorePricingInputMetadata(TEST_BANK_ID);
+        TenantContextHolder.setSystemMode(true);
+        TenantContextHolder.setBankId(TEST_BANK_ID);
 
-            ProductType productType = new ProductType();
-            productType.setName("LOAN_TYPE");
-            persistedProductType = productTypeRepository.save(productType);
+        try {
+            txHelper.doInTransaction(() -> {
+                cleanupData();
+                coreMetadataSeeder.seedCorePricingInputMetadata(TEST_BANK_ID);
+                ProductType type = productTypeRepository.save(ProductType.builder()
+                        .name("LOAN_TYPE").bankId(TEST_BANK_ID).build());
 
-            Product product = new Product();
-            product.setName("Test Loan");
-            product.setProductType(persistedProductType);
-            product.setCategory("RETAIL");
-            persistedProduct = productRepository.save(product);
+                persistedProduct = productRepository.save(Product.builder()
+                        .name("Test Loan").code("TEST-LOAN-001")
+                        .productType(type).category("RETAIL").bankId(TEST_BANK_ID).build());
 
-            PricingComponent component = new PricingComponent(TEST_COMPONENT_NAME, PricingComponent.ComponentType.FEE);
-            component = pricingComponentRepository.save(component);
+                PricingComponent component = pricingComponentRepository.save(PricingComponent.builder()
+                        .name(TEST_COMPONENT_NAME).code("FEE-001")
+                        .type(PricingComponent.ComponentType.FEE).bankId(TEST_BANK_ID).build());
 
-            PricingTier tier = new PricingTier(component, "Base Tier", BigDecimal.ZERO, null);
-            tier.setEffectiveDate(LocalDate.now().minusDays(1)); // Ensure it's valid for today
+                PricingTier tier = PricingTier.builder()
+                        .pricingComponent(component).name("Base Tier")
+                        .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
-            TierCondition condition = new TierCondition();
-            condition.setPricingTier(tier);
-            condition.setAttributeName("customerSegment");
-            condition.setOperator(Operator.EQ);
-            condition.setAttributeValue(TEST_SEGMENT);
-            condition.setConnector(TierCondition.LogicalConnector.AND);
-            tier.getConditions().add(condition);
+                tier.getConditions().add(TierCondition.builder()
+                        .pricingTier(tier).attributeName("customerSegment").operator(Operator.EQ)
+                        .attributeValue(TEST_SEGMENT).connector(TierCondition.LogicalConnector.AND)
+                        .bankId(TEST_BANK_ID).build());
 
-            PriceValue priceValue = new PriceValue(tier, EXPECTED_PRICE_INITIAL, ValueType.FEE_ABSOLUTE);
-            tier.getPriceValues().add(priceValue);
-            pricingTierRepository.save(tier);
-            this.existingTierId = tier.getId();
+                tier.getPriceValues().add(PriceValue.builder()
+                        .pricingTier(tier).rawValue(EXPECTED_PRICE_INITIAL)
+                        .valueType(ValueType.FEE_ABSOLUTE).bankId(TEST_BANK_ID).build());
 
-            productPricingLinkRepository.save(new ProductPricingLink(persistedProduct, component, null, null, null, true));
-            return null;
-        });
-        kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
+                pricingTierRepository.save(tier);
+                this.existingTierId = tier.getId();
+
+                productPricingLinkRepository.save(ProductPricingLink.builder()
+                        .product(persistedProduct).pricingComponent(component)
+                        .bankId(TEST_BANK_ID).effectiveDate(LocalDate.now().minusDays(5))
+                        .useRulesEngine(true).build());
+            });
+
+        } finally {
+            TenantContextHolder.clear();
+            TenantContextHolder.setSystemMode(false);
+        }
+
+        reloadRules();
     }
 
     @AfterEach
     void cleanup() {
-        try {
-            TenantContextHolder.setBankId(TEST_BANK_ID);
-            cleanupData();
-        } finally {
-            TenantContextHolder.clear();
-        }
+        TenantContextHolder.setBankId(TEST_BANK_ID);
+        txHelper.doInTransaction(this::cleanupData);
+        TenantContextHolder.clear();
     }
 
     private void cleanupData() {
@@ -136,151 +152,159 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:calculation:read"})
-    void testEffectiveDate_FutureRule_NotReturned() {
-        final Long[] futureTierId = new Long[1];
-        // Use a fixed LocalDate to ensure consistency between DB and Request
-        LocalDate today = LocalDate.now();
-
-        transactionTemplate.execute(status -> {
-            // 1. Fetch the component
-            PricingComponent comp = pricingComponentRepository.findByName(TEST_COMPONENT_NAME).get();
-
-            // 2. Create a tier that explicitly starts TOMORROW
-            PricingTier futureTier = new PricingTier(comp, "Future Tier", BigDecimal.ZERO, null);
-            futureTier.setEffectiveDate(today.plusDays(1));
-
-            PriceValue val = new PriceValue(futureTier, new BigDecimal("50.00"), ValueType.FEE_ABSOLUTE);
-            futureTier.getPriceValues().add(val);
-
-            pricingTierRepository.save(futureTier);
-            futureTierId[0] = futureTier.getId();
-            return null;
-        });
-
-        // 3. FORCE PERSISTENCE CONTEXT CLEARANCE
-        // This ensures the service doesn't use cached entities from the setup() phase
-        entityManager.clear();
-
-        // 4. Reload KieContainer so the DRL is generated including the new tier
-        kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
-
-        // 5. Requesting for TODAY (which is before the futureTier's start date)
+    @DisplayName("Success - Standard rule execution returns expected price")
+    void testStandardRuleExecution_Success() {
         PricingRequest request = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT)
-                .effectiveDate(today)
-                .build();
+                .customerSegment(TEST_SEGMENT).amount(TEST_AMOUNT).build();
 
-        List<PriceComponentDetail> results = pricingCalculationService.getProductPricing(request).getComponentBreakdown();
-
-        // 6. Verify the future tier ID is NOT in the results
-        boolean futureTierFired = results.stream()
-                .anyMatch(r -> futureTierId[0].equals(r.getMatchedTierId()));
-
-        assertFalse(futureTierFired, "Rule for Tier " + futureTierId[0] + " should not fire because its effective date is in the future");
+        ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
+        assertEquals(EXPECTED_PRICE_INITIAL, result.getComponentBreakdown().getFirst().getRawValue());
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:calculation:read"})
-    void testCalculation_InDateGap_ThrowsNotFound() {
-        transactionTemplate.execute(status -> {
-            PricingTier tier = pricingTierRepository.findById(existingTierId).get();
-            tier.setExpiryDate(LocalDate.now().minusDays(1)); // Expired yesterday
-            pricingTierRepository.save(tier);
-            return null;
+    @DisplayName("Temporal - Link with future effective date should not activate its component rules today")
+    void testFutureDatedLink_DoesNotActivateRulesToday() {
+        final Long[] futureComponentTierId = new Long[1];
+
+        txHelper.doInTransaction(() -> {
+            // 1. Create a NEW component that will be linked in the future
+            PricingComponent futureLinkComponent = pricingComponentRepository.save(PricingComponent.builder()
+                    .name("FutureLinkedComponent").code("FEE-FUTURE-LINK")
+                    .type(PricingComponent.ComponentType.FEE).bankId(TEST_BANK_ID).build());
+
+            PricingTier tierInsideFutureLink = PricingTier.builder()
+                    .pricingComponent(futureLinkComponent).name("Tier inside future link")
+                    .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
+
+            tierInsideFutureLink.getPriceValues().add(PriceValue.builder()
+                    .pricingTier(tierInsideFutureLink).rawValue(new BigDecimal("50.00"))
+                    .valueType(ValueType.FEE_ABSOLUTE).bankId(TEST_BANK_ID).build());
+
+            pricingTierRepository.save(tierInsideFutureLink);
+            futureComponentTierId[0] = tierInsideFutureLink.getId();
+
+            // 2. The Link determines the date availability
+            productPricingLinkRepository.save(ProductPricingLink.builder()
+                    .product(persistedProduct)
+                    .pricingComponent(futureLinkComponent)
+                    .bankId(TEST_BANK_ID)
+                    .effectiveDate(LocalDate.now().plusDays(10)) // THE FUTURE DATE IS HERE
+                    .useRulesEngine(true).build());
         });
 
-        kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
+        reloadRules();
+
+        // 3. Requesting pricing for TODAY
+        PricingRequest request = PricingRequest.builder()
+                .productId(this.persistedProduct.getId())
+                .customerSegment(TEST_SEGMENT)
+                .effectiveDate(LocalDate.now()).build();
+
+        List<PriceComponentDetail> results = pricingCalculationService.getProductPricing(request).getComponentBreakdown();
+
+        // 4. Verify that the Tier belonging to the future-dated Link did not fire
+        boolean ruleFromFutureLinkFired = results.stream()
+                .anyMatch(r -> futureComponentTierId[0].equals(r.getMatchedTierId()));
+
+        assertFalse(ruleFromFutureLinkFired,
+                "The rule for Tier " + futureComponentTierId[0] + " should not fire because its associated Link is not yet effective.");
+    }
+
+    @Test
+    @DisplayName("Temporal Gap - Throws NotFound when no Links are active for the requested date")
+    void testCalculation_InDateGap_ThrowsNotFound() {
+        txHelper.doInTransaction(() -> {
+            // Expire all links to create a gap for today
+            productPricingLinkRepository.findAll().forEach(link -> {
+                link.setExpiryDate(LocalDate.now().minusDays(1));
+                productPricingLinkRepository.save(link);
+            });
+        });
+
+        reloadRules();
 
         PricingRequest request = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .effectiveDate(LocalDate.now())
-                .customerSegment(TEST_SEGMENT)
-                .build();
+                .customerSegment(TEST_SEGMENT).build();
 
         assertThrows(NotFoundException.class, () -> pricingCalculationService.getProductPricing(request));
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:calculation:read", "pricing:component:delete"})
+    @DisplayName("Deletion - Rules stop firing immediately after component deletion and reload")
     void testRuleReloadAfterFullComponentDeletion() {
-        // FIXED: Wrap findByName in transaction
-        final Long[] ids = new Long[2];
-        transactionTemplate.execute(status -> {
-            PricingComponent component = pricingComponentRepository.findByName(TEST_COMPONENT_NAME).get();
-            ids[0] = component.getId();
-            ids[1] = component.getPricingTiers().iterator().next().getId();
-            return null;
+        txHelper.doInTransaction(() -> {
+            PricingComponent component = pricingComponentRepository.findByName(TEST_COMPONENT_NAME).orElseThrow();
+            Long compId = component.getId();
+            productPricingLinkRepository.deleteByPricingComponentId(compId);
+            component.getPricingTiers().clear();
+            pricingComponentRepository.flush();
+            pricingComponentService.deletePricingComponent(compId);
         });
-
-        pricingComponentService.deleteTierAndValue(ids[0], ids[1]);
-
-        transactionTemplate.execute(status -> {
-            productPricingLinkRepository.deleteByPricingComponentId(ids[0]);
-            pricingComponentService.deletePricingComponent(ids[0]);
-            return null;
-        });
-
-        kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
-
+        reloadRules();
         PricingRequest request = PricingRequest.builder()
-                .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT)
-                .build();
+                .productId(this.persistedProduct.getId()).customerSegment(TEST_SEGMENT).build();
 
         assertThrows(NotFoundException.class, () -> pricingCalculationService.getProductPricing(request));
     }
 
     @Test
-    @WithMockUser(authorities = {"pricing:calculation:read"})
-    void testStandardRuleExecution_Success() {
-        PricingRequest request = PricingRequest.builder()
-                .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT)
-                .amount(TEST_AMOUNT)
-                .build();
-
-        ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
-        assertEquals(EXPECTED_PRICE_INITIAL, result.getComponentBreakdown().get(0).getRawValue());
-    }
-
-    @Test
-    @WithMockUser(authorities = {"pricing:calculation:read", "pricing:component:write"})
+    @DisplayName("Logic Branch - Percentage discount rule execution")
     void testRuleExecutionForPercentageDiscount() {
-        transactionTemplate.execute(status -> {
-            PricingComponent component = new PricingComponent("BulkDiscountComponent", PricingComponent.ComponentType.DISCOUNT);
-            component = pricingComponentRepository.save(component);
+        txHelper.doInTransaction(() -> {
+            PricingComponent component = pricingComponentRepository.save(PricingComponent.builder()
+                    .name("BulkDiscountComponent").code("BULK-DIS-01")
+                    .type(PricingComponent.ComponentType.DISCOUNT).bankId(TEST_BANK_ID).build());
 
-            PricingTier tier = new PricingTier(component, "Bulk Discount Tier", BigDecimal.ZERO, null);
-            tier.setEffectiveDate(LocalDate.now().minusDays(1));
+            PricingTier tier = PricingTier.builder()
+                    .pricingComponent(component).name("Bulk Tier")
+                    .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
-            TierCondition cond = new TierCondition(tier, "transactionAmount", Operator.GT, "500.00", TierCondition.LogicalConnector.AND);
-            tier.getConditions().add(cond);
+            tier.getConditions().add(TierCondition.builder()
+                    .pricingTier(tier).attributeName("transactionAmount").operator(Operator.GT)
+                    .attributeValue("500.00").connector(TierCondition.LogicalConnector.AND)
+                    .bankId(TEST_BANK_ID).build());
 
-            PriceValue val = new PriceValue(tier, new BigDecimal("5.00"), ValueType.DISCOUNT_PERCENTAGE);
-            tier.getPriceValues().add(val);
+            tier.getPriceValues().add(PriceValue.builder()
+                    .pricingTier(tier).rawValue(new BigDecimal("5.00"))
+                    .valueType(ValueType.DISCOUNT_PERCENTAGE).bankId(TEST_BANK_ID).build());
+
             pricingTierRepository.save(tier);
 
-            productPricingLinkRepository.save(new ProductPricingLink(persistedProduct, component, null, null, null, true));
-            return null;
+            productPricingLinkRepository.save(ProductPricingLink.builder()
+                    .product(persistedProduct).pricingComponent(component)
+                    .bankId(TEST_BANK_ID).effectiveDate(LocalDate.now())
+                    .useRulesEngine(true).build());
         });
 
-        kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
+        reloadRules();
 
         PricingRequest request = PricingRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT)
-                .amount(TEST_AMOUNT)
-                .build();
+                .customerSegment(TEST_SEGMENT).amount(TEST_AMOUNT).build();
 
         List<PriceComponentDetail> results = pricingCalculationService.getProductPricing(request).getComponentBreakdown();
-        assertTrue(results.stream().anyMatch(r -> r.getValueType() == ValueType.DISCOUNT_PERCENTAGE));
+
+        assertTrue(results.stream().anyMatch(r -> r.getValueType() == ValueType.DISCOUNT_PERCENTAGE),
+                "Should have found a percentage discount in the breakdown");
     }
 
     @Test
-    @WithMockUser(authorities = {"rules:management:reload"})
+    @DisplayName("Management - Reload endpoint security check")
     void testManagementReloadEndpoint() throws Exception {
         mockMvc.perform(post("/api/v1/rules/reload")).andExpect(status().isOk());
+    }
+
+    private void reloadRules() {
+        try {
+            TenantContextHolder.setSystemMode(true);
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+            kieContainerReloadService.reloadKieContainer(TEST_BANK_ID);
+        } finally {
+            TenantContextHolder.setSystemMode(false);
+            TenantContextHolder.setBankId(TEST_BANK_ID);
+        }
     }
 }

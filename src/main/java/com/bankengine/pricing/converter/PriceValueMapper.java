@@ -9,12 +9,15 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(config = MapStructConfig.class)
+@Mapper(config = MapStructConfig.class, componentModel = "spring")
 public interface PriceValueMapper {
 
     @ToAuditableEntity
     @Mapping(target = "pricingTier", ignore = true)
-    @Mapping(target = "valueType", ignore = true)
+    PriceValue clone(PriceValue source);
+
+    @ToAuditableEntity
+    @Mapping(target = "pricingTier", ignore = true)
     @Mapping(target = "matchedTierId", ignore = true)
     @Mapping(target = "componentCode", ignore = true)
     @Mapping(target = "rawValue", source = "priceAmount")
@@ -22,7 +25,6 @@ public interface PriceValueMapper {
 
     @ToAuditableEntity
     @Mapping(target = "pricingTier", ignore = true)
-    @Mapping(target = "valueType", ignore = true)
     @Mapping(target = "matchedTierId", ignore = true)
     @Mapping(target = "componentCode", ignore = true)
     @Mapping(target = "rawValue", source = "priceAmount")
@@ -31,6 +33,7 @@ public interface PriceValueMapper {
     @Mapping(target = "componentCode", source = "pricingTier.pricingComponent.name")
     @Mapping(target = "matchedTierId", source = "pricingTier.id")
     @Mapping(target = "sourceType", constant = "CATALOG")
+    @Mapping(target = "valueType", source = "valueType") // ADDED: Explicitly map the enum
     @Mapping(target = "calculatedAmount", ignore = true)
     @Mapping(target = "targetComponentCode", ignore = true)
     @Mapping(target = "proRataApplicable", source = "pricingTier.proRataApplicable")

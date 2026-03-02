@@ -1,5 +1,6 @@
 package com.bankengine.pricing.converter;
 
+import com.bankengine.common.mapping.ToAuditableEntity;
 import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.dto.TierConditionDto;
 import com.bankengine.pricing.model.TierCondition;
@@ -9,17 +10,16 @@ import org.mapstruct.Mapping;
 import java.util.List;
 import java.util.Set;
 
-@Mapper(config = MapStructConfig.class)
+@Mapper(config = MapStructConfig.class, componentModel = "spring")
 public interface TierConditionMapper {
 
-    @Mapping(target = "id", ignore = true)
+    @ToAuditableEntity
     @Mapping(target = "pricingTier", ignore = true)
-    @Mapping(target = "bankId", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "updatedBy", ignore = true)
     TierCondition toEntity(TierConditionDto dto);
+
+    @ToAuditableEntity
+    @Mapping(target = "pricingTier", ignore = true)
+    TierCondition clone(TierCondition source);
 
     TierConditionDto toDto(TierCondition entity);
 

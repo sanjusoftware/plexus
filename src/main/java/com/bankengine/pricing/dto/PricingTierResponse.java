@@ -9,10 +9,10 @@ import java.util.List;
 @Value
 @Builder
 public class PricingTierResponse {
-    private Long id;
-    private String tierName;
-    private BigDecimal minThreshold;
-    private BigDecimal maxThreshold;
-    private List<TierConditionDto> conditions;
-    private List<ProductPricingCalculationResult.PriceComponentDetail> priceValues;
+    Long id;
+    String name;
+    BigDecimal minThreshold;
+    BigDecimal maxThreshold;
+    List<TierConditionDto> conditions;
+    List<ProductPricingCalculationResult.PriceComponentDetail> priceValues;
 }

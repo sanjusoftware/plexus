@@ -1,6 +1,6 @@
 package com.bankengine.catalog.converter;
 
-import com.bankengine.catalog.dto.ProductPricing;
+import com.bankengine.catalog.dto.ProductPricingDto;
 import com.bankengine.common.mapping.ToAuditableEntity;
 import com.bankengine.config.MapStructConfig;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -10,17 +10,19 @@ import org.mapstruct.MappingTarget;
 
 import java.util.List;
 
-@Mapper(config = MapStructConfig.class)
+@Mapper(config = MapStructConfig.class, componentModel = "spring")
 public interface PricingLinkMapper {
 
     @Mapping(target = "pricingComponentName", source = "link.pricingComponent.name")
     @Mapping(target = "pricingComponentId", source = "link.pricingComponent.id")
-    ProductPricing toResponse(ProductPricingLink link);
+    @Mapping(target = "targetComponentCode", source = "link.pricingComponent.code")
+    ProductPricingDto toResponse(ProductPricingLink link);
 
-    List<ProductPricing> toResponseList(List<ProductPricingLink> links);
+    List<ProductPricingDto> toResponseList(List<ProductPricingLink> links);
 
-    @Mapping(target = "id", ignore = true)
+    @ToAuditableEntity
     @Mapping(target = "product", ignore = true)
+    @Mapping(target = "pricingComponent", source = "oldLink.pricingComponent")
     @Mapping(target = "effectiveDate", ignore = true)
     @Mapping(target = "expiryDate", ignore = true)
     ProductPricingLink clone(ProductPricingLink oldLink);
@@ -28,10 +30,10 @@ public interface PricingLinkMapper {
     @ToAuditableEntity
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "pricingComponent", ignore = true)
-    ProductPricingLink toEntity(ProductPricing dto);
+    ProductPricingLink toEntity(ProductPricingDto dto);
 
     @ToAuditableEntity
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "pricingComponent", ignore = true)
-    void updateFromDto(ProductPricing dto, @MappingTarget ProductPricingLink entity);
+    void updateFromDto(ProductPricingDto dto, @MappingTarget ProductPricingLink entity);
 }

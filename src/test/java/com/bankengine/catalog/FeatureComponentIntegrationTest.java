@@ -2,6 +2,7 @@ package com.bankengine.catalog;
 
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.dto.FeatureComponentRequest;
+import com.bankengine.catalog.dto.VersionRequest;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
@@ -10,22 +11,23 @@ import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Map;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -55,11 +57,10 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                                    @Autowired FeatureComponentRepository featureRepoStatic,
                                    @Autowired ProductFeatureLinkRepository linkRepoStatic) {
 
-        // 1. Seed Roles using Template Method
         seedBaseRoles(txHelperStatic, Map.of(
-            ADMIN_ROLE, Set.of("catalog:feature:create", "catalog:feature:read", "catalog:feature:update", "catalog:feature:delete"),
-            READER_ROLE, Set.of("catalog:feature:read"),
-            UNAUTHORIZED_ROLE, Set.of("some:other:permission")
+                ADMIN_ROLE, Set.of("catalog:feature:create", "catalog:feature:read", "catalog:feature:update", "catalog:feature:delete", "catalog:feature:activate"),
+                READER_ROLE, Set.of("catalog:feature:read"),
+                UNAUTHORIZED_ROLE, Set.of("some:other:permission")
         ));
 
         // 2. Setup Shared Entities for Linking
@@ -78,7 +79,9 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
                 Product product = new Product();
                 product.setName("Link Test Product");
-                product.setStatus("ACTIVE");
+                product.setCode("TEST-PROD-" + UUID.randomUUID());
+                product.setActivationDate(LocalDate.now());
+                product.setStatus(VersionableEntity.EntityStatus.ACTIVE);
                 product.setProductType(savedType);
                 product.setCategory("RETAIL");
                 sharedProduct = productRepoStatic.save(product);
@@ -91,6 +94,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
     @AfterEach
     void tearDown() {
+        TenantContextHolder.setBankId(TEST_BANK_ID);
         txHelper.doInTransaction(() -> {
             linkRepository.deleteAllInBatch();
             featureComponentRepository.deleteAllInBatch();
@@ -98,23 +102,25 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         txHelper.flushAndClear();
     }
 
-    private FeatureComponentRequest getCreateDto(String name) {
+    private FeatureComponentRequest newFeatureComponentRequest(String name) {
         FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName(name);
+        dto.setCode(name + UUID.randomUUID());
         dto.setDataType("STRING");
         return dto;
     }
 
     private FeatureComponent createFeatureComponentInDb(String name) {
-        return txHelper.doInTransaction(() -> {
-            return featureComponentRepository.findByName(name)
-                    .orElseGet(() -> {
-                        FeatureComponent component = new FeatureComponent();
-                        component.setName(name);
-                        component.setDataType(FeatureComponent.DataType.STRING);
-                        return featureComponentRepository.save(component);
-                    });
-        });
+        return txHelper.doInTransaction(() -> featureComponentRepository.findByName(name)
+                .orElseGet(() -> featureComponentRepository.save(
+                        FeatureComponent.builder()
+                                .name(name)
+                                .code(name + UUID.randomUUID())
+                                .dataType(FeatureComponent.DataType.STRING)
+                                .status(VersionableEntity.EntityStatus.DRAFT)
+                                .bankId(TEST_BANK_ID)
+                                .build())
+                ));
     }
 
     // --- 1. CREATE TESTS ---
@@ -124,7 +130,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     void shouldReturn403WhenCreatingFeatureWithoutPermission() throws Exception {
         mockMvc.perform(post("/api/v1/features")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getCreateDto("ForbiddenFeature"))))
+                        .content(objectMapper.writeValueAsString(newFeatureComponentRequest("ForbiddenFeature"))))
                 .andExpect(status().isForbidden());
     }
 
@@ -133,11 +139,12 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     void shouldCreateFeatureAndReturn201() throws Exception {
         mockMvc.perform(post("/api/v1/features")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getCreateDto("PremiumSupport"))))
+                        .content(objectMapper.writeValueAsString(newFeatureComponentRequest("PremiumSupport"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name", is("PremiumSupport")))
                 .andExpect(jsonPath("$.dataType", is("STRING")))
                 .andExpect(jsonPath("$.id").isNumber());
+
         // Verify DB Tenancy & Auditing
         txHelper.doInTransaction(() -> {
             FeatureComponent fc = featureComponentRepository.findByName("PremiumSupport").orElseThrow();
@@ -149,7 +156,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn400OnCreateWithInvalidDataType() throws Exception {
-        FeatureComponentRequest dto = getCreateDto("BadTypeFeature");
+        FeatureComponentRequest dto = newFeatureComponentRequest("BadTypeFeature");
         dto.setDataType("XYZ");
 
         mockMvc.perform(post("/api/v1/features")
@@ -194,9 +201,9 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn403WhenUpdatingFeatureWithoutPermission() throws Exception {
         FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
-        FeatureComponentRequest updateDto = getCreateDto("NewName");
+        FeatureComponentRequest updateDto = newFeatureComponentRequest("NewName");
 
-        mockMvc.perform(put("/api/v1/features/{id}", savedComponent.getId())
+        mockMvc.perform(patch("/api/v1/features/{id}", savedComponent.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isForbidden());
@@ -208,23 +215,23 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         FeatureComponent savedComponent = createFeatureComponentInDb("OldName");
         FeatureComponentRequest updateDto = new FeatureComponentRequest();
         updateDto.setName("NewName");
+        updateDto.setCode(savedComponent.getCode()); // Keep existing code
         updateDto.setDataType("BOOLEAN");
 
-        mockMvc.perform(put("/api/v1/features/{id}", savedComponent.getId())
+        mockMvc.perform(patch("/api/v1/features/{id}", savedComponent.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name", is("NewName")))
-                .andExpect(jsonPath("$.dataType", is("BOOLEAN")))
-                .andExpect(jsonPath("$.updatedAt").exists());
+                .andExpect(jsonPath("$.dataType", is("BOOLEAN")));
     }
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404OnUpdateNonExistentFeature() throws Exception {
-        mockMvc.perform(put("/api/v1/features/99999")
+        mockMvc.perform(patch("/api/v1/features/99999")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(getCreateDto("Test"))))
+                        .content(objectMapper.writeValueAsString(newFeatureComponentRequest("Test"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -239,6 +246,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("Branch: DRAFT Status -> Physical Deletion")
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldDeleteFeatureAndReturn204() throws Exception {
         FeatureComponent savedComponent = createFeatureComponentInDb("DeletableFeature");
@@ -247,17 +255,34 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(delete("/api/v1/features/{id}", idToDelete))
                 .andExpect(status().isNoContent());
 
-        // Assert via API
-        mockMvc.perform(get("/api/v1/features/{id}", idToDelete))
-                .andExpect(status().isNotFound());
+        // Assert physical removal via API and DB
+        mockMvc.perform(get("/api/v1/features/{id}", idToDelete)).andExpect(status().isNotFound());
+        txHelper.doInTransaction(() -> assertThat(featureComponentRepository.findById(idToDelete)).isEmpty());
+    }
 
-        // Assert via DB
+    @Test
+    @DisplayName("Branch: ACTIVE Status -> Logical Archive")
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldArchiveFeatureInsteadOfDelete() throws Exception {
+        FeatureComponent savedComponent = createFeatureComponentInDb("ArchivableFeature");
         txHelper.doInTransaction(() -> {
-            assertThat(featureComponentRepository.findById(idToDelete)).isEmpty();
+            savedComponent.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+            featureComponentRepository.save(savedComponent);
+        });
+
+        mockMvc.perform(delete("/api/v1/features/{id}", savedComponent.getId()))
+                .andExpect(status().isNoContent());
+
+        // Verify logical existence with ARCHIVED status
+        txHelper.doInTransaction(() -> {
+            FeatureComponent fc = featureComponentRepository.findById(savedComponent.getId())
+                    .orElseThrow(() -> new NoSuchElementException("Active feature should be archived, not physically deleted!"));
+            assertThat(fc.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ARCHIVED);
         });
     }
 
     @Test
+    @DisplayName("Branch: Dependency Violation -> 409 Conflict")
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn409WhenDeletingLinkedFeature() throws Exception {
         FeatureComponent linkedComponent = createFeatureComponentInDb("LinkedFeature");
@@ -272,7 +297,105 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(delete("/api/v1/features/{id}", linkedComponent.getId()))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status", is(409)))
-                .andExpect(jsonPath("$.message", containsString("Cannot delete Feature Component ID")));
+                .andExpect(jsonPath("$.message", is("Cannot delete feature as it is linked to 1 product(s).")));
+    }
+
+    // --- 5. LIFECYCLE & STATE MACHINE TESTS ---
+
+    @Test
+    @DisplayName("Activation - Should transition DRAFT to ACTIVE")
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldActivateFeature() throws Exception {
+        FeatureComponent feature = createFeatureComponentInDb("ToActivate");
+
+        mockMvc.perform(post("/api/v1/features/{id}/activate", feature.getId()))
+                .andExpect(status().isOk());
+
+        txHelper.doInTransaction(() -> {
+            assertThat(featureComponentRepository.findById(feature.getId()).orElseThrow().getStatus())
+                    .isEqualTo(VersionableEntity.EntityStatus.ACTIVE);
+        });
+    }
+
+    @Test
+    @DisplayName("Update Constraint - Should return 409 when updating an already ACTIVE feature")
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldFailToUpdateActiveFeature() throws Exception {
+        FeatureComponent activeFeature = createFeatureComponentInDb("LockedFeature");
+        txHelper.doInTransaction(() -> {
+            activeFeature.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+            featureComponentRepository.save(activeFeature);
+        });
+
+        FeatureComponentRequest request = newFeatureComponentRequest("AttemptedChange");
+        request.setCode(activeFeature.getCode());
+
+        mockMvc.perform(patch("/api/v1/features/{id}", activeFeature.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", is("Operation allowed only on DRAFT status.")));
+    }
+
+    // --- 6. VERSIONING TESTS ---
+
+    @Test
+    @DisplayName("Versioning - Should create new DRAFT version from ACTIVE feature")
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldVersionFeatureSuccessfully() throws Exception {
+        FeatureComponent source = createFeatureComponentInDb("BaseFeature");
+        txHelper.doInTransaction(() -> {
+            source.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+            source.setVersion(1);
+            featureComponentRepository.save(source);
+        });
+
+        VersionRequest vRequest = new VersionRequest();
+
+        mockMvc.perform(post("/api/v1/features/{id}/version", source.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(vRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$").isNumber());
+
+        txHelper.doInTransaction(() -> {
+            assertThat(featureComponentRepository.findAll().size()).isGreaterThan(1);
+        });
+    }
+
+    // --- 7. MULTI-LINK DEPENDENCY CHECK ---
+
+    @Test
+    @DisplayName("Delete - Should show correct count of links in error message")
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldShowCorrectLinkCountIn409() throws Exception {
+        FeatureComponent feature = createFeatureComponentInDb("HeavilyLinked");
+
+        txHelper.doInTransaction(() -> {
+            // Create a second product to avoid the Unique Constraint violation
+            Product secondProduct = new Product();
+            secondProduct.setName("Second Product");
+            secondProduct.setCode("TEST-PROD-" + UUID.randomUUID());
+            secondProduct.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+            secondProduct.setProductType(sharedProduct.getProductType()); // Reuse the same type
+            secondProduct.setCategory("RETAIL");
+            productRepository.save(secondProduct);
+
+            ProductFeatureLink link1 = new ProductFeatureLink();
+            link1.setFeatureComponent(feature);
+            link1.setProduct(sharedProduct);
+            link1.setFeatureValue("V1");
+
+            ProductFeatureLink link2 = new ProductFeatureLink();
+            link2.setFeatureComponent(feature);
+            link2.setProduct(secondProduct); // Link to the NEW product
+            link2.setFeatureValue("V2");
+
+            linkRepository.saveAll(List.of(link1, link2));
+        });
+
+        mockMvc.perform(delete("/api/v1/features/{id}", feature.getId()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", is("Cannot delete feature as it is linked to 2 product(s).")));
     }
 }

@@ -49,12 +49,12 @@ class PricingMappersIntegrationTest extends AbstractIntegrationTest {
     @Test
     void testTierMapper() {
         PricingTier tier = new PricingTier();
-        tier.setTierName("Tier 1");
+        tier.setName("Tier 1");
         tier.setMinThreshold(BigDecimal.TEN);
 
         PricingTierResponse response = tierMapper.toResponse(tier);
         assertNotNull(response);
-        assertEquals("Tier 1", response.getTierName());
+        assertEquals("Tier 1", response.getName());
     }
 
     @Test
