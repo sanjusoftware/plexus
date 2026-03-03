@@ -307,7 +307,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         request.setCode(code);
         request.setName(name);
         request.setActivationDate(LocalDate.now().plusDays(7));
-        request.setEligibilitySegment("RETAIL");
+        request.setTargetCustomerSegments("RETAIL");
         return request;
     }
 

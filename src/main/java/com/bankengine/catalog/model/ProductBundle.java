@@ -31,7 +31,7 @@ public class ProductBundle extends VersionableEntity {
     private String description;
 
     @Column(nullable = false)
-    private String eligibilitySegment; // e.g., "Retail", "SME"
+    private String targetCustomerSegments; // e.g., "Retail", "SME"
 
     @Column(name = "activation_date")
     private LocalDate activationDate;

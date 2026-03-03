@@ -36,7 +36,6 @@ public class PriceValue extends AuditableEntity {
     public enum ValueType {
         FEE_ABSOLUTE,
         FEE_PERCENTAGE,
-        WAIVED,
         DISCOUNT_PERCENTAGE,
         DISCOUNT_ABSOLUTE,
         FREE_COUNT

@@ -84,7 +84,7 @@ public class ProductBundleService extends BaseService {
         // Partial updates for metadata
         if (dto.getName() != null) bundle.setName(dto.getName());
         if (dto.getDescription() != null) bundle.setDescription(dto.getDescription());
-        if (dto.getEligibilitySegment() != null) bundle.setEligibilitySegment(dto.getEligibilitySegment());
+        if (dto.getTargetCustomerSegments() != null) bundle.setTargetCustomerSegments(dto.getTargetCustomerSegments());
 
         // Sync products if the list is provided in the request
         if (dto.getProducts() != null) {

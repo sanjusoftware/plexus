@@ -36,7 +36,9 @@ public class PricingTier extends AuditableEntity {
     @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private Set<TierCondition> conditions = new HashSet<>();
 
+    @Column(nullable = false)
     private String name;
+
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
 

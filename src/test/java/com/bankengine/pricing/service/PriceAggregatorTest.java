@@ -1,6 +1,5 @@
 package com.bankengine.pricing.service;
 
-import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import org.junit.jupiter.api.DisplayName;
@@ -16,14 +15,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class PriceAggregatorTest {
 
     private final PriceAggregator aggregator = new PriceAggregator();
+    private static final int SCALE = 2;
 
     @Test
     @DisplayName("Complex Mix - Should handle targeted and global discounts correctly")
     void shouldHandleTargetedDiscounts() {
-        // ARRANGE: $1,000 transaction
-        // Fees: $10 Base Fee + $20 (2% Proc Fee) = $30 Pool
-        // Discounts: 50% targeted at 'BASE_FEE' ($5.00) + 10% Global ($3.00)
-        // Expected: 30.00 - 5.00 - 3.00 = 22.00
+        // ARRANGE: $1,000 Product Base Fee
+        // Fees: $10 Base Fee + $20 (2% Proc Fee of $1000) = $30 Bundle Fees
+        // Total Pool for Global: $1000 (Product) + $30 (Bundle Fees) = $1030
+
+        // Discounts:
+        // 1. 50% targeted at 'BASE_FEE' ($10.00) = $5.00
+        // 2. 10% Global ($1030.00 * 0.10) = $103.00
+        // Net Impact: $30.00 (Fees) - $5.00 (Targeted) - $103.00 (Global) = -$78.00
+
         List<PriceComponentDetail> components = List.of(
                 createComponentDetail("BASE_FEE", "10.00", ValueType.FEE_ABSOLUTE, null),
                 createComponentDetail("PROC_FEE", "2.00", ValueType.FEE_PERCENTAGE, null),
@@ -31,19 +36,29 @@ class PriceAggregatorTest {
                 createComponentDetail("GLOBAL_DISC", "10.00", ValueType.DISCOUNT_PERCENTAGE, null)
         );
 
-        PricingRequest request = PricingRequest.builder()
-                .amount(new BigDecimal("1000.00"))
-                .effectiveDate(LocalDate.now())
-                .build();
+        BigDecimal productBaseFee = new BigDecimal("1000.00");
 
-        BigDecimal result = aggregator.calculate(components, request);
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, productBaseFee, productBaseFee, null, LocalDate.now());
 
-        // Expected: 10 + 20 = 30 fees. Discount: 50% of 10 (5) + 10% of 30 (3) = 8. Total = 22.
-        assertEquals(new BigDecimal("22.00").setScale(2, RoundingMode.HALF_UP), result);
+        assertScaledBigDecimal("-78.00", netImpact);
     }
 
     @Test
-    @DisplayName("Pro-rata Check - Should calculate partial fee for first month")
+    @DisplayName("Safety: Should return $0 discount impact if target component code does not exist")
+    void shouldReturnZeroForMissingTargetComponent() {
+        List<PriceComponentDetail> components = List.of(
+                createComponentDetail("BASE_FEE", "10.00", ValueType.FEE_ABSOLUTE, null),
+                createComponentDetail("ORPHAN_DISC", "50.00", ValueType.DISCOUNT_PERCENTAGE, "NON_EXISTENT")
+        );
+
+        // $10.00 fee + 0.00 (invalid target discount) = $10.00 impact
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO,  BigDecimal.ZERO, null, LocalDate.now());
+
+        assertScaledBigDecimal("10.00", netImpact);
+    }
+
+    @Test
+    @DisplayName("Pro-rata Check - Should calculate partial fee for mid-month enrollment")
     void shouldHandleProRataCalculation() {
         // ARRANGE: Monthly fee of $30.00
         List<PriceComponentDetail> components = List.of(
@@ -55,118 +70,83 @@ class PriceAggregatorTest {
                         .build()
         );
 
-        // Enrollment on the 16th of a 30-day month = 15 days active (exactly 50%)
-        PricingRequest request = PricingRequest.builder()
-                .enrollmentDate(LocalDate.of(2024, 6, 16))
-                .effectiveDate(LocalDate.of(2024, 6, 30))
-                .amount(BigDecimal.ZERO)
-                .build();
+        // Enroll mid-month (16th of 30-day June) = 15 days active = 50%
+        LocalDate enrollment = LocalDate.of(2024, 6, 16);
+        LocalDate effective = LocalDate.of(2024, 6, 30);
 
-        // ACT
-        BigDecimal result = aggregator.calculate(components, request);
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, enrollment, effective);
 
-        // ASSERT
-        assertEquals(new BigDecimal("15.00").setScale(2, RoundingMode.HALF_UP), result);
+        assertScaledBigDecimal("15.00", netImpact);
     }
 
     @Test
-    @DisplayName("Waiver Check - Should result in no additional cost when type is WAIVED")
-    void shouldHandleWaivedValueType() {
-        // ARRANGE: $1,000 transaction
-        // + $10.00 Base Fee
-        // + $50.00 Service Fee (WAIVED)
-        // Result should be exactly 10.00
+    @DisplayName("Waiver Check - Should handle 100% discount as a specific waiver")
+    void shouldHandleOneHundredPercentDiscount() {
         List<PriceComponentDetail> components = List.of(
                 createComponentDetail("BASE_FEE", "10.00", ValueType.FEE_ABSOLUTE, null),
-                createComponentDetail("VIP_FEE", "50.00", ValueType.WAIVED, null)
+                createComponentDetail("MAINTENANCE_FEE", "25.00", ValueType.FEE_ABSOLUTE, null),
+                createComponentDetail("WAIVE_MAINTENANCE", "100.00", ValueType.DISCOUNT_PERCENTAGE, "MAINTENANCE_FEE")
         );
 
-        PricingRequest request = PricingRequest.builder()
-                .amount(new BigDecimal("100.00"))
-                .build();
+        // 10.00 (Base) + 25.00 (Maint) - 25.00 (100% Waiver) = 10.00 impact
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, null, LocalDate.now());
 
-        BigDecimal result = aggregator.calculate(components, request);
-
-        assertEquals(new BigDecimal("10.00").setScale(2, RoundingMode.HALF_UP), result);
+        assertScaledBigDecimal("10.00", netImpact);
     }
 
     @Test
-    @DisplayName("Free Count - Should ignore non-monetary components like FREE_COUNT")
+    @DisplayName("Free Count - Should have zero monetary impact")
     void shouldIgnoreFreeCountInCalculation() {
-        // ARRANGE: $1,000 transaction
-        // + $5.00 Fee
-        // + 5 (FREE_COUNT) -> This represents an entitlement, not a price
         List<PriceComponentDetail> components = List.of(
                 createComponentDetail("FIXED_FEE", "5.00", ValueType.FEE_ABSOLUTE, null),
                 createComponentDetail("ATM_ENTITLEMENT", "5.00", ValueType.FREE_COUNT, null)
         );
 
-        PricingRequest request = PricingRequest.builder()
-                .amount(new BigDecimal("10.00"))
-                .build();
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, null, LocalDate.now());
 
-        BigDecimal result = aggregator.calculate(components, request);
-
-        assertEquals(new BigDecimal("5.00").setScale(2, RoundingMode.HALF_UP), result);
-    }
-
-    @Test
-    @DisplayName("Aggregate Mix - Should correctly sum absolute and percentage fees and subtract discounts")
-    void shouldCalculateComplexPricingMixCorrectly() {
-        // ARRANGE: $1,000 transaction
-        // + $10.00 (Fixed Fee)
-        // + 2% Processing Fee ($20.00) -> Total Fees = $30.00
-        // - $5.00 Senior Discount
-        // - 1% Promo Discount (1% of $30.00 = $0.30)
-        // Total Expected: 30.00 - 5.00 - 0.30 = 24.70
-
-        List<PriceComponentDetail> components = List.of(
-                createComponentDetail("BASE_FEE", "10.00", ValueType.FEE_ABSOLUTE, null),
-                createComponentDetail("PROC_FEE", "2.00", ValueType.FEE_PERCENTAGE, null),
-                createComponentDetail("SENIOR_DISC", "5.00", ValueType.DISCOUNT_ABSOLUTE, null),
-                createComponentDetail("PROMO_DISC", "1.00", ValueType.DISCOUNT_PERCENTAGE, null),
-                createComponentDetail("ATM_FREE", "5.00", ValueType.FREE_COUNT, null) // Should be ignored in math
-        );
-
-        PricingRequest request = PricingRequest.builder()
-                .amount(new BigDecimal("1000.00"))
-                .build();
-
-        BigDecimal result = aggregator.calculate(components, request);
-
-        // Fees: 10 + 20 = 30. Discounts: 5 + 0.30 = 5.30. Final: 24.70.
-        assertEquals(new BigDecimal("24.70").setScale(2, RoundingMode.HALF_UP), result);
-    }
-
-    @Test
-    @DisplayName("Floor Zero - Total pricing should never be negative (fees cannot be less than zero)")
-    void shouldReturnZeroIfDiscountsExceedFees() {
-        List<PriceComponentDetail> components = List.of(
-                createComponentDetail("BASE_FEE", "10.00", ValueType.FEE_ABSOLUTE, null),
-                createComponentDetail("HUGE_DISC", "50.00", ValueType.DISCOUNT_ABSOLUTE, null)
-        );
-
-        PricingRequest request = PricingRequest.builder().amount(BigDecimal.ZERO).build();
-        BigDecimal result = aggregator.calculate(components, request);
-
-        assertEquals(new BigDecimal("0.00").setScale(2, RoundingMode.HALF_UP), result);
+        assertScaledBigDecimal("5.00", netImpact);
     }
 
     @Test
     @DisplayName("Rounding - Should handle fractional percentages correctly (e.g., 1.75%)")
     void shouldHandleFractionalPercentages() {
-        // ARRANGE: $100.00 transaction * 1.75% = $1.75
+        // ARRANGE: $100.00 Product Base * 1.75% = $1.75 fee impact
         List<PriceComponentDetail> components = List.of(
                 createComponentDetail("FRACTIONAL_FEE", "1.75", ValueType.FEE_PERCENTAGE, null)
         );
 
-        PricingRequest request = PricingRequest.builder()
-                .amount(new BigDecimal("100.00"))
-                .build();
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, new BigDecimal("100.00"), BigDecimal.ZERO, null, LocalDate.now());
 
-        BigDecimal result = aggregator.calculate(components, request);
+        assertScaledBigDecimal("1.75", netImpact);
+    }
 
-        assertEquals(new BigDecimal("1.75").setScale(2, RoundingMode.HALF_UP), result);
+    @Test
+    @DisplayName("Aggregate Mix - 10% Global Discount should see Product + Fees")
+    void shouldCalculateGlobalDiscountAgainstWholePool() {
+        // ARRANGE: $200.00 Product Base
+        // + $5.00 Bundle Admin Fee
+        // = $205.00 Total Pool
+        // - 10% Global Discount = $20.50
+        // Expected Net Impact: $5.00 - $20.50 = -$15.50
+
+        List<PriceComponentDetail> components = List.of(
+                createComponentDetail("ADMIN_FEE", "5.00", ValueType.FEE_ABSOLUTE, null),
+                createComponentDetail("GLOBAL_PROMO", "10.00", ValueType.DISCOUNT_PERCENTAGE, null)
+        );
+
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, new BigDecimal("200.00"), new BigDecimal("200.00"), null, LocalDate.now());
+
+        // Impact on the price is a reduction of $15.50
+        assertScaledBigDecimal("-15.50", netImpact);
+    }
+
+    // -----------------------------------------------------------------------------------
+    // HELPERS
+    // -----------------------------------------------------------------------------------
+
+    private void assertScaledBigDecimal(String expected, BigDecimal actual) {
+        BigDecimal expectedScaled = new BigDecimal(expected).setScale(SCALE, RoundingMode.HALF_UP);
+        assertEquals(expectedScaled, actual, "Math mismatch in price aggregation");
     }
 
     private PriceComponentDetail createComponentDetail(String code, String amount, ValueType type, String target) {

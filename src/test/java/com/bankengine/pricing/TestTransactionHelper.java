@@ -393,7 +393,7 @@ public class TestTransactionHelper {
         ProductBundle bundle = new ProductBundle();
         bundle.setName(name);
         bundle.setCode("BNDL_" + System.currentTimeMillis());
-        bundle.setEligibilitySegment("RETAIL");
+        bundle.setTargetCustomerSegments("RETAIL");
         bundle.setActivationDate(LocalDate.now());
         bundle.setStatus(bundleStatus);
         bundle.setBankId(TenantContextHolder.getBankId());

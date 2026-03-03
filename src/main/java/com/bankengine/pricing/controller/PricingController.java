@@ -2,10 +2,10 @@ package com.bankengine.pricing.controller;
 
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
-import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
+import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.service.BundlePricingService;
-import com.bankengine.pricing.service.PricingCalculationService;
+import com.bankengine.pricing.service.ProductPricingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PricingController {
 
-    private final PricingCalculationService pricingCalculationService;
+    private final ProductPricingService productPricingService;
     private final BundlePricingService bundlePricingService;
 
     @Operation(summary = "Calculate all pricing components for a single product ID",
@@ -36,9 +36,9 @@ public class PricingController {
     @PostMapping("/calculate/product")
     @PreAuthorize("hasAuthority('pricing:calculate:read')")
     public ResponseEntity<ProductPricingCalculationResult> calculateProductPrice(
-            @Valid @RequestBody PricingRequest request) {
+            @Valid @RequestBody ProductPricingRequest request) {
 
-        ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
+        ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
         return ResponseEntity.ok(result);
     }
 

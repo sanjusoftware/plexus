@@ -250,7 +250,7 @@ These entities are generic and defined once in their respective services:
 | **`PricingTier`**      | 201-1   | `Standard`              | Condition: `SEGMENT=STANDARD` | Rule for standard customers.              |
 | **`PriceValue`**       | 201-1-V | `10.00`                 | `ABSOLUTE`, `USD`             | The actual price for the Standard rule.   |
 | **`PricingTier`**      | 201-2   | `Premium`               | Condition: `SEGMENT=PREMIUM`  | Rule for premium customers.               |
-| **`PriceValue`**       | 201-2-V | `0.00`                  | `WAIVED`                      | The price for the Premium rule (waived).  |
+| **`PriceValue`**       | 201-2-V | `0.00`                  | `DISCOUNT_PERCENTAGE`                      | The price for the Premium rule (waived).  |
 
 ### B. Step 2: Configuring the Product (Linking)
 The `Product` entity (ID 50) is created and then **linked** to the reusable components to create its unique definition:
@@ -421,7 +421,7 @@ Define the foundation for products.
       ],
       "priceValue": {
         "priceAmount": 0.00,
-        "valueType": "WAIVED"
+        "valueType": "DISCOUNT_PERCENTAGE"
       }
     },
     {

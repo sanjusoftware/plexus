@@ -14,14 +14,12 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PricingRequest {
+public class ProductPricingRequest {
 
     @NotNull(message = "Product ID is mandatory.")
     private Long productId;
-
     private Long productBundleId;
-
-    private BigDecimal amount;
+    private BigDecimal transactionAmount;
 
     // Date to check for rate/fee applicability (default to today)
     @Builder.Default

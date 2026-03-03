@@ -15,12 +15,12 @@ import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
-import com.bankengine.pricing.dto.PricingRequest;
+import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.BundlePricingService;
-import com.bankengine.pricing.service.PricingCalculationService;
+import com.bankengine.pricing.service.ProductPricingService;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -45,19 +45,19 @@ public class PublicCatalogService extends BaseService {
     private final ProductRepository productRepository;
     private final ProductBundleRepository productBundleRepository;
     private final ProductMapper productMapper;
-    private final PricingCalculationService pricingCalculationService;
+    private final ProductPricingService productPricingService;
     private final BundlePricingService bundlePricingService;
     private static final String NOT_APPLICABLE_DASH = "—";
 
     public PublicCatalogService(ProductRepository productRepository,
                                 ProductBundleRepository productBundleRepository,
                                 ProductMapper productMapper,
-                                PricingCalculationService pricingCalculationService,
+                                ProductPricingService productPricingService,
                                 BundlePricingService bundlePricingService) {
         this.productRepository = productRepository;
         this.productBundleRepository = productBundleRepository;
         this.productMapper = productMapper;
-        this.pricingCalculationService = pricingCalculationService;
+        this.productPricingService = productPricingService;
         this.bundlePricingService = bundlePricingService;
     }
 
@@ -139,15 +139,15 @@ public class PublicCatalogService extends BaseService {
                     ProductCatalogCard card = toProductCatalogCard(product);
 
                     if (estimatedMonthlyBalance != null) {
-                        PricingRequest request = PricingRequest.builder()
+                        ProductPricingRequest request = ProductPricingRequest.builder()
                                 .productId(product.getId())
-                                .amount(estimatedMonthlyBalance)
+                                .transactionAmount(estimatedMonthlyBalance)
                                 .customerSegment(customerSegment)
                                 .effectiveDate(LocalDate.now())
                                 .build();
 
                         try {
-                            var calculation = pricingCalculationService.getProductPricing(request);
+                            var calculation = productPricingService.getProductPricing(request);
                             card.getPricingSummary().setMainPriceValue(calculation.getFinalChargeablePrice());
                             card.getPricingSummary().setPriceDescription("Personalized for your balance");
                         } catch (Exception e) {
@@ -178,8 +178,7 @@ public class PublicCatalogService extends BaseService {
         BundlePriceResponse pricing = bundlePricingService.calculateTotalBundlePrice(pricingRequest);
 
         List<String> benefits = pricing.getBundleAdjustments().stream()
-                .filter(adj -> adj.getValueType() == ValueType.WAIVED ||
-                               adj.getValueType() == ValueType.DISCOUNT_PERCENTAGE ||
+                .filter(adj -> adj.getValueType() == ValueType.DISCOUNT_PERCENTAGE ||
                                adj.getValueType() == ValueType.DISCOUNT_ABSOLUTE ||
                                adj.getValueType() == ValueType.FREE_COUNT)
                 .map(adj -> adj.getComponentCode().replace("_", " "))

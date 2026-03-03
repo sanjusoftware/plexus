@@ -18,7 +18,7 @@ public class ProductBundleResponse {
     private LocalDate expiryDate;
     private String status;
     private String description;
-    private String eligibilitySegment;
+    private String targetCustomerSegments;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

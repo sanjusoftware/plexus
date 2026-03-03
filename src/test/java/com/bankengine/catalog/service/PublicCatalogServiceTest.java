@@ -12,13 +12,13 @@ import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.dto.BundlePriceResponse;
-import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
+import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.BundlePricingService;
-import com.bankengine.pricing.service.PricingCalculationService;
+import com.bankengine.pricing.service.ProductPricingService;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -51,7 +51,7 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
 
     @Mock private ProductRepository productRepository;
     @Mock private ProductMapper productMapper;
-    @Mock private PricingCalculationService pricingCalculationService;
+    @Mock private ProductPricingService productPricingService;
     @Mock private ProductBundleRepository productBundleRepository;
     @Mock private BundlePricingService bundlePricingService;
 
@@ -70,8 +70,8 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         when(productMapper.toCatalogCard(any())).thenAnswer(inv -> ProductCatalogCard.builder()
                 .pricingSummary(ProductCatalogCard.PricingSummary.builder().build()).build());
 
-        when(pricingCalculationService.getProductPricing(any())).thenAnswer(inv -> {
-            var req = (PricingRequest) inv.getArgument(0);
+        when(productPricingService.getProductPricing(any())).thenAnswer(inv -> {
+            var req = (ProductPricingRequest) inv.getArgument(0);
             BigDecimal price = req.getProductId().equals(101L) ? new BigDecimal("20.00") : new BigDecimal("5.00");
             return ProductPricingCalculationResult.builder().finalChargeablePrice(price).build();
         });
@@ -193,7 +193,7 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder()
                 .pricingSummary(ProductCatalogCard.PricingSummary.builder().build()).build());
 
-        when(pricingCalculationService.getProductPricing(any())).thenThrow(new RuntimeException("Service Down"));
+        when(productPricingService.getProductPricing(any())).thenThrow(new RuntimeException("Service Down"));
 
         List<ProductCatalogCard> results = publicCatalogService.getRecommendedProducts("RETAIL", new BigDecimal("1000"));
         assertEquals("Pricing currently unavailable", results.get(0).getEligibilityMessage());
@@ -306,7 +306,7 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         ProductBundle bundle = createMockBundle(500L);
 
         var adj = mock(ProductPricingCalculationResult.PriceComponentDetail.class);
-        when(adj.getValueType()).thenReturn(PriceValue.ValueType.WAIVED);
+        when(adj.getValueType()).thenReturn(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
         when(adj.getComponentCode()).thenReturn("MONTHLY_WAIVER");
 
         BundlePriceResponse response = BundlePriceResponse.builder()
@@ -322,11 +322,10 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         // 5. Assert
         assertAll(
                 () -> assertEquals(new BigDecimal("5.00"), result.getPricing().getTotalSavings()),
-                // If actual is 0, verify the service's .contains("WAIVER") check against "WAIVED"
                 () -> {
-                    boolean match = PriceValue.ValueType.WAIVED.name().contains("WAIVE");
+                    boolean match = PriceValue.ValueType.DISCOUNT_PERCENTAGE.name().contains("WAIVE");
                     if (match && result.getPricing().getAdjustmentLabels().isEmpty()) {
-                        fail("Filter logic in service didn't match 'WAIVED'. Check if service uses .contains('WAIVER')");
+                        fail("Filter logic in service didn't match 'DISCOUNT_PERCENTAGE'. Check if service uses .contains('WAIVER')");
                     }
                 }
         );

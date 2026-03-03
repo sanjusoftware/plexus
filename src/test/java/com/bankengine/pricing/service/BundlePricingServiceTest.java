@@ -1,7 +1,5 @@
 package com.bankengine.pricing.service;
 
-import com.bankengine.catalog.model.BundleProductLink;
-import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.pricing.dto.BundlePriceRequest;
@@ -20,9 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -34,153 +35,201 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class BundlePricingServiceTest extends BaseServiceTest {
 
-    @Mock
-    private PricingCalculationService pricingCalculationService;
-    @Mock
-    private BundleRulesEngineService bundleRulesEngineService;
-    @Mock
-    private ProductBundleRepository productBundleRepository;
-    @Mock
-    private BundlePricingLinkRepository bundlePricingLinkRepository;
+    @Mock private ProductPricingService productPricingService;
+    @Mock private BundleRulesEngineService bundleRulesEngineService;
+    @Mock private ProductBundleRepository productBundleRepository;
+    @Mock private BundlePricingLinkRepository bundlePricingLinkRepository;
 
-    @InjectMocks
-    private BundlePricingService bundlePricingService;
+    // Spy allows us to use the real logic of the refactored aggregator
+    @Spy private PriceAggregator priceAggregator = new PriceAggregator();
+
+    @InjectMocks private BundlePricingService bundlePricingService;
+
+    // -----------------------------------------------------------------------------------
+    // VALIDATION TESTS
+    // -----------------------------------------------------------------------------------
 
     @Test
     @DisplayName("Branch: Should throw ValidationException when product list is empty")
     void calculateTotalBundlePrice_EmptyProducts_ThrowsException() {
-        BundlePriceRequest request = BundlePriceRequest.builder()
-                .products(List.of())
-                .build();
-
+        BundlePriceRequest request = BundlePriceRequest.builder().products(List.of()).build();
         assertThrows(ValidationException.class, () -> bundlePricingService.calculateTotalBundlePrice(request));
     }
 
+    // -----------------------------------------------------------------------------------
+    // CORE LOGIC TESTS (EXHAUSTIVE)
+    // -----------------------------------------------------------------------------------
+
     @Test
-    @DisplayName("Exhaustive: Should calculate Mixed Adjustments (Fixed ABS, Rule PCT, Waived, FreeCount)")
+    @DisplayName("Exhaustive: Should calculate $184.50 (10% Discount on Gross Pool)")
     void calculateTotalBundlePrice_ExhaustiveLogic() {
         // 1. Setup Request: Two products totaling $200
         Long bundleId = 500L;
-        var pReq1 = new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO);
-        var pReq2 = new BundlePriceRequest.ProductRequest(11L, BigDecimal.ZERO);
-
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
-                .products(List.of(pReq1, pReq2))
+                .products(List.of(
+                    new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO),
+                    new BundlePriceRequest.ProductRequest(11L, BigDecimal.ZERO)
+                ))
                 .customerSegment("GOLD")
                 .build();
 
-        // Mock individual products returning $100 each
-        when(pricingCalculationService.getProductPricing(any())).thenReturn(
-                ProductPricingCalculationResult.builder()
-                        .finalChargeablePrice(new BigDecimal("100.00"))
-                        .build()
+        // Each product returns $100.00
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build()
         );
 
-        // 2. Mock Bundle with 1 Fixed Fee ($5 Absolute) and 1 Rule Component
-        PricingComponent feeComp = new PricingComponent();
-        feeComp.setName("BUNDLE_ADMIN_FEE");
+        // 2. Setup Bundle Links ($5.00 Fee)
+        BundlePricingLink fixedFeeLink = BundlePricingLink.builder()
+                .pricingComponent(PricingComponent.builder().name("BUNDLE_ADMIN_FEE").build())
+                .fixedValue(new BigDecimal("5.00"))
+                .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
+                .useRulesEngine(false)
+                .build();
 
-        BundlePricingLink fixedFeeLink = new BundlePricingLink();
-        fixedFeeLink.setPricingComponent(feeComp);
-        fixedFeeLink.setFixedValue(new BigDecimal("5.00"));
-        fixedFeeLink.setFixedValueType(PriceValue.ValueType.FEE_ABSOLUTE);
-        fixedFeeLink.setUseRulesEngine(false);
+        List<BundlePricingLink> activeLinks = List.of(fixedFeeLink);
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(activeLinks);
+        when(productBundleRepository.findById(bundleId)).thenReturn(Optional.of(ProductBundle.builder().id(bundleId).build()));
 
-        PricingComponent ruleComp = new PricingComponent();
-        ruleComp.setId(99L);
-        ruleComp.setName("DYNAMIC_PROMO");
-
-        BundlePricingLink rulesLink = new BundlePricingLink();
-        rulesLink.setPricingComponent(ruleComp);
-        rulesLink.setUseRulesEngine(true);
-
-        // STUB REPOSITORY: Tell the service these links are "active" in the DB
-        List<BundlePricingLink> activeLinks = List.of(fixedFeeLink, rulesLink);
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any()))
-                .thenReturn(activeLinks);
-
-        ProductBundle bundle = new ProductBundle();
-        bundle.setId(bundleId);
-        bundle.setBundlePricingLinks(activeLinks);
-
-        // Setup internal products for Drools context
-        Product p1 = new Product(); p1.setId(10L);
-        Product p2 = new Product(); p2.setId(11L);
-        BundleProductLink bpl1 = new BundleProductLink(); bpl1.setProduct(p1);
-        BundleProductLink bpl2 = new BundleProductLink(); bpl2.setProduct(p2);
-        bundle.setContainedProducts(List.of(bpl1, bpl2));
-
-        when(productBundleRepository.findById(bundleId)).thenReturn(Optional.of(bundle));
-
-        // 3. Mock Rules Engine: Adding a 10% Discount and a WAIVED component
+        // 3. Mock Rules: 10% Global Discount (No Target)
+        // Math: Product($200) + Fee($5) = $205 Gross.
+        // Discount: 10% of $205 = $20.50
         BundlePricingInput rulesOutput = new BundlePricingInput();
         rulesOutput.addAdjustment("BUNDLE_DISCOUNT", new BigDecimal("10.00"), "DISCOUNT_PERCENTAGE");
-        rulesOutput.addAdjustment("OVERDRAFT_PROTECTION", BigDecimal.ZERO, "WAIVED");
-
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(rulesOutput);
 
         // 4. Act
         BundlePriceResponse response = bundlePricingService.calculateTotalBundlePrice(request);
 
-        // 5. Assert Math and Logic Branches
-        // Base Products = 200
-        // Fees = 5 (Fixed)
-        // Gross = 205
-        // Discounts = 10% of 200 (base is products only) = -20
-        // Net = 205 - 20 = 185
+        // 5. Assert: Verify the Global Pool Logic
         assertAll(
-                () -> assertEquals(new BigDecimal("205.00"), response.getGrossTotalAmount(), "Gross should include fixed fees"),
-                () -> assertEquals(new BigDecimal("185.00"), response.getNetTotalAmount(), "Net should apply percentage discount"),
-                () -> assertEquals(3, response.getBundleAdjustments().size(), "Should have Admin Fee, Discount, and Waived items"),
+                () -> assertScaledBigDecimal("205.00", response.getGrossTotalAmount(), "Gross = 200 products + 5 bundle fee"),
+                () -> assertScaledBigDecimal("184.50", response.getNetTotalAmount(), "Net = 205 - 20.50 discount"),
 
-                // Verify percentage calculation logic
                 () -> {
                     var discount = response.getBundleAdjustments().stream()
-                            .filter(a -> a.getComponentCode().equals("BUNDLE_DISCOUNT"))
-                            .findFirst().orElseThrow();
-                    assertEquals(new BigDecimal("-20.00"), discount.getCalculatedAmount());
-                },
-
-                // Verify WAIVED logic (0 amount, but present)
-                () -> assertTrue(response.getBundleAdjustments().stream()
-                        .anyMatch(a -> a.getValueType() == PriceValue.ValueType.WAIVED), "Waived item should be present")
+                            .filter(a -> a.getComponentCode().equals("BUNDLE_DISCOUNT")).findFirst().orElseThrow();
+                    assertScaledBigDecimal("-20.50", discount.getCalculatedAmount(), "Discount applies to the $205.00 total pool");
+                }
         );
     }
 
+    // -----------------------------------------------------------------------------------
+    // SCENARIO TESTS
+    // -----------------------------------------------------------------------------------
+
     @Test
-    @DisplayName("Branch: Should handle FREE_COUNT and Absolute Discount")
-    void calculateTotalBundlePrice_FreeCountAndAbsolute() {
-        Long bundleId = 1L;
+    @DisplayName("Scenario: Targeted Discount should only apply to the specific target fee")
+    void calculateTotalBundlePrice_TargetedDiscountLogic() {
         BundlePriceRequest request = BundlePriceRequest.builder()
-                .productBundleId(bundleId)
+                .productBundleId(1L)
                 .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
                 .build();
 
-        when(pricingCalculationService.getProductPricing(any())).thenReturn(
-                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("50.00")).build()
-        );
+        // Product Base Fee is $1000
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("1000.00")).build());
 
-        ProductBundle bundle = new ProductBundle();
-        bundle.setBundlePricingLinks(new ArrayList<>());
-        bundle.setContainedProducts(new ArrayList<>());
-        when(productBundleRepository.findById(any())).thenReturn(Optional.of(bundle));
+        // Setup two different Bundle Fees: Service Fee($100) and Tech Fee($50)
+        BundlePricingLink feeALink = createLink("SERVICE_FEE", "100.00");
+        BundlePricingLink feeBLink = createLink("TECH_FEE", "50.00");
 
-        // Return empty list for this test as we only want Rules Engine adjustments
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any()))
-                .thenReturn(new ArrayList<>());
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(feeALink, feeBLink));
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(ProductBundle.builder().build()));
 
+        // 50% discount targeting TECH_FEE only
         BundlePricingInput rulesOutput = new BundlePricingInput();
-        rulesOutput.addAdjustment("FREE_TRANSFERS", new BigDecimal("5.00"), "FREE_COUNT");
-        rulesOutput.addAdjustment("LOYALTY_CREDIT", new BigDecimal("10.00"), "DISCOUNT_ABSOLUTE");
-
+        rulesOutput.addAdjustment("TECH_DISCOUNT", new BigDecimal("50.00"), "DISCOUNT_PERCENTAGE", "TECH_FEE");
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(rulesOutput);
 
         var response = bundlePricingService.calculateTotalBundlePrice(request);
 
-        // Net = 50 - 10 = 40. (FREE_COUNT doesn't impact net price math, just visibility)
-        assertEquals(new BigDecimal("40.00"), response.getNetTotalAmount());
-        assertTrue(response.getBundleAdjustments().stream()
-                .anyMatch(a -> a.getValueType() == PriceValue.ValueType.FREE_COUNT));
+        // Math: 1000 + 100 + 50 = 1150 Gross.
+        // Discount: 50% of 50 = 25.00
+        // Net: 1150 - 25 = 1125.00
+        assertAll(
+                () -> assertScaledBigDecimal("1150.00", response.getGrossTotalAmount()),
+                () -> assertScaledBigDecimal("1125.00", response.getNetTotalAmount()),
+                () -> {
+                    var discount = response.getBundleAdjustments().stream()
+                            .filter(a -> a.getComponentCode().equals("TECH_DISCOUNT")).findFirst().orElseThrow();
+                    assertScaledBigDecimal("-25.00", discount.getCalculatedAmount());
+                }
+        );
+    }
+
+    @Test
+    @DisplayName("Scenario: FREE_COUNT should have 0.00 monetary impact")
+    void calculateTotalBundlePrice_FreeCountAssertion() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("50.00")).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(new ArrayList<>());
+
+        BundlePricingInput rulesOutput = new BundlePricingInput();
+        rulesOutput.addAdjustment("FREE_TRANSFERS", new BigDecimal("5.00"), "FREE_COUNT");
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(rulesOutput);
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        var freeCount = response.getBundleAdjustments().stream().findFirst().orElseThrow();
+        assertScaledBigDecimal("0.00", freeCount.getCalculatedAmount(), "Monetary impact of free count must be zero");
+    }
+
+    @Test
+    @DisplayName("Scenario: Pro-Rata applies to bundle fees (50% for mid-month)")
+    void calculateTotalBundlePrice_ApplyProRata() {
+        LocalDate midMonth = LocalDate.of(2024, 6, 16); // 15 days left in 30-day month
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .enrollmentDate(midMonth)
+                .effectiveDate(midMonth)
+                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
+
+        BundlePricingLink link = BundlePricingLink.builder()
+                .pricingComponent(PricingComponent.builder().name("SERVICE_FEE").build())
+                .fixedValue(new BigDecimal("20.00"))
+                .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
+                .build();
+
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(link));
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        // $100 product fee + ($20 fee pro-rated by 50% = $10) = $110.00
+        assertScaledBigDecimal("110.00", response.getNetTotalAmount());
+        assertScaledBigDecimal("10.00", response.getBundleAdjustments().getFirst().getCalculatedAmount());
+    }
+
+    // -----------------------------------------------------------------------------------
+    // HELPERS
+    // -----------------------------------------------------------------------------------
+
+    private void assertScaledBigDecimal(String expected, BigDecimal actual) {
+        assertScaledBigDecimal(expected, actual, null);
+    }
+
+    private void assertScaledBigDecimal(String expected, BigDecimal actual, String message) {
+        BigDecimal expectedScaled = new BigDecimal(expected).setScale(2, RoundingMode.HALF_UP);
+        assertEquals(expectedScaled, actual, message);
+    }
+
+    private BundlePricingLink createLink(String name, String value) {
+        return BundlePricingLink.builder()
+                .pricingComponent(PricingComponent.builder().name(name).build())
+                .fixedValue(new BigDecimal(value))
+                .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
+                .build();
     }
 }

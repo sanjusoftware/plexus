@@ -19,8 +19,15 @@ public class BundleRuleBuilderService extends AbstractRuleBuilderService {
         super(componentRepository, metadataService, droolsExpressionBuilder);
     }
 
-    @Override protected String getFactType() { return "com.bankengine.rules.model.BundlePricingInput"; }
-    @Override protected String getPackageSubPath() { return "bundle"; }
+    @Override
+    protected String getFactType() {
+        return "com.bankengine.rules.model.BundlePricingInput";
+    }
+
+    @Override
+    protected String getPackageSubPath() {
+        return "bundle";
+    }
 
     @Override
     protected List<PricingComponent> fetchComponents() {
@@ -36,9 +43,10 @@ public class BundleRuleBuilderService extends AbstractRuleBuilderService {
         }
         PriceValue pv = tier.getPriceValues().iterator().next();
         return String.format("""
-                    $input.addAdjustment("%s_Tier%d", new BigDecimal("%s"), "%s");
-                    update($input);""",
-                component.getName().replaceAll("\\s", "_"), tier.getId(),
-                pv.getRawValue().toPlainString(), pv.getValueType().name());
+                        $input.addAdjustment("%s", new BigDecimal("%s"), "%s");
+                        update($input);""",
+                component.getCode(),
+                pv.getRawValue().toPlainString(),
+                pv.getValueType().name());
     }
 }

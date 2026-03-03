@@ -103,7 +103,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 %s
                     then
                 %s
-                end""", ruleName, tier.getId(), buildLHSCondition(tier, component.getId()), rhsWithLogging);
+                end""", ruleName, tier.getId(), buildLHSCondition(tier, component.getId(), component.getCode()), rhsWithLogging);
     }
 
     // --- Common Shared Logic ---
@@ -142,24 +142,43 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 """, getPackageSubPath(), safeBankId, factImport);
     }
 
-    protected String buildLHSCondition(PricingTier tier, Long componentId) {
-        if (tier.getId() == null || tier.getId() <= 0) {
-            throw new IllegalStateException("Cannot build DRL because Tier ID is missing.");
-        }
-
+    /**
+     * @param componentCode Refactored to use Component Code to match RHS addAdjustment calls
+     */
+    protected String buildLHSCondition(PricingTier tier, Long componentId, String componentCode) {
         String bankId = getSafeBankIdForDrl();
-        String factName = getFactType().substring(getFactType().lastIndexOf(".") + 1);
+        String factFqn = getFactType();
+        String factName = factFqn.substring(factFqn.lastIndexOf(".") + 1);
 
         StringBuilder conditionBuilder = new StringBuilder();
 
-        // 1. Check Bank Context
+        // 1. Context Filter: Bank and Component ID
         conditionBuilder.append(String.format("bankId == \"%s\"", bankId));
-
-        // 2. Check Targeted Tier ID (Date-Aware Filter) - activePricingTierIds
-        // This is the "kill switch" for rules whose effective dates haven't arrived.
+        conditionBuilder.append(String.format(", targetPricingComponentIds contains %dL", componentId));
         conditionBuilder.append(String.format(", activePricingTierIds contains %dL", tier.getId()));
 
-        // 3. Append User-Defined Tier Conditions (Segment, Amount, etc.)
+        // LOOP PREVENTION: Surgical fix for recursion logs
+        if ("BundlePricingInput".equals(factName)) {
+            // Check against adjustments keySet using the unique component code
+            conditionBuilder.append(String.format(", adjustments.keySet() not contains \"%s\"", componentCode));
+        } else if ("PricingInput".equals(factName)) {
+            // For standard pricing, we check the ruleFired flag
+            conditionBuilder.append(", ruleFired == false");
+        }
+
+        // 2. Automatic Threshold Logic (Min/Max)
+        String amountField = factName.equals("BundlePricingInput") ? "grossTotalAmount" : "transactionAmount";
+
+        if (tier.getMinThreshold() != null) {
+            conditionBuilder.append(String.format(", %s >= new java.math.BigDecimal(\"%s\")",
+                    amountField, tier.getMinThreshold().toPlainString()));
+        }
+        if (tier.getMaxThreshold() != null) {
+            conditionBuilder.append(String.format(", %s <= new java.math.BigDecimal(\"%s\")",
+                    amountField, tier.getMaxThreshold().toPlainString()));
+        }
+
+        // 3. Custom Attributes (Segments, etc.) via DroolsExpressionBuilder
         if (tier.getConditions() != null && !tier.getConditions().isEmpty()) {
             conditionBuilder.append(", ");
             Iterator<TierCondition> it = tier.getConditions().iterator();
@@ -170,11 +189,12 @@ public abstract class AbstractRuleBuilderService extends BaseService {
 
                 if (it.hasNext()) {
                     String connector = cond.getConnector() != null ? cond.getConnector().name() : "AND";
-                    conditionBuilder.append(" ").append(connector).append(" ");
+                    conditionBuilder.append(connector.equalsIgnoreCase("OR") ? " || " : " && ");
                 }
             }
         }
-        return String.format("        $input : %s ( %s )", factName, conditionBuilder.toString().trim());
+
+        return String.format("        $input : %s ( %s )", factName, conditionBuilder.toString());
     }
 
     protected String buildPlaceholderRules() {

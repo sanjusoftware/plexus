@@ -6,7 +6,7 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.dto.BundlePriceRequest;
-import com.bankengine.pricing.dto.PricingRequest;
+import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -118,10 +118,10 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             return pId;
         });
 
-        PricingRequest request = new PricingRequest();
+        ProductPricingRequest request = new ProductPricingRequest();
         request.setProductId(productId);
         request.setCustomerSegment("RETAIL");
-        request.setAmount(BigDecimal.valueOf(1000.0));
+        request.setTransactionAmount(BigDecimal.valueOf(1000.0));
         request.setEffectiveDate(LocalDate.now());
         request.setCustomAttributes(Map.of("transactionAmount", new BigDecimal("1000")));
 
@@ -257,10 +257,10 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             return pId;
         });
 
-        PricingRequest request = new PricingRequest();
+        ProductPricingRequest request = new ProductPricingRequest();
         request.setProductId(productId);
         request.setCustomerSegment("RETAIL");
-        request.setAmount(new BigDecimal("1000.00"));
+        request.setTransactionAmount(new BigDecimal("1000.00"));
         request.setEffectiveDate(LocalDate.now());
 
         // 2. ACT & ASSERT
@@ -308,10 +308,10 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             productRuleBuilderService.rebuildRules();
         });
 
-        PricingRequest request = new PricingRequest();
+        ProductPricingRequest request = new ProductPricingRequest();
         request.setProductId(productId);
         request.setCustomerSegment("DEFAULT_SEGMENT");
-        request.setAmount(new BigDecimal("1000.00"));
+        request.setTransactionAmount(new BigDecimal("1000.00"));
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -352,10 +352,10 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         txHelper.flushAndClear();
 
-        PricingRequest request = new PricingRequest();
+        ProductPricingRequest request = new ProductPricingRequest();
         request.setProductId(productId);
         request.setCustomerSegment("RETAIL");
-        request.setAmount(BigDecimal.ZERO);
+        request.setTransactionAmount(BigDecimal.ZERO);
         request.setEffectiveDate(LocalDate.now());
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
@@ -371,7 +371,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {PRICING_READER_ROLE})
     void calculateProductPrice_ShouldReturn400_WhenValidationFails() throws Exception {
-        PricingRequest request = new PricingRequest();
+        ProductPricingRequest request = new ProductPricingRequest();
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -382,7 +382,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void calculateProductPrice_ShouldReturn401_WhenUnauthenticated() throws Exception {
-        PricingRequest request = new PricingRequest();
+        ProductPricingRequest request = new ProductPricingRequest();
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)

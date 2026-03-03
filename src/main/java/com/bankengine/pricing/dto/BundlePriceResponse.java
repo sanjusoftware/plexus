@@ -21,7 +21,7 @@ public class BundlePriceResponse {
     @Builder
     public static class ProductPricingResult {
         private Long productId;
-        private BigDecimal productTotalAmount;
+        private BigDecimal productTotalFee;
 
         private List<ProductPricingCalculationResult.PriceComponentDetail> pricingComponents;
     }

@@ -34,12 +34,11 @@ public class ProductRuleBuilderService extends AbstractRuleBuilderService {
         }
 
         PriceValue pv = tier.getPriceValues().iterator().next();
-
-        // Ensure we have a default value type if one isn't specified,
-        // though our validation should catch this earlier.
         String valueTypeStr = pv.getValueType() != null ? pv.getValueType().name() : "FEE_ABSOLUTE";
 
         return String.format("""
+                    $input.setRuleFired(true);
+                    update($input);
                     PriceValue priceValueFact = new PriceValue();
                     priceValueFact.setMatchedTierId(%dL);
                     priceValueFact.setRawValue(new BigDecimal("%s"));

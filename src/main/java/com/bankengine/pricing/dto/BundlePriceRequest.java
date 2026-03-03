@@ -9,28 +9,28 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class BundlePriceRequest {
-
     @NotNull(message = "Product Bundle ID is mandatory for pricing.")
     private Long productBundleId;
 
     @NotNull(message = "A list of products is mandatory for bundle calculation.")
     private List<ProductRequest> products;
 
-    // --- Contextual Inputs ---
     @NotNull(message = "Customer Segment is mandatory for pricing rule matching.")
     private String customerSegment;
 
     @Builder.Default
     private LocalDate effectiveDate = LocalDate.now();
 
-    // ADDED: To pass any metadata (e.g., yearsWithBank, region, etc.)
-    private java.util.Map<String, Object> customAttributes;
+    private LocalDate enrollmentDate; // For pro-rata calculation
+
+    private Map<String, Object> customAttributes;
 
     @Data
     @Builder
@@ -40,6 +40,6 @@ public class BundlePriceRequest {
         @NotNull
         private Long productId;
         @NotNull
-        private BigDecimal amount;
+        private BigDecimal transactionAmount;
     }
 }

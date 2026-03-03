@@ -220,7 +220,7 @@ public class TestDataSeeder implements CommandLineRunner {
         bundle.setDescription("Comprehensive bundle for " + bankId);
         bundle.setStatus(VersionableEntity.EntityStatus.ACTIVE);
         bundle.setActivationDate(LocalDate.now());
-        bundle.setEligibilitySegment("RETAIL");
+        bundle.setTargetCustomerSegments("RETAIL");
 
         List<BundleProductLink> links = new ArrayList<>();
         links.add(createBundleLink(bundle, savings, true, true, bankId));

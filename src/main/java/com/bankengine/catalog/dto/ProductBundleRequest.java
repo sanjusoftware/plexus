@@ -27,8 +27,8 @@ public class ProductBundleRequest {
     @Size(max = 500, message = "Description is too long.")
     private String description;
 
-    @NotBlank(message = "Eligibility segment is required (e.g., Retail, SME).")
-    private String eligibilitySegment;
+    @NotBlank(message = "Target customer segments is required (e.g., Retail,SME).")
+    private String targetCustomerSegments;
 
     @FutureOrPresent(message = "Activation date cannot be in the past.")
     private LocalDate activationDate;

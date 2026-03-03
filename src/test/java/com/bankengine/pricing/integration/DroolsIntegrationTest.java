@@ -7,15 +7,15 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.data.seeding.CoreMetadataSeeder;
 import com.bankengine.pricing.TestTransactionHelper;
-import com.bankengine.pricing.dto.PricingRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
+import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.TierCondition.Operator;
 import com.bankengine.pricing.repository.*;
-import com.bankengine.pricing.service.PricingCalculationService;
 import com.bankengine.pricing.service.PricingComponentService;
+import com.bankengine.pricing.service.ProductPricingService;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
@@ -57,7 +57,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ProductPricingLinkRepository productPricingLinkRepository;
     @Autowired
-    private PricingCalculationService pricingCalculationService;
+    private ProductPricingService productPricingService;
     @Autowired
     private PricingComponentService pricingComponentService;
     @Autowired
@@ -86,50 +86,44 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setup() {
-        TenantContextHolder.setSystemMode(true);
         TenantContextHolder.setBankId(TEST_BANK_ID);
 
-        try {
-            txHelper.doInTransaction(() -> {
-                cleanupData();
-                coreMetadataSeeder.seedCorePricingInputMetadata(TEST_BANK_ID);
-                ProductType type = productTypeRepository.save(ProductType.builder()
-                        .name("LOAN_TYPE").bankId(TEST_BANK_ID).build());
 
-                persistedProduct = productRepository.save(Product.builder()
-                        .name("Test Loan").code("TEST-LOAN-001")
-                        .productType(type).category("RETAIL").bankId(TEST_BANK_ID).build());
+        txHelper.doInTransaction(() -> {
+            cleanupData();
+            coreMetadataSeeder.seedCorePricingInputMetadata(TEST_BANK_ID);
+            ProductType type = productTypeRepository.save(ProductType.builder()
+                    .name("LOAN_TYPE").bankId(TEST_BANK_ID).build());
 
-                PricingComponent component = pricingComponentRepository.save(PricingComponent.builder()
-                        .name(TEST_COMPONENT_NAME).code("FEE-001")
-                        .type(PricingComponent.ComponentType.FEE).bankId(TEST_BANK_ID).build());
+            persistedProduct = productRepository.save(Product.builder()
+                    .name("Test Loan").code("TEST-LOAN-001")
+                    .productType(type).category("RETAIL").bankId(TEST_BANK_ID).build());
 
-                PricingTier tier = PricingTier.builder()
-                        .pricingComponent(component).name("Base Tier")
-                        .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
+            PricingComponent component = pricingComponentRepository.save(PricingComponent.builder()
+                    .name(TEST_COMPONENT_NAME).code("FEE-001")
+                    .type(PricingComponent.ComponentType.FEE).bankId(TEST_BANK_ID).build());
 
-                tier.getConditions().add(TierCondition.builder()
-                        .pricingTier(tier).attributeName("customerSegment").operator(Operator.EQ)
-                        .attributeValue(TEST_SEGMENT).connector(TierCondition.LogicalConnector.AND)
-                        .bankId(TEST_BANK_ID).build());
+            PricingTier tier = PricingTier.builder()
+                    .pricingComponent(component).name("Base Tier")
+                    .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
-                tier.getPriceValues().add(PriceValue.builder()
-                        .pricingTier(tier).rawValue(EXPECTED_PRICE_INITIAL)
-                        .valueType(ValueType.FEE_ABSOLUTE).bankId(TEST_BANK_ID).build());
+            tier.getConditions().add(TierCondition.builder()
+                    .pricingTier(tier).attributeName("customerSegment").operator(Operator.EQ)
+                    .attributeValue(TEST_SEGMENT).connector(TierCondition.LogicalConnector.AND)
+                    .bankId(TEST_BANK_ID).build());
 
-                pricingTierRepository.save(tier);
-                this.existingTierId = tier.getId();
+            tier.getPriceValues().add(PriceValue.builder()
+                    .pricingTier(tier).rawValue(EXPECTED_PRICE_INITIAL)
+                    .valueType(ValueType.FEE_ABSOLUTE).bankId(TEST_BANK_ID).build());
 
-                productPricingLinkRepository.save(ProductPricingLink.builder()
-                        .product(persistedProduct).pricingComponent(component)
-                        .bankId(TEST_BANK_ID).effectiveDate(LocalDate.now().minusDays(5))
-                        .useRulesEngine(true).build());
-            });
+            pricingTierRepository.save(tier);
+            this.existingTierId = tier.getId();
 
-        } finally {
-            TenantContextHolder.clear();
-            TenantContextHolder.setSystemMode(false);
-        }
+            productPricingLinkRepository.save(ProductPricingLink.builder()
+                    .product(persistedProduct).pricingComponent(component)
+                    .bankId(TEST_BANK_ID).effectiveDate(LocalDate.now().minusDays(5))
+                    .useRulesEngine(true).build());
+        });
 
         reloadRules();
     }
@@ -154,11 +148,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Success - Standard rule execution returns expected price")
     void testStandardRuleExecution_Success() {
-        PricingRequest request = PricingRequest.builder()
+        ProductPricingRequest request = ProductPricingRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT).amount(TEST_AMOUNT).build();
+                .customerSegment(TEST_SEGMENT).transactionAmount(TEST_AMOUNT).build();
 
-        ProductPricingCalculationResult result = pricingCalculationService.getProductPricing(request);
+        ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
         assertEquals(EXPECTED_PRICE_INITIAL, result.getComponentBreakdown().getFirst().getRawValue());
     }
 
@@ -189,19 +183,19 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                     .product(persistedProduct)
                     .pricingComponent(futureLinkComponent)
                     .bankId(TEST_BANK_ID)
-                    .effectiveDate(LocalDate.now().plusDays(10)) // THE FUTURE DATE IS HERE
+                    .effectiveDate(LocalDate.now().plusDays(10)) // Future date
                     .useRulesEngine(true).build());
         });
 
         reloadRules();
 
         // 3. Requesting pricing for TODAY
-        PricingRequest request = PricingRequest.builder()
+        ProductPricingRequest request = ProductPricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .effectiveDate(LocalDate.now()).build();
 
-        List<PriceComponentDetail> results = pricingCalculationService.getProductPricing(request).getComponentBreakdown();
+        List<PriceComponentDetail> results = productPricingService.getProductPricing(request).getComponentBreakdown();
 
         // 4. Verify that the Tier belonging to the future-dated Link did not fire
         boolean ruleFromFutureLinkFired = results.stream()
@@ -224,12 +218,12 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         reloadRules();
 
-        PricingRequest request = PricingRequest.builder()
+        ProductPricingRequest request = ProductPricingRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .effectiveDate(LocalDate.now())
                 .customerSegment(TEST_SEGMENT).build();
 
-        assertThrows(NotFoundException.class, () -> pricingCalculationService.getProductPricing(request));
+        assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
     }
 
     @Test
@@ -244,10 +238,10 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentService.deletePricingComponent(compId);
         });
         reloadRules();
-        PricingRequest request = PricingRequest.builder()
+        ProductPricingRequest request = ProductPricingRequest.builder()
                 .productId(this.persistedProduct.getId()).customerSegment(TEST_SEGMENT).build();
 
-        assertThrows(NotFoundException.class, () -> pricingCalculationService.getProductPricing(request));
+        assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
     }
 
     @Test
@@ -281,11 +275,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         reloadRules();
 
-        PricingRequest request = PricingRequest.builder()
+        ProductPricingRequest request = ProductPricingRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT).amount(TEST_AMOUNT).build();
+                .customerSegment(TEST_SEGMENT).transactionAmount(TEST_AMOUNT).build();
 
-        List<PriceComponentDetail> results = pricingCalculationService.getProductPricing(request).getComponentBreakdown();
+        List<PriceComponentDetail> results = productPricingService.getProductPricing(request).getComponentBreakdown();
 
         assertTrue(results.stream().anyMatch(r -> r.getValueType() == ValueType.DISCOUNT_PERCENTAGE),
                 "Should have found a percentage discount in the breakdown");

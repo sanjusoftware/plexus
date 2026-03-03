@@ -43,6 +43,7 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
         // ARRANGE
         PricingComponent waiver = mock(PricingComponent.class);
         when(waiver.getName()).thenReturn("Staff Waiver");
+        when(waiver.getCode()).thenReturn("STAFF_WAIVER_01");
 
         PricingTier tier = mock(PricingTier.class);
         when(tier.getId()).thenReturn(999L);
@@ -53,8 +54,6 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
 
         when(tier.getPriceValues()).thenReturn(Set.of(pv));
         when(waiver.getPricingTiers()).thenReturn(List.of(tier));
-
-        // Mock repository to return only the allowed types
         when(componentRepository.findByTypeIn(any())).thenReturn(List.of(waiver));
 
         // ACT
@@ -67,8 +66,8 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
         assertTrue(drl.contains("$input : BundlePricingInput"), "Incorrect fact type");
 
         // Verify RHS Action
-        assertTrue(drl.contains("$input.addAdjustment(\"Staff_Waiver_Tier999\", new BigDecimal(\"100.00\"), \"DISCOUNT_PERCENTAGE\");"),
-                "RHS should call addAdjustment with sanitized name");
+        assertTrue(drl.contains("$input.addAdjustment(\"STAFF_WAIVER_01\""),
+                "RHS should call addAdjustment with the component code. Found: " + drl);
         assertTrue(drl.contains("update($input);"), "Bundle rules must update the existing input fact");
 
         // Optional: Verify the debug print is present
