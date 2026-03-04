@@ -318,4 +318,81 @@ class PricingComponentServiceTest extends BaseServiceTest {
         verify(componentRepository).save(draft);
         verify(reloadService).reloadKieContainer();
     }
+
+    @Test
+    @DisplayName("Branch: Should handle tiers with conditions and values in attachTiersToComponent")
+    void testAttachTiersToComponent_complex() {
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+
+        PricingTierRequest tierReq = new PricingTierRequest();
+        tierReq.setConditions(List.of(new TierConditionDto()));
+        tierReq.setPriceValue(new PriceValueRequest());
+
+        when(pricingTierMapper.toEntity(any())).thenReturn(new PricingTier());
+        when(tierConditionMapper.toEntity(any())).thenReturn(new TierCondition());
+        when(priceValueMapper.toEntity(any())).thenReturn(new PriceValue());
+
+        // This is called inside createComponent
+        PricingComponentRequest request = newPricingComponentRequest("Complex");
+        request.setPricingTiers(List.of(tierReq));
+
+        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(pricingComponentMapper.toEntity(any())).thenReturn(component);
+        when(componentRepository.save(any())).thenReturn(component);
+
+        componentService.createComponent(request);
+
+        assertNotNull(component.getPricingTiers());
+        assertEquals(1, component.getPricingTiers().size());
+        PricingTier tier = component.getPricingTiers().get(0);
+        assertEquals(1, tier.getConditions().size());
+        assertEquals(1, tier.getPriceValues().size());
+    }
+
+    @Test
+    @DisplayName("Branch: Should handle updateTierAndValue with new conditions")
+    void testUpdateTierAndValue_withConditions() {
+        Long cId = 1L, tId = 2L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(cId);
+
+        PricingTier tier = new PricingTier();
+        tier.setId(tId);
+        tier.setPricingComponent(component);
+        tier.setConditions(new HashSet<>());
+        tier.setPriceValues(new HashSet<>(List.of(new PriceValue())));
+
+        when(componentRepository.findById(cId)).thenReturn(Optional.of(component));
+        when(tierRepository.findById(tId)).thenReturn(Optional.of(tier));
+        when(tierRepository.save(any())).thenReturn(tier);
+        when(tierConditionMapper.toEntity(any())).thenReturn(new TierCondition());
+
+        PricingTierRequest request = new PricingTierRequest();
+        request.setConditions(List.of(new TierConditionDto()));
+
+        componentService.updateTierAndValue(cId, tId, request);
+
+        assertEquals(1, tier.getConditions().size());
+    }
+
+    @Test
+    @DisplayName("Branch: Should throw NotFound when tier does not belong to component")
+    void testUpdateTierAndValue_mismatch() {
+        Long cId = 1L, tId = 2L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(cId);
+
+        PricingComponent otherComponent = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        otherComponent.setId(99L);
+
+        PricingTier tier = new PricingTier();
+        tier.setId(tId);
+        tier.setPricingComponent(otherComponent);
+
+        when(componentRepository.findById(cId)).thenReturn(Optional.of(component));
+        when(tierRepository.findById(tId)).thenReturn(Optional.of(tier));
+
+        assertThrows(NotFoundException.class, () -> componentService.updateTierAndValue(cId, tId, new PricingTierRequest()));
+    }
 }

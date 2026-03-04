@@ -121,6 +121,69 @@ class PriceAggregatorTest {
     }
 
     @Test
+    @DisplayName("Branch: Should handle null rawValue by treating as ZERO")
+    void shouldHandleNullRawValue() {
+        List<PriceComponentDetail> components = List.of(
+                PriceComponentDetail.builder()
+                        .componentCode("NULL_FEE")
+                        .rawValue(null)
+                        .valueType(ValueType.FEE_ABSOLUTE)
+                        .build()
+        );
+
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, null, LocalDate.now());
+
+        assertScaledBigDecimal("0.00", netImpact);
+    }
+
+    @Test
+    @DisplayName("Branch: Should use LocalDate.now() if effectiveDate is null in pro-rata")
+    void shouldHandleNullEffectiveDateInProRata() {
+        // ARRANGE: Monthly fee of $30.00
+        List<PriceComponentDetail> components = List.of(
+                PriceComponentDetail.builder()
+                        .componentCode("MONTHLY_FEE")
+                        .rawValue(new BigDecimal("30.00"))
+                        .valueType(ValueType.FEE_ABSOLUTE)
+                        .proRataApplicable(true)
+                        .build()
+        );
+
+        // Enroll today
+        LocalDate enrollment = LocalDate.now();
+
+        // If effectiveDate is null, it uses now()
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, enrollment, null);
+
+        // Since enrollment == now, it should be pro-rated for the remaining days of the month
+        int daysInMonth = enrollment.lengthOfMonth();
+        int activeDays = daysInMonth - enrollment.getDayOfMonth() + 1;
+        BigDecimal expected = new BigDecimal("30.00").multiply(BigDecimal.valueOf(activeDays))
+                .divide(BigDecimal.valueOf(daysInMonth), 2, RoundingMode.HALF_UP);
+
+        assertScaledBigDecimal(expected.toString(), netImpact);
+    }
+
+    @Test
+    @DisplayName("Should return full fee if enrollment month/year != effective month/year")
+    void shouldReturnFullFeeIfDifferentMonth() {
+        List<PriceComponentDetail> components = List.of(
+                PriceComponentDetail.builder()
+                        .componentCode("MONTHLY_FEE")
+                        .rawValue(new BigDecimal("30.00"))
+                        .valueType(ValueType.FEE_ABSOLUTE)
+                        .proRataApplicable(true)
+                        .build()
+        );
+
+        // Enroll last month
+        LocalDate enrollment = LocalDate.now().minusMonths(1);
+        LocalDate effective = LocalDate.now();
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, enrollment, effective);
+        assertScaledBigDecimal("30.00", netImpact);
+    }
+
+    @Test
     @DisplayName("Aggregate Mix - 10% Global Discount should see Product + Fees")
     void shouldCalculateGlobalDiscountAgainstWholePool() {
         // ARRANGE: $200.00 Product Base

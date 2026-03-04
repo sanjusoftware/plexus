@@ -305,6 +305,112 @@ class BundlePricingServiceTest extends BaseServiceTest {
         assertScaledBigDecimal("0.00", response.getNetTotalAmount(), "Net amount should be 0 after 100% loyalty waiver");
     }
 
+    @DisplayName("Branch: Should handle null productTotalFee by treating as ZERO")
+    void calculateTotalBundlePrice_shouldHandleNullProductPrice() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .build();
+
+        // calcResult with null finalChargeablePrice
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(null).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of());
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        assertScaledBigDecimal("0.00", response.getNetTotalAmount());
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException if ProductPricingService returns null result")
+    void calculateTotalBundlePrice_shouldThrowExceptionOnNullResult() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(null);
+
+        assertThrows(IllegalStateException.class, () -> bundlePricingService.calculateTotalBundlePrice(request));
+    }
+
+    @Test
+    @DisplayName("Should handle null adjustments from Rules Engine")
+    void calculateTotalBundlePrice_shouldHandleNullAdjustmentsFromRules() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of());
+
+        BundlePricingInput rulesOutput = new BundlePricingInput();
+        rulesOutput.setAdjustments(null); // Explicitly null
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(rulesOutput);
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        assertScaledBigDecimal("100.00", response.getNetTotalAmount());
+        assertTrue(response.getBundleAdjustments().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Feature: Should pass custom attributes to Bundle Rules")
+    void calculateTotalBundlePrice_shouldPassCustomAttributesToRules() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .customAttributes(java.util.Map.of("isNewCustomer", true))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of());
+
+        BundlePricingInput rulesOutput = new BundlePricingInput();
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenAnswer(invocation -> {
+            BundlePricingInput input = invocation.getArgument(0);
+            assertEquals(true, input.getCustomAttributes().get("isNewCustomer"));
+            return rulesOutput;
+        });
+
+        bundlePricingService.calculateTotalBundlePrice(request);
+    }
+
+    @Test
+    @DisplayName("Should handle fixed bundle link with null valueType")
+    void calculateTotalBundlePrice_shouldHandleNullValueType() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+
+        BundlePricingLink link = BundlePricingLink.builder()
+                .pricingComponent(PricingComponent.builder().name("TEST_FEE").build())
+                .fixedValue(new BigDecimal("10.00"))
+                .fixedValueType(null) // Should default to FEE_ABSOLUTE
+                .build();
+
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(link));
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        assertEquals(PriceValue.ValueType.FEE_ABSOLUTE, response.getBundleAdjustments().getFirst().getValueType());
+        assertScaledBigDecimal("110.00", response.getNetTotalAmount());
+    }
+
     // -----------------------------------------------------------------------------------
     // HELPERS
     // -----------------------------------------------------------------------------------

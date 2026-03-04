@@ -240,10 +240,6 @@ public class BundlePricingService extends BaseService {
                 .build();
     }
 
-    private boolean isDiscount(PriceValue.ValueType type) {
-        return type == PriceValue.ValueType.DISCOUNT_ABSOLUTE || type == PriceValue.ValueType.DISCOUNT_PERCENTAGE;
-    }
-
     private boolean isFee(PriceValue.ValueType type) {
         return type == PriceValue.ValueType.FEE_ABSOLUTE || type == PriceValue.ValueType.FEE_PERCENTAGE;
     }
