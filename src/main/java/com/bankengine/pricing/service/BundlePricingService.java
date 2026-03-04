@@ -152,11 +152,16 @@ public class BundlePricingService extends BaseService {
         PriceValue.ValueType type = link.getFixedValueType() != null ?
                 link.getFixedValueType() : PriceValue.ValueType.FEE_ABSOLUTE;
 
+        // Determine if any associated tier has the full breach flag set
+        boolean isFullBreach = link.getPricingComponent().getPricingTiers().stream()
+                .anyMatch(PricingTier::isApplyChargeOnFullBreach);
+
         return PriceComponentDetail.builder()
                 .componentCode(link.getPricingComponent().getName())
                 .rawValue(link.getFixedValue())
                 .valueType(type)
                 .sourceType("FIXED_VALUE")
+                .applyChargeOnFullBreach(isFullBreach)
                 .proRataApplicable(true)
                 .build();
     }
@@ -209,6 +214,7 @@ public class BundlePricingService extends BaseService {
                     .sourceType("BUNDLE_RULES")
                     .valueType(type)
                     .targetComponentCode(entry.getValue().getTargetComponentCode())
+                    .applyChargeOnFullBreach(entry.getValue().isApplyChargeOnFullBreach())
                     .build();
         }).toList();
     }

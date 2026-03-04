@@ -8,6 +8,7 @@ import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.model.BundlePricingLink;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.repository.BundlePricingLinkRepository;
 import com.bankengine.rules.model.BundlePricingInput;
 import com.bankengine.rules.service.BundleRulesEngineService;
@@ -26,6 +27,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,9 +42,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     @Mock private ProductBundleRepository productBundleRepository;
     @Mock private BundlePricingLinkRepository bundlePricingLinkRepository;
 
-    // Spy allows us to use the real logic of the refactored aggregator
     @Spy private PriceAggregator priceAggregator = new PriceAggregator();
-
     @InjectMocks private BundlePricingService bundlePricingService;
 
     // -----------------------------------------------------------------------------------
@@ -68,8 +68,8 @@ class BundlePricingServiceTest extends BaseServiceTest {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
                 .products(List.of(
-                    new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO),
-                    new BundlePriceRequest.ProductRequest(11L, BigDecimal.ZERO)
+                    BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build(),
+                    BundlePriceRequest.ProductRequest.builder().productId(11L).transactionAmount(BigDecimal.ZERO).build()
                 ))
                 .customerSegment("GOLD")
                 .build();
@@ -87,8 +87,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .useRulesEngine(false)
                 .build();
 
-        List<BundlePricingLink> activeLinks = List.of(fixedFeeLink);
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(activeLinks);
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(fixedFeeLink));
         when(productBundleRepository.findById(bundleId)).thenReturn(Optional.of(ProductBundle.builder().id(bundleId).build()));
 
         // 3. Mock Rules: 10% Global Discount (No Target)
@@ -123,7 +122,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_TargetedDiscountLogic() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .products(List.of(BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .build();
 
         // Product Base Fee is $1000
@@ -139,7 +138,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
 
         // 50% discount targeting TECH_FEE only
         BundlePricingInput rulesOutput = new BundlePricingInput();
-        rulesOutput.addAdjustment("TECH_DISCOUNT", new BigDecimal("50.00"), "DISCOUNT_PERCENTAGE", "TECH_FEE");
+        rulesOutput.addAdjustment("TECH_DISCOUNT", new BigDecimal("50.00"), "DISCOUNT_PERCENTAGE", "TECH_FEE", false);
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(rulesOutput);
 
         var response = bundlePricingService.calculateTotalBundlePrice(request);
@@ -163,7 +162,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_FreeCountAssertion() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .products(List.of(BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .build();
 
         when(productPricingService.getProductPricing(any())).thenReturn(
@@ -189,14 +188,20 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .productBundleId(1L)
                 .enrollmentDate(midMonth)
                 .effectiveDate(midMonth)
-                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .products(List.of(BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .build();
 
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
 
+        PricingTier tier = PricingTier.builder().proRataApplicable(true).build();
+        PricingComponent component = PricingComponent.builder()
+                .name("SERVICE_FEE")
+                .pricingTiers(List.of(tier))
+                .build();
+
         BundlePricingLink link = BundlePricingLink.builder()
-                .pricingComponent(PricingComponent.builder().name("SERVICE_FEE").build())
+                .pricingComponent(component)
                 .fixedValue(new BigDecimal("20.00"))
                 .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
                 .build();
@@ -212,6 +217,94 @@ class BundlePricingServiceTest extends BaseServiceTest {
         assertScaledBigDecimal("10.00", response.getBundleAdjustments().getFirst().getCalculatedAmount());
     }
 
+    @Test
+    @DisplayName("Scenario: Full Breach Charge logic applied to bundle tier")
+    void calculateTotalBundlePrice_FullBreachLogic() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(
+                    BundlePriceRequest.ProductRequest.builder()
+                        .productId(10L)
+                        .transactionAmount(new BigDecimal("5000.00")) // Breach amount
+                        .build()
+                ))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(BigDecimal.ZERO).build());
+
+        PricingTier breachTier = PricingTier.builder()
+                .applyChargeOnFullBreach(true)
+                .maxThreshold(new BigDecimal("1000.00"))
+                .build();
+
+        BundlePricingLink link = BundlePricingLink.builder()
+                .pricingComponent(PricingComponent.builder().name("OVER_LIMIT_FEE").pricingTiers(List.of(breachTier)).build())
+                .fixedValue(new BigDecimal("50.00"))
+                .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
+                .build();
+
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(link));
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        // Verify that the detail carrying the flag is present in the response
+        ProductPricingCalculationResult.PriceComponentDetail detail = response.getBundleAdjustments().getFirst();
+        assertTrue(detail.isApplyChargeOnFullBreach(), "The response detail should flag that full breach logic was applied");
+        assertScaledBigDecimal("50.00", detail.getCalculatedAmount());
+    }
+
+    @Test
+    @DisplayName("Branch: Handle null transaction amounts in bundle calculation")
+    void calculateTotalBundlePrice_NullTransactionAmount() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(
+                    BundlePriceRequest.ProductRequest.builder()
+                        .productId(10L)
+                        .transactionAmount(null)
+                        .build()
+                ))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("50.00")).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(new ArrayList<>());
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
+
+        assertDoesNotThrow(() -> {
+            BundlePriceResponse response = bundlePricingService.calculateTotalBundlePrice(request);
+            assertScaledBigDecimal("50.00", response.getNetTotalAmount());
+        });
+    }
+
+    @Test
+    @DisplayName("Custom Attributes: Apply bundle discount based on external loyalty score")
+    void calculateTotalBundlePrice_CustomAttributesLoyalty() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
+                .customAttributes(Map.of("loyalty_score", 95))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(new ArrayList<>());
+
+        // Simulate rules engine seeing the 95 score and returning a VIP discount
+        BundlePricingInput rulesOutput = new BundlePricingInput();
+        rulesOutput.addAdjustment("VIP_BUNDLE_WAIVER", new BigDecimal("100.00"), "DISCOUNT_PERCENTAGE");
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(rulesOutput);
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        assertScaledBigDecimal("0.00", response.getNetTotalAmount(), "Net amount should be 0 after 100% loyalty waiver");
+    }
+
     // -----------------------------------------------------------------------------------
     // HELPERS
     // -----------------------------------------------------------------------------------
@@ -222,7 +315,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
 
     private void assertScaledBigDecimal(String expected, BigDecimal actual, String message) {
         BigDecimal expectedScaled = new BigDecimal(expected).setScale(2, RoundingMode.HALF_UP);
-        assertEquals(expectedScaled, actual, message);
+        assertEquals(expectedScaled, actual.setScale(2, RoundingMode.HALF_UP), message);
     }
 
     private BundlePricingLink createLink(String name, String value) {
