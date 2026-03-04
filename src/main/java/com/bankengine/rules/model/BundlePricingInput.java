@@ -25,7 +25,7 @@ public class BundlePricingInput {
     private BigDecimal grossTotalAmount;
 
     private Map<String, Object> customAttributes = new HashMap<>();
-    private final Map<String, BundleAdjustment> adjustments = new HashMap<>();
+    private Map<String, BundleAdjustment> adjustments = new HashMap<>();
 
     @Data
     @AllArgsConstructor

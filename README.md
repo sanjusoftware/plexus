@@ -440,17 +440,34 @@ Define the foundation for products.
 *Assuming ID returned is `100`.*
 
 ## Step 5: Bank Admin - Create and Configure Product
-### A. Create Product (DRAFT)
+Plexus uses a **FAT DTO** pattern, allowing you to create the product, its features, and its pricing links in a single atomic request.
+
+### A. Create Product Aggregate (DRAFT)
 **Request:** `POST /api/v1/products`
 **Authority:** `catalog:product:create`
 ```json
 {
+  "code": "GLB-SAV-001",
   "name": "Global Savings",
   "productTypeId": 1,
   "category": "RETAIL",
-  "effectiveDate": "2026-03-01",
+  "activationDate": "2026-03-01",
   "tagline": "Grow your wealth faster",
   "fullDescription": "A high-yield savings account with no hidden fees.",
+  "features": [
+    {
+      "featureComponentId": 10,
+      "featureValue": "10"
+    }
+  ],
+  "pricing": [
+    {
+      "pricingComponentId": 100,
+      "fixedValue": 12.00,
+      "fixedValueType": "FEE_ABSOLUTE",
+      "useRulesEngine": false
+    }
+  ],
   "iconUrl": "https://cdn.plexus.com/icons/savings.png",
   "displayOrder": 1,
   "featured": true
@@ -458,33 +475,7 @@ Define the foundation for products.
 ```
 *Assuming ID returned is `500`.*
 
-### B. Link Features
-**Request:** `PUT /api/v1/products/500/features`
-**Authority:** `catalog:product:update`
-```json
-[
-  {
-    "featureComponentId": 10,
-    "featureValue": "10"
-  }
-]
-```
-
-### C. Link Pricing
-**Request:** `PUT /api/v1/products/500/pricing`
-**Authority:** `catalog:product:update`
-```json
-[
-  {
-    "pricingComponentId": 100,
-    "fixedValue": 12.00,
-    "fixedValueType": "ABSOLUTE",
-    "useRulesEngine": false
-  }
-]
-```
-
-### D. Activate Product
+### B. Activate Product
 **Request:** `POST /api/v1/products/500/activate`
 **Authority:** `catalog:product:activate`
 
@@ -518,3 +509,14 @@ Define the foundation for products.
   }
 }
 ```
+
+***
+
+# Future Roadmap & Admin Client Improvements
+To facilitate the development of a thin client for administration, the following improvements are planned:
+
+1.  **Metadata Discovery**: New endpoints (e.g., `/api/v1/metadata/schema/{entity}`) to provide JSON schema for dynamic form generation in the UI.
+2.  **Bulk Operations**: Support for batch activation, archiving, and updates for products and bundles to improve operational efficiency.
+3.  **Structured Validation Feedback**: Transitioning from generic error messages to structured, field-level business rule violation reports.
+4.  **Dry-run Validation**: A `/validate` endpoint for aggregate DTOs to provide real-time UI feedback without persistence.
+5.  **Audit & Impersonation**: Enhanced auditing and a controlled "impersonation mode" for System Admins to assist Bank Admins in read-only mode.

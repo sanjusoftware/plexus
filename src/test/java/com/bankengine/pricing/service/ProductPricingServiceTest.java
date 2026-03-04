@@ -203,6 +203,40 @@ class ProductPricingServiceTest extends BaseServiceTest {
         assertEquals(new BigDecimal("5.00"), result.getFinalChargeablePrice());
     }
 
+    @Test
+    @DisplayName("Branch: Should handle null transactionAmount by treating as ZERO")
+    void getProductPricing_shouldHandleNullTransactionAmount() {
+        request.setTransactionAmount(null);
+        ProductPricingLink fixedLink = createLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(fixedLink));
+        when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(new BigDecimal("10.00"));
+
+        ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
+
+        verify(priceAggregator).calculateBundleImpact(anyList(), eq(BigDecimal.ZERO), eq(BigDecimal.ZERO), any(), any());
+        assertEquals(new BigDecimal("10.00"), result.getFinalChargeablePrice());
+    }
+
+    @Test
+    @DisplayName("Feature: Should pass custom attributes to Drools")
+    void getProductPricing_shouldPassCustomAttributesToDrools() {
+        request.setCustomAttributes(java.util.Map.of("yearsOfService", 5));
+        ProductPricingLink rulesLink = createLink(202L, "RulesComp", null, null, true);
+        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(rulesLink));
+
+        KieSession mockSession = setupMockDrools();
+        when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+
+        productPricingService.getProductPricing(request);
+
+        ArgumentCaptor<PricingInput> inputCaptor = ArgumentCaptor.forClass(PricingInput.class);
+        verify(mockSession).insert(inputCaptor.capture());
+        PricingInput input = inputCaptor.getValue();
+
+        assertEquals(5, input.getCustomAttributes().get("yearsOfService"));
+        assertEquals(1L, input.getCustomAttributes().get("productId"));
+    }
+
     // --- Helper Methods ---
 
     private KieSession setupMockDrools() {

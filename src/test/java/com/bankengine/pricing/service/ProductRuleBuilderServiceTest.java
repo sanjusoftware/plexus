@@ -17,8 +17,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -176,5 +184,69 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         // Ensure the "contains" logic points to Tiers (1001, 2002), NOT Components (101, 102)
         assertTrue(drl.contains("activePricingTierIds contains 1001L"), "DRL must target specific Tier ID 1001");
         assertTrue(drl.contains("activePricingTierIds contains 2002L"), "DRL must target specific Tier ID 2002");
+    }
+
+    @Test
+    @DisplayName("Branch: Should handle maxThreshold and threshold-only conditions")
+    void testBuildRules_maxThreshold() {
+        PricingTier tier = mock(PricingTier.class);
+        when(tier.getId()).thenReturn(300L);
+        when(tier.getMaxThreshold()).thenReturn(new BigDecimal("1000.00"));
+        when(tier.getPriceValues()).thenReturn(Set.of(new PriceValue()));
+
+        PricingComponent comp = mock(PricingComponent.class);
+        when(comp.getId()).thenReturn(101L);
+        when(comp.getName()).thenReturn("Comp");
+        when(comp.getPricingTiers()).thenReturn(List.of(tier));
+
+        when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(comp));
+
+        String drl = productRuleBuilderService.buildAllRulesForCompilation();
+        assertTrue(drl.contains("transactionAmount <= new java.math.BigDecimal(\"1000.00\")"));
+    }
+
+    @Test
+    @DisplayName("Branch: Should handle OR connector in conditions")
+    void testBuildRules_orConnector() {
+        TierCondition c1 = mock(TierCondition.class);
+        when(c1.getAttributeName()).thenReturn("attr1");
+        when(c1.getConnector()).thenReturn(TierCondition.LogicalConnector.OR);
+
+        TierCondition c2 = mock(TierCondition.class);
+        when(c2.getAttributeName()).thenReturn("attr2");
+        when(c2.getConnector()).thenReturn(TierCondition.LogicalConnector.OR);
+
+        PricingTier tier = mock(PricingTier.class);
+        when(tier.getId()).thenReturn(400L);
+        // Both have OR, so regardless of order, we should get || between them
+        when(tier.getConditions()).thenReturn(Set.of(c1, c2));
+        when(tier.getPriceValues()).thenReturn(Set.of(new PriceValue()));
+
+        PricingComponent comp = mock(PricingComponent.class);
+        when(comp.getId()).thenReturn(102L);
+        when(comp.getName()).thenReturn("CompOR");
+        when(comp.getPricingTiers()).thenReturn(List.of(tier));
+
+        when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(comp));
+        when(metadataService.getMetadataEntityByKey(any())).thenReturn(mock(PricingInputMetadata.class));
+        when(droolsExpressionBuilder.buildExpression(any(), any())).thenReturn("expr");
+
+        String drl = productRuleBuilderService.buildAllRulesForCompilation();
+        assertTrue(drl.contains(" || "), "DRL should contain OR connector");
+    }
+
+    @Test
+    @DisplayName("Branch: Should throw IllegalStateException if bankId is missing and not in system mode")
+    void testGetSafeBankId_missingBankId() {
+        // We need to clear the mock static or ensure it returns null
+        // But since this is a unit test with InjectMocks, we can control TenantContextHolder if it's mocked static.
+        // ProductRuleBuilderServiceTest extends BaseServiceTest which mocks TenantContextHolder.
+
+        try (var mockedContext = mockStatic(com.bankengine.auth.security.TenantContextHolder.class)) {
+            mockedContext.when(com.bankengine.auth.security.TenantContextHolder::getBankId).thenReturn(null);
+            mockedContext.when(com.bankengine.auth.security.TenantContextHolder::isSystemMode).thenReturn(false);
+
+            assertThrows(IllegalStateException.class, () -> productRuleBuilderService.buildAllRulesForCompilation());
+        }
     }
 }
