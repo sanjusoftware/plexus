@@ -11,7 +11,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "pricing_tier")
+@Table(name = "pricing_tier", indexes = {
+        @Index(name = "idx_pricing_tier_code", columnList = "code")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -39,12 +41,11 @@ public class PricingTier extends AuditableEntity {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false, length = 100)
+    private String code;
+
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
-
-    // Identify if this tier allows pro-rating
-    @Builder.Default
-    private boolean proRataApplicable = false;
 
     // "Slab Breaching" flag
     // If true, the fee applies to the WHOLE transaction if the limit is breached

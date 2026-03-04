@@ -81,7 +81,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
 
         // 2. Setup Bundle Links ($5.00 Fee)
         BundlePricingLink fixedFeeLink = BundlePricingLink.builder()
-                .pricingComponent(PricingComponent.builder().name("BUNDLE_ADMIN_FEE").build())
+                .pricingComponent(PricingComponent.builder().name("BUNDLE_ADMIN_FEE").code("BUNDLE_ADMIN_FEE").build())
                 .fixedValue(new BigDecimal("5.00"))
                 .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
                 .useRulesEngine(false)
@@ -194,9 +194,11 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
 
-        PricingTier tier = PricingTier.builder().proRataApplicable(true).build();
+        PricingTier tier = PricingTier.builder().build();
         PricingComponent component = PricingComponent.builder()
                 .name("SERVICE_FEE")
+                .code("SERVICE_FEE")
+                .proRataApplicable(true)
                 .pricingTiers(List.of(tier))
                 .build();
 
@@ -239,7 +241,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .build();
 
         BundlePricingLink link = BundlePricingLink.builder()
-                .pricingComponent(PricingComponent.builder().name("OVER_LIMIT_FEE").pricingTiers(List.of(breachTier)).build())
+                .pricingComponent(PricingComponent.builder().name("OVER_LIMIT_FEE").code("OVER_LIMIT_FEE").pricingTiers(List.of(breachTier)).build())
                 .fixedValue(new BigDecimal("50.00"))
                 .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
                 .build();
@@ -397,7 +399,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
 
         BundlePricingLink link = BundlePricingLink.builder()
-                .pricingComponent(PricingComponent.builder().name("TEST_FEE").build())
+                .pricingComponent(PricingComponent.builder().name("TEST_FEE").code("TEST_FEE").build())
                 .fixedValue(new BigDecimal("10.00"))
                 .fixedValueType(null) // Should default to FEE_ABSOLUTE
                 .build();
@@ -426,7 +428,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
 
     private BundlePricingLink createLink(String name, String value) {
         return BundlePricingLink.builder()
-                .pricingComponent(PricingComponent.builder().name(name).build())
+                .pricingComponent(PricingComponent.builder().name(name).code(name).build())
                 .fixedValue(new BigDecimal(value))
                 .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
                 .build();

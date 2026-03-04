@@ -13,7 +13,7 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.dto.BundlePriceResponse;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
-import com.bankengine.pricing.dto.ProductPricingRequest;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -71,7 +71,7 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
                 .pricingSummary(ProductCatalogCard.PricingSummary.builder().build()).build());
 
         when(productPricingService.getProductPricing(any())).thenAnswer(inv -> {
-            var req = (ProductPricingRequest) inv.getArgument(0);
+            var req = (ProductPriceRequest) inv.getArgument(0);
             BigDecimal price = req.getProductId().equals(101L) ? new BigDecimal("20.00") : new BigDecimal("5.00");
             return ProductPricingCalculationResult.builder().finalChargeablePrice(price).build();
         });

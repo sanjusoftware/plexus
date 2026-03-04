@@ -4,15 +4,18 @@ import com.bankengine.pricing.model.PricingDataType;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.model.TierCondition.Operator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 public class DroolsExpressionBuilder {
 
-    public String buildExpression(TierCondition condition, PricingInputMetadata metadata) {
+    public String buildExpression(TierCondition condition, PricingInputMetadata metadata, String factName) {
         String val = condition.getAttributeValue();
         Operator op = condition.getOperator();
 
@@ -22,8 +25,23 @@ public class DroolsExpressionBuilder {
         String fqn = type.getFqn();
         boolean quoted = type.isQuoted();
 
-        String access = String.format("customAttributes[\"%s\"]", condition.getAttributeName());
-        String path = (type != PricingDataType.STRING) ? String.format("((%s) %s)", fqn, access) : access;
+        String access;
+        String path;
+
+        String attributeName = condition.getAttributeName();
+        if ("transactionAmount".equals(attributeName) && "BundlePricingInput".equals(factName)) {
+            attributeName = "grossTotalAmount";
+        }
+
+        if (List.of("transactionAmount", "grossTotalAmount", "customerSegment", "referenceDate").contains(attributeName)) {
+            access = attributeName;
+            path = access;
+        } else {
+            access = String.format("customAttributes[\"%s\"]", condition.getAttributeName());
+            path = (type != PricingDataType.STRING) ? String.format("((%s) %s)", fqn, access) : access;
+        }
+
+
 
         if (op == Operator.IN) {
             String list = Arrays.stream(val.split(","))

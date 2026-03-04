@@ -49,7 +49,7 @@ public class ProductRuleBuilderService extends AbstractRuleBuilderService {
                 tier.getId(),
                 pv.getRawValue(),
                 valueTypeStr,
-                component.getName().replaceAll("\\s", "_"),
+                component.getCode(),
                 getSafeBankIdForDrl());
     }
 }

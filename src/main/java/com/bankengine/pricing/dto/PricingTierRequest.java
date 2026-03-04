@@ -20,13 +20,16 @@ import java.util.List;
 public class PricingTierRequest {
     @NotBlank(message = "Tier name is required.")
     private String name;
+
+    @NotBlank(message = "Tier code is required.")
+    private String code;
+
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
 
     @Builder.Default
     private LocalDate effectiveDate = LocalDate.now();
     private LocalDate expiryDate;
-    private boolean proRataApplicable;
     private boolean applyChargeOnFullBreach;
 
     @Builder.Default

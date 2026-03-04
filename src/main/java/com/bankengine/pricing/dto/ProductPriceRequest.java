@@ -14,7 +14,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductPricingRequest {
+public class ProductPriceRequest {
 
     @NotNull(message = "Product ID is mandatory.")
     private Long productId;

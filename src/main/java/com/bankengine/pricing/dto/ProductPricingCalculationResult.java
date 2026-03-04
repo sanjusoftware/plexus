@@ -48,6 +48,9 @@ public class ProductPricingCalculationResult {
         @Schema(description = "Metadata indicating if rules engine was used", example = "RULES_ENGINE")
         private String sourceType;
 
+        @Schema(description = "Code of the specific tier that matched the logic", example = "T1")
+        private String matchedTierCode;
+
         @Schema(description = "Database ID of the specific tier that matched the logic", example = "1024")
         private Long matchedTierId;
     }

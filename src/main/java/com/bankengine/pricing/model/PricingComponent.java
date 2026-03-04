@@ -45,6 +45,9 @@ public class PricingComponent extends VersionableEntity {
     @Enumerated(EnumType.STRING)
     private ComponentType type;
 
+    @Builder.Default
+    private boolean proRataApplicable = false;
+
     @OneToMany(mappedBy = "pricingComponent", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PricingTier> pricingTiers = new ArrayList<>();

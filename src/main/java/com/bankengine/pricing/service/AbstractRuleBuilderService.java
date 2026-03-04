@@ -85,13 +85,13 @@ public abstract class AbstractRuleBuilderService extends BaseService {
     }
 
     private String buildSingleRule(PricingComponent component, PricingTier tier) {
-        String ruleName = String.format("%s_%s_%s_Tier_%d",
+        String ruleName = String.format("%s_%s_%s_V%d_Tier_%s",
                 getPackageSubPath().toUpperCase(), getSafeBankIdForDrl(),
-                component.getName().replaceAll("\\s", "_"), tier.getId());
+                component.getCode(), component.getVersion(), tier.getCode());
 
         // Added a debug print to the RHS (then) of the rule so you know if it fires
         String rhsWithLogging = String.format("""
-                System.out.println("🔥 Rule Fired: %s");
+                log.info("🔥 Rule Fired: %s");
                 %s
                 """, ruleName, buildRHSAction(component, tier));
 
@@ -103,7 +103,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 %s
                     then
                 %s
-                end""", ruleName, tier.getId(), buildLHSCondition(tier, component.getId(), component.getCode()), rhsWithLogging);
+                end""", ruleName, 100, buildLHSCondition(tier, component.getCode(), component.getVersion()), rhsWithLogging);
     }
 
     // --- Common Shared Logic ---
@@ -139,13 +139,16 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 import java.math.BigDecimal;
                 import java.time.LocalDate;
                 
+                global org.slf4j.Logger log;
+
                 """, getPackageSubPath(), safeBankId, factImport);
     }
 
     /**
-     * @param componentCode Refactored to use Component Code to match RHS addAdjustment calls
+     * @param componentCode Component Code
+     * @param componentVersion Component Version
      */
-    protected String buildLHSCondition(PricingTier tier, Long componentId, String componentCode) {
+    protected String buildLHSCondition(PricingTier tier, String componentCode, Integer componentVersion) {
         String bankId = getSafeBankIdForDrl();
         String factFqn = getFactType();
         String factName = factFqn.substring(factFqn.lastIndexOf(".") + 1);
@@ -154,17 +157,8 @@ public abstract class AbstractRuleBuilderService extends BaseService {
 
         // 1. Context Filter: Bank and Component ID
         conditionBuilder.append(String.format("bankId == \"%s\"", bankId));
-        conditionBuilder.append(String.format(", targetPricingComponentIds contains %dL", componentId));
-        conditionBuilder.append(String.format(", activePricingTierIds contains %dL", tier.getId()));
-
-        // LOOP PREVENTION: Surgical fix for recursion logs
-        if ("BundlePricingInput".equals(factName)) {
-            // Check against adjustments keySet using the unique component code
-            conditionBuilder.append(String.format(", adjustments.keySet() not contains \"%s\"", componentCode));
-        } else if ("PricingInput".equals(factName)) {
-            // For standard pricing, we check the ruleFired flag
-            conditionBuilder.append(", ruleFired == false");
-        }
+        conditionBuilder.append(String.format(", targetPricingComponentCodes contains \"%s:%d\"", componentCode, componentVersion));
+        conditionBuilder.append(String.format(", activePricingTierCodes contains \"%s\"", tier.getCode()));
 
         // 2. Automatic Threshold Logic (Min/Max)
         String amountField = factName.equals("BundlePricingInput") ? "grossTotalAmount" : "transactionAmount";
@@ -178,6 +172,12 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                     amountField, tier.getMaxThreshold().toPlainString()));
         }
 
+        // LOOP PREVENTION: Surgical fix for recursion logs
+        if ("BundlePricingInput".equals(factName)) {
+            // Check against adjustments keySet using the unique component code
+            conditionBuilder.append(String.format(", adjustments.keySet() not contains \"%s\"", componentCode));
+        }
+
         // 3. Custom Attributes (Segments, etc.) via DroolsExpressionBuilder
         if (tier.getConditions() != null && !tier.getConditions().isEmpty()) {
             conditionBuilder.append(", ");
@@ -185,7 +185,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
             while (it.hasNext()) {
                 TierCondition cond = it.next();
                 PricingInputMetadata metadata = metadataService.getMetadataEntityByKey(cond.getAttributeName());
-                conditionBuilder.append(droolsExpressionBuilder.buildExpression(cond, metadata));
+                conditionBuilder.append(droolsExpressionBuilder.buildExpression(cond, metadata, factName));
 
                 if (it.hasNext()) {
                     String connector = cond.getConnector() != null ? cond.getConnector().name() : "AND";
@@ -194,7 +194,12 @@ public abstract class AbstractRuleBuilderService extends BaseService {
             }
         }
 
-        return String.format("        $input : %s ( %s )", factName, conditionBuilder.toString());
+        String mainPattern = String.format("        $input : %s ( %s )", factName, conditionBuilder.toString());
+
+        if ("PricingInput".equals(factName)) {
+            return mainPattern + String.format("\n        not PriceValue(componentCode == \"%s\")", componentCode);
+        }
+        return mainPattern;
     }
 
     protected String buildPlaceholderRules() {

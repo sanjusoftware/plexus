@@ -9,7 +9,7 @@ import com.bankengine.data.seeding.CoreMetadataSeeder;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
-import com.bankengine.pricing.dto.ProductPricingRequest;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.TierCondition.Operator;
@@ -105,6 +105,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             PricingTier tier = PricingTier.builder()
                     .pricingComponent(component).name("Base Tier")
+                    .code("TIER-001")
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
             tier.getConditions().add(TierCondition.builder()
@@ -148,7 +149,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Success - Standard rule execution returns expected price")
     void testStandardRuleExecution_Success() {
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT).transactionAmount(TEST_AMOUNT).build();
 
@@ -169,6 +170,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             PricingTier tierInsideFutureLink = PricingTier.builder()
                     .pricingComponent(futureLinkComponent).name("Tier inside future link")
+                    .code("TIER-FUTURE")
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
             tierInsideFutureLink.getPriceValues().add(PriceValue.builder()
@@ -190,7 +192,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         reloadRules();
 
         // 3. Requesting pricing for TODAY
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .effectiveDate(LocalDate.now()).build();
@@ -218,7 +220,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         reloadRules();
 
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .effectiveDate(LocalDate.now())
                 .customerSegment(TEST_SEGMENT).build();
@@ -238,7 +240,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentService.deletePricingComponent(compId);
         });
         reloadRules();
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId()).customerSegment(TEST_SEGMENT).build();
 
         assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
@@ -254,6 +256,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             PricingTier tier = PricingTier.builder()
                     .pricingComponent(component).name("Bulk Tier")
+                    .code("TIER-BULK")
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
             tier.getConditions().add(TierCondition.builder()
@@ -275,12 +278,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         reloadRules();
 
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT).transactionAmount(TEST_AMOUNT).build();
 
         List<PriceComponentDetail> results = productPricingService.getProductPricing(request).getComponentBreakdown();
-
         assertTrue(results.stream().anyMatch(r -> r.getValueType() == ValueType.DISCOUNT_PERCENTAGE),
                 "Should have found a percentage discount in the breakdown");
     }

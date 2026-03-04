@@ -15,7 +15,7 @@ import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
-import com.bankengine.pricing.dto.ProductPricingRequest;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -139,7 +139,7 @@ public class PublicCatalogService extends BaseService {
                     ProductCatalogCard card = toProductCatalogCard(product);
 
                     if (estimatedMonthlyBalance != null) {
-                        ProductPricingRequest request = ProductPricingRequest.builder()
+                        ProductPriceRequest request = ProductPriceRequest.builder()
                                 .productId(product.getId())
                                 .transactionAmount(estimatedMonthlyBalance)
                                 .customerSegment(customerSegment)

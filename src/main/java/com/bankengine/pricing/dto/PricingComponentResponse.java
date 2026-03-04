@@ -14,7 +14,10 @@ import java.util.List;
 public class PricingComponentResponse {
     private Long id;
     private String name;
+    private String code;
+    private Integer version;
     private ComponentType type;
+    private boolean proRataApplicable;
     private LocalDateTime createdAt;
     private String createdBy;
     private LocalDateTime updatedAt;

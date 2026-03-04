@@ -188,8 +188,8 @@ public class TestTransactionHelper {
         PricingTier tier = new PricingTier();
         tier.setPricingComponent(component);
         tier.setName(tierName);
+        tier.setCode("TIER_" + UUID.randomUUID().toString().substring(0, 8));
         tier.setMinThreshold(BigDecimal.ZERO);
-        tier.setProRataApplicable(false);
         tier.setApplyChargeOnFullBreach(false);
 
         TierCondition condition = new TierCondition();
