@@ -112,6 +112,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         return PricingTierRequest.builder()
                 .name("Default Tier")
+                .code("TIER_" + UUID.randomUUID().toString().substring(0, 8))
                 .minThreshold(BigDecimal.ZERO)
                 .effectiveDate(LocalDate.now())
                 .conditions(List.of(cond))
@@ -187,7 +188,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(tierReq)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.rawValue", is(5.00)))
+                .andExpect(jsonPath("$.rawValue", is(5.0)))
                 .andReturn().getResponse().getContentAsString();
 
         Long tierId = Long.valueOf(objectMapper.readTree(addJson).get("matchedTierId").asText());
@@ -200,7 +201,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(tierReq)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rawValue", is(12.50)))
+                .andExpect(jsonPath("$.rawValue", is(12.5)))
                 .andExpect(jsonPath("$.valueType", is("FEE_PERCENTAGE")));
 
         // 3. DELETE TIER

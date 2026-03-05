@@ -1,0 +1,192 @@
+Initialized native services in: /home/jules/.gradle/native
+Initialized jansi services in: /home/jules/.gradle/native
+The client will now receive all logging from the daemon (pid: 3117). The daemon log file: /home/jules/.gradle/daemon/8.14/daemon-3117.out.log
+Starting 63rd build in daemon [uptime: 2 hrs 17 mins 16.933 secs, performance: 99%, GC rate: 0.00/s, heap usage: 13% of 512 MiB, non-heap usage: 31% of 384 MiB]
+Using 4 worker leases.
+Not watching /app since the file system is not supported
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Settings evaluated using settings file '/app/settings.gradle'.
+Projects loaded. Root project using build file '/app/build.gradle'.
+Included projects: [root project 'plexus']
+
+> Configure project :
+Evaluating root project 'plexus' using build file '/app/build.gradle'.
+Resolved plugin [id: 'java']
+Resolved plugin [id: 'org.springframework.boot', version: '3.3.1']
+Resolved plugin [id: 'io.spring.dependency-management', version: '1.1.5']
+Resolved plugin [id: 'jacoco']
+Applying dependency management to configuration 'annotationProcessor' in project 'plexus'
+Applying dependency management to configuration 'apiElements' in project 'plexus'
+Applying dependency management to configuration 'archives' in project 'plexus'
+Applying dependency management to configuration 'bootArchives' in project 'plexus'
+Applying dependency management to configuration 'compileClasspath' in project 'plexus'
+Applying dependency management to configuration 'compileOnly' in project 'plexus'
+Applying dependency management to configuration 'default' in project 'plexus'
+Applying dependency management to configuration 'developmentOnly' in project 'plexus'
+Applying dependency management to configuration 'implementation' in project 'plexus'
+Applying dependency management to configuration 'mainSourceElements' in project 'plexus'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'plexus'
+Applying dependency management to configuration 'runtimeClasspath' in project 'plexus'
+Applying dependency management to configuration 'runtimeElements' in project 'plexus'
+Applying dependency management to configuration 'runtimeOnly' in project 'plexus'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'plexus'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'plexus'
+Applying dependency management to configuration 'testCompileClasspath' in project 'plexus'
+Applying dependency management to configuration 'testCompileOnly' in project 'plexus'
+Applying dependency management to configuration 'testImplementation' in project 'plexus'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'plexus'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'plexus'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'plexus'
+Applying dependency management to configuration 'jacocoAgent' in project 'plexus'
+Applying dependency management to configuration 'jacocoAnt' in project 'plexus'
+Applying dependency management to configuration 'coverageDataElementsForTest' in project 'plexus'
+All projects evaluated.
+Task name matched 'test'
+Selected primary task 'test' from project :
+Tasks to be executed: [task ':compileJava', task ':processResources', task ':classes', task ':compileTestJava', task ':processTestResources', task ':testClasses', task ':test', task ':jacocoTestReport']
+Tasks that were excluded: []
+Resolve mutations for :compileJava (Thread[#4575,Execution worker,5,main]) started.
+:compileJava (Thread[#4575,Execution worker,5,main]) started.
+
+> Task :compileJava UP-TO-DATE
+Resolving global dependency management for project 'plexus'
+Excluding [javax.annotation:javax.annotation-api]
+Excluding []
+Custom actions are attached to task ':compileJava'.
+Caching disabled for task ':compileJava' because:
+  Build cache is disabled
+Skipping task ':compileJava' as it is up-to-date.
+Resolve mutations for :processResources (Thread[#4575,Execution worker,5,main]) started.
+:processResources (Thread[#4575,Execution worker,5,main]) started.
+
+> Task :processResources UP-TO-DATE
+Caching disabled for task ':processResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':processResources' as it is up-to-date.
+Resolve mutations for :classes (Thread[#4575,Execution worker,5,main]) started.
+:classes (Thread[#4575,Execution worker,5,main]) started.
+
+> Task :classes UP-TO-DATE
+Skipping task ':classes' as it has no actions.
+Resolve mutations for :compileTestJava (Thread[#4575,Execution worker,5,main]) started.
+:compileTestJava (Thread[#4575,Execution worker,5,main]) started.
+
+> Task :compileTestJava
+Excluding []
+Excluding []
+Custom actions are attached to task ':compileTestJava'.
+Caching disabled for task ':compileTestJava' because:
+  Build cache is disabled
+Task ':compileTestJava' is not up-to-date because:
+  Input property 'stableSources' file /app/src/test/java/com/bankengine/pricing/service/BundleRuleBuilderServiceTest.java has changed.
+Compilation mode: in-process compilation
+Created classpath snapshot for incremental compilation in 0.05 secs.
+Compiling with toolchain '/usr/lib/jvm/java-21-openjdk-amd64'.
+Compiling with JDK Java compiler API.
+Incremental compilation of 1 classes completed in 0.391 secs.
+Class dependency analysis for incremental compilation took 0.008 secs.
+Resolve mutations for :processTestResources (Thread[#4575,Execution worker,5,main]) started.
+:processTestResources (Thread[#4575,Execution worker,5,main]) started.
+
+> Task :processTestResources UP-TO-DATE
+Caching disabled for task ':processTestResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':processTestResources' as it is up-to-date.
+Resolve mutations for :testClasses (Thread[#4575,Execution worker,5,main]) started.
+:testClasses (Thread[#4576,Execution worker Thread 2,5,main]) started.
+
+> Task :testClasses
+Skipping task ':testClasses' as it has no actions.
+Resolve mutations for :test (Thread[#4576,Execution worker Thread 2,5,main]) started.
+:test (Thread[#4576,Execution worker Thread 2,5,main]) started.
+Gradle Test Executor 56 started executing tests.
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+> Task :test
+Excluding []
+Excluding []
+Custom actions are attached to task ':test'.
+Caching disabled for task ':test' because:
+  Build cache is disabled
+Task ':test' is not up-to-date because:
+  Task has failed previously.
+Starting process 'Gradle Test Executor 56'. Working directory: /app Command: /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Dorg.gradle.internal.worker.tmpdir=/app/build/tmp/test/work -javaagent:/app/build/tmp/.cache/expanded/zip_cde35f471dab581134460fc9a50e2c59/jacocoagent.jar=destfile=build/jacoco/test.exec,append=true,excludes=org/drools/drl/parser/lang/*,inclnolocationclasses=false,dumponexit=true,output=file,jmx=false @/home/jules/.gradle/.tmp/gradle-worker-classpath3563782299849112494txt -Xmx512m -Dfile.encoding=UTF-8 -Duser.country -Duser.language=en -Duser.variant -ea worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 56'
+Successfully started process 'Gradle Test Executor 56'
+
+BundleRuleBuilderServiceTest > Should filter for WAIVER/DISCOUNT and generate update($input) action STANDARD_ERROR
+    WARNING: A Java agent has been loaded dynamically (/home/jules/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.14.17/e3c251a39dc90badaf71c83427ba46840f219d8d/byte-buddy-agent-1.14.17.jar)
+    WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+    WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+    WARNING: Dynamic loading of agents will be disallowed by default in a future release
+
+BundleRuleBuilderServiceTest > Should filter for WAIVER/DISCOUNT and generate update($input) action STANDARD_OUT
+    12:15:19.793 [Test worker] INFO com.bankengine.pricing.service.AbstractRuleBuilderService -- ========================================================
+    12:15:19.800 [Test worker] INFO com.bankengine.pricing.service.AbstractRuleBuilderService -- GENERATED DRL FOR PACKAGE: bundle
+    12:15:19.800 [Test worker] INFO com.bankengine.pricing.service.AbstractRuleBuilderService -- ========================================================
+    12:15:19.800 [Test worker] INFO com.bankengine.pricing.service.AbstractRuleBuilderService -- package bankengine.bundle.rules.testbank;
+
+    import com.bankengine.rules.model.BundlePricingInput;
+    import com.bankengine.pricing.model.PriceValue;
+    import java.math.BigDecimal;
+    import java.time.LocalDate;
+
+    global org.slf4j.Logger log;
+
+    rule "BUNDLE_TEST_BANK_STAFF_WAIVER_01_V0_Tier_null"
+        no-loop true
+        salience 0
+        when
+            $input : BundlePricingInput ( bankId == "TEST_BANK", targetPricingComponentCodes contains "STAFF_WAIVER_01:0", activePricingTierCodes contains "null", adjustments.keySet() not contains "STAFF_WAIVER_01" )
+        then
+    log.info("🔥 Rule Fired: BUNDLE_TEST_BANK_STAFF_WAIVER_01_V0_Tier_null");
+    $input.addAdjustment("STAFF_WAIVER_01", new BigDecimal("100.00"), "DISCOUNT_PERCENTAGE");
+    update($input);
+
+    end
+
+
+    12:15:19.802 [Test worker] INFO com.bankengine.pricing.service.AbstractRuleBuilderService -- ========================================================
+
+Gradle Test Executor 56 finished executing tests.
+
+> Task :test FAILED
+
+BundleRuleBuilderServiceTest > Should filter for WAIVER/DISCOUNT and generate update($input) action FAILED
+    org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+        at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+        at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:31)
+        at app//org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:183)
+        at app//com.bankengine.pricing.service.BundleRuleBuilderServiceTest.testBuildRules_shouldGenerateBundleSpecificDRL(BundleRuleBuilderServiceTest.java:74)
+
+1 test completed, 1 failed
+Finished generating test XML results (0.003 secs) into: /app/build/test-results/test
+Generating HTML test report...
+Finished generating test html results (0.006 secs) into: /app/build/reports/tests/test
+
+[Incubating] Problems report is available at: file:///app/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///app/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 7s
+5 actionable tasks: 2 executed, 3 up-to-date
+Some of the file system contents retained in the virtual file system are on file systems that Gradle doesn't support watching. The relevant state was discarded to ensure changes to these locations are properly detected. You can override this by explicitly enabling file system watching.

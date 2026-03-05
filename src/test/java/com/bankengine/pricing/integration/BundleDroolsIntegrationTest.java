@@ -34,6 +34,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.List;
 
 import static com.bankengine.common.model.VersionableEntity.EntityStatus.ACTIVE;
@@ -219,6 +220,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
 
             PricingTier tier = pricingTierRepository.save(PricingTier.builder()
                     .pricingComponent(comp).name(name + " Tier")
+                    .code("TIER_" + UUID.randomUUID().toString().substring(0, 8))
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build());
 
             priceValueRepository.save(PriceValue.builder()

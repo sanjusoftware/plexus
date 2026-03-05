@@ -47,6 +47,8 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
 
         PricingTier tier = mock(PricingTier.class);
         when(tier.getId()).thenReturn(999L);
+        when(tier.getCode()).thenReturn("STAFF_WAIVER_TIER");
+        when(tier.getPriority()).thenReturn(0);
 
         PriceValue pv = new PriceValue();
         pv.setRawValue(new BigDecimal("100.00"));
@@ -71,7 +73,7 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
         assertTrue(drl.contains("update($input);"), "Bundle rules must update the existing input fact");
 
         // Optional: Verify the debug print is present
-        assertTrue(drl.contains("Rule Fired: BUNDLE_TEST_BANK_Staff_Waiver_Tier_999"));
+        assertTrue(drl.contains("Rule Fired: BUNDLE_TEST_BANK_STAFF_WAIVER_01_V0_Tier_STAFF_WAIVER_TIER"));
     }
 
     @Test
@@ -94,6 +96,8 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
 
         PricingTier tier = mock(PricingTier.class);
         when(tier.getId()).thenReturn(111L);
+        when(tier.getCode()).thenReturn("EMPTY_TIER");
+        when(tier.getPriority()).thenReturn(0);
         // Explicitly set price values to empty
         when(tier.getPriceValues()).thenReturn(Collections.emptySet());
 

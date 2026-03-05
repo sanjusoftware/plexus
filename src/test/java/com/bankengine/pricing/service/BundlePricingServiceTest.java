@@ -194,7 +194,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
 
-        PricingTier tier = PricingTier.builder().build();
+        PricingTier tier = PricingTier.builder().code("T1").build();
         PricingComponent component = PricingComponent.builder()
                 .name("SERVICE_FEE")
                 .code("SERVICE_FEE")
@@ -236,6 +236,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 ProductPricingCalculationResult.builder().finalChargeablePrice(BigDecimal.ZERO).build());
 
         PricingTier breachTier = PricingTier.builder()
+                .code("TBREACH")
                 .applyChargeOnFullBreach(true)
                 .maxThreshold(new BigDecimal("1000.00"))
                 .build();

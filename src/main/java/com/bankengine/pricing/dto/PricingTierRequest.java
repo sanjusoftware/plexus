@@ -24,6 +24,8 @@ public class PricingTierRequest {
     @NotBlank(message = "Tier code is required.")
     private String code;
 
+    private int priority;
+
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
 

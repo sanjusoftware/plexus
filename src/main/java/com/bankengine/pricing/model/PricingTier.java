@@ -44,6 +44,9 @@ public class PricingTier extends AuditableEntity {
     @Column(nullable = false, length = 100)
     private String code;
 
+    @Builder.Default
+    private int priority = 0;
+
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
 

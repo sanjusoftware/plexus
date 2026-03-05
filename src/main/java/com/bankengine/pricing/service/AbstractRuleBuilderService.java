@@ -103,7 +103,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 %s
                     then
                 %s
-                end""", ruleName, 100, buildLHSCondition(tier, component.getCode(), component.getVersion()), rhsWithLogging);
+                end""", ruleName, tier.getPriority(), buildLHSCondition(tier, component.getCode(), component.getVersion()), rhsWithLogging);
     }
 
     // --- Common Shared Logic ---

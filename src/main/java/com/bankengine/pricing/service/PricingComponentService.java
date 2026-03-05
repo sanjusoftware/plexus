@@ -333,7 +333,7 @@ public class PricingComponentService extends BaseService {
         if (component.getPricingTiers() == null) return;
 
         for (PricingTier tier : component.getPricingTiers()) {
-            if (tier.getPriceValues() == null) continue;
+            if (tier.getPriceValues() == null || tier.getPriceValues().isEmpty()) continue;
             for (PriceValue value : tier.getPriceValues()) {
                 if (isDiscountType(component.getType())) {
                     if (!isDiscountValue(value.getValueType())) {

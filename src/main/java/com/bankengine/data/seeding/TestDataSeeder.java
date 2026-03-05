@@ -195,7 +195,8 @@ public class TestDataSeeder implements CommandLineRunner {
 
         PricingTier tier = createTier("Standard Tier", fee, bankId);
         tierConditionRepository.save(createCondition(tier, "customerSegment", Operator.EQ, "STANDARD", bankId));
-        priceValueRepository.save(createPriceValue(new BigDecimal("15.00"), PriceValue.ValueType.FEE_ABSOLUTE, tier, bankId));
+        PriceValue priceValue = createPriceValue(new BigDecimal("15.00"), PriceValue.ValueType.FEE_ABSOLUTE, tier, bankId);
+        priceValueRepository.save(priceValue);
 
         productRepository.findByName(bankId.equals(BANK_A) ? "Global Savings" : "Local Savings").ifPresent(p -> {
             ProductPricingLink link = new ProductPricingLink();
@@ -275,7 +276,12 @@ public class TestDataSeeder implements CommandLineRunner {
     }
 
     private PricingTier createTier(String name, PricingComponent c, String bankId) {
-        PricingTier t = new PricingTier(); t.setName(name + " " + bankId); t.setPricingComponent(c); t.setBankId(bankId); return pricingTierRepository.save(t);
+        PricingTier t = new PricingTier();
+        t.setName(name + " " + bankId);
+        t.setPricingComponent(c);
+        t.setBankId(bankId);
+        t.setCode("TIER-" + UUID.randomUUID().toString().substring(0, 8));
+        return pricingTierRepository.save(t);
     }
 
     private TierCondition createCondition(PricingTier t, String a, Operator o, String v, String bankId) {

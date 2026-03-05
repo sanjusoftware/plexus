@@ -50,6 +50,7 @@ class PricingMappersIntegrationTest extends AbstractIntegrationTest {
     void testTierMapper() {
         PricingTier tier = new PricingTier();
         tier.setName("Tier 1");
+        tier.setCode("T1");
         tier.setMinThreshold(BigDecimal.TEN);
 
         PricingTierResponse response = tierMapper.toResponse(tier);

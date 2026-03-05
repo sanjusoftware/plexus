@@ -18,12 +18,14 @@ public interface PricingTierMapper {
     @Mapping(target = "pricingComponent", ignore = true)
     @Mapping(target = "priceValues", ignore = true)
     @Mapping(target = "conditions", ignore = true)
+    @Mapping(target = "priority", source = "priority")
     PricingTier toEntity(PricingTierRequest pricingTierRequest);
 
     @ToAuditableEntity
     @Mapping(target = "pricingComponent", ignore = true)
     @Mapping(target = "priceValues", ignore = true)
     @Mapping(target = "conditions", ignore = true)
+    @Mapping(target = "priority", source = "priority")
     void updateFromDto(PricingTierRequest pricingTierRequest, @MappingTarget PricingTier entity);
 
     @ToAuditableEntity
