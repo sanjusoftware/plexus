@@ -157,12 +157,12 @@ public class BundlePricingService extends BaseService {
                 .anyMatch(PricingTier::isApplyChargeOnFullBreach);
 
         return PriceComponentDetail.builder()
-                .componentCode(link.getPricingComponent().getName())
+                .componentCode(link.getPricingComponent().getCode())
                 .rawValue(link.getFixedValue())
                 .valueType(type)
                 .sourceType("FIXED_VALUE")
                 .applyChargeOnFullBreach(isFullBreach)
-                .proRataApplicable(true)
+                .proRataApplicable(link.getPricingComponent().isProRataApplicable())
                 .build();
     }
 
@@ -178,19 +178,18 @@ public class BundlePricingService extends BaseService {
                 .filter(BundlePricingLink::isUseRulesEngine)
                 .toList();
 
-        // 2. Identify Target Components
-        Set<Long> targetComponentIds = ruleLinks.stream()
-                .map(link -> link.getPricingComponent().getId())
+        // 2. Identify Target Component Codes and Versions
+        Set<String> targetComponentCodes = ruleLinks.stream()
+                .map(link -> link.getPricingComponent().getCode() + ":" + link.getPricingComponent().getVersion())
                 .collect(Collectors.toSet());
-        inputFact.setTargetPricingComponentIds(targetComponentIds);
+        inputFact.setTargetPricingComponentCodes(targetComponentCodes);
 
-        // 3. NEW: Collect Tier IDs for the active components to satisfy DRL filtering
-        // Since Tiers now depend on Component activation, we harvest all tiers from active components
-        Set<Long> activeTierIds = ruleLinks.stream()
+        // 3. Harvest Tier Codes directly from the active component links.
+        Set<String> activeTierCodes = ruleLinks.stream()
                 .flatMap(link -> link.getPricingComponent().getPricingTiers().stream())
-                .map(PricingTier::getId)
+                .map(PricingTier::getCode)
                 .collect(Collectors.toSet());
-        inputFact.setActivePricingTierIds(activeTierIds);
+        inputFact.setActivePricingTierCodes(activeTierCodes);
 
         // 4. Populate Context Attributes for custom DRL expressions
         inputFact.getCustomAttributes().put("customerSegment", request.getCustomerSegment());

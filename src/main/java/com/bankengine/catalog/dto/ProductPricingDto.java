@@ -20,6 +20,9 @@ public class ProductPricingDto {
     @Schema(example = "100", description = "ID of the master pricing component.")
     private Long pricingComponentId;
 
+    @Schema(example = "FEE_001", description = "Unique code of the pricing component.")
+    private String pricingComponentCode;
+
     @Schema(example = "Monthly Maintenance Fee", description = "Name of the component.")
     private String pricingComponentName;
 

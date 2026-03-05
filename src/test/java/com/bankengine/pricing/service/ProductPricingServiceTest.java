@@ -130,9 +130,9 @@ class ProductPricingServiceTest extends BaseServiceTest {
         ArgumentCaptor<PricingInput> inputCaptor = ArgumentCaptor.forClass(PricingInput.class);
         verify(mockSession).insert(inputCaptor.capture());
 
-        Set<Long> targetIds = inputCaptor.getValue().getTargetPricingComponentIds();
-        assertTrue(targetIds.contains(2L));
-        assertFalse(targetIds.contains(1L));
+        Set<String> targetCodes = inputCaptor.getValue().getTargetPricingComponentCodes();
+        assertTrue(targetCodes.contains("Rules:1"));
+        assertFalse(targetCodes.contains("Fixed:1"));
     }
 
     @Test
@@ -149,8 +149,11 @@ class ProductPricingServiceTest extends BaseServiceTest {
         when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
 
         KieSession mockSession = setupMockDrools();
+        PricingComponent comp = rulesLink.getPricingComponent();
+        comp.setProRataApplicable(true);
+
         PricingTier dskTier = new PricingTier();
-        dskTier.setProRataApplicable(true);
+        dskTier.setPricingComponent(comp);
         dskTier.setApplyChargeOnFullBreach(true);
 
         PriceValue fact = createFact("DSK_FEE", "50.00", PriceValue.ValueType.FEE_ABSOLUTE);
@@ -291,6 +294,8 @@ class ProductPricingServiceTest extends BaseServiceTest {
         PricingComponent comp = new PricingComponent();
         comp.setId(componentId);
         comp.setName(componentName);
+        comp.setCode(componentName);
+        comp.setVersion(1);
         ProductPricingLink link = new ProductPricingLink();
         link.setPricingComponent(comp);
         link.setFixedValue(fixedValue);
@@ -304,7 +309,9 @@ class ProductPricingServiceTest extends BaseServiceTest {
         pv.setComponentCode(code);
         pv.setRawValue(new BigDecimal(val));
         pv.setValueType(type);
-        pv.setPricingTier(new PricingTier());
+        PricingTier tier = new PricingTier();
+        tier.setPricingComponent(new PricingComponent());
+        pv.setPricingTier(tier);
         return pv;
     }
 }

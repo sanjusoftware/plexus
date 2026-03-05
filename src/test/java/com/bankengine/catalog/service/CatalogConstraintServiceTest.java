@@ -19,8 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
+import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -72,7 +72,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
         Product product = createProduct("RETAIL", "Savings product");
         product.setId(100l);
         setupBankConfig(false, List.of());
-        ProductBundle activeBundle = createBundle("BNDL-ACTIVE", VersionableEntity.EntityStatus.ACTIVE);
+        ProductBundle activeBundle = createBundle(VersionableEntity.EntityStatus.ACTIVE);
         when(bundleProductLinkRepository.findAllByProductId(product.getId())).thenReturn(List.of(createLink(activeBundle, product.getId())));
 
         ValidationException exception = assertThrows(ValidationException.class,
@@ -89,7 +89,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
     void validateProductCanBeBundled_InactiveLink_Passes() {
         Long productId = 100L;
         setupBankConfig(false, List.of());
-        ProductBundle archivedBundle = createBundle("BNDL-OLD", VersionableEntity.EntityStatus.INACTIVE);
+        ProductBundle archivedBundle = createBundle(VersionableEntity.EntityStatus.INACTIVE);
         when(bundleProductLinkRepository.findAllByProductId(productId)).thenReturn(List.of(createLink(archivedBundle, productId)));
         assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(productId));
     }
@@ -108,7 +108,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
         product.setId(100L);
         setupBankConfig(false, List.of());
 
-        ProductBundle draftBundle = createBundle("BNDL-DRAFT", VersionableEntity.EntityStatus.DRAFT);
+        ProductBundle draftBundle = createBundle(VersionableEntity.EntityStatus.DRAFT);
         when(bundleProductLinkRepository.findAllByProductId(product.getId()))
                 .thenReturn(List.of(createLink(draftBundle, product.getId())));
         ValidationException ex = assertThrows(ValidationException.class,
@@ -117,8 +117,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
         assertThat(ex.getMessage())
                 .contains("[BUNDLE_CONSTRAINT_VIOLATION]")
                 .contains("DRAFT")
-                .contains("BNDL-DRAFT")
-                .contains("ID: 100")
+                .contains(draftBundle.getCode())
                 .contains(TEST_BANK_ID);
     }
 
@@ -136,7 +135,7 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
         Long productId = 100L;
         setupBankConfig(false, List.of());
 
-        ProductBundle archivedBundle = createBundle("BNDL-OLD", VersionableEntity.EntityStatus.ARCHIVED);
+        ProductBundle archivedBundle = createBundle(VersionableEntity.EntityStatus.ARCHIVED);
         when(bundleProductLinkRepository.findAllByProductId(productId)).thenReturn(List.of(createLink(archivedBundle, productId)));
         assertDoesNotThrow(() -> constraintService.validateProductCanBeBundled(productId));
     }
@@ -155,13 +154,13 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
         Product product = new Product();
         product.setCategory(category);
         product.setName(name);
-        product.setCode(name + UUID.randomUUID());
+        product.setCode(generateValidCode(name));
         return product;
     }
 
-    private ProductBundle createBundle(String code, VersionableEntity.EntityStatus status) {
+    private ProductBundle createBundle(VersionableEntity.EntityStatus status) {
         ProductBundle productBundle = new ProductBundle();
-        productBundle.setCode(code);
+        productBundle.setCode(generateValidCode(null));
         productBundle.setStatus(status);
         return productBundle;
     }
@@ -170,11 +169,11 @@ public class CatalogConstraintServiceTest extends BaseServiceTest {
         BundleProductLink link = new BundleProductLink();
         link.setProductBundle(bundle);
 
-        // FIX: Attach a mock or dummy product to the link
+        String name = "Test Product " + productId;
         Product dummyProduct = new Product();
         dummyProduct.setId(productId);
-        dummyProduct.setCode("PROD-" + productId);
-        dummyProduct.setName("Test Product " + productId);
+        dummyProduct.setCode(generateValidCode(name));
+        dummyProduct.setName(name);
 
         link.setProduct(dummyProduct);
         return link;

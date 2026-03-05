@@ -15,7 +15,8 @@ public interface PricingLinkMapper {
 
     @Mapping(target = "pricingComponentName", source = "link.pricingComponent.name")
     @Mapping(target = "pricingComponentId", source = "link.pricingComponent.id")
-    @Mapping(target = "targetComponentCode", source = "link.pricingComponent.code")
+    @Mapping(target = "pricingComponentCode", source = "link.pricingComponent.code")
+    @Mapping(target = "targetComponentCode", source = "link.targetComponentCode")
     ProductPricingDto toResponse(ProductPricingLink link);
 
     List<ProductPricingDto> toResponseList(List<ProductPricingLink> links);

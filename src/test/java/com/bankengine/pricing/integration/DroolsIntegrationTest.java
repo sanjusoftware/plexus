@@ -22,12 +22,14 @@ import com.bankengine.test.config.WithMockRole;
 import com.bankengine.web.exception.NotFoundException;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -67,6 +69,8 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private TestTransactionHelper txHelper;
     @Autowired
+    private CacheManager cacheManager;
+    @Autowired
     private MockMvc mockMvc;
 
     private Product persistedProduct;
@@ -86,6 +90,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setup() {
+        if (cacheManager.getCache("productPricingLinks") != null) {
+            Objects.requireNonNull(cacheManager.getCache("productPricingLinks")).clear();
+        }
         TenantContextHolder.setBankId(TEST_BANK_ID);
 
 
@@ -105,6 +112,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             PricingTier tier = PricingTier.builder()
                     .pricingComponent(component).name("Base Tier")
+                    .code("TIER-001")
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
             tier.getConditions().add(TierCondition.builder()
@@ -169,6 +177,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             PricingTier tierInsideFutureLink = PricingTier.builder()
                     .pricingComponent(futureLinkComponent).name("Tier inside future link")
+                    .code("TIER-FUTURE")
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
             tierInsideFutureLink.getPriceValues().add(PriceValue.builder()
@@ -254,6 +263,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             PricingTier tier = PricingTier.builder()
                     .pricingComponent(component).name("Bulk Tier")
+                    .code("TIER-BULK")
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
             tier.getConditions().add(TierCondition.builder()
@@ -269,20 +279,32 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
             productPricingLinkRepository.save(ProductPricingLink.builder()
                     .product(persistedProduct).pricingComponent(component)
-                    .bankId(TEST_BANK_ID).effectiveDate(LocalDate.now())
+                    .bankId(TEST_BANK_ID).effectiveDate(LocalDate.now().minusDays(1))
                     .useRulesEngine(true).build());
         });
+
+        // CRITICAL: Clear cache again because we added a new link inside the test body
+        if (cacheManager.getCache("productPricingLinks") != null) {
+            cacheManager.getCache("productPricingLinks").clear();
+        }
 
         reloadRules();
 
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT).transactionAmount(TEST_AMOUNT).build();
+                .customerSegment(TEST_SEGMENT)
+                .transactionAmount(TEST_AMOUNT)
+                .effectiveDate(LocalDate.now().plusDays(1))
+                .build();
 
         List<PriceComponentDetail> results = productPricingService.getProductPricing(request).getComponentBreakdown();
-
+        System.out.println("results = " + results);
         assertTrue(results.stream().anyMatch(r -> r.getValueType() == ValueType.DISCOUNT_PERCENTAGE),
                 "Should have found a percentage discount in the breakdown");
+
+        // Verify matchedTierCode is now populated
+        assertTrue(results.stream().anyMatch(r -> "TIER-BULK".equals(r.getMatchedTierCode())),
+                "The matchedTierCode should be correctly populated from the rule");
     }
 
     @Test

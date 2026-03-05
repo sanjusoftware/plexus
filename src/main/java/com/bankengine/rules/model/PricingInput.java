@@ -14,8 +14,8 @@ public class PricingInput {
     private String customerSegment;
     private LocalDate referenceDate = LocalDate.now();
     private BigDecimal transactionAmount;
-    private Set<Long> targetPricingComponentIds;
-    private Set<Long> activePricingTierIds;
+    private Set<String> targetPricingComponentCodes;
+    private Set<String> activePricingTierCodes;
     private Map<String, Object> customAttributes = new HashMap<>();
 
     // --- Output fields updated by the Drools Rules (RHS) ---

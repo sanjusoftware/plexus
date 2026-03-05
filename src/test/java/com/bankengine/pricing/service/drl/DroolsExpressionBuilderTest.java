@@ -25,7 +25,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_BigDecimal_EQ() {
         TierCondition condition = createCondition("amount", Operator.EQ, "500.00");
         PricingInputMetadata metadata = createMetadata("DECIMAL");
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("((java.math.BigDecimal) customAttributes[\"amount\"]).compareTo(new java.math.BigDecimal(\"500.00\")) == 0", result);
     }
 
@@ -34,7 +34,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_Date_GT() {
         TierCondition condition = createCondition("effectiveDate", Operator.GT, "2026-01-01");
         PricingInputMetadata metadata = createMetadata("DATE");
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("((java.time.LocalDate) customAttributes[\"effectiveDate\"]).isAfter(java.time.LocalDate.parse(\"2026-01-01\"))", result);
     }
 
@@ -44,7 +44,7 @@ class DroolsExpressionBuilderTest {
         TierCondition condition = createCondition("expiryDate", Operator.LE, "2030-12-31");
         PricingInputMetadata metadata = createMetadata("DATE");
 
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("(!((java.time.LocalDate) customAttributes[\"expiryDate\"]).isAfter(java.time.LocalDate.parse(\"2030-12-31\")))", result);
     }
 
@@ -54,7 +54,7 @@ class DroolsExpressionBuilderTest {
         TierCondition condition = createCondition("age", Operator.GT, "18");
         PricingInputMetadata metadata = createMetadata("INTEGER");
 
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("((java.lang.Long) customAttributes[\"age\"]) > 18", result);
     }
 
@@ -63,7 +63,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_String_IN() {
         TierCondition condition = createCondition("segment", Operator.IN, "RETAIL, PREMIUM");
         PricingInputMetadata metadata = createMetadata("STRING");
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("customAttributes[\"segment\"] in ( \"RETAIL\", \"PREMIUM\" )", result);
     }
 
@@ -73,7 +73,7 @@ class DroolsExpressionBuilderTest {
         TierCondition condition = createCondition("isStaff", Operator.EQ, "true");
         PricingInputMetadata metadata = createMetadata("BOOLEAN");
 
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("((java.lang.Boolean) customAttributes[\"isStaff\"]) == true", result);
     }
 
@@ -82,7 +82,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_EmptyValue() {
         TierCondition condition = new TierCondition();
         condition.setAttributeValue("");
-        assertEquals("true", builder.buildExpression(condition, null));
+        assertEquals("true", builder.buildExpression(condition, null, "PricingInput"));
     }
 
     @Test
@@ -90,7 +90,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_BigDecimal_LT() {
         TierCondition condition = createCondition("limit", Operator.LT, "100.00");
         PricingInputMetadata metadata = createMetadata("DECIMAL");
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
 
         assertTrue(result.contains(".compareTo("), "Should use compareTo for BigDecimal");
         assertTrue(result.endsWith("< 0"), "Should end with < 0 for LT operator");
@@ -101,7 +101,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_Date_GE() {
         TierCondition condition = createCondition("effectiveDate", Operator.GE, "2026-01-01");
         PricingInputMetadata metadata = createMetadata("DATE");
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("(!((java.time.LocalDate) customAttributes[\"effectiveDate\"]).isBefore(java.time.LocalDate.parse(\"2026-01-01\")))", result);
     }
 
@@ -112,15 +112,15 @@ class DroolsExpressionBuilderTest {
 
         // Testing NE (!=)
         assertEquals("((java.math.BigDecimal) customAttributes[\"amt\"]).compareTo(new java.math.BigDecimal(\"10\")) != 0",
-                builder.buildExpression(createCondition("amt", Operator.NE, "10"), metadata));
+                builder.buildExpression(createCondition("amt", Operator.NE, "10"), metadata, "PricingInput"));
 
         // Testing GE (>=)
         assertEquals("((java.math.BigDecimal) customAttributes[\"amt\"]).compareTo(new java.math.BigDecimal(\"10\")) >= 0",
-                builder.buildExpression(createCondition("amt", Operator.GE, "10"), metadata));
+                builder.buildExpression(createCondition("amt", Operator.GE, "10"), metadata, "PricingInput"));
 
         // Testing LE (<=)
         assertEquals("((java.math.BigDecimal) customAttributes[\"amt\"]).compareTo(new java.math.BigDecimal(\"10\")) <= 0",
-                builder.buildExpression(createCondition("amt", Operator.LE, "10"), metadata));
+                builder.buildExpression(createCondition("amt", Operator.LE, "10"), metadata, "PricingInput"));
     }
 
     @Test
@@ -133,15 +133,15 @@ class DroolsExpressionBuilderTest {
 
         // Testing EQ
         assertEquals(access + ".isEqual(" + rhs + ")",
-                builder.buildExpression(createCondition("dt", Operator.EQ, dateVal), metadata));
+                builder.buildExpression(createCondition("dt", Operator.EQ, dateVal), metadata, "PricingInput"));
 
         // Testing NE
         assertEquals("!" + access + ".isEqual(" + rhs + ")",
-                builder.buildExpression(createCondition("dt", Operator.NE, dateVal), metadata));
+                builder.buildExpression(createCondition("dt", Operator.NE, dateVal), metadata, "PricingInput"));
 
         // Testing LT
         assertEquals(access + ".isBefore(" + rhs + ")",
-                builder.buildExpression(createCondition("dt", Operator.LT, dateVal), metadata));
+                builder.buildExpression(createCondition("dt", Operator.LT, dateVal), metadata, "PricingInput"));
     }
 
     @Test
@@ -149,12 +149,12 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_InOperator_Branches() {
         // String Branch: metadata.getFqnType() returns java.lang.String -> No cast applied
         PricingInputMetadata strMetadata = createMetadata("STRING");
-        String strResult = builder.buildExpression(createCondition("segment", Operator.IN, "RETAIL, PREMIUM"), strMetadata);
+        String strResult = builder.buildExpression(createCondition("segment", Operator.IN, "RETAIL, PREMIUM"), strMetadata, "PricingInput");
         assertEquals("customAttributes[\"segment\"] in ( \"RETAIL\", \"PREMIUM\" )", strResult);
 
         // Long Branch: metadata.getFqnType() returns java.lang.Long -> Cast applied
         PricingInputMetadata longMetadata = createMetadata("INTEGER");
-        String longResult = builder.buildExpression(createCondition("age", Operator.IN, "18, 21"), longMetadata);
+        String longResult = builder.buildExpression(createCondition("age", Operator.IN, "18, 21"), longMetadata, "PricingInput");
         assertEquals("((java.lang.Long) customAttributes[\"age\"]) in ( 18, 21 )", longResult);
     }
 
@@ -164,7 +164,7 @@ class DroolsExpressionBuilderTest {
         PricingInputMetadata metadata = createMetadata("DECIMAL");
         TierCondition condition = createCondition("balance", Operator.NE, "0");
 
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("((java.math.BigDecimal) customAttributes[\"balance\"]).compareTo(new java.math.BigDecimal(\"0\")) != 0", result);
     }
 
@@ -174,7 +174,7 @@ class DroolsExpressionBuilderTest {
         PricingInputMetadata metadata = createMetadata("DATE");
         TierCondition condition = createCondition("joiningDate", Operator.LT, "2020-01-01");
 
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("((java.time.LocalDate) customAttributes[\"joiningDate\"]).isBefore(java.time.LocalDate.parse(\"2020-01-01\"))", result);
     }
 
@@ -183,7 +183,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_UnsupportedOperator() {
         PricingInputMetadata metadata = createMetadata("LONG");
         TierCondition condition = createCondition("id", null, "10");
-        assertThrows(NullPointerException.class, () -> builder.buildExpression(condition, metadata));
+        assertThrows(NullPointerException.class, () -> builder.buildExpression(condition, metadata, "PricingInput"));
     }
 
     @Test
@@ -193,7 +193,7 @@ class DroolsExpressionBuilderTest {
         PricingInputMetadata metadata = createMetadata("MYSTERY_TYPE");
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> builder.buildExpression(condition, metadata));
+                () -> builder.buildExpression(condition, metadata, "PricingInput"));
 
         assertTrue(ex.getMessage().contains("Unsupported pricing data type"),
                 "Error message should indicate the type is unsupported");
@@ -204,7 +204,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_IntegerAlias() {
         TierCondition condition = createCondition("count", Operator.EQ, "5");
         PricingInputMetadata metadata = createMetadata("INTEGER");
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         // Even though input was INTEGER, DRL uses Long cast
         assertEquals("((java.lang.Long) customAttributes[\"count\"]) == 5", result);
     }
@@ -214,7 +214,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_NullOperator() {
         TierCondition condition = createCondition("amount", null, "100");
         PricingInputMetadata metadata = createMetadata("DECIMAL");
-        assertThrows(RuntimeException.class, () -> builder.buildExpression(condition, metadata));
+        assertThrows(RuntimeException.class, () -> builder.buildExpression(condition, metadata, "PricingInput"));
     }
 
     @Test
@@ -222,7 +222,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_Date_NE() {
         TierCondition condition = createCondition("dt", Operator.NE, "2026-01-01");
         PricingInputMetadata metadata = createMetadata("DATE");
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("!((java.time.LocalDate) customAttributes[\"dt\"]).isEqual(java.time.LocalDate.parse(\"2026-01-01\"))", result);
     }
 
@@ -231,7 +231,7 @@ class DroolsExpressionBuilderTest {
     void testBuildExpression_BigDecimal_GE() {
         TierCondition condition = createCondition("balance", Operator.GE, "1000");
         PricingInputMetadata metadata = createMetadata("DECIMAL");
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("((java.math.BigDecimal) customAttributes[\"balance\"]).compareTo(new java.math.BigDecimal(\"1000\")) >= 0", result);
     }
 
@@ -249,7 +249,7 @@ class DroolsExpressionBuilderTest {
         TierCondition condition = createCondition("age", op, value);
         PricingInputMetadata metadata = createMetadata("INTEGER");
 
-        String result = builder.buildExpression(condition, metadata);
+        String result = builder.buildExpression(condition, metadata, "PricingInput");
         assertEquals("((java.lang.Long) customAttributes[\"age\"]) " + expectedSymbol + " " + value, result);
     }
 

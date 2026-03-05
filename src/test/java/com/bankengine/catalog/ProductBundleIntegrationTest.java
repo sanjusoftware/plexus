@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
+import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -127,7 +128,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
             return txHelper.getOrCreateProduct("Unique Product " + UUID.randomUUID(), type, "RETAIL").getId();
         });
 
-        ProductBundleRequest request = createBaseRequest("B-NEW-" + UUID.randomUUID(), "New Bundle");
+        ProductBundleRequest request = createBaseRequest("New Bundle");
         request.setProducts(List.of(createItem(newProductId, true)));
 
         mockMvc.perform(post("/api/v1/bundles")
@@ -258,7 +259,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
             return txHelper.getOrCreateProduct("Wealth P", type, "WEALTH").getId();
         });
 
-        ProductBundleRequest request = createBaseRequest("B-CONFLICT-" + UUID.randomUUID(), "Conflict Bundle");
+        ProductBundleRequest request = createBaseRequest("Conflict Bundle");
         request.setProducts(List.of(
                 createItem(retailProduct, true),
                 createItem(wealthProduct, false)
@@ -279,7 +280,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = BUNDLE_ADMIN)
     @DisplayName("Validation - Should fail when more than one product is marked as Main Account")
     void createBundle_ShouldFail_WhenMultipleMainProductsExist() throws Exception {
-        ProductBundleRequest request = createBaseRequest("B-MULTI-MAIN", "Invalid Multi Main");
+        ProductBundleRequest request = createBaseRequest("Invalid Multi Main");
         request.setProducts(List.of(
                 createItem(retailProductId, true),
                 createItem(wealthProductId, true)
@@ -302,10 +303,10 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
 
     // --- HELPERS ---
 
-    private ProductBundleRequest createBaseRequest(String code, String name) {
+    private ProductBundleRequest createBaseRequest(String name) {
         ProductBundleRequest request = new ProductBundleRequest();
-        request.setCode(code);
         request.setName(name);
+        request.setCode(generateValidCode(name));
         request.setActivationDate(LocalDate.now().plusDays(7));
         request.setTargetCustomerSegments("RETAIL");
         return request;

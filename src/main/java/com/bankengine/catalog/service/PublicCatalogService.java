@@ -53,6 +53,7 @@ public class PublicCatalogService extends BaseService {
     private final BankConfigurationRepository bankConfigurationRepository;
 
     private static final String NOT_APPLICABLE_DASH = "—";
+    private static final String PRICING_INCLUDED_LABEL = "Included";
 
     public PublicCatalogService(ProductRepository productRepository,
                                 ProductBundleRepository productBundleRepository,
@@ -271,7 +272,7 @@ public class PublicCatalogService extends BaseService {
                 name -> products.stream().map(p ->
                         p.getProductPricingLinks().stream()
                                 .filter(l -> l.getPricingComponent().getName().equals(name))
-                                .map(l -> l.getFixedValue() != null ? "$" + l.getFixedValue() : "Included")
+                                .map(l -> formatPricingValue(l.getFixedValue(), l.getPricingComponent().getType()))
                                 .findFirst()
                                 .orElse(NOT_APPLICABLE_DASH)
                 ).toList()
@@ -288,16 +289,18 @@ public class PublicCatalogService extends BaseService {
         BigDecimal totalIndividualSavings = BigDecimal.ZERO;
 
         for (ProductPricingLink link : product.getProductPricingLinks()) {
+            PricingComponent component = link.getPricingComponent();
             var item = ProductDetailView.PricingBreakdown.PricingItem.builder()
-                    .name(link.getPricingComponent().getName())
-                    .value(formatPricingValue(link, link.getPricingComponent()))
-                    .highlighted(link.getPricingComponent().getType() == PricingComponent.ComponentType.FEE)
+                    .name(component.getName())
+                    .value(formatPricingValue(link.getFixedValue(), link.getPricingComponent().getType()))
+                    .condition(component.getDescription())
+                    .highlighted(isHighlightedCost(component.getType()))
                     .build();
 
-            switch (link.getPricingComponent().getType()) {
-                case FEE -> fees.add(item);
+            switch (component.getType()) {
+                case FEE, PACKAGE_FEE, TAX -> fees.add(item);
                 case INTEREST_RATE -> rates.add(item);
-                case DISCOUNT -> {
+                case DISCOUNT, BENEFIT -> {
                     discounts.add(item);
                     if (link.getFixedValue() != null)
                         totalIndividualSavings = totalIndividualSavings.add(link.getFixedValue());
@@ -307,7 +310,7 @@ public class PublicCatalogService extends BaseService {
                     if (link.getFixedValue() != null)
                         totalIndividualSavings = totalIndividualSavings.add(link.getFixedValue());
                 }
-                default -> waivers.add(item);
+                default -> fees.add(item);
             }
         }
 
@@ -325,19 +328,18 @@ public class PublicCatalogService extends BaseService {
                 .build();
     }
 
-    private String formatPricingValue(ProductPricingLink link, PricingComponent component) {
-        if (link.getFixedValue() == null) {
-            return component.getName();
+    private String formatPricingValue(BigDecimal fixedValue, PricingComponent.ComponentType componentType) {
+        if (fixedValue == null) {
+            return PRICING_INCLUDED_LABEL;
         }
-        String currencyCode = bankConfigurationRepository
-                .findByBankIdUnfiltered(getCurrentBankId())
-                .map(BankConfiguration::getCurrencyCode)
-                .orElse("NO_CURR");
 
-        return switch (component.getType()) {
-            case INTEREST_RATE -> link.getFixedValue().toString() + "% p.a.";
-            case FEE, PACKAGE_FEE, WAIVER, DISCOUNT -> currencyCode + " " + String.format("%.2f", link.getFixedValue());
-            default -> link.getFixedValue().toString();
+        String currencyCode = getCurrencyCode();
+
+        return switch (componentType) {
+            case INTEREST_RATE -> String.format("%.2f%% p.a.", fixedValue);
+            case FEE, PACKAGE_FEE, TAX, WAIVER, DISCOUNT, BENEFIT ->
+                    currencyCode + " " + String.format("%.2f", fixedValue);
+            default -> fixedValue.toString();
         };
     }
 
@@ -357,7 +359,8 @@ public class PublicCatalogService extends BaseService {
 
     private ProductCatalogCard.PricingSummary summarizePricing(Product product) {
         ProductPricingLink mainFeeLink = product.getProductPricingLinks().stream()
-                .filter(link -> link.getPricingComponent().getType() == PricingComponent.ComponentType.FEE)
+                .filter(link -> link.getPricingComponent().getType() == PricingComponent.ComponentType.FEE ||
+                                link.getPricingComponent().getType() == PricingComponent.ComponentType.PACKAGE_FEE)
                 .findFirst()
                 .orElse(null);
 
@@ -396,5 +399,20 @@ public class PublicCatalogService extends BaseService {
             return "Services & Access";
         }
         return "Other Features";
+    }
+
+    // --- Refactoring Helpers ---
+
+    private String getCurrencyCode() {
+        return bankConfigurationRepository
+                .findByBankIdUnfiltered(getCurrentBankId())
+                .map(BankConfiguration::getCurrencyCode)
+                .orElse("NO_CURR");
+    }
+
+    private boolean isHighlightedCost(PricingComponent.ComponentType type) {
+        return type == PricingComponent.ComponentType.FEE ||
+               type == PricingComponent.ComponentType.PACKAGE_FEE ||
+               type == PricingComponent.ComponentType.TAX;
     }
 }

@@ -26,11 +26,15 @@ import static org.mockito.Mockito.when;
 
 class BundleRuleBuilderServiceTest extends BaseServiceTest {
 
-    @Mock private PricingComponentRepository componentRepository;
-    @Mock private PricingInputMetadataService metadataService;
-    @Mock private DroolsExpressionBuilder droolsExpressionBuilder;
+    @Mock
+    private PricingComponentRepository componentRepository;
+    @Mock
+    private PricingInputMetadataService metadataService;
+    @Mock
+    private DroolsExpressionBuilder droolsExpressionBuilder;
 
-    @InjectMocks private BundleRuleBuilderService bundleRuleBuilderService;
+    @InjectMocks
+    private BundleRuleBuilderService bundleRuleBuilderService;
 
     @BeforeEach
     void setUp() {
@@ -44,34 +48,30 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
         PricingComponent waiver = mock(PricingComponent.class);
         when(waiver.getName()).thenReturn("Staff Waiver");
         when(waiver.getCode()).thenReturn("STAFF_WAIVER_01");
+        when(waiver.getBankId()).thenReturn("TEST_BANK");
 
         PricingTier tier = mock(PricingTier.class);
         when(tier.getId()).thenReturn(999L);
+        when(tier.getCode()).thenReturn("TIER-999");
 
         PriceValue pv = new PriceValue();
         pv.setRawValue(new BigDecimal("100.00"));
         pv.setValueType(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
 
         when(tier.getPriceValues()).thenReturn(Set.of(pv));
+        when(tier.getPricingComponent()).thenReturn(waiver);
+
         when(waiver.getPricingTiers()).thenReturn(List.of(tier));
         when(componentRepository.findByTypeIn(any())).thenReturn(List.of(waiver));
 
-        // ACT
         String drl = bundleRuleBuilderService.buildAllRulesForCompilation();
 
-        // ASSERT
-        // FIX: Match actual package prefix 'bankengine.bundle.rules' and the mock bank ID
-        assertTrue(drl.contains("package bankengine.bundle.rules.testbank"), "Incorrect package path. Found: " + drl);
+        assertTrue(drl.contains("package bankengine.bundle.rules.testbank"), "Incorrect package path");
         assertTrue(drl.contains("import com.bankengine.rules.model.BundlePricingInput"), "Missing import");
-        assertTrue(drl.contains("$input : BundlePricingInput"), "Incorrect fact type");
-
-        // Verify RHS Action
-        assertTrue(drl.contains("$input.addAdjustment(\"STAFF_WAIVER_01\""),
-                "RHS should call addAdjustment with the component code. Found: " + drl);
-        assertTrue(drl.contains("update($input);"), "Bundle rules must update the existing input fact");
-
-        // Optional: Verify the debug print is present
-        assertTrue(drl.contains("Rule Fired: BUNDLE_TEST_BANK_Staff_Waiver_Tier_999"));
+        assertTrue(drl.contains("$input.addAdjustment(\"STAFF_WAIVER_01\", new BigDecimal(\"100.00\"), \"DISCOUNT_PERCENTAGE\", \"TIER-999\")"),
+                "RHS should call addAdjustment with the component code and tier code.");
+        assertTrue(drl.contains("Rule Fired: BUNDLE_TEST_BANK_STAFF_WAIVER_01"), "Log message missing component code");
+        assertTrue(drl.contains("Tier_TIER-999"), "Log message missing tier code");
     }
 
     @Test

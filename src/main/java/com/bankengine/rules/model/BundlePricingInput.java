@@ -19,8 +19,8 @@ public class BundlePricingInput {
     private String customerSegment;
     private LocalDate referenceDate = LocalDate.now();
 
-    private Set<Long> targetPricingComponentIds;
-    private Set<Long> activePricingTierIds;
+    private Set<String> targetPricingComponentCodes;
+    private Set<String> activePricingTierCodes;
     private List<Long> containedProductIds;
     private BigDecimal grossTotalAmount;
 
@@ -36,6 +36,7 @@ public class BundlePricingInput {
         private String type;
         private String targetComponentCode;
         private boolean applyChargeOnFullBreach;
+        private String matchedTierCode;
     }
 
     /**
@@ -46,14 +47,30 @@ public class BundlePricingInput {
     }
 
     /**
+     * Overloaded method to support Drools BundleRuleBuilderService (4 arguments).
+     * Maps to: $input.addAdjustment(code, value, type, tierCode)
+     */
+    public void addAdjustment(String code, BigDecimal value, String type, String tierCode) {
+        this.addAdjustment(code, value, type, null, false, tierCode);
+    }
+
+    /**
      * Surgical adjustment targeting a specific component code.
      */
     public void addAdjustment(String code, BigDecimal value, String type, String targetComponentCode, boolean isFullBreach) {
+        this.addAdjustment(code, value, type, targetComponentCode, isFullBreach, null);
+    }
+
+    /**
+     * Internal master method to build the adjustment with all metadata.
+     */
+    private void addAdjustment(String code, BigDecimal value, String type, String targetComponentCode, boolean isFullBreach, String tierCode) {
         this.adjustments.put(code, BundleAdjustment.builder()
                 .value(value)
                 .type(type)
                 .targetComponentCode(targetComponentCode)
                 .applyChargeOnFullBreach(isFullBreach)
+                .matchedTierCode(tierCode)
                 .build());
     }
 }

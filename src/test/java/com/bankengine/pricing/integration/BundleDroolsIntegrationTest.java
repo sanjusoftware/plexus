@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.bankengine.common.model.VersionableEntity.EntityStatus.ACTIVE;
+import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -218,7 +219,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
                     .type(PricingComponent.ComponentType.DISCOUNT).bankId(TEST_BANK_ID).status(ACTIVE).build());
 
             PricingTier tier = pricingTierRepository.save(PricingTier.builder()
-                    .pricingComponent(comp).name(name + " Tier")
+                    .pricingComponent(comp).name(name + " Tier").code(generateValidCode(name))
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build());
 
             priceValueRepository.save(PriceValue.builder()

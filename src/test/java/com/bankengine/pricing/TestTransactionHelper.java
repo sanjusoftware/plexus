@@ -23,9 +23,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
+import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static com.bankengine.test.config.AbstractIntegrationTest.TEST_BANK_ID;
 
 @Component
@@ -82,13 +86,9 @@ public class TestTransactionHelper {
     @Transactional
     public Product createValidProduct(String productName, String typeName, VersionableEntity.EntityStatus status) {
         ProductType type = getOrCreateProductType(typeName);
-
-        // We use a unique code to avoid constraint violations in parallel tests
-        String uniqueCode = "PROD_" + UUID.randomUUID().toString().substring(0, 8);
-
         Product product = Product.builder()
                 .name(productName)
-                .code(uniqueCode)
+                .code(generateValidCode(productName))
                 .productType(type)
                 .category("RETAIL")
                 .status(status)
@@ -105,7 +105,7 @@ public class TestTransactionHelper {
                 .orElseGet(() -> {
                     PricingComponent component = new PricingComponent();
                     component.setName(name);
-                    component.setCode("MONTHLY_MIAN_FEE_"+ UUID.randomUUID());
+                    component.setCode(generateValidCode(name));
                     component.setBankId(TenantContextHolder.getBankId());
                     component.setType(PricingComponent.ComponentType.FEE);
                     return pricingComponentRepository.save(component);
@@ -188,8 +188,8 @@ public class TestTransactionHelper {
         PricingTier tier = new PricingTier();
         tier.setPricingComponent(component);
         tier.setName(tierName);
+        tier.setCode(generateValidCode(tierName));
         tier.setMinThreshold(BigDecimal.ZERO);
-        tier.setProRataApplicable(false);
         tier.setApplyChargeOnFullBreach(false);
 
         TierCondition condition = new TierCondition();
@@ -238,7 +238,7 @@ public class TestTransactionHelper {
                 .orElseGet(() -> {
                     Product p = new Product();
                     p.setName(name);
-                    p.setCode("CASA_01_" + UUID.randomUUID() );
+                    p.setCode(generateValidCode(name));
                     p.setProductType(type);
                     p.setCategory(category);
                     p.setStatus(VersionableEntity.EntityStatus.ACTIVE);
@@ -392,7 +392,7 @@ public class TestTransactionHelper {
     public ProductBundle createBundleInDb(String name, VersionableEntity.EntityStatus bundleStatus) {
         ProductBundle bundle = new ProductBundle();
         bundle.setName(name);
-        bundle.setCode("BNDL_" + System.currentTimeMillis());
+        bundle.setCode(generateValidCode(name));
         bundle.setTargetCustomerSegments("RETAIL");
         bundle.setActivationDate(LocalDate.now());
         bundle.setStatus(bundleStatus);

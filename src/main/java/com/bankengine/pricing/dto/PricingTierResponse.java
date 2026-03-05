@@ -11,6 +11,8 @@ import java.util.List;
 public class PricingTierResponse {
     Long id;
     String name;
+    String code;
+    int priority;
     BigDecimal minThreshold;
     BigDecimal maxThreshold;
     List<TierConditionDto> conditions;

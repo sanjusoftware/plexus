@@ -69,6 +69,7 @@ public class PricingComponentService extends BaseService {
         component.setVersion(1);
 
         attachTiersToComponent(component, requestDto.getPricingTiers());
+        validateComponentAndValueType(component);
 
         PricingComponent saved = pricingComponentRepository.save(component);
         reloadService.reloadKieContainer();
@@ -101,6 +102,7 @@ public class PricingComponentService extends BaseService {
         }
 
         pricingComponentMapper.updateFromDto(requestDto, component);
+        validateComponentAndValueType(component);
         PricingComponent updated = pricingComponentRepository.save(component);
         reloadService.reloadKieContainer();
         return pricingComponentMapper.toResponseDto(updated);
@@ -224,6 +226,7 @@ public class PricingComponentService extends BaseService {
         tier.setPriceValues(Set.of(value));
 
         mapConditions(tierDto, tier);
+        validateComponentAndValueType(component);
 
         PricingTier saved = tierRepository.save(tier);
         reloadService.reloadKieContainer();
@@ -270,6 +273,7 @@ public class PricingComponentService extends BaseService {
             priceValueMapper.updateFromDto(tierDto.getPriceValue(), tier.getPriceValues().iterator().next());
         }
 
+        validateComponentAndValueType(component);
         PricingTier updated = tierRepository.save(tier);
         reloadService.reloadKieContainer();
 
@@ -323,5 +327,52 @@ public class PricingComponentService extends BaseService {
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid component type provided: " + type);
         }
+    }
+
+    private void validateComponentAndValueType(PricingComponent component) {
+        if (component.getPricingTiers() == null) return;
+
+        for (PricingTier tier : component.getPricingTiers()) {
+            if (tier.getPriceValues() == null) continue;
+            for (PriceValue value : tier.getPriceValues()) {
+                if (isDiscountType(component.getType())) {
+                    if (!isDiscountValue(value.getValueType())) {
+                        throw new IllegalArgumentException(String.format(
+                                "Component type %s must have discount-related value types (DISCOUNT_PERCENTAGE, DISCOUNT_ABSOLUTE, FREE_COUNT). Found: %s",
+                                component.getType(), value.getValueType()));
+                    }
+                } else if (isFeeType(component.getType())) {
+                    if (!isFeeValue(value.getValueType())) {
+                        throw new IllegalArgumentException(String.format(
+                                "Component type %s must have fee-related value types (FEE_ABSOLUTE, FEE_PERCENTAGE). Found: %s",
+                                component.getType(), value.getValueType()));
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isDiscountType(PricingComponent.ComponentType type) {
+        return type == PricingComponent.ComponentType.WAIVER ||
+                type == PricingComponent.ComponentType.BENEFIT ||
+                type == PricingComponent.ComponentType.DISCOUNT;
+    }
+
+    private boolean isFeeType(PricingComponent.ComponentType type) {
+        return type == PricingComponent.ComponentType.FEE ||
+                type == PricingComponent.ComponentType.INTEREST_RATE ||
+                type == PricingComponent.ComponentType.PACKAGE_FEE ||
+                type == PricingComponent.ComponentType.TAX;
+    }
+
+    private boolean isDiscountValue(PriceValue.ValueType type) {
+        return type == PriceValue.ValueType.DISCOUNT_PERCENTAGE ||
+                type == PriceValue.ValueType.DISCOUNT_ABSOLUTE ||
+                type == PriceValue.ValueType.FREE_COUNT;
+    }
+
+    private boolean isFeeValue(PriceValue.ValueType type) {
+        return type == PriceValue.ValueType.FEE_ABSOLUTE ||
+                type == PriceValue.ValueType.FEE_PERCENTAGE;
     }
 }

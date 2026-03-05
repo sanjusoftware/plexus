@@ -37,19 +37,19 @@ public class ProductRuleBuilderService extends AbstractRuleBuilderService {
         String valueTypeStr = pv.getValueType() != null ? pv.getValueType().name() : "FEE_ABSOLUTE";
 
         return String.format("""
-                    $input.setRuleFired(true);
-                    update($input);
                     PriceValue priceValueFact = new PriceValue();
                     priceValueFact.setMatchedTierId(%dL);
+                    priceValueFact.setMatchedTierCode("%s");
                     priceValueFact.setRawValue(new BigDecimal("%s"));
                     priceValueFact.setValueType(PriceValue.ValueType.%s);
                     priceValueFact.setComponentCode("%s");
                     priceValueFact.setBankId("%s");
                     insert(priceValueFact);""",
                 tier.getId(),
+                tier.getCode(),
                 pv.getRawValue(),
                 valueTypeStr,
-                component.getName().replaceAll("\\s", "_"),
+                component.getCode(),
                 getSafeBankIdForDrl());
     }
 }

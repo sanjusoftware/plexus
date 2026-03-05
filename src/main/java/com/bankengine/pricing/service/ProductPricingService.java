@@ -113,31 +113,30 @@ public class ProductPricingService extends BaseService {
     }
 
     private List<PriceComponentDetail> retrieveDynamicComponents(ProductPriceRequest request, List<ProductPricingLink> ruleLinks) {
-        // 1. Identify Target Component IDs
-        Set<Long> componentIds = ruleLinks.stream()
-                .map(l -> l.getPricingComponent().getId())
+        // 1. Identify Target Component Codes and Versions
+        Set<String> componentCodes = ruleLinks.stream()
+                .map(l -> l.getPricingComponent().getCode() + ":" + l.getPricingComponent().getVersion())
                 .collect(Collectors.toSet());
 
-        // 2. REFACTORED: Harvest Tier IDs directly from the active component links.
-        // Since Tiers follow Component activation dates, we collect all tiers belonging to these active components.
-        Set<Long> activeTierIds = ruleLinks.stream()
+        // 2. Harvest Tier Codes directly from the active component links.
+        Set<String> activeTierCodes = ruleLinks.stream()
                 .flatMap(l -> l.getPricingComponent().getPricingTiers().stream())
-                .map(PricingTier::getId)
+                .map(PricingTier::getCode)
                 .collect(Collectors.toSet());
 
-        // 3. Execute Rules with fully populated ID sets
-        return determinePriceWithDrools(request, componentIds, activeTierIds).stream()
+        // 3. Execute Rules with fully populated code sets
+        return determinePriceWithDrools(request, componentCodes, activeTierCodes).stream()
                 .map(this::mapFactToDetail)
                 .toList();
     }
 
-    private Collection<PriceValue> determinePriceWithDrools(ProductPriceRequest request, Set<Long> componentIds, Set<Long> activeTierIds) {
+    private Collection<PriceValue> determinePriceWithDrools(ProductPriceRequest request, Set<String> componentCodes, Set<String> activeTierCodes) {
         KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
         try {
             PricingInput input = new PricingInput();
             input.setBankId(getCurrentBankId());
-            input.setTargetPricingComponentIds(componentIds);
-            input.setActivePricingTierIds(activeTierIds); // Satisfies 'activePricingTierIds contains' in DRL
+            input.setTargetPricingComponentCodes(componentCodes);
+            input.setActivePricingTierCodes(activeTierCodes);
             input.setReferenceDate(request.getEffectiveDate());
 
             // CRITICAL: Set the top-level field so the DRL 'amountField' logic works
@@ -155,6 +154,7 @@ public class ProductPricingService extends BaseService {
             input.getCustomAttributes().put("customerSegment", request.getCustomerSegment());
             input.getCustomAttributes().put("transactionAmount", input.getTransactionAmount());
 
+            kieSession.setGlobal("log", log);
             kieSession.insert(input);
             kieSession.fireAllRules();
 
@@ -177,28 +177,43 @@ public class ProductPricingService extends BaseService {
 
     private PriceComponentDetail mapFixedLinkToDetail(ProductPricingLink link) {
         return PriceComponentDetail.builder()
-                .componentCode(link.getPricingComponent().getName())
+                .componentCode(link.getPricingComponent().getCode())
                 .rawValue(link.getFixedValue())
                 .valueType(link.getFixedValueType())
                 .sourceType("FIXED_VALUE")
                 .targetComponentCode(link.getTargetComponentCode())
-                .proRataApplicable(false)
+                .proRataApplicable(link.getPricingComponent().isProRataApplicable())
                 .applyChargeOnFullBreach(false)
                 .build();
     }
 
     private PriceComponentDetail mapFactToDetail(PriceValue fact) {
-        boolean proRata = fact.getPricingTier() != null && fact.getPricingTier().isProRataApplicable();
-        boolean fullBreach = fact.getPricingTier() != null && fact.getPricingTier().isApplyChargeOnFullBreach();
+    // Default values
+    boolean proRata = false;
+    boolean fullBreach = false;
 
-        return PriceComponentDetail.builder()
-                .componentCode(fact.getComponentCode())
-                .rawValue(fact.getRawValue())
-                .valueType(fact.getValueType())
-                .sourceType("RULES_ENGINE")
-                .matchedTierId(fact.getMatchedTierId())
-                .proRataApplicable(proRata)
-                .applyChargeOnFullBreach(fullBreach)
-                .build();
+    // Extract Tier Code from the flat field (populated by Drools)
+    // or the nested entity (populated by DB/Hibernate)
+    String tierCode = fact.getMatchedTierCode();
+
+    if (fact.getPricingTier() != null) {
+        proRata = fact.getPricingTier().getPricingComponent().isProRataApplicable();
+        fullBreach = fact.getPricingTier().isApplyChargeOnFullBreach();
+        // Fallback to entity code if flat field is missing
+        if (tierCode == null) {
+            tierCode = fact.getPricingTier().getCode();
+        }
     }
+
+    return PriceComponentDetail.builder()
+            .componentCode(fact.getComponentCode())
+            .rawValue(fact.getRawValue())
+            .valueType(fact.getValueType())
+            .sourceType("RULES_ENGINE")
+            .matchedTierId(fact.getMatchedTierId())
+            .matchedTierCode(tierCode)
+            .proRataApplicable(proRata)
+            .applyChargeOnFullBreach(fullBreach)
+            .build();
+}
 }

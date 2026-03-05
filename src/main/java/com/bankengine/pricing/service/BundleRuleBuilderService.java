@@ -43,10 +43,10 @@ public class BundleRuleBuilderService extends AbstractRuleBuilderService {
         }
         PriceValue pv = tier.getPriceValues().iterator().next();
         return String.format("""
-                        $input.addAdjustment("%s", new BigDecimal("%s"), "%s");
-                        update($input);""",
+                        $input.addAdjustment("%s", new BigDecimal("%s"), "%s", "%s");""",
                 component.getCode(),
                 pv.getRawValue().toPlainString(),
-                pv.getValueType().name());
+                pv.getValueType().name(),
+                tier.getCode());
     }
 }

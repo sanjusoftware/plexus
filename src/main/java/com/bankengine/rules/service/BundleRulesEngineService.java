@@ -2,11 +2,13 @@ package com.bankengine.rules.service;
 
 import com.bankengine.rules.model.BundlePricingInput;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.kie.api.runtime.KieSession;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BundleRulesEngineService {
 
     private final KieContainerReloadService kieContainerReloadService;
@@ -22,6 +24,7 @@ public class BundleRulesEngineService {
 
         try {
             // 1. Insert the input fact
+            kieSession.setGlobal("log", log);
             kieSession.insert(inputFact);
 
             // 2. Fire all bundle-specific rules

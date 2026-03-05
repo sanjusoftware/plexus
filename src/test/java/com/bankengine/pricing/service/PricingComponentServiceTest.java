@@ -26,10 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,7 +54,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
     private PricingComponentRequest newPricingComponentRequest(String name) {
         PricingComponentRequest request = new PricingComponentRequest();
         request.setName(name);
-        request.setCode(TEST_CODE); // Restored mandatory field
+        request.setCode(TEST_CODE);
         request.setType("FEE");
         return request;
     }
@@ -68,6 +65,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         component.setStatus(status);
         component.setCode(TEST_CODE);
         component.setType(PricingComponent.ComponentType.FEE);
+        component.setPricingTiers(new ArrayList<>());
         return component;
     }
 
@@ -83,6 +81,8 @@ class PricingComponentServiceTest extends BaseServiceTest {
 
         PricingComponent entity = new PricingComponent();
         entity.setBankId(TEST_BANK_ID);
+        entity.setType(PricingComponent.ComponentType.FEE);
+        entity.setPricingTiers(new ArrayList<>());
 
         when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
         when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
@@ -323,14 +323,23 @@ class PricingComponentServiceTest extends BaseServiceTest {
     @DisplayName("Branch: Should handle tiers with conditions and values in attachTiersToComponent")
     void testAttachTiersToComponent_complex() {
         PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setType(PricingComponent.ComponentType.FEE);
 
         PricingTierRequest tierReq = new PricingTierRequest();
         tierReq.setConditions(List.of(new TierConditionDto()));
-        tierReq.setPriceValue(new PriceValueRequest());
+        PriceValueRequest priceValueRequest = new PriceValueRequest();
+        priceValueRequest.setValueType("FEE_ABSOLUTE");
+        tierReq.setPriceValue(priceValueRequest);
 
-        when(pricingTierMapper.toEntity(any())).thenReturn(new PricingTier());
+        PriceValue priceValue = new PriceValue();
+        priceValue.setValueType(PriceValue.ValueType.FEE_ABSOLUTE);
+
+        PricingTier tierEntity = new PricingTier();
+        tierEntity.setPriceValues(new HashSet<>());
+
+        when(pricingTierMapper.toEntity(any())).thenReturn(tierEntity);
         when(tierConditionMapper.toEntity(any())).thenReturn(new TierCondition());
-        when(priceValueMapper.toEntity(any())).thenReturn(new PriceValue());
+        when(priceValueMapper.toEntity(any())).thenReturn(priceValue);
 
         // This is called inside createComponent
         PricingComponentRequest request = newPricingComponentRequest("Complex");

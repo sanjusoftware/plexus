@@ -50,7 +50,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class PublicCatalogServiceTest extends BaseServiceTest {
+public class PublicCatalogServiceTest extends BaseServiceTest {
 
     @Mock
     private ProductRepository productRepository;
@@ -113,10 +113,10 @@ class PublicCatalogServiceTest extends BaseServiceTest {
     void testOrganizeFeaturesByCategory_Keywords() {
         Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
         p.setProductFeatureLinks(List.of(
-                createFeatureLink("Daily Withdrawal Limit", "500"), // Account Limits
-                createFeatureLink("Base Interest Rate", "2.5%"),    // Interest & Returns
-                createFeatureLink("Global ATM Service", "Free"),    // Services & Access
-                createFeatureLink("Color", "Blue")                  // Other Features
+                createFeatureLink("Daily Withdrawal Limit", "500"),
+                createFeatureLink("Base Interest Rate", "2.5%"),
+                createFeatureLink("Global ATM Service", "Free"),
+                createFeatureLink("Color", "Blue")
         ));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(p));
@@ -150,7 +150,7 @@ class PublicCatalogServiceTest extends BaseServiceTest {
 
         assertAll(
                 () -> assertEquals("USD 10.00", breakdown.getFees().getFirst().getValue()),
-                () -> assertEquals("15.5% p.a.", breakdown.getRates().getFirst().getValue()),
+                () -> assertEquals("15.50% p.a.", breakdown.getRates().getFirst().getValue()),
                 () -> assertTrue(breakdown.getFees().getFirst().isHighlighted(), "Fees should be highlighted")
         );
     }
@@ -188,13 +188,13 @@ class PublicCatalogServiceTest extends BaseServiceTest {
                 // Pricing Matrix Check (Standardized fallback to "—")
                 () -> {
                     var priceX = matrix.getPricingComparison().get("PriceX");
-                    assertEquals("$1.00", priceX.get(0));
+                    assertEquals("USD 1.00", priceX.get(0));
                     assertEquals("—", priceX.get(1), "P2 should have dash for missing PriceX");
                 },
                 () -> {
                     var priceY = matrix.getPricingComparison().get("PriceY");
                     assertEquals("—", priceY.get(0), "P1 should have dash for missing PriceY");
-                    assertEquals("$0.00", priceY.get(1));
+                    assertEquals("USD 0.00", priceY.get(1));
                 }
         );
     }
@@ -360,33 +360,137 @@ class PublicCatalogServiceTest extends BaseServiceTest {
     }
 
     @Test
-    @DisplayName("BuildPricingBreakdown - Should handle unknown component types via default branch")
+    @DisplayName("BuildPricingBreakdown - Should handle BENEFIT type via Discounts branch")
     void testBuildPricingBreakdown_DefaultFallback() {
         Product product = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
-        // BENEFIT type triggers default branch in summarizePricing switch
-        product.setProductPricingLinks(List.of(createPricingLink("Bonus", new BigDecimal("1.00"), PricingComponent.ComponentType.BENEFIT)));
+        // This is a BENEFIT type
+        product.setProductPricingLinks(List.of(
+                createPricingLink("Bonus", new BigDecimal("1.00"), PricingComponent.ComponentType.BENEFIT)
+        ));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
 
         ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
-        // Benefits/Unknown typically fall into the waivers/other category based on current service impl
-        assertFalse(detail.getPricing().getWaivers().isEmpty());
+
+        assertAll(
+                () -> assertFalse(detail.getPricing().getDiscounts().isEmpty(), "Benefits should be in the discounts list"),
+                () -> assertEquals("Bonus", detail.getPricing().getDiscounts().getFirst().getName()),
+                () -> assertEquals("USD 1.00", detail.getPricing().getDiscounts().getFirst().getValue())
+        );
     }
 
     @Test
-    @DisplayName("BuildPricingBreakdown - Should handle all ComponentTypes")
-    void testBuildPricingBreakdown_Exhaustive() {
-        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
-        p.setProductPricingLinks(List.of(
-                createPricingLink("Fee", new BigDecimal("10"), PricingComponent.ComponentType.FEE)
+    @DisplayName("Detail View - Comprehensive test of all categories, features, and pricing types")
+    void testGetProductDetailView_Exhaustive() {
+        // 1. Setup Product with all 7 ComponentTypes + Multiple Feature Categories
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
+        p.setFullDescription("Full Description");
+        p.setTermsAndConditions("T&Cs Apply");
+
+        p.setProductFeatureLinks(List.of(
+                createFeatureLink("Daily Limit", "1000"),        // Account Limits
+                createFeatureLink("Savings Rate", "4.0%"),      // Interest & Returns
+                createFeatureLink("ATM Access", "Worldwide"),   // Services & Access
+                createFeatureLink("Card Color", "Gold")         // Other Features
         ));
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(p));
-        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        p.setProductPricingLinks(List.of(
+                createPricingLink("Monthly Fee", new BigDecimal("10.00"), PricingComponent.ComponentType.FEE),
+                createPricingLink("Bundle Charge", new BigDecimal("5.00"), PricingComponent.ComponentType.PACKAGE_FEE),
+                createPricingLink("Gov Tax", new BigDecimal("1.50"), PricingComponent.ComponentType.TAX),
+                createPricingLink("Overdraft Rate", new BigDecimal("18.0"), PricingComponent.ComponentType.INTEREST_RATE),
+                createPricingLink("Student Waiver", new BigDecimal("10.00"), PricingComponent.ComponentType.WAIVER),
+                createPricingLink("Referral Discount", new BigDecimal("2.00"), PricingComponent.ComponentType.DISCOUNT),
+                createPricingLink("Loyalty Bonus", new BigDecimal("1.00"), PricingComponent.ComponentType.BENEFIT),
+                createPricingLink("Null Value Item", null, PricingComponent.ComponentType.FEE)
+        ));
 
+        // 2. Mock Repositories
+        when(productRepository.findById(1L)).thenReturn(Optional.of(p));
+        // Mocking an empty related products list to keep focus on the main detail view
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+
+        // 3. Execute
         ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
-        assertNotNull(detail.getPricing());
+
+        // 4. Assert All The Things
+        assertAll(
+                // Basic Info
+                () -> assertEquals("Test Product 1", detail.getProductName()),
+                () -> assertEquals("Full Description", detail.getFullDescription()),
+
+                // Feature Categorization (Validates organizeFeaturesByCategory)
+                () -> assertEquals(4, detail.getFeaturesByCategory().size(), "Should have 4 feature categories"),
+                () -> assertTrue(detail.getFeaturesByCategory().containsKey("Account Limits")),
+
+                // Pricing Lists (Validates buildPricingBreakdown switch)
+                () -> assertEquals(4, detail.getPricing().getFees().size(), "3 Costs + 1 Default/Null"),
+                () -> assertEquals(1, detail.getPricing().getRates().size()),
+                () -> assertEquals(1, detail.getPricing().getWaivers().size()),
+                () -> assertEquals(2, detail.getPricing().getDiscounts().size(), "Discount + Benefit"),
+
+                // Formatting & Highlighting (Validates formatPricingValue and isHighlightedCost)
+                () -> {
+                    var feeItem = detail.getPricing().getFees().stream()
+                            .filter(i -> i.getName().equals("Monthly Fee")).findFirst().get();
+                    assertTrue(feeItem.isHighlighted());
+                    assertEquals("USD 10.00", feeItem.getValue());
+                },
+                () -> {
+                    var taxItem = detail.getPricing().getFees().stream()
+                            .filter(i -> i.getName().equals("Gov Tax")).findFirst().get();
+                    assertTrue(taxItem.isHighlighted(), "Taxes should be highlighted");
+                },
+                () -> {
+                    var includedItem = detail.getPricing().getFees().stream()
+                            .filter(i -> i.getName().equals("Null Value Item")).findFirst().get();
+                    assertEquals("Included", includedItem.getValue(), "Null fixed values should return 'Included'");
+                },
+
+                // Savings Logic
+                () -> assertEquals(new BigDecimal("13.00"), detail.getPricing().getTotalSavings(),
+                        "Should sum Waiver(10) + Discount(2) + Benefit(1)")
+        );
+    }
+
+    @Test
+    @DisplayName("Comparison Matrix - Should correctly map TAX and BENEFIT across multiple products")
+    void testCompareProducts_TaxAndBenefitMatrix() {
+        // 1. Setup Product A with a Tax and a Benefit
+        Product p1 = createMockProduct(101L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
+        p1.setProductPricingLinks(List.of(
+                createPricingLink("State Tax", new BigDecimal("1.50"), PricingComponent.ComponentType.TAX),
+                createPricingLink("Loyalty Bonus", new BigDecimal("5.00"), PricingComponent.ComponentType.BENEFIT)
+        ));
+
+        // 2. Setup Product B with NO Tax and a NULL (Included) Benefit
+        Product p2 = createMockProduct(102L, VersionableEntity.EntityStatus.ACTIVE, "RETAIL");
+        p2.setProductPricingLinks(List.of(
+                createPricingLink("Loyalty Bonus", null, PricingComponent.ComponentType.BENEFIT)
+        ));
+
+        when(productRepository.findAllById(anyList())).thenReturn(List.of(p1, p2));
+        when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder().build());
+
+        // 3. Execute
+        ProductComparisonView matrix = publicCatalogService.compareProducts(List.of(101L, 102L));
+
+        // 4. Assert Alignment
+        assertAll(
+                () -> {
+                    // Check TAX alignment
+                    List<String> taxRow = matrix.getPricingComparison().get("State Tax");
+                    assertEquals("USD 1.50", taxRow.get(0), "P1 should show formatted tax");
+                    assertEquals("—", taxRow.get(1), "P2 should show dash for missing tax");
+                },
+                () -> {
+                    // Check BENEFIT alignment
+                    List<String> benefitRow = matrix.getPricingComparison().get("Loyalty Bonus");
+                    assertEquals("USD 5.00", benefitRow.get(0), "P1 should show formatted benefit");
+                    assertEquals("Included", benefitRow.get(1), "P2 should show 'Included' for null benefit value");
+                }
+        );
     }
 
     // --- HELPERS ---

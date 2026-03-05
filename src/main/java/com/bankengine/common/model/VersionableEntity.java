@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.validation.constraints.Pattern;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,10 @@ public abstract class VersionableEntity extends AuditableEntity {
     @Column(nullable = false)
     protected String name;
 
+    @Pattern(
+            regexp = "^[a-zA-Z0-9_-]+$",
+            message = "Code must be a single word containing only alphanumeric characters, underscores, or dashes"
+    )
     @Column(name = "code", nullable = false, length = 100)
     protected String code;
 

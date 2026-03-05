@@ -25,8 +25,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
 
+import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -77,9 +81,10 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                 type.setName("Test Type for Link");
                 ProductType savedType = productTypeRepoStatic.save(type);
 
+                String productName = "Link Test Product";
                 Product product = new Product();
-                product.setName("Link Test Product");
-                product.setCode("TEST-PROD-" + UUID.randomUUID());
+                product.setName(productName);
+                product.setCode(generateValidCode(productName));
                 product.setActivationDate(LocalDate.now());
                 product.setStatus(VersionableEntity.EntityStatus.ACTIVE);
                 product.setProductType(savedType);
@@ -105,7 +110,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     private FeatureComponentRequest newFeatureComponentRequest(String name) {
         FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName(name);
-        dto.setCode(name + UUID.randomUUID());
+        dto.setCode(generateValidCode(name));
         dto.setDataType("STRING");
         return dto;
     }
@@ -115,7 +120,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                 .orElseGet(() -> featureComponentRepository.save(
                         FeatureComponent.builder()
                                 .name(name)
-                                .code(name + UUID.randomUUID())
+                                .code(generateValidCode(name))
                                 .dataType(FeatureComponent.DataType.STRING)
                                 .status(VersionableEntity.EntityStatus.DRAFT)
                                 .bankId(TEST_BANK_ID)
@@ -372,10 +377,10 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         FeatureComponent feature = createFeatureComponentInDb("HeavilyLinked");
 
         txHelper.doInTransaction(() -> {
-            // Create a second product to avoid the Unique Constraint violation
+            String productName = "Second Product";
             Product secondProduct = new Product();
-            secondProduct.setName("Second Product");
-            secondProduct.setCode("TEST-PROD-" + UUID.randomUUID());
+            secondProduct.setName(productName);
+            secondProduct.setCode(generateValidCode(productName));
             secondProduct.setStatus(VersionableEntity.EntityStatus.ACTIVE);
             secondProduct.setProductType(sharedProduct.getProductType()); // Reuse the same type
             secondProduct.setCategory("RETAIL");

@@ -25,8 +25,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
+import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -95,7 +95,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     private PricingComponentRequest newPricingComponentRequest(String name) {
         PricingComponentRequest req = new PricingComponentRequest();
         req.setName(name);
-        req.setCode(name.toUpperCase() + "_" + UUID.randomUUID().toString().substring(0, 8));
+        req.setCode(generateValidCode(name));
         req.setType("FEE");
         return req;
     }
@@ -112,6 +112,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         return PricingTierRequest.builder()
                 .name("Default Tier")
+                .code("DEFAULT-TIER")
                 .minThreshold(BigDecimal.ZERO)
                 .effectiveDate(LocalDate.now())
                 .conditions(List.of(cond))

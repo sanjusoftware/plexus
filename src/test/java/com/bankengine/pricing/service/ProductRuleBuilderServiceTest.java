@@ -39,7 +39,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
     }
 
     @Test
-    @DisplayName("Should generate DRL using activePricingTierIds and correct BigDecimal syntax")
+    @DisplayName("Should generate DRL using activePricingTierCodes and correct BigDecimal syntax")
     void testBuildRules_shouldGenerateCorrectDRL_withCustomAttributeAndFreeCount() {
         // ARRANGE
         PricingInputMetadata metadata = mock(PricingInputMetadata.class);
@@ -52,6 +52,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
 
         PricingTier tier1 = mock(PricingTier.class);
         when(tier1.getId()).thenReturn(200L);
+        when(tier1.getCode()).thenReturn("TIER_200");
         when(tier1.getConditions()).thenReturn(Set.of(mock(TierCondition.class)));
         when(tier1.getPriceValues()).thenReturn(Set.of(priceValue1));
 
@@ -62,25 +63,28 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
 
         PricingTier tier2 = mock(PricingTier.class);
         when(tier2.getId()).thenReturn(500L);
+        when(tier2.getCode()).thenReturn("TIER_500");
         when(tier2.getConditions()).thenReturn(Collections.emptySet());
         when(tier2.getPriceValues()).thenReturn(Set.of(priceValue2));
 
         PricingComponent component = mock(PricingComponent.class);
         when(component.getId()).thenReturn(101L);
+        when(component.getCode()).thenReturn("FEE_101");
+        when(component.getVersion()).thenReturn(1);
         when(component.getName()).thenReturn("TestFee");
         when(component.getPricingTiers()).thenReturn(List.of(tier1, tier2));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(component));
         when(metadataService.getMetadataEntityByKey(any())).thenReturn(metadata);
-        when(droolsExpressionBuilder.buildExpression(any(), any())).thenReturn(MOCKED_DRL_EXPRESSION);
+        when(droolsExpressionBuilder.buildExpression(any(), any(), anyString())).thenReturn(MOCKED_DRL_EXPRESSION);
 
         // ACT
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
 
         // ASSERT
         // 1. Verify Date-Aware Filtering (The previous cause of failure)
-        assertTrue(drl.contains("activePricingTierIds contains 200L"), "LHS must contain Tier 200 filter");
-        assertTrue(drl.contains("activePricingTierIds contains 500L"), "LHS must contain Tier 500 filter");
+        assertTrue(drl.contains("activePricingTierCodes contains \"TIER_200\""), "LHS must contain Tier TIER_200 filter");
+        assertTrue(drl.contains("activePricingTierCodes contains \"TIER_500\""), "LHS must contain Tier TIER_500 filter");
 
         // 2. Verify Relational Expression
         assertTrue(drl.contains(MOCKED_DRL_EXPRESSION), "DRL should contain the compareTo expression for BigDecimal");
@@ -106,24 +110,27 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
 
         PricingTier tier = mock(PricingTier.class);
         when(tier.getId()).thenReturn(100L);
+        when(tier.getCode()).thenReturn("TIER_100");
         when(tier.getConditions()).thenReturn(Set.of(tierConditionMock));
         when(tier.getPriceValues()).thenReturn(Set.of(priceValue));
 
         PricingComponent component = mock(PricingComponent.class);
         when(component.getId()).thenReturn(100L);
+        when(component.getCode()).thenReturn("FEE_100");
+        when(component.getVersion()).thenReturn(1);
         when(component.getName()).thenReturn("TestFee");
         when(component.getPricingTiers()).thenReturn(List.of(tier));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(component));
         when(metadataService.getMetadataEntityByKey("transactionAmount")).thenReturn(metadata);
-        when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class)))
+        when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class), anyString()))
                 .thenReturn(MOCKED_DRL_EXPRESSION);
 
         // ACT
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
 
         // ASSERT
-        assertTrue(drl.contains("activePricingTierIds contains 100L"), "Should verify Tier ID is present in LHS");
+        assertTrue(drl.contains("activePricingTierCodes contains \"TIER_100\""), "Should verify Tier ID is present in LHS");
         assertTrue(drl.contains("priceValueFact.setMatchedTierId(100L);"), "Should verify Tier ID is passed to RHS fact");
         assertTrue(drl.contains("rule \"PRICING_" + TEST_BANK_ID.toUpperCase()), "Rule name missing Bank ID");
         assertTrue(drl.contains("PricingInput ( bankId == \"" + TEST_BANK_ID + "\""), "LHS missing Bank ID");
@@ -147,23 +154,29 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
     }
 
     @Test
-    @DisplayName("Should handle multiple components using Tier IDs, not Component IDs")
+    @DisplayName("Should handle multiple components using Tier codes, not Component IDs")
     void testBuildRules_shouldHandleMultipleComponentsWithDistinctTargetIds() {
         // 1. Component A: Monthly Service Fee (ID 101)
         PricingComponent compA = mock(PricingComponent.class);
         when(compA.getId()).thenReturn(101L);
+        when(compA.getCode()).thenReturn("FEE_101");
+        when(compA.getVersion()).thenReturn(1);
         when(compA.getName()).thenReturn("Service Fee");
         PricingTier tierA = mock(PricingTier.class);
         when(tierA.getId()).thenReturn(1001L);
+        when(tierA.getCode()).thenReturn("TIER_1001");
         when(tierA.getPriceValues()).thenReturn(Set.of(new PriceValue()));
         when(compA.getPricingTiers()).thenReturn(List.of(tierA));
 
         // 2. Component B: Transaction Tax (ID 102)
         PricingComponent compB = mock(PricingComponent.class);
         when(compB.getId()).thenReturn(102L);
+        when(compB.getCode()).thenReturn("FEE_102");
+        when(compB.getVersion()).thenReturn(1);
         when(compB.getName()).thenReturn("Tax");
         PricingTier tierB = mock(PricingTier.class);
         when(tierB.getId()).thenReturn(2002L);
+        when(tierB.getCode()).thenReturn("TIER_2002");
         when(tierB.getPriceValues()).thenReturn(Set.of(new PriceValue()));
         when(compB.getPricingTiers()).thenReturn(List.of(tierB));
 
@@ -171,8 +184,8 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
 
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
 
-        assertTrue(drl.contains("activePricingTierIds contains 1001L"), "DRL must target specific Tier ID 1001");
-        assertTrue(drl.contains("activePricingTierIds contains 2002L"), "DRL must target specific Tier ID 2002");
+        assertTrue(drl.contains("activePricingTierCodes contains \"TIER_1001\""), "DRL must target specific Tier code TIER_1001");
+        assertTrue(drl.contains("activePricingTierCodes contains \"TIER_2002\""), "DRL must target specific Tier code TIER_2002");
     }
 
     @Test
@@ -180,11 +193,14 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
     void testBuildRules_maxThreshold() {
         PricingTier tier = mock(PricingTier.class);
         when(tier.getId()).thenReturn(300L);
+        when(tier.getCode()).thenReturn("TIER_300");
         when(tier.getMaxThreshold()).thenReturn(new BigDecimal("1000.00"));
         when(tier.getPriceValues()).thenReturn(Set.of(new PriceValue()));
 
         PricingComponent comp = mock(PricingComponent.class);
         when(comp.getId()).thenReturn(101L);
+        when(comp.getCode()).thenReturn("FEE_101");
+        when(comp.getVersion()).thenReturn(1);
         when(comp.getName()).thenReturn("Comp");
         when(comp.getPricingTiers()).thenReturn(List.of(tier));
 
@@ -207,18 +223,21 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
 
         PricingTier tier = mock(PricingTier.class);
         when(tier.getId()).thenReturn(400L);
+        when(tier.getCode()).thenReturn("TIER_400");
         // Both have OR, so regardless of order, we should get || between them
         when(tier.getConditions()).thenReturn(Set.of(c1, c2));
         when(tier.getPriceValues()).thenReturn(Set.of(new PriceValue()));
 
         PricingComponent comp = mock(PricingComponent.class);
         when(comp.getId()).thenReturn(102L);
+        when(comp.getCode()).thenReturn("FEE_102");
+        when(comp.getVersion()).thenReturn(1);
         when(comp.getName()).thenReturn("CompOR");
         when(comp.getPricingTiers()).thenReturn(List.of(tier));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(comp));
         when(metadataService.getMetadataEntityByKey(any())).thenReturn(mock(PricingInputMetadata.class));
-        when(droolsExpressionBuilder.buildExpression(any(), any())).thenReturn("expr");
+        when(droolsExpressionBuilder.buildExpression(any(), any(), anyString())).thenReturn("expr");
 
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
         assertTrue(drl.contains(" || "), "DRL should contain OR connector");

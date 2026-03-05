@@ -41,15 +41,14 @@ public class PriceValue extends AuditableEntity {
         FREE_COUNT
     }
 
-    // ------------------------------------------------
-    // 💡 REQUIRED FIELDS FOR DROOLS FACT INSERTION
-    // ------------------------------------------------
+    // --- Drools Execution Fields ---
 
-    // Used by setMatchedTierId(Long)
     @Transient
     private Long matchedTierId;
 
-    // Used by setComponentCode(String)
+    @Transient
+    private String matchedTierCode;
+
     @Transient
     private String componentCode;
 }

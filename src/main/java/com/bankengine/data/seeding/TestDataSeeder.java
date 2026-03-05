@@ -23,7 +23,12 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 
 @Component
 @Profile("dev")
@@ -187,7 +192,7 @@ public class TestDataSeeder implements CommandLineRunner {
         PricingComponent fee = pricingComponentRepository.findByName(name).orElseGet(() -> {
             PricingComponent pricingComponent = new PricingComponent();
             pricingComponent.setName(name);
-            pricingComponent.setCode(name + UUID.randomUUID());
+            pricingComponent.setCode(generateValidCode(name));
             pricingComponent.setType(ComponentType.FEE);
             pricingComponent.setBankId(bankId);
             return pricingComponentRepository.save(pricingComponent);
@@ -213,10 +218,11 @@ public class TestDataSeeder implements CommandLineRunner {
         Product checking = productRepository.findByName(bankId.equals(BANK_A) ? "Global Checking" : "Local Checking")
                 .orElseThrow(() -> new RuntimeException("Checking not found for " + bankId));
 
+        String bankName = bankId.equals(BANK_A) ? "Gold Elite Bundle" : "Standard Starter Pack";
         ProductBundle bundle = new ProductBundle();
         bundle.setBankId(bankId);
-        bundle.setCode(bankId + "-BNDL-01");
-        bundle.setName(bankId.equals(BANK_A) ? "Gold Elite Bundle" : "Standard Starter Pack");
+        bundle.setCode(generateValidCode(bankName));
+        bundle.setName(bankName);
         bundle.setDescription("Comprehensive bundle for " + bankId);
         bundle.setStatus(VersionableEntity.EntityStatus.ACTIVE);
         bundle.setActivationDate(LocalDate.now());
@@ -250,7 +256,7 @@ public class TestDataSeeder implements CommandLineRunner {
     private Product createProduct(String name, ProductType type, String bankId, String cat) {
         Product p = new Product();
         p.setName(name);
-        p.setCode(name +"_"+ UUID.randomUUID());
+        p.setCode(generateValidCode(name));
         p.setProductType(type);
         p.setBankId(bankId);
         p.setCategory(cat);
@@ -275,7 +281,12 @@ public class TestDataSeeder implements CommandLineRunner {
     }
 
     private PricingTier createTier(String name, PricingComponent c, String bankId) {
-        PricingTier t = new PricingTier(); t.setName(name + " " + bankId); t.setPricingComponent(c); t.setBankId(bankId); return pricingTierRepository.save(t);
+        PricingTier t = new PricingTier();
+        t.setName(name + " " + bankId);
+        t.setCode(generateValidCode(name));
+        t.setPricingComponent(c);
+        t.setBankId(bankId);
+        return pricingTierRepository.save(t);
     }
 
     private TierCondition createCondition(PricingTier t, String a, Operator o, String v, String bankId) {
