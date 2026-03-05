@@ -34,6 +34,10 @@ public class BankConfiguration extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "currency_code", nullable = false)
+    @Builder.Default
+    private String currencyCode = "NO_CURR";
+
     @Column(name = "allow_multi_bundle_product", nullable = false)
     @Builder.Default
     private boolean allowProductInMultipleBundles = false;

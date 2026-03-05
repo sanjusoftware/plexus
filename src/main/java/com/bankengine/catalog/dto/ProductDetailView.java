@@ -3,6 +3,7 @@ package com.bankengine.catalog.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,14 @@ public class ProductDetailView {
         private List<PricingItem> fees;
         private List<PricingItem> rates;
         private List<PricingItem> waivers;
+        private List<PricingItem> discounts;
+
+        // Summary fields for Comparison and Recommendation views
+        private BigDecimal mainPriceValue;
+        private String mainPriceLabel;
+        private BigDecimal totalSavings;
+        private List<String> adjustmentLabels;
+
         private String pricingNote; // e.g., "Pricing varies by customer segment"
 
         @Data
@@ -52,7 +61,7 @@ public class ProductDetailView {
         public static class PricingItem {
             private String name;
             private String value;
-            private String condition; // e.g., "for transactions > $1,000"
+            private String condition;
             private boolean highlighted;
         }
     }

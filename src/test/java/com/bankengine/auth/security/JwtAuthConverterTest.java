@@ -77,4 +77,38 @@ class JwtAuthConverterTest {
 
         assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
     }
+
+    @Test
+    void convert_ShouldThrowException_WhenIssuerIsNull() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("bank_id", "BANK_A")
+                // No 'iss' claim
+                .build();
+
+        assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
+    }
+
+    @Test
+    void convert_ShouldHandleMissingRoles() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("bank_id", "BANK_A")
+                .claim("iss", "https://trusted.com")
+                .claim("sub", "user-123")
+                // Explicitly NO 'roles' claim
+                .build();
+
+        BankConfiguration config = new BankConfiguration();
+        config.setIssuerUrl("https://trusted.com");
+        config.setBankId("BANK_A");
+
+        when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A"))
+                .thenReturn(Optional.of(config));
+
+        var token = converter.convert(jwt);
+
+        assertNotNull(token, "Converter should not return null");
+        assertTrue(token.getAuthorities().isEmpty(), "Authorities should be empty when roles claim is missing");
+    }
 }

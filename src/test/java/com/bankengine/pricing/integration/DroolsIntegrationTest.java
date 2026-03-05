@@ -7,9 +7,9 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.data.seeding.CoreMetadataSeeder;
 import com.bankengine.pricing.TestTransactionHelper;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
-import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.TierCondition.Operator;
@@ -148,7 +148,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Success - Standard rule execution returns expected price")
     void testStandardRuleExecution_Success() {
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT).transactionAmount(TEST_AMOUNT).build();
 
@@ -190,7 +190,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         reloadRules();
 
         // 3. Requesting pricing for TODAY
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT)
                 .effectiveDate(LocalDate.now()).build();
@@ -218,7 +218,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         reloadRules();
 
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .effectiveDate(LocalDate.now())
                 .customerSegment(TEST_SEGMENT).build();
@@ -238,7 +238,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             pricingComponentService.deletePricingComponent(compId);
         });
         reloadRules();
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId()).customerSegment(TEST_SEGMENT).build();
 
         assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
@@ -275,7 +275,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         reloadRules();
 
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customerSegment(TEST_SEGMENT).transactionAmount(TEST_AMOUNT).build();
 

@@ -4,14 +4,13 @@ import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.model.FeatureComponent;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class FeatureComponentMapperTest {
+class FeatureComponentMapperTest {
 
-    private final FeatureComponentMapper mapper = Mappers.getMapper(FeatureComponentMapper.class);
+    private final FeatureComponentMapper mapper = new FeatureComponentMapperImpl();
 
     @Test
     void testToEntity() {

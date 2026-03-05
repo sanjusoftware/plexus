@@ -2,8 +2,8 @@ package com.bankengine.pricing.controller;
 
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
-import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.service.BundlePricingService;
 import com.bankengine.pricing.service.ProductPricingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,7 +36,7 @@ public class PricingController {
     @PostMapping("/calculate/product")
     @PreAuthorize("hasAuthority('pricing:calculate:read')")
     public ResponseEntity<ProductPricingCalculationResult> calculateProductPrice(
-            @Valid @RequestBody ProductPricingRequest request) {
+            @Valid @RequestBody ProductPriceRequest request) {
 
         ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
         return ResponseEntity.ok(result);

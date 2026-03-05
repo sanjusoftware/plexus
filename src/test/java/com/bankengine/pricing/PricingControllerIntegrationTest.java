@@ -6,7 +6,7 @@ import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.dto.BundlePriceRequest;
-import com.bankengine.pricing.dto.ProductPricingRequest;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -118,7 +118,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             return pId;
         });
 
-        ProductPricingRequest request = new ProductPricingRequest();
+        ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
         request.setCustomerSegment("RETAIL");
         request.setTransactionAmount(BigDecimal.valueOf(1000.0));
@@ -158,8 +158,8 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setProductBundleId(ids.get("bundle"));
         request.setCustomerSegment("RETAIL");
 
-        BundlePriceRequest.ProductRequest pr1 = new BundlePriceRequest.ProductRequest(ids.get("p1"), BigDecimal.valueOf(1000));
-        BundlePriceRequest.ProductRequest pr2 = new BundlePriceRequest.ProductRequest(ids.get("p2"), BigDecimal.valueOf(1000));
+        BundlePriceRequest.BundleProductItem pr1 = new BundlePriceRequest.BundleProductItem(ids.get("p1"), BigDecimal.valueOf(1000));
+        BundlePriceRequest.BundleProductItem pr2 = new BundlePriceRequest.BundleProductItem(ids.get("p2"), BigDecimal.valueOf(1000));
 
         request.setProducts(List.of(pr1, pr2));
 
@@ -205,8 +205,8 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setProductBundleId(ids.get("bundle"));
         request.setCustomerSegment("RETAIL");
         request.setProducts(List.of(
-                new BundlePriceRequest.ProductRequest(ids.get("p1"), BigDecimal.valueOf(1000)),
-                new BundlePriceRequest.ProductRequest(ids.get("p2"), BigDecimal.valueOf(1000))
+                new BundlePriceRequest.BundleProductItem(ids.get("p1"), BigDecimal.valueOf(1000)),
+                new BundlePriceRequest.BundleProductItem(ids.get("p2"), BigDecimal.valueOf(1000))
         ));
 
         // 2. ACT & ASSERT
@@ -257,7 +257,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             return pId;
         });
 
-        ProductPricingRequest request = new ProductPricingRequest();
+        ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
         request.setCustomerSegment("RETAIL");
         request.setTransactionAmount(new BigDecimal("1000.00"));
@@ -308,7 +308,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             productRuleBuilderService.rebuildRules();
         });
 
-        ProductPricingRequest request = new ProductPricingRequest();
+        ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
         request.setCustomerSegment("DEFAULT_SEGMENT");
         request.setTransactionAmount(new BigDecimal("1000.00"));
@@ -352,7 +352,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         txHelper.flushAndClear();
 
-        ProductPricingRequest request = new ProductPricingRequest();
+        ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
         request.setCustomerSegment("RETAIL");
         request.setTransactionAmount(BigDecimal.ZERO);
@@ -371,7 +371,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {PRICING_READER_ROLE})
     void calculateProductPrice_ShouldReturn400_WhenValidationFails() throws Exception {
-        ProductPricingRequest request = new ProductPricingRequest();
+        ProductPriceRequest request = new ProductPriceRequest();
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -382,7 +382,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void calculateProductPrice_ShouldReturn401_WhenUnauthenticated() throws Exception {
-        ProductPricingRequest request = new ProductPricingRequest();
+        ProductPriceRequest request = new ProductPriceRequest();
 
         mockMvc.perform(post(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)

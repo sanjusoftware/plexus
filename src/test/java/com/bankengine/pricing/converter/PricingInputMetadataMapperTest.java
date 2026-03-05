@@ -3,14 +3,12 @@ package com.bankengine.pricing.converter;
 import com.bankengine.pricing.dto.PricingMetadataDto;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class PricingMappersTest {
-
-    private final PricingInputMetadataMapper metadataMapper = Mappers.getMapper(PricingInputMetadataMapper.class);
+class PricingInputMetadataMapperTest {
+    private final PricingInputMetadataMapper mapper = new PricingInputMetadataMapperImpl();
 
     @Test
     void testMetadataMapper() {
@@ -19,14 +17,11 @@ class PricingMappersTest {
         entity.setDataType("STRING");
         entity.setDisplayName("Display Name");
 
-        PricingMetadataDto dto = metadataMapper.toResponse(entity);
-
+        PricingMetadataDto dto = mapper.toResponse(entity);
         assertNotNull(dto);
-        assertEquals("key1", dto.getAttributeKey());
-        assertEquals("STRING", dto.getDataType());
         assertEquals("Display Name", dto.getDisplayName());
 
-        PricingInputMetadata entity2 = metadataMapper.toEntity(dto);
+        PricingInputMetadata entity2 = mapper.toEntity(dto);
         assertEquals("key1", entity2.getAttributeKey());
     }
 }

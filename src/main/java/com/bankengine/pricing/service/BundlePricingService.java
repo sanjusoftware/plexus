@@ -5,9 +5,9 @@ import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
 import com.bankengine.pricing.dto.BundlePriceResponse.ProductPricingResult;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
-import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.BundlePricingLink;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingTier;
@@ -90,8 +90,8 @@ public class BundlePricingService extends BaseService {
     private List<ProductPricingResult> calculateIndividualProductFee(BundlePriceRequest request) {
         List<ProductPricingResult> results = new ArrayList<>();
 
-        for (BundlePriceRequest.ProductRequest productReq : request.getProducts()) {
-            ProductPricingRequest singlePricingRequest = ProductPricingRequest.builder()
+        for (BundlePriceRequest.BundleProductItem productReq : request.getProducts()) {
+            ProductPriceRequest singlePricingRequest = ProductPriceRequest.builder()
                     .productId(productReq.getProductId())
                     .transactionAmount(productReq.getTransactionAmount()) // Base amount for product-specific rules
                     .customerSegment(request.getCustomerSegment())

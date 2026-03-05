@@ -120,7 +120,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
                 .productBundleId(bundleId)
                 .effectiveDate(LocalDate.now())
                 .customerSegment("RETAIL")
-                .products(List.of(new BundlePriceRequest.ProductRequest(productId, new BigDecimal("1000.00"))))
+                .products(List.of(new BundlePriceRequest.BundleProductItem(productId, new BigDecimal("1000.00"))))
                 .build();
 
         // Stub product pricing at $500
@@ -163,7 +163,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
                 .customerSegment("RETAIL")
-                .products(List.of(new BundlePriceRequest.ProductRequest(productId, productFee)))
+                .products(List.of(new BundlePriceRequest.BundleProductItem(productId, productFee)))
                 .build();
 
         BundlePriceResponse response = bundlePricingService.calculateTotalBundlePrice(request);
@@ -189,7 +189,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
 
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
-                .products(List.of(new BundlePriceRequest.ProductRequest(productId, BigDecimal.ZERO)))
+                .products(List.of(new BundlePriceRequest.BundleProductItem(productId, BigDecimal.ZERO)))
                 .build();
 
         // Stub product price at $0

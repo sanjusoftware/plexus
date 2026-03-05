@@ -68,8 +68,8 @@ class BundlePricingServiceTest extends BaseServiceTest {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
                 .products(List.of(
-                    BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build(),
-                    BundlePriceRequest.ProductRequest.builder().productId(11L).transactionAmount(BigDecimal.ZERO).build()
+                    BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build(),
+                    BundlePriceRequest.BundleProductItem.builder().productId(11L).transactionAmount(BigDecimal.ZERO).build()
                 ))
                 .customerSegment("GOLD")
                 .build();
@@ -122,7 +122,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_TargetedDiscountLogic() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
+                .products(List.of(BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .build();
 
         // Product Base Fee is $1000
@@ -162,7 +162,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_FreeCountAssertion() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
+                .products(List.of(BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .build();
 
         when(productPricingService.getProductPricing(any())).thenReturn(
@@ -188,7 +188,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .productBundleId(1L)
                 .enrollmentDate(midMonth)
                 .effectiveDate(midMonth)
-                .products(List.of(BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
+                .products(List.of(BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .build();
 
         when(productPricingService.getProductPricing(any())).thenReturn(
@@ -223,7 +223,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
                 .products(List.of(
-                    BundlePriceRequest.ProductRequest.builder()
+                    BundlePriceRequest.BundleProductItem.builder()
                         .productId(10L)
                         .transactionAmount(new BigDecimal("5000.00")) // Breach amount
                         .build()
@@ -262,7 +262,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
                 .products(List.of(
-                    BundlePriceRequest.ProductRequest.builder()
+                    BundlePriceRequest.BundleProductItem.builder()
                         .productId(10L)
                         .transactionAmount(null)
                         .build()
@@ -286,7 +286,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_CustomAttributesLoyalty() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(BundlePriceRequest.ProductRequest.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
+                .products(List.of(BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .customAttributes(Map.of("loyalty_score", 95))
                 .build();
 
@@ -309,7 +309,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_shouldHandleNullProductPrice() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .products(List.of(new BundlePriceRequest.BundleProductItem(10L, BigDecimal.ZERO)))
                 .build();
 
         // calcResult with null finalChargeablePrice
@@ -329,7 +329,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_shouldThrowExceptionOnNullResult() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .products(List.of(new BundlePriceRequest.BundleProductItem(10L, BigDecimal.ZERO)))
                 .build();
 
         when(productPricingService.getProductPricing(any())).thenReturn(null);
@@ -342,7 +342,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_shouldHandleNullAdjustmentsFromRules() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .products(List.of(new BundlePriceRequest.BundleProductItem(10L, BigDecimal.ZERO)))
                 .build();
 
         when(productPricingService.getProductPricing(any())).thenReturn(
@@ -365,7 +365,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_shouldPassCustomAttributesToRules() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .products(List.of(new BundlePriceRequest.BundleProductItem(10L, BigDecimal.ZERO)))
                 .customAttributes(java.util.Map.of("isNewCustomer", true))
                 .build();
 
@@ -389,7 +389,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
     void calculateTotalBundlePrice_shouldHandleNullValueType() {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
-                .products(List.of(new BundlePriceRequest.ProductRequest(10L, BigDecimal.ZERO)))
+                .products(List.of(new BundlePriceRequest.BundleProductItem(10L, BigDecimal.ZERO)))
                 .build();
 
         when(productPricingService.getProductPricing(any())).thenReturn(

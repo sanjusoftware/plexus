@@ -3,7 +3,6 @@ package com.bankengine.catalog.converter;
 import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 
 import java.util.Collections;
 import java.util.List;
@@ -11,9 +10,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class ProductTypeMapperTest {
+class ProductTypeMapperTest {
 
-    private final ProductTypeMapper mapper = Mappers.getMapper(ProductTypeMapper.class);
+    private final ProductTypeMapper mapper = new ProductTypeMapperImpl();
 
     @Test
     void testToResponse() {
@@ -38,8 +37,8 @@ public class ProductTypeMapperTest {
 
         assertNotNull(dtoList);
         assertEquals(1, dtoList.size());
-        assertEquals(entity.getId(), dtoList.get(0).getId());
-        assertEquals(entity.getName(), dtoList.get(0).getName());
+        assertEquals(entity.getId(), dtoList.getFirst().getId());
+        assertEquals(entity.getName(), dtoList.getFirst().getName());
     }
 
     @Test

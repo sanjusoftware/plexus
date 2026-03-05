@@ -3,13 +3,12 @@ package com.bankengine.catalog.converter;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class PricingLinkMapperTest {
+class PricingLinkMapperTest {
 
-    private final PricingLinkMapper mapper = Mappers.getMapper(PricingLinkMapper.class);
+    private final PricingLinkMapper mapper = new PricingLinkMapperImpl();
 
     @Test
     void shouldCorrectlyClonePricingLink() {

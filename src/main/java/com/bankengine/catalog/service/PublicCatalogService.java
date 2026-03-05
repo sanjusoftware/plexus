@@ -11,11 +11,13 @@ import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.VersionableEntity;
+import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.BundlePriceResponse;
-import com.bankengine.pricing.dto.ProductPricingRequest;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,18 +50,22 @@ public class PublicCatalogService extends BaseService {
     private final ProductMapper productMapper;
     private final ProductPricingService productPricingService;
     private final BundlePricingService bundlePricingService;
+    private final BankConfigurationRepository bankConfigurationRepository;
+
     private static final String NOT_APPLICABLE_DASH = "—";
 
     public PublicCatalogService(ProductRepository productRepository,
                                 ProductBundleRepository productBundleRepository,
                                 ProductMapper productMapper,
                                 ProductPricingService productPricingService,
-                                BundlePricingService bundlePricingService) {
+                                BundlePricingService bundlePricingService,
+                                BankConfigurationRepository bankConfigurationRepository) {
         this.productRepository = productRepository;
         this.productBundleRepository = productBundleRepository;
         this.productMapper = productMapper;
         this.productPricingService = productPricingService;
         this.bundlePricingService = bundlePricingService;
+        this.bankConfigurationRepository = bankConfigurationRepository;
     }
 
     @Cacheable(value = "publicCatalog",
@@ -139,7 +146,7 @@ public class PublicCatalogService extends BaseService {
                     ProductCatalogCard card = toProductCatalogCard(product);
 
                     if (estimatedMonthlyBalance != null) {
-                        ProductPricingRequest request = ProductPricingRequest.builder()
+                        ProductPriceRequest request = ProductPriceRequest.builder()
                                 .productId(product.getId())
                                 .transactionAmount(estimatedMonthlyBalance)
                                 .customerSegment(customerSegment)
@@ -171,7 +178,7 @@ public class PublicCatalogService extends BaseService {
                 .customerSegment(segment)
                 .effectiveDate(LocalDate.now())
                 .products(bundle.getContainedProducts().stream()
-                        .map(link -> new BundlePriceRequest.ProductRequest(link.getProduct().getId(), BigDecimal.ZERO))
+                        .map(link -> new BundlePriceRequest.BundleProductItem(link.getProduct().getId(), BigDecimal.ZERO))
                         .toList())
                 .build();
 
@@ -179,8 +186,8 @@ public class PublicCatalogService extends BaseService {
 
         List<String> benefits = pricing.getBundleAdjustments().stream()
                 .filter(adj -> adj.getValueType() == ValueType.DISCOUNT_PERCENTAGE ||
-                               adj.getValueType() == ValueType.DISCOUNT_ABSOLUTE ||
-                               adj.getValueType() == ValueType.FREE_COUNT)
+                        adj.getValueType() == ValueType.DISCOUNT_ABSOLUTE ||
+                        adj.getValueType() == ValueType.FREE_COUNT)
                 .map(adj -> adj.getComponentCode().replace("_", " "))
                 .toList();
 
@@ -272,45 +279,64 @@ public class PublicCatalogService extends BaseService {
     }
 
     private ProductDetailView.PricingBreakdown buildPricingBreakdown(Product product) {
-        List<ProductDetailView.PricingBreakdown.PricingItem> fees = new java.util.ArrayList<>();
-        List<ProductDetailView.PricingBreakdown.PricingItem> rates = new java.util.ArrayList<>();
-        List<ProductDetailView.PricingBreakdown.PricingItem> waivers = new java.util.ArrayList<>();
+        List<ProductDetailView.PricingBreakdown.PricingItem> fees = new ArrayList<>();
+        List<ProductDetailView.PricingBreakdown.PricingItem> rates = new ArrayList<>();
+        List<ProductDetailView.PricingBreakdown.PricingItem> waivers = new ArrayList<>();
+        List<ProductDetailView.PricingBreakdown.PricingItem> discounts = new ArrayList<>();
 
-        product.getProductPricingLinks().forEach(link -> {
-            PricingComponent component = link.getPricingComponent();
+        // Dynamic Savings Calculation
+        BigDecimal totalIndividualSavings = BigDecimal.ZERO;
+
+        for (ProductPricingLink link : product.getProductPricingLinks()) {
             var item = ProductDetailView.PricingBreakdown.PricingItem.builder()
-                    .name(component.getName())
-                    .value(formatPricingValue(link, component))
-                    .condition(component.getDescription())
-                    .highlighted(component.getType() == PricingComponent.ComponentType.FEE ||
-                                 component.getType() == PricingComponent.ComponentType.PACKAGE_FEE)
+                    .name(link.getPricingComponent().getName())
+                    .value(formatPricingValue(link, link.getPricingComponent()))
+                    .highlighted(link.getPricingComponent().getType() == PricingComponent.ComponentType.FEE)
                     .build();
 
-            switch (component.getType()) {
-                case FEE, PACKAGE_FEE -> fees.add(item);
+            switch (link.getPricingComponent().getType()) {
+                case FEE -> fees.add(item);
                 case INTEREST_RATE -> rates.add(item);
-                case DISCOUNT, WAIVER, BENEFIT -> waivers.add(item);
-                default -> fees.add(item);
+                case DISCOUNT -> {
+                    discounts.add(item);
+                    if (link.getFixedValue() != null)
+                        totalIndividualSavings = totalIndividualSavings.add(link.getFixedValue());
+                }
+                case WAIVER -> {
+                    waivers.add(item);
+                    if (link.getFixedValue() != null)
+                        totalIndividualSavings = totalIndividualSavings.add(link.getFixedValue());
+                }
+                default -> waivers.add(item);
             }
-        });
+        }
+
+        ProductCatalogCard.PricingSummary summary = summarizePricing(product);
 
         return ProductDetailView.PricingBreakdown.builder()
-                .fees(fees).rates(rates).waivers(waivers)
-                .pricingNote("Standard rates apply. See terms for details.")
+                .fees(fees)
+                .rates(rates)
+                .waivers(waivers)
+                .discounts(discounts)
+                .mainPriceValue(summary.getMainPriceValue())
+                .mainPriceLabel(summary.getMainPriceLabel())
+                .totalSavings(totalIndividualSavings)
+                .adjustmentLabels(List.of())
                 .build();
     }
 
-    /**
-     * Helper to ensure we don't put a '$' sign in front of a 5% interest rate!
-     */
     private String formatPricingValue(ProductPricingLink link, PricingComponent component) {
         if (link.getFixedValue() == null) {
             return component.getName();
         }
+        String currencyCode = bankConfigurationRepository
+                .findByBankIdUnfiltered(getCurrentBankId())
+                .map(BankConfiguration::getCurrencyCode)
+                .orElse("NO_CURR");
 
         return switch (component.getType()) {
             case INTEREST_RATE -> link.getFixedValue().toString() + "% p.a.";
-            case FEE, PACKAGE_FEE -> "$" + link.getFixedValue().toString();
+            case FEE, PACKAGE_FEE, WAIVER, DISCOUNT -> currencyCode + " " + String.format("%.2f", link.getFixedValue());
             default -> link.getFixedValue().toString();
         };
     }

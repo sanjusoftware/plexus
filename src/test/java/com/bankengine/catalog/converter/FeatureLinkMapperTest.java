@@ -3,13 +3,12 @@ package com.bankengine.catalog.converter;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class FeatureLinkMapperTest {
+class FeatureLinkMapperTest {
 
-    private final FeatureLinkMapper mapper = Mappers.getMapper(FeatureLinkMapper.class);
+    private final FeatureLinkMapper mapper = new FeatureLinkMapperImpl();
 
     @Test
     void shouldCorrectlyCloneFeatureLink() {

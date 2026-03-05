@@ -20,7 +20,7 @@ public class BundlePriceRequest {
     private Long productBundleId;
 
     @NotNull(message = "A list of products is mandatory for bundle calculation.")
-    private List<ProductRequest> products;
+    private List<BundleProductItem> products;
 
     @NotNull(message = "Customer Segment is mandatory for pricing rule matching.")
     private String customerSegment;
@@ -36,7 +36,7 @@ public class BundlePriceRequest {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ProductRequest {
+    public static class BundleProductItem {
         @NotNull
         private Long productId;
         @NotNull

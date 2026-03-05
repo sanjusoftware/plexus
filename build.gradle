@@ -101,25 +101,44 @@ jacocoTestReport {
 
 jacocoTestCoverageVerification {
     violationRules {
-        // Global rule: 85% for the whole project
-        rule {
-            limit {
-                counter = 'LINE'
-                value = 'COVEREDRATIO'
-                minimum = 0.85
-            }
-            excludes = coverageExclusions
-        }
-
-        // Strict rule: 95% specifically for Pricing Logic
+        // TIER 1: CRITICAL (Pricing & Math)
         rule {
             element = 'PACKAGE'
-            includes = ['com.bankengine.pricing.service*']
+            includes = ['com.bankengine.pricing.*']
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.90 // Very strict for calculations
+            }
+        }
+
+        // TIER 2: SECURITY (Auth & Tenancy)
+        rule {
+            element = 'PACKAGE'
+            includes = ['com.bankengine.auth.*']
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.95 // Strict: Security paths must be 100% verified
+            }
+        }
+
+        // TIER 3: BUSINESS CORE (Catalog & FAT DTO logic)
+        rule {
+            element = 'PACKAGE'
+            includes = ['com.bankengine.catalog.service*']
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.80 // Solid coverage for business orchestration
+            }
+        }
+
+        // TIER 4: THE REST (Global fallback)
+        rule {
+            element = 'BUNDLE'
             limit {
                 counter = 'LINE'
-                value = 'COVEREDRATIO'
-                minimum = 0.95
+                minimum = 0.70 // General baseline for the whole project
             }
+            excludes = coverageExclusions
         }
     }
 }

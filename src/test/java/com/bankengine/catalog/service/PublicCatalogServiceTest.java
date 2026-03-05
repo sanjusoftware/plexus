@@ -10,10 +10,12 @@ import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.VersionableEntity;
+import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.dto.BundlePriceResponse;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
-import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -21,6 +23,7 @@ import com.bankengine.pricing.service.BundlePricingService;
 import com.bankengine.pricing.service.ProductPricingService;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,16 +50,31 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class PublicCatalogServiceTest extends BaseServiceTest {
+class PublicCatalogServiceTest extends BaseServiceTest {
 
-    @Mock private ProductRepository productRepository;
-    @Mock private ProductMapper productMapper;
-    @Mock private ProductPricingService productPricingService;
-    @Mock private ProductBundleRepository productBundleRepository;
-    @Mock private BundlePricingService bundlePricingService;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private ProductMapper productMapper;
+    @Mock
+    private ProductPricingService productPricingService;
+    @Mock
+    private ProductBundleRepository productBundleRepository;
+    @Mock
+    private BundlePricingService bundlePricingService;
+    @Mock
+    private BankConfigurationRepository bankConfigurationRepository;
 
     @InjectMocks
     private PublicCatalogService publicCatalogService;
+
+    @BeforeEach
+    void setUp() {
+        BankConfiguration config = new BankConfiguration();
+        config.setCurrencyCode("USD");
+        lenient().when(bankConfigurationRepository.findByBankIdUnfiltered(anyString()))
+                .thenReturn(Optional.of(config));
+    }
 
     // --- SECURITY TESTS ---
 
@@ -71,14 +89,14 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
                 .pricingSummary(ProductCatalogCard.PricingSummary.builder().build()).build());
 
         when(productPricingService.getProductPricing(any())).thenAnswer(inv -> {
-            var req = (ProductPricingRequest) inv.getArgument(0);
+            var req = (ProductPriceRequest) inv.getArgument(0);
             BigDecimal price = req.getProductId().equals(101L) ? new BigDecimal("20.00") : new BigDecimal("5.00");
             return ProductPricingCalculationResult.builder().finalChargeablePrice(price).build();
         });
 
         List<ProductCatalogCard> results = publicCatalogService.getRecommendedProducts("RETAIL", new BigDecimal("5000"));
 
-        assertEquals(new BigDecimal("5.00"), results.get(0).getPricingSummary().getMainPriceValue());
+        assertEquals(new BigDecimal("5.00"), results.getFirst().getPricingSummary().getMainPriceValue());
     }
 
     @Test
@@ -95,10 +113,10 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     void testOrganizeFeaturesByCategory_Keywords() {
         Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
         p.setProductFeatureLinks(List.of(
-                createFeatureLink("Daily Withdrawal Limit", "500"),
-                createFeatureLink("Base Interest Rate", "2.5%"),
-                createFeatureLink("Global ATM Service", "Free"),
-                createFeatureLink("Color", "Blue")
+                createFeatureLink("Daily Withdrawal Limit", "500"), // Account Limits
+                createFeatureLink("Base Interest Rate", "2.5%"),    // Interest & Returns
+                createFeatureLink("Global ATM Service", "Free"),    // Services & Access
+                createFeatureLink("Color", "Blue")                  // Other Features
         ));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(p));
@@ -108,10 +126,10 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
                 publicCatalogService.getProductDetailView(1L).getFeaturesByCategory();
 
         assertAll(
-                () -> assertTrue(categorized.containsKey("Account Limits")),
-                () -> assertTrue(categorized.containsKey("Interest & Returns")),
-                () -> assertTrue(categorized.containsKey("Services & Access")),
-                () -> assertTrue(categorized.containsKey("Other Features")),
+                () -> assertTrue(categorized.containsKey("Account Limits"), "Missing Account Limits"),
+                () -> assertTrue(categorized.containsKey("Interest & Returns"), "Missing Interest & Returns"),
+                () -> assertTrue(categorized.containsKey("Services & Access"), "Missing Services & Access"),
+                () -> assertTrue(categorized.containsKey("Other Features"), "Missing Other Features"),
                 () -> assertEquals(1, categorized.get("Account Limits").size())
         );
     }
@@ -131,9 +149,9 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         ProductDetailView.PricingBreakdown breakdown = publicCatalogService.getProductDetailView(1L).getPricing();
 
         assertAll(
-                () -> assertEquals("$10.00", breakdown.getFees().get(0).getValue()),
-                () -> assertEquals("15.5% p.a.", breakdown.getRates().get(0).getValue()),
-                () -> assertTrue(breakdown.getFees().get(0).isHighlighted(), "Fees should be highlighted")
+                () -> assertEquals("USD 10.00", breakdown.getFees().getFirst().getValue()),
+                () -> assertEquals("15.5% p.a.", breakdown.getRates().getFirst().getValue()),
+                () -> assertTrue(breakdown.getFees().getFirst().isHighlighted(), "Fees should be highlighted")
         );
     }
 
@@ -151,15 +169,11 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         p2.setProductPricingLinks(List.of(createPricingLink("PriceY", new BigDecimal("0.00"), PricingComponent.ComponentType.FEE)));
 
         when(productRepository.findAllById(anyList())).thenReturn(List.of(p1, p2));
-        // Mocking the mapper to avoid NPE during card generation
         when(productMapper.toCatalogCard(any())).thenReturn(ProductCatalogCard.builder().build());
 
-        // When
         ProductComparisonView matrix = publicCatalogService.compareProducts(List.of(101L, 102L));
 
-        // Then
         assertAll(
-                // Feature Matrix Check
                 () -> {
                     var featA = matrix.getFeatureComparison().get("FeatureA");
                     assertEquals("ValA", featA.get(0), "P1 should have ValA");
@@ -242,7 +256,7 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
 
         // Components typed as FEE or unknown default to the Fees list in the service switch
         assertFalse(breakdown.getFees().isEmpty());
-        assertEquals("$5.00", breakdown.getFees().get(0).getValue());
+        assertEquals("USD 5.00", breakdown.getFees().getFirst().getValue());
     }
 
     @Test
@@ -280,13 +294,14 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         when(productRepository.findById(1L)).thenReturn(Optional.of(p));
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
 
-    ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
+        ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
 
-    assertAll(
-            () -> assertEquals(2, detail.getPricing().getWaivers().size()),
-            () -> assertEquals("50.00", detail.getPricing().getWaivers().get(0).getValue())
-    );
-}
+        assertAll(
+                () -> assertEquals(1, detail.getPricing().getWaivers().size()),
+                () -> assertEquals("USD 50.00", detail.getPricing().getWaivers().getFirst().getValue()),
+                () -> assertEquals(1, detail.getPricing().getDiscounts().size())
+        );
+    }
 
     @Test
     @DisplayName("SummarizePricing - Should handle case with no main fee")
@@ -319,9 +334,9 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
 
         var result = publicCatalogService.getPublicBundleDetails(500L, "RETAIL");
 
-        // 5. Assert
         assertAll(
                 () -> assertEquals(new BigDecimal("5.00"), result.getPricing().getTotalSavings()),
+                () -> assertFalse(result.getPricing().getAdjustmentLabels().isEmpty(), "Should have adjustment labels"),
                 () -> {
                     boolean match = PriceValue.ValueType.DISCOUNT_PERCENTAGE.name().contains("WAIVE");
                     if (match && result.getPricing().getAdjustmentLabels().isEmpty()) {
@@ -339,7 +354,7 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
         when(productBundleRepository.findById(500L)).thenReturn(Optional.of(bundle));
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
-            () -> publicCatalogService.getPublicBundleDetails(500L, "RETAIL"));
+                () -> publicCatalogService.getPublicBundleDetails(500L, "RETAIL"));
 
         assertEquals("You do not have permission to access this ProductBundle", ex.getMessage());
     }
@@ -348,12 +363,14 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     @DisplayName("BuildPricingBreakdown - Should handle unknown component types via default branch")
     void testBuildPricingBreakdown_DefaultFallback() {
         Product product = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
+        // BENEFIT type triggers default branch in summarizePricing switch
         product.setProductPricingLinks(List.of(createPricingLink("Bonus", new BigDecimal("1.00"), PricingComponent.ComponentType.BENEFIT)));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
 
         ProductDetailView detail = publicCatalogService.getProductDetailView(1L);
+        // Benefits/Unknown typically fall into the waivers/other category based on current service impl
         assertFalse(detail.getPricing().getWaivers().isEmpty());
     }
 

@@ -9,8 +9,6 @@ import com.bankengine.common.model.VersionableEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -20,19 +18,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class ProductMapperTest {
+class ProductMapperTest {
 
-    private final ProductMapper mapper = Mappers.getMapper(ProductMapper.class);
+    private ProductMapper mapper;
 
     @BeforeEach
     void setUp() {
-        ProductTypeMapper typeMapper = Mappers.getMapper(ProductTypeMapper.class);
-        FeatureLinkMapper featureMapper = Mappers.getMapper(FeatureLinkMapper.class);
-        PricingLinkMapper pricingLinkMapper = Mappers.getMapper(PricingLinkMapper.class);
+        ProductTypeMapper typeMapper = new ProductTypeMapperImpl();
+        FeatureLinkMapper featureMapper = new FeatureLinkMapperImpl();
+        PricingLinkMapper pricingLinkMapper = new PricingLinkMapperImpl();
 
-        ReflectionTestUtils.setField(mapper, "productTypeMapper", typeMapper);
-        ReflectionTestUtils.setField(mapper, "featureLinkMapper", featureMapper);
-        ReflectionTestUtils.setField(mapper, "pricingLinkMapper", pricingLinkMapper);
+        this.mapper = new ProductMapperImpl(
+            typeMapper,
+            featureMapper,
+            pricingLinkMapper
+        );
     }
 
     @Test

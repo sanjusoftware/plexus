@@ -3,8 +3,8 @@ package com.bankengine.pricing.service;
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.repository.ProductRepository;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
-import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
@@ -43,7 +43,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
 
     @InjectMocks private ProductPricingService productPricingService;
 
-    private ProductPricingRequest request;
+    private ProductPriceRequest request;
     private MockedStatic<TenantContextHolder> mockedBankContext;
 
     @BeforeEach
@@ -51,7 +51,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
         mockedBankContext = Mockito.mockStatic(TenantContextHolder.class);
         mockedBankContext.when(TenantContextHolder::getBankId).thenReturn("TEST_BANK");
 
-        request = ProductPricingRequest.builder()
+        request = ProductPriceRequest.builder()
                 .productId(1L)
                 .transactionAmount(new BigDecimal("1000.00"))
                 .effectiveDate(LocalDate.now())
@@ -208,7 +208,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
         Map<String, Object> customAttrs = new HashMap<>();
         customAttrs.put("loyalty_score", 85);
 
-        ProductPricingRequest request = ProductPricingRequest.builder()
+        ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(1L)
                 .customerSegment("RETAIL")
                 .customAttributes(customAttrs)

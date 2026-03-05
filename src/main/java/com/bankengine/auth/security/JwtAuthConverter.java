@@ -40,18 +40,21 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
 
     @Override
     public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
-        String bankId = jwt.getClaimAsString(BANK_ID_CLAIM_NAME);
-        String issuer = jwt.getIssuer().toString();
-
+        String bankId = getBankIdClaim(jwt);
+        String issuer = getIssuerClaim(jwt, bankId);
         log.info("[AUTH] Token received for Bank: {} | Issuer: {}", bankId, issuer);
+        validateBankAndIssuer(bankId, issuer);
 
-        // 1. Extract bank_id
-        if (bankId == null || bankId.trim().isEmpty()) {
-            log.error("[AUTH-FAIL] Missing bank_id claim");
-            throw new OAuth2AuthenticationException(new OAuth2Error("invalid_token"), "Missing bank_id claim");
-        }
+        // Set bank context for the rest of the request thread execution
+        TenantContextHolder.setBankId(bankId);
+        Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
+        log.info("[AUTH-SUCCESS] User authorized with {} permissions", authorities.size());
 
-        // 2. Verify the combination of Bank ID and Issuer
+        return new JwtAuthenticationToken(jwt, authorities, getPrincipalClaimName(jwt));
+
+    }
+
+    private void validateBankAndIssuer(String bankId, String issuer) {
         BankConfiguration bankConfig;
         try {
             TenantContextHolder.setSystemMode(true);
@@ -72,14 +75,23 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         } finally {
             TenantContextHolder.setSystemMode(false);
         }
+    }
 
-        // Set bank context for the rest of the request thread execution
-        TenantContextHolder.setBankId(bankId);
-        Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
-        log.info("[AUTH-SUCCESS] User authorized with {} permissions", authorities.size());
+    private static String getIssuerClaim(Jwt jwt, String bankId) {
+        if (jwt.getIssuer() == null) {
+            log.error("[AUTH-FAIL] Missing issuer (iss) claim for bank: {}", bankId);
+            throw new OAuth2AuthenticationException(new OAuth2Error("invalid_token"), "Missing issuer claim");
+        }
+        return jwt.getIssuer().toString();
+    }
 
-        return new JwtAuthenticationToken(jwt, authorities, getPrincipalClaimName(jwt));
-
+    private static String getBankIdClaim(Jwt jwt) {
+        String bankId = jwt.getClaimAsString(BANK_ID_CLAIM_NAME);
+        if (bankId == null || bankId.trim().isEmpty()) {
+            log.error("[AUTH-FAIL] Missing bank_id claim");
+            throw new OAuth2AuthenticationException(new OAuth2Error("invalid_token"), "Missing bank_id claim");
+        }
+        return bankId;
     }
 
     private String getPrincipalClaimName(Jwt jwt) {

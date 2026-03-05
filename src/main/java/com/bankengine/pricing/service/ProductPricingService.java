@@ -2,9 +2,9 @@ package com.bankengine.pricing.service;
 
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.service.BaseService;
+import com.bankengine.pricing.dto.ProductPriceRequest;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult;
 import com.bankengine.pricing.dto.ProductPricingCalculationResult.PriceComponentDetail;
-import com.bankengine.pricing.dto.ProductPricingRequest;
 import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -42,7 +42,7 @@ public class ProductPricingService extends BaseService {
      * Live Pricing Entry Point: Fetches configuration from DB/Rules and calculates final price.
      */
     @Transactional(readOnly = true)
-    public ProductPricingCalculationResult getProductPricing(ProductPricingRequest request) {
+    public ProductPricingCalculationResult getProductPricing(ProductPriceRequest request) {
         // 0. Validation & Security
         verifyProductAccess(request.getProductId());
 
@@ -80,7 +80,7 @@ public class ProductPricingService extends BaseService {
         getByIdSecurely(productRepository, productId, "Product");
     }
 
-    private List<ProductPricingLink> getActivePricingLinks(ProductPricingRequest request) {
+    private List<ProductPricingLink> getActivePricingLinks(ProductPriceRequest request) {
         List<ProductPricingLink> links = getCachedLinks(request.getProductId(), request.getEffectiveDate());
         if (links.isEmpty()) {
             throw new NotFoundException("No active pricing configuration found for product: "
@@ -92,7 +92,7 @@ public class ProductPricingService extends BaseService {
     /**
      * Gathers all definitions (Fixed from DB and Tiers from Rules).
      */
-    private List<PriceComponentDetail> assemblePricingComponents(ProductPricingRequest request, List<ProductPricingLink> links) {
+    private List<PriceComponentDetail> assemblePricingComponents(ProductPriceRequest request, List<ProductPricingLink> links) {
         List<PriceComponentDetail> components = new ArrayList<>();
 
         // Process Static Fixed Values
@@ -112,7 +112,7 @@ public class ProductPricingService extends BaseService {
         return components;
     }
 
-    private List<PriceComponentDetail> retrieveDynamicComponents(ProductPricingRequest request, List<ProductPricingLink> ruleLinks) {
+    private List<PriceComponentDetail> retrieveDynamicComponents(ProductPriceRequest request, List<ProductPricingLink> ruleLinks) {
         // 1. Identify Target Component IDs
         Set<Long> componentIds = ruleLinks.stream()
                 .map(l -> l.getPricingComponent().getId())
@@ -131,7 +131,7 @@ public class ProductPricingService extends BaseService {
                 .toList();
     }
 
-    private Collection<PriceValue> determinePriceWithDrools(ProductPricingRequest request, Set<Long> componentIds, Set<Long> activeTierIds) {
+    private Collection<PriceValue> determinePriceWithDrools(ProductPriceRequest request, Set<Long> componentIds, Set<Long> activeTierIds) {
         KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
         try {
             PricingInput input = new PricingInput();
