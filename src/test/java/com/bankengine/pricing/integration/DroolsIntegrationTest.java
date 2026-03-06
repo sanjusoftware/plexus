@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -100,14 +101,14 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
             cleanupData();
             coreMetadataSeeder.seedCorePricingInputMetadata(TEST_BANK_ID);
             ProductType type = productTypeRepository.save(ProductType.builder()
-                    .name("LOAN_TYPE").bankId(TEST_BANK_ID).build());
+                    .name("LOAN_TYPE").code(generateValidCode("LOAN_TYPE")).bankId(TEST_BANK_ID).build());
 
             persistedProduct = productRepository.save(Product.builder()
-                    .name("Test Loan").code("TEST-LOAN-001")
+                    .name("Test Loan").code(generateValidCode("TEST_LOAN")).version(1)
                     .productType(type).category("RETAIL").bankId(TEST_BANK_ID).build());
 
             PricingComponent component = pricingComponentRepository.save(PricingComponent.builder()
-                    .name(TEST_COMPONENT_NAME).code("FEE-001")
+                    .name(TEST_COMPONENT_NAME).code("FEE-001").version(1)
                     .type(PricingComponent.ComponentType.FEE).bankId(TEST_BANK_ID).build());
 
             PricingTier tier = PricingTier.builder()
@@ -172,7 +173,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         txHelper.doInTransaction(() -> {
             // 1. Create a NEW component that will be linked in the future
             PricingComponent futureLinkComponent = pricingComponentRepository.save(PricingComponent.builder()
-                    .name("FutureLinkedComponent").code("FEE-FUTURE-LINK")
+                    .name("FutureLinkedComponent").code(generateValidCode("FEE-FUTURE-LINK")).version(1)
                     .type(PricingComponent.ComponentType.FEE).bankId(TEST_BANK_ID).build());
 
             PricingTier tierInsideFutureLink = PricingTier.builder()
@@ -239,7 +240,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @DisplayName("Deletion - Rules stop firing immediately after component deletion and reload")
     void testRuleReloadAfterFullComponentDeletion() {
         txHelper.doInTransaction(() -> {
-            PricingComponent component = pricingComponentRepository.findByName(TEST_COMPONENT_NAME).orElseThrow();
+            PricingComponent component = pricingComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, "FEE-001", 1).orElseThrow();
             Long compId = component.getId();
             productPricingLinkRepository.deleteByPricingComponentId(compId);
             component.getPricingTiers().clear();
@@ -258,7 +259,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     void testRuleExecutionForPercentageDiscount() {
         txHelper.doInTransaction(() -> {
             PricingComponent component = pricingComponentRepository.save(PricingComponent.builder()
-                    .name("BulkDiscountComponent").code("BULK-DIS-01")
+                    .name("BulkDiscountComponent").code(generateValidCode("BULK-DIS-01")).version(1)
                     .type(PricingComponent.ComponentType.DISCOUNT).bankId(TEST_BANK_ID).build());
 
             PricingTier tier = PricingTier.builder()

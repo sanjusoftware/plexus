@@ -79,15 +79,15 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
         txHelper.doInTransaction(() -> {
             cleanupData();
             ProductType type = productTypeRepository.save(ProductType.builder()
-                    .name("SAVINGS_TYPE").bankId(TEST_BANK_ID).build());
+                    .name("SAVINGS_TYPE").code("SAV_TYPE").bankId(TEST_BANK_ID).build());
 
             Product product = productRepository.save(Product.builder()
-                    .name("Integration Product").code("PROD-INT-01").category("RETAIL")
+                    .name("Integration Product").code("PROD-INT-01").version(1).category("RETAIL")
                     .productType(type).bankId(TEST_BANK_ID).build());
             this.productId = product.getId();
 
             ProductBundle bundle = bundleRepository.save(ProductBundle.builder()
-                    .name("Drools Test Bundle").code("BNDL-DR-01")
+                    .name("Drools Test Bundle").code("BNDL-DR-01").version(1)
                     .bankId(TEST_BANK_ID).status(ACTIVE)
                     .targetCustomerSegments("RETAIL,CORPORATE").build());
             bundleId = bundle.getId();
@@ -215,7 +215,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
     private void setupBundlePricingRule(String code, String name, BigDecimal value, PriceValue.ValueType type) {
         txHelper.doInTransaction(() -> {
             PricingComponent comp = pricingComponentRepository.save(PricingComponent.builder()
-                    .name(name).code(code)
+                    .name(name).code(code).version(1)
                     .type(PricingComponent.ComponentType.DISCOUNT).bankId(TEST_BANK_ID).status(ACTIVE).build());
 
             PricingTier tier = pricingTierRepository.save(PricingTier.builder()

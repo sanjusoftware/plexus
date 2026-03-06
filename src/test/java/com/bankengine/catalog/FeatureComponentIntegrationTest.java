@@ -79,12 +79,16 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
                 ProductType type = new ProductType();
                 type.setName("Test Type for Link");
+                type.setCode("TTFL");
+                type.setBankId(TEST_BANK_ID);
                 ProductType savedType = productTypeRepoStatic.save(type);
 
                 String productName = "Link Test Product";
                 Product product = new Product();
                 product.setName(productName);
                 product.setCode(generateValidCode(productName));
+                product.setVersion(1);
+                product.setBankId(TEST_BANK_ID);
                 product.setActivationDate(LocalDate.now());
                 product.setStatus(VersionableEntity.EntityStatus.ACTIVE);
                 product.setProductType(savedType);
@@ -116,11 +120,13 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     }
 
     private FeatureComponent createFeatureComponentInDb(String name) {
-        return txHelper.doInTransaction(() -> featureComponentRepository.findByName(name)
+        String code = generateValidCode(name);
+        return txHelper.doInTransaction(() -> featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 1)
                 .orElseGet(() -> featureComponentRepository.save(
                         FeatureComponent.builder()
                                 .name(name)
-                                .code(generateValidCode(name))
+                                .code(code)
+                                .version(1)
                                 .dataType(FeatureComponent.DataType.STRING)
                                 .status(VersionableEntity.EntityStatus.DRAFT)
                                 .bankId(TEST_BANK_ID)
@@ -142,17 +148,20 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldCreateFeatureAndReturn201() throws Exception {
+        String name = "PremiumSupport";
+        FeatureComponentRequest request = newFeatureComponentRequest(name);
+        String code = request.getCode();
         mockMvc.perform(post("/api/v1/features")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newFeatureComponentRequest("PremiumSupport"))))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", is("PremiumSupport")))
+                .andExpect(jsonPath("$.name", is(name)))
                 .andExpect(jsonPath("$.dataType", is("STRING")))
                 .andExpect(jsonPath("$.id").isNumber());
 
         // Verify DB Tenancy & Auditing
         txHelper.doInTransaction(() -> {
-            FeatureComponent fc = featureComponentRepository.findByName("PremiumSupport").orElseThrow();
+            FeatureComponent fc = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 1).orElseThrow();
             assertThat(fc.getBankId()).isEqualTo(TEST_BANK_ID);
             assertThat(fc.getCreatedBy()).isNotEqualTo("SYSTEM"); // Should be mock user
         });

@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface ProductTypeRepository extends TenantRepository<ProductType, Long> {
-    Optional<ProductType> findByName(String name);
+    Optional<ProductType> findByBankIdAndCode(String bankId, String code);
 }

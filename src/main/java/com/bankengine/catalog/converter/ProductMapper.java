@@ -29,6 +29,7 @@ public interface ProductMapper {
 
     @ToNewEntity
     @Mapping(target = "name", source = "dto.name")
+    @Mapping(target = "code", source = "dto.code")
     @Mapping(target = "productType", source = "productType")
     @Mapping(target = "productFeatureLinks", ignore = true)
     @Mapping(target = "productPricingLinks", ignore = true)

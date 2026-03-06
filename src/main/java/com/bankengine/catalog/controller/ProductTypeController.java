@@ -1,5 +1,6 @@
 package com.bankengine.catalog.controller;
 
+import com.bankengine.catalog.converter.ProductTypeMapper;
 import com.bankengine.catalog.dto.ProductTypeDto;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.service.ProductTypeService;
@@ -23,9 +24,11 @@ import java.util.List;
 public class ProductTypeController {
 
     private final ProductTypeService productTypeService;
+    private final ProductTypeMapper productTypeMapper;
 
-    public ProductTypeController(ProductTypeService productTypeService) {
+    public ProductTypeController(ProductTypeService productTypeService, ProductTypeMapper productTypeMapper) {
         this.productTypeService = productTypeService;
+        this.productTypeMapper = productTypeMapper;
     }
 
     /**
@@ -38,10 +41,9 @@ public class ProductTypeController {
                     schema = @Schema(implementation = ProductType.class)))
     @GetMapping
     @PreAuthorize("hasAuthority('catalog:product-type:read')")
-    public ResponseEntity<List<ProductType>> getAllProductTypes() {
+    public ResponseEntity<List<ProductTypeDto>> getAllProductTypes() {
         List<ProductType> productTypes = productTypeService.findAllProductTypes();
-
-        return ResponseEntity.ok(productTypes);
+        return ResponseEntity.ok(productTypeMapper.toResponseList(productTypes));
     }
 
     @Operation(summary = "Create a new product type",
@@ -52,8 +54,8 @@ public class ProductTypeController {
     @ApiResponse(responseCode = "400", description = "Validation error.")
     @PostMapping
     @PreAuthorize("hasAuthority('catalog:product-type:create')")
-    public ResponseEntity<ProductType> createProductType(@Valid @RequestBody ProductTypeDto requestDto) {
+    public ResponseEntity<ProductTypeDto> createProductType(@Valid @RequestBody ProductTypeDto requestDto) {
         ProductType createdType = productTypeService.createProductType(requestDto);
-        return new ResponseEntity<>(createdType, HttpStatus.CREATED);
+        return new ResponseEntity<>(productTypeMapper.toResponse(createdType), HttpStatus.CREATED);
     }
 }

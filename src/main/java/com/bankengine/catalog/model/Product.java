@@ -27,6 +27,7 @@ public class Product extends VersionableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
     @Column(name = "expiry_date")
     private LocalDate expiryDate;
 

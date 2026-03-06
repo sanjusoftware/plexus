@@ -26,9 +26,11 @@ public class ProductRequest {
     @Schema(example = "Standard Savings Account", description = "Marketing name of the product.")
     private String name;
 
-    @NotNull(message = "Product Type ID is required.")
     @Schema(example = "1", description = "ID of the associated Product Type (e.g., CASA).")
     private Long productTypeId;
+
+    @Schema(example = "CASA", description = "Code of the associated Product Type.")
+    private String productTypeCode;
 
     @NotBlank(message = "Product category is required (e.g., RETAIL, WEALTH, CORPORATE).")
     @Schema(example = "RETAIL", description = "Primary business category.")

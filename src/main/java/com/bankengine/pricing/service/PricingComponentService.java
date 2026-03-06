@@ -56,6 +56,10 @@ public class PricingComponentService extends BaseService {
         return getByIdSecurely(pricingComponentRepository, id, "Pricing Component");
     }
 
+    public PricingComponent getPricingComponentByCode(String code, Integer version) {
+        return getByCodeAndVersionSecurely(pricingComponentRepository, code, version, "Pricing Component");
+    }
+
     // --- WRITE OPERATIONS ---
 
     @Transactional

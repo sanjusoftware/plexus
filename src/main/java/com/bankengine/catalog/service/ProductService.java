@@ -13,6 +13,7 @@ import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.catalog.specification.ProductSpecification;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
+import com.bankengine.web.exception.NotFoundException;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.PricingComponentService;
@@ -81,7 +82,9 @@ public class ProductService extends BaseService {
     public ProductResponse createProduct(ProductRequest requestDto) {
         validateNewVersionable(productRepository, requestDto.getName(), requestDto.getCode());
 
-        ProductType productType = getProductTypeById(requestDto.getProductTypeId());
+        ProductType productType = requestDto.getProductTypeCode() != null
+                ? getProductTypeByCode(requestDto.getProductTypeCode())
+                : getProductTypeById(requestDto.getProductTypeId());
         Product product = productMapper.toEntity(requestDto, productType);
         product.setBankId(getCurrentBankId());
         product.setStatus(VersionableEntity.EntityStatus.DRAFT);
@@ -305,8 +308,17 @@ public class ProductService extends BaseService {
         return getByIdSecurely(productRepository, id, "Product");
     }
 
+    public Product getProductEntityByCode(String code, Integer version) {
+        return getByCodeAndVersionSecurely(productRepository, code, version, "Product");
+    }
+
     private ProductType getProductTypeById(Long id) {
         return getByIdSecurely(productTypeRepository, id, "Product Type");
+    }
+
+    private ProductType getProductTypeByCode(String code) {
+        return productTypeRepository.findByBankIdAndCode(getCurrentBankId(), code)
+                .orElseThrow(() -> new NotFoundException("Product Type not found with code: " + code));
     }
 
     private void validateExpirationDate(Product product, LocalDate newDate) {

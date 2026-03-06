@@ -1,5 +1,6 @@
 package com.bankengine.catalog.controller;
 
+import com.bankengine.catalog.converter.ProductBundleMapper;
 import com.bankengine.catalog.dto.ProductBundleRequest;
 import com.bankengine.catalog.dto.ProductBundleResponse;
 import com.bankengine.catalog.dto.VersionRequest;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductBundleController {
 
     private final ProductBundleService bundleService;
+    private final ProductBundleMapper bundleMapper;
 
     @Operation(summary = "Create a new product bundle aggregate",
             description = "Creates a bundle in DRAFT status. Performs category compatibility checks. Include the 'products' list to initialize links.")
@@ -55,6 +57,15 @@ public class ProductBundleController {
             @Parameter(description = "The unique ID of the bundle", required = true)
             @PathVariable Long id) {
         return ResponseEntity.ok(bundleService.getBundleResponseById(id));
+    }
+
+    @GetMapping("/code/{code}")
+    @PreAuthorize("hasAuthority('catalog:bundle:read')")
+    public ResponseEntity<ProductBundleResponse> getBundleByCode(
+            @PathVariable String code,
+            @RequestParam(required = false) Integer version) {
+        return ResponseEntity.ok(bundleMapper.toResponse(
+                bundleService.getProductBundleByCode(code, version)));
     }
 
     @Operation(summary = "Partial update of a DRAFT bundle",

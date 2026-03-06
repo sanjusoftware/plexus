@@ -64,10 +64,12 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         });
     }
 
-    private ProductType createAndSaveProductType(String name) {
+    private ProductType createAndSaveProductType(String name, String code) {
         return txHelper.doInTransaction(() -> {
             ProductType type = new ProductType();
             type.setName(name);
+            type.setCode(code);
+            type.setBankId(TEST_BANK_ID);
             return productTypeRepository.save(type);
         });
     }
@@ -79,15 +81,15 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn200AndAllProductTypes() throws Exception {
-        createAndSaveProductType("CASA");
-        createAndSaveProductType("Credit Card");
+        createAndSaveProductType("Current and Savings Account", "CASA");
+        createAndSaveProductType("Credit Card", "CC");
 
         mockMvc.perform(get(API_URL)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].name", is("CASA")))
-                .andExpect(jsonPath("$[1].name", is("Credit Card")));
+                .andExpect(jsonPath("$[?(@.code == 'CASA')].name").value("Current and Savings Account"))
+                .andExpect(jsonPath("$[?(@.code == 'CC')].name").value("Credit Card"));
     }
 
     @Test
@@ -114,12 +116,14 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     void shouldReturn201AndCreateProductTypeSuccessfully() throws Exception {
         ProductTypeDto requestDto = new ProductTypeDto();
         requestDto.setName("Fixed Deposit");
+        requestDto.setCode("FD");
 
         mockMvc.perform(post(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name", is("Fixed Deposit")))
+                .andExpect(jsonPath("$.code", is("FD")))
                 .andExpect(jsonPath("$.id").isNumber());
     }
 
@@ -128,6 +132,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     void shouldReturn403WhenCreatingWithoutPermission() throws Exception {
         ProductTypeDto requestDto = new ProductTypeDto();
         requestDto.setName("Forbidden Type");
+        requestDto.setCode("FT");
 
         mockMvc.perform(post(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -164,10 +169,27 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn409ConflictWhenCreatingDuplicateName() throws Exception {
-        createAndSaveProductType("Checking Account");
+        createAndSaveProductType("Checking Account", "CH");
 
         ProductTypeDto requestDto = new ProductTypeDto();
         requestDto.setName("Checking Account");
+        requestDto.setCode("CH2");
+
+        mockMvc.perform(post(API_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    @WithMockRole(roles = {CREATOR_ROLE})
+    void shouldReturn409ConflictWhenCreatingDuplicateCode() throws Exception {
+        createAndSaveProductType("Checking Account 1", "CH");
+
+        ProductTypeDto requestDto = new ProductTypeDto();
+        requestDto.setName("Checking Account 2");
+        requestDto.setCode("CH");
 
         mockMvc.perform(post(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)

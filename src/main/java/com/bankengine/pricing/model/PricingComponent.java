@@ -40,6 +40,7 @@ public class PricingComponent extends VersionableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
     private String description;
 
     @Enumerated(EnumType.STRING)
