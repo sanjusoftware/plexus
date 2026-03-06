@@ -51,6 +51,10 @@ public class ProductBundleService extends BaseService {
         return bundleMapper.toResponse(bundle);
     }
 
+    public ProductBundle getProductBundleByCode(String code, Integer version) {
+        return getByCodeAndVersionSecurely(productBundleRepository, code, version, "Bundle");
+    }
+
     // --- WRITE OPERATIONS ---
 
     @Transactional

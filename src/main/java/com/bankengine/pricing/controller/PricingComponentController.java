@@ -1,6 +1,7 @@
 package com.bankengine.pricing.controller;
 
 import com.bankengine.catalog.dto.VersionRequest;
+import com.bankengine.pricing.converter.PricingComponentMapper;
 import com.bankengine.pricing.dto.PricingComponentRequest;
 import com.bankengine.pricing.dto.PricingComponentResponse;
 import com.bankengine.pricing.service.PricingComponentService;
@@ -27,6 +28,7 @@ import java.util.List;
 public class PricingComponentController {
 
     private final PricingComponentService pricingComponentService;
+    private final PricingComponentMapper pricingComponentMapper;
 
     @Operation(summary = "Retrieve all pricing components",
             description = "Returns a list of all reusable pricing definitions including nested tiers and price values. Tenant isolation is applied automatically.")
@@ -48,6 +50,15 @@ public class PricingComponentController {
             @Parameter(description = "ID of the pricing component to retrieve", required = true)
             @PathVariable Long id) {
         return ResponseEntity.ok(pricingComponentService.getComponentById(id));
+    }
+
+    @GetMapping("/code/{code}")
+    @PreAuthorize("hasAuthority('pricing:component:read')")
+    public ResponseEntity<PricingComponentResponse> getPricingComponentByCode(
+            @PathVariable String code,
+            @RequestParam(required = false) Integer version) {
+        return ResponseEntity.ok(pricingComponentMapper.toResponseDto(
+                pricingComponentService.getPricingComponentByCode(code, version)));
     }
 
     @Operation(summary = "Define a new pricing aggregate",

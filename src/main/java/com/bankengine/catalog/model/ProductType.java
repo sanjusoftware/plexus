@@ -11,7 +11,8 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "product_type", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"bank_id", "name"})
+        @UniqueConstraint(columnNames = {"bank_id", "name"}),
+        @UniqueConstraint(columnNames = {"bank_id", "code"})
 })
 @Getter
 @Setter
@@ -27,4 +28,7 @@ public class ProductType extends AuditableEntity {
 
     @Column(nullable = false)
     private String name; // e.g., "Loan", "Credit Card", "CASA"
+
+    @Column(nullable = false, length = 100)
+    private String code;
 }

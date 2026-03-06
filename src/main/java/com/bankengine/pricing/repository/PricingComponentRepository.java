@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PricingComponentRepository extends VersionableRepository<PricingComponent> {
-    Optional<PricingComponent> findByName(String name);
     @EntityGraph(value = "component-with-tiers-values-conditions", type = EntityGraph.EntityGraphType.LOAD)
     List<PricingComponent> findAllWithDetailsBy();
     List<PricingComponent> findByTypeIn(List<ComponentType> types);

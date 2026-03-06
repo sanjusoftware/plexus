@@ -101,12 +101,15 @@ public class TestTransactionHelper {
 
     @Transactional
     public PricingComponent createPricingComponentInDb(String name) {
-        return pricingComponentRepository.findByName(name)
+        String code = generateValidCode(name);
+        String bankId = TenantContextHolder.getBankId();
+        return pricingComponentRepository.findByBankIdAndCodeAndVersion(bankId, code, 1)
                 .orElseGet(() -> {
                     PricingComponent component = new PricingComponent();
                     component.setName(name);
-                    component.setCode(generateValidCode(name));
-                    component.setBankId(TenantContextHolder.getBankId());
+                    component.setCode(code);
+                    component.setVersion(1);
+                    component.setBankId(bankId);
                     component.setType(PricingComponent.ComponentType.FEE);
                     return pricingComponentRepository.save(component);
                 });
@@ -221,10 +224,13 @@ public class TestTransactionHelper {
      */
     @Transactional
     public ProductType getOrCreateProductType(String name) {
-        return productTypeRepository.findByName(name)
+        String code = name.toUpperCase().replace(" ", "_");
+        return productTypeRepository.findByBankIdAndCode(TEST_BANK_ID, code)
                 .orElseGet(() -> {
                     ProductType pt = new ProductType();
                     pt.setName(name);
+                    pt.setCode(code);
+                    pt.setBankId(TEST_BANK_ID);
                     return productTypeRepository.save(pt);
                 });
     }
@@ -234,15 +240,18 @@ public class TestTransactionHelper {
      */
     @Transactional
     public Product getOrCreateProduct(String name, ProductType type, String category) {
-        return productRepository.findByName(name)
+        String code = generateValidCode(name);
+        String bankId = TenantContextHolder.getBankId();
+        return productRepository.findByBankIdAndCodeAndVersion(bankId, code, 1)
                 .orElseGet(() -> {
                     Product p = new Product();
                     p.setName(name);
-                    p.setCode(generateValidCode(name));
+                    p.setCode(code);
+                    p.setVersion(1);
                     p.setProductType(type);
                     p.setCategory(category);
                     p.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-                    p.setBankId(TenantContextHolder.getBankId());
+                    p.setBankId(bankId);
                     p.setActivationDate(LocalDate.now().minusDays(1));
                     return productRepository.save(p);
                 });

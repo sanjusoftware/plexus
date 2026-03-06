@@ -48,7 +48,7 @@ public class ProductSearchIntegrationTest extends AbstractIntegrationTest {
             TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelperStatic.doInTransaction(() -> {
                 productTypeRepoStatic.deleteAllInBatch();
-                ProductType baseType = ProductType.builder().name("General Banking").build();
+                ProductType baseType = ProductType.builder().name("General Banking").code("GEN").bankId(TEST_BANK_ID).build();
                 EXISTING_PRODUCT_TYPE_ID = productTypeRepoStatic.save(baseType).getId();
             });
         } finally {
@@ -66,29 +66,29 @@ public class ProductSearchIntegrationTest extends AbstractIntegrationTest {
     private void setupMultipleProductsForSearch() {
         txHelper.doInTransaction(() -> {
             ProductType generalType = productTypeRepository.findById(EXISTING_PRODUCT_TYPE_ID).orElseThrow();
-            ProductType cardType = productTypeRepository.findByName("Cards")
-                    .orElseGet(() -> productTypeRepository.save(ProductType.builder().name("Cards").build()));
+            ProductType cardType = productTypeRepository.findByBankIdAndCode(TEST_BANK_ID, "CRD")
+                    .orElseGet(() -> productTypeRepository.save(ProductType.builder().name("Cards").code("CRD").bankId(TEST_BANK_ID).build()));
 
             // 1. Draft Product
             productRepository.save(Product.builder()
-                    .name("Draft Checking").code("CODE_D1").productType(generalType)
-                    .category("RETAIL").status(VersionableEntity.EntityStatus.DRAFT).build());
+                    .name("Draft Checking").code("CODE_D1").version(1).productType(generalType)
+                    .category("RETAIL").status(VersionableEntity.EntityStatus.DRAFT).bankId(TEST_BANK_ID).build());
 
             // 2. Active Product (Matching "Checking")
             productRepository.save(Product.builder()
-                    .name("Active Checking").code("CODE_A1").productType(generalType)
-                    .category("RETAIL").status(VersionableEntity.EntityStatus.ACTIVE)
+                    .name("Active Checking").code("CODE_A1").version(1).productType(generalType)
+                    .category("RETAIL").status(VersionableEntity.EntityStatus.ACTIVE).bankId(TEST_BANK_ID)
                     .activationDate(LocalDate.now().minusDays(5)).build());
 
             // 3. Inactive Savings
             productRepository.save(Product.builder()
-                    .name("Inactive Savings").code("CODE_I1").productType(generalType)
-                    .category("RETAIL").status(VersionableEntity.EntityStatus.INACTIVE).build());
+                    .name("Inactive Savings").code("CODE_I1").version(1).productType(generalType)
+                    .category("RETAIL").status(VersionableEntity.EntityStatus.INACTIVE).bankId(TEST_BANK_ID).build());
 
             // 4. Active Card (Different Type)
             productRepository.save(Product.builder()
-                    .name("Premium Card").code("CODE_A2").productType(cardType)
-                    .category("RETAIL").status(VersionableEntity.EntityStatus.ACTIVE)
+                    .name("Premium Card").code("CODE_A2").version(1).productType(cardType)
+                    .category("RETAIL").status(VersionableEntity.EntityStatus.ACTIVE).bankId(TEST_BANK_ID)
                     .activationDate(LocalDate.now().minusDays(1)).build());
         });
     }
@@ -121,7 +121,7 @@ public class ProductSearchIntegrationTest extends AbstractIntegrationTest {
     void shouldFilterProductsByProductType() throws Exception {
         setupMultipleProductsForSearch();
         Long cardTypeId = txHelper.doInTransaction(() ->
-                productTypeRepository.findByName("Cards").get().getId());
+                productTypeRepository.findByBankIdAndCode(TEST_BANK_ID, "CRD").get().getId());
 
         mockMvc.perform(get(PRODUCT_API_BASE)
                         .param("productTypeId", cardTypeId.toString()))
@@ -145,12 +145,12 @@ public class ProductSearchIntegrationTest extends AbstractIntegrationTest {
         txHelper.doInTransaction(() -> {
             ProductType type = productTypeRepository.findById(EXISTING_PRODUCT_TYPE_ID).get();
             productRepository.save(Product.builder()
-                    .name("Future Product").code("F1").productType(type)
+                    .name("Future Product").code("F1").version(1).productType(type).bankId(TEST_BANK_ID)
                     .category("RETAIL").status(VersionableEntity.EntityStatus.DRAFT)
                     .activationDate(LocalDate.now().plusDays(10)).build());
 
             productRepository.save(Product.builder()
-                    .name("Past Product").code("P1").productType(type)
+                    .name("Past Product").code("P1").version(1).productType(type).bankId(TEST_BANK_ID)
                     .category("RETAIL").status(VersionableEntity.EntityStatus.ACTIVE)
                     .activationDate(LocalDate.now().minusDays(10)).build());
         });

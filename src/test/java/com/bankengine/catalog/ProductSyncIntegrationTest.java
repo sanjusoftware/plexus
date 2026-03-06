@@ -81,7 +81,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
         try {
             TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelperStatic.doInTransaction(() -> {
-                ProductType type = ProductType.builder().name("Sync Test Type").build();
+                ProductType type = ProductType.builder().name("Sync Test Type").code("STT").bankId(TEST_BANK_ID).build();
                 EXISTING_PRODUCT_TYPE_ID = productTypeRepoStatic.save(type).getId();
 
                 PricingComponent comp = PricingComponent.builder()

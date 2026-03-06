@@ -91,6 +91,8 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
 
                 ProductType pt = new ProductType();
                 pt.setName("Base Checking Type");
+                pt.setCode("BCT");
+                pt.setBankId(TEST_BANK_ID);
                 EXISTING_PRODUCT_TYPE_ID = productTypeRepoStatic.save(pt).getId();
             });
         } finally {
@@ -113,7 +115,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     private ProductRequest.ProductRequestBuilder defaultRequestBuilder() {
         return ProductRequest.builder()
                 .name("Standard Product Name")
-                .code("CODE_" + UUID.randomUUID())
+                .code("CODE_" + UUID.randomUUID().toString().substring(0, 8))
                 .productTypeId(EXISTING_PRODUCT_TYPE_ID)
                 .category("RETAIL")
                 .activationDate(LocalDate.now().plusDays(1))
@@ -134,7 +136,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         return txHelper.doInTransaction(() -> {
             Product p = Product.builder()
                     .name("Standard Product")
-                    .code("CODE_" + UUID.randomUUID())
+                    .code("CODE_" + UUID.randomUUID().toString().substring(0, 8))
                     .bankId(TEST_BANK_ID)
                     .productType(productTypeRepository.getReferenceById(EXISTING_PRODUCT_TYPE_ID))
                     .category("RETAIL")

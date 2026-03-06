@@ -35,6 +35,28 @@ public abstract class BaseService {
         return entity;
     }
 
+    protected <T extends VersionableEntity> T getByCodeAndVersionSecurely(
+            VersionableRepository<T> repository,
+            String code,
+            Integer version,
+            String entityName) {
+
+        String bankId = getCurrentBankId();
+        T entity;
+
+        if (version != null) {
+            entity = repository.findByBankIdAndCodeAndVersion(bankId, code, version)
+                    .orElseThrow(() -> new NotFoundException(
+                            String.format("%s not found with code: %s and version: %d", entityName, code, version)));
+        } else {
+            entity = repository.findFirstByBankIdAndCodeOrderByVersionDesc(bankId, code)
+                    .orElseThrow(() -> new NotFoundException(
+                            String.format("Latest %s not found with code: %s", entityName, code)));
+        }
+
+        return entity;
+    }
+
     /**
      * Ensures the entity is in DRAFT status.
      */

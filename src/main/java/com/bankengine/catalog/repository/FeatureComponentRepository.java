@@ -8,5 +8,4 @@ import java.util.Optional;
 
 @Repository
 public interface FeatureComponentRepository extends VersionableRepository<FeatureComponent> {
-    Optional<FeatureComponent> findByName(String name);
 }

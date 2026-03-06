@@ -109,6 +109,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         Long productId = txHelper.doInTransaction(() -> {
             ProductType type = new ProductType();
             type.setName("Savings Type");
+            type.setCode("ST1");
             type.setBankId(TEST_BANK_ID);
             Long typeId = productTypeRepository.save(type).getId();
 
@@ -140,6 +141,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         Map<String, Long> ids = txHelper.doInTransaction(() -> {
             ProductType type = new ProductType();
             type.setName("Bundle Type");
+            type.setCode("BT1");
             type.setBankId(TEST_BANK_ID);
             Long typeId = productTypeRepository.save(type).getId();
 

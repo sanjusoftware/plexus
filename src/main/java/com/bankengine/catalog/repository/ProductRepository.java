@@ -8,5 +8,4 @@ import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends VersionableRepository<Product> {
-    Optional<Product> findByName(String name);
 }

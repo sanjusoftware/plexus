@@ -39,8 +39,12 @@ public class ProductTypeService extends BaseService {
      */
     @Transactional
     public ProductType createProductType(ProductTypeDto requestDto) {
+        String bankId = getCurrentBankId();
+        if (productTypeRepository.findByBankIdAndCode(bankId, requestDto.getCode()).isPresent()) {
+            throw new IllegalStateException("Product Type code '" + requestDto.getCode() + "' already exists.");
+        }
         ProductType productType = productTypeMapper.toEntity(requestDto);
-        productType.setBankId(getCurrentBankId());
+        productType.setBankId(bankId);
         return productTypeRepository.save(productType);
     }
 }

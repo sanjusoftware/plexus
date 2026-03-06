@@ -165,22 +165,27 @@ public class TestDataSeeder implements CommandLineRunner {
 
     @Transactional
     public void seedProductTypes(String bankId) {
-        if (productTypeRepository.findByName("CASA").isEmpty()) {
-            productTypeRepository.save(createType("CASA", bankId));
+        String code = "CASA";
+        if (productTypeRepository.findByBankIdAndCode(bankId, code).isEmpty()) {
+            productTypeRepository.save(createType("Current and Savings Account", code, bankId));
             System.out.println("Seeded Product Types for " + bankId);
         }
     }
 
     @Transactional
     public void seedFeaturesAndProducts(String bankId) {
-        ProductType casaType = productTypeRepository.findByName("CASA")
+        ProductType casaType = productTypeRepository.findByBankIdAndCode(bankId, "CASA")
                 .orElseThrow(() -> new RuntimeException("CASA type not found for " + bankId));
 
-        FeatureComponent maxTxn = featureComponentRepository.findByName("Max_Free_ATM_Txn")
-                .orElseGet(() -> featureComponentRepository.save(createFeature("Max_Free_ATM_Txn", DataType.INTEGER, bankId)));
+        String featureName = "Max Free ATM Txn";
+        String featureCode = "MAX_FREE_ATM_TXN";
+        FeatureComponent maxTxn = featureComponentRepository.findByBankIdAndCodeAndVersion(bankId, featureCode, 1)
+                .orElseGet(() -> featureComponentRepository.save(createFeature(featureName, featureCode, DataType.INTEGER, bankId)));
 
-        Product savings = createProduct(bankId.equals(BANK_A) ? "Global Savings" : "Local Savings", casaType, bankId, "RETAIL");
-        Product checking = createProduct(bankId.equals(BANK_A) ? "Global Checking" : "Local Checking", casaType, bankId, "RETAIL");
+        Product savings = createProduct(bankId.equals(BANK_A) ? "Global Savings" : "Local Savings",
+                bankId.equals(BANK_A) ? "GLOB-SAV" : "LOC-SAV", casaType, bankId, "RETAIL");
+        Product checking = createProduct(bankId.equals(BANK_A) ? "Global Checking" : "Local Checking",
+                bankId.equals(BANK_A) ? "GLOB-CHK" : "LOC-CHK", casaType, bankId, "RETAIL");
 
         productRepository.saveAll(List.of(savings, checking));
         linkRepository.save(createLink(savings, maxTxn, "10", bankId));
@@ -188,11 +193,14 @@ public class TestDataSeeder implements CommandLineRunner {
 
     @Transactional
     public void seedPricingComponentsAndLinks(String bankId) {
-        String name = "Monthly_Maintenance_Fee";
-        PricingComponent fee = pricingComponentRepository.findByName(name).orElseGet(() -> {
+        String name = "Monthly Maintenance Fee";
+        String code = "MONTHLY_MAINT_FEE";
+        PricingComponent fee = pricingComponentRepository.findByBankIdAndCodeAndVersion(bankId, code, 1).orElseGet(() -> {
             PricingComponent pricingComponent = new PricingComponent();
             pricingComponent.setName(name);
-            pricingComponent.setCode(generateValidCode(name));
+            pricingComponent.setCode(code);
+            pricingComponent.setVersion(1);
+            pricingComponent.setStatus(VersionableEntity.EntityStatus.ACTIVE);
             pricingComponent.setType(ComponentType.FEE);
             pricingComponent.setBankId(bankId);
             return pricingComponentRepository.save(pricingComponent);
@@ -202,7 +210,7 @@ public class TestDataSeeder implements CommandLineRunner {
         tierConditionRepository.save(createCondition(tier, "customerSegment", Operator.EQ, "STANDARD", bankId));
         priceValueRepository.save(createPriceValue(new BigDecimal("15.00"), PriceValue.ValueType.FEE_ABSOLUTE, tier, bankId));
 
-        productRepository.findByName(bankId.equals(BANK_A) ? "Global Savings" : "Local Savings").ifPresent(p -> {
+        productRepository.findByBankIdAndCodeAndVersion(bankId, bankId.equals(BANK_A) ? "GLOB-SAV" : "LOC-SAV", 1).ifPresent(p -> {
             ProductPricingLink link = new ProductPricingLink();
             link.setProduct(p);
             link.setPricingComponent(fee);
@@ -213,9 +221,9 @@ public class TestDataSeeder implements CommandLineRunner {
 
     @Transactional
     public void seedBundles(String bankId) {
-        Product savings = productRepository.findByName(bankId.equals(BANK_A) ? "Global Savings" : "Local Savings")
+        Product savings = productRepository.findByBankIdAndCodeAndVersion(bankId, bankId.equals(BANK_A) ? "GLOB-SAV" : "LOC-SAV", 1)
                 .orElseThrow(() -> new RuntimeException("Savings not found for " + bankId));
-        Product checking = productRepository.findByName(bankId.equals(BANK_A) ? "Global Checking" : "Local Checking")
+        Product checking = productRepository.findByBankIdAndCodeAndVersion(bankId, bankId.equals(BANK_A) ? "GLOB-CHK" : "LOC-CHK", 1)
                 .orElseThrow(() -> new RuntimeException("Checking not found for " + bankId));
 
         String bankName = bankId.equals(BANK_A) ? "Gold Elite Bundle" : "Standard Starter Pack";
@@ -249,14 +257,15 @@ public class TestDataSeeder implements CommandLineRunner {
         return link;
     }
 
-    private ProductType createType(String name, String bankId) {
-        ProductType t = new ProductType(); t.setName(name); t.setBankId(bankId); return t;
+    private ProductType createType(String name, String code, String bankId) {
+        ProductType t = new ProductType(); t.setName(name); t.setCode(code); t.setBankId(bankId); return t;
     }
 
-    private Product createProduct(String name, ProductType type, String bankId, String cat) {
+    private Product createProduct(String name, String code, ProductType type, String bankId, String cat) {
         Product p = new Product();
         p.setName(name);
-        p.setCode(generateValidCode(name));
+        p.setCode(code);
+        p.setVersion(1);
         p.setProductType(type);
         p.setBankId(bankId);
         p.setCategory(cat);
@@ -265,12 +274,12 @@ public class TestDataSeeder implements CommandLineRunner {
         return p;
     }
 
-    private FeatureComponent createFeature(String name, DataType type, String bankId) {
+    private FeatureComponent createFeature(String name, String code, DataType type, String bankId) {
         return FeatureComponent.builder()
                 .name(name)
                 .dataType(type)
                 .bankId(bankId)
-                .code(name.toUpperCase())
+                .code(code)
                 .status(VersionableEntity.EntityStatus.ACTIVE)
                 .version(1)
                 .build();

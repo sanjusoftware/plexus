@@ -18,4 +18,9 @@ public class ProductTypeDto {
     @Size(min = 3, max = 100, message = "Name must be between 3 and 100 characters.")
     @Schema(description = "The name of the product type", example = "CASA")
     private String name;
+
+    @NotBlank(message = "Product Type code is required.")
+    @Size(min = 2, max = 50, message = "Code must be between 2 and 50 characters.")
+    @Schema(description = "The unique code of the product type", example = "CASA")
+    private String code;
 }

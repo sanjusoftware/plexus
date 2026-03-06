@@ -27,6 +27,7 @@ public class ProductBundle extends VersionableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
     @Column(length = 500)
     private String description;
 

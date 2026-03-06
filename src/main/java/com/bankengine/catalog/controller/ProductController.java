@@ -1,5 +1,6 @@
 package com.bankengine.catalog.controller;
 
+import com.bankengine.catalog.converter.ProductMapper;
 import com.bankengine.catalog.dto.ProductRequest;
 import com.bankengine.catalog.dto.ProductResponse;
 import com.bankengine.catalog.dto.ProductSearchRequest;
@@ -30,6 +31,7 @@ import java.time.LocalDate;
 public class ProductController {
 
     private final ProductService productService;
+    private final ProductMapper productMapper;
 
     @Operation(summary = "Create a new product definition",
             description = "Creates a new Product entity in DRAFT status. This is an aggregate creation: include all Feature and Pricing links in the Request DTO to initialize the product fully.")
@@ -65,6 +67,15 @@ public class ProductController {
             @Parameter(description = "The unique ID of the product to retrieve", required = true)
             @PathVariable Long productId) {
         return ResponseEntity.ok(productService.getProductResponseById(productId));
+    }
+
+    @GetMapping("/code/{code}")
+    @PreAuthorize("hasAuthority('catalog:product:read')")
+    public ResponseEntity<ProductResponse> getProductByCode(
+            @PathVariable String code,
+            @RequestParam(required = false) Integer version) {
+        return ResponseEntity.ok(productMapper.toResponse(
+                productService.getProductEntityByCode(code, version)));
     }
 
     @Operation(summary = "Partial update of a DRAFT product (Simplified Aggregate Update)",

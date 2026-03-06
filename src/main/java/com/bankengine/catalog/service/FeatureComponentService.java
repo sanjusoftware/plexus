@@ -41,6 +41,10 @@ public class FeatureComponentService extends BaseService {
         return getByIdSecurely(componentRepository, id, "Feature Component");
     }
 
+    public FeatureComponent getFeatureComponentByCode(String code, Integer version) {
+        return getByCodeAndVersionSecurely(componentRepository, code, version, "Feature Component");
+    }
+
     // --- WRITE OPERATIONS ---
 
     @Transactional

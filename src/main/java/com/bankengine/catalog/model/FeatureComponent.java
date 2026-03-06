@@ -22,6 +22,7 @@ public class FeatureComponent extends VersionableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
     @Enumerated(EnumType.STRING)
     @NonNull
     private DataType dataType;

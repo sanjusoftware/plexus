@@ -1,5 +1,6 @@
 package com.bankengine.catalog.controller;
 
+import com.bankengine.catalog.converter.FeatureComponentMapper;
 import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.dto.VersionRequest;
@@ -28,6 +29,7 @@ import java.util.List;
 public class FeatureComponentController {
 
     private final FeatureComponentService featureComponentService;
+    private final FeatureComponentMapper featureComponentMapper;
 
     @Operation(summary = "Retrieve all defined feature components",
             description = "Returns a list of all reusable feature definitions in the catalog. Results are automatically scoped to the current Bank/Tenant ID.")
@@ -52,6 +54,15 @@ public class FeatureComponentController {
             @Parameter(description = "The unique ID of the feature component", required = true)
             @PathVariable Long id) {
         return ResponseEntity.ok(featureComponentService.getFeatureResponseById(id));
+    }
+
+    @GetMapping("/code/{code}")
+    @PreAuthorize("hasAuthority('catalog:feature:read')")
+    public ResponseEntity<FeatureComponentResponse> getFeatureByCode(
+            @PathVariable String code,
+            @RequestParam(required = false) Integer version) {
+        return ResponseEntity.ok(featureComponentMapper.toResponseDto(
+                featureComponentService.getFeatureComponentByCode(code, version)));
     }
 
     @Operation(summary = "Create a new reusable feature component",
