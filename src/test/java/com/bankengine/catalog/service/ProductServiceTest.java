@@ -393,4 +393,122 @@ public class ProductServiceTest extends BaseServiceTest {
                 () -> assertEquals(TEST_BANK_ID, saved.getBankId())
         );
     }
+
+    @Test
+    @DisplayName("Branch: deactivateProduct success")
+    void testDeactivateProduct_success() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        productService.deactivateProduct(1L);
+
+        assertEquals(VersionableEntity.EntityStatus.INACTIVE, product.getStatus());
+        assertEquals(LocalDate.now(), product.getExpiryDate());
+    }
+
+    @Test
+    @DisplayName("Branch: extendProductExpiry success")
+    void testExtendProductExpiry_success() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        product.setExpiryDate(LocalDate.now().plusDays(10));
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        LocalDate newExpiry = LocalDate.now().plusDays(20);
+        productService.extendProductExpiry(1L, newExpiry);
+
+        assertEquals(newExpiry, product.getExpiryDate());
+    }
+
+    @Test
+    @DisplayName("Branch: extendProductExpiry failure - past status")
+    void testExtendProductExpiry_invalidStatus() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.ARCHIVED);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+        assertThrows(IllegalStateException.class, () -> productService.extendProductExpiry(1L, LocalDate.now().plusDays(20)));
+    }
+
+    @Test
+    @DisplayName("Branch: extendProductExpiry failure - invalid date")
+    void testExtendProductExpiry_invalidDate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        product.setExpiryDate(LocalDate.now().plusDays(10));
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+        assertThrows(IllegalArgumentException.class, () -> productService.extendProductExpiry(1L, LocalDate.now().plusDays(5)));
+    }
+
+    @Test
+    @DisplayName("Branch: extendProductExpiry failure - no current expiry, new date in past")
+    void testExtendProductExpiry_noCurrent_pastDate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
+        product.setExpiryDate(null);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+        assertThrows(IllegalArgumentException.class, () -> productService.extendProductExpiry(1L, LocalDate.now().minusDays(1)));
+    }
+
+    @Test
+    @DisplayName("Branch: validateFeatureValue missing value for non-string")
+    void testValidateFeatureValue_missingValue() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        FeatureComponent comp = new FeatureComponent();
+        comp.setBankId(TEST_BANK_ID);
+        comp.setDataType(FeatureComponent.DataType.INTEGER);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(featureComponentService.getFeatureComponentById(anyLong())).thenReturn(comp);
+
+        assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, createFeatureRequest(1L, "")));
+    }
+
+    @Test
+    @DisplayName("Branch: syncPricingInternal smart update")
+    void testSyncPricingInternal_smartUpdate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        PricingComponent pc = new PricingComponent();
+        pc.setId(50L);
+        pc.setBankId(TEST_BANK_ID);
+
+        ProductPricingLink existingLink = spy(ProductPricingLink.builder()
+                .pricingComponent(pc).fixedValue(new java.math.BigDecimal("10.00")).build());
+        product.getProductPricingLinks().add(existingLink);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        ProductPricingDto dto = new ProductPricingDto();
+        dto.setPricingComponentId(50L);
+        dto.setFixedValue(new java.math.BigDecimal("10.00"));
+
+        productService.updateProduct(1L, ProductRequest.builder().pricing(List.of(dto)).build());
+        verify(existingLink, never()).setFixedValue(any());
+    }
+
+    @Test
+    @DisplayName("Branch: mapPricingFields date validations")
+    void testMapPricingFields_dates() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        PricingComponent pc = new PricingComponent();
+        pc.setId(50L);
+        pc.setBankId(TEST_BANK_ID);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(pricingComponentService.getPricingComponentById(50L)).thenReturn(pc);
+
+        ProductPricingDto dto = new ProductPricingDto();
+        dto.setPricingComponentId(50L);
+        dto.setEffectiveDate(LocalDate.now().minusDays(1)); // Past effective date
+
+        assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, ProductRequest.builder().pricing(List.of(dto)).build()));
+
+        dto.setEffectiveDate(LocalDate.now().plusDays(10));
+        dto.setExpiryDate(LocalDate.now().plusDays(5)); // Expiry before effective
+        assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, ProductRequest.builder().pricing(List.of(dto)).build()));
+    }
 }

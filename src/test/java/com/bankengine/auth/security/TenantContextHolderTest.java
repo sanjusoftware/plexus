@@ -32,4 +32,18 @@ class TenantContextHolderTest {
         TenantContextHolder.setBankId("BANK_XYZ");
         assertEquals("BANK_XYZ", TenantContextHolder.getBankId());
     }
+
+    @Test
+    void getSystemBankId_ShouldThrowException_WhenNotInitialized() {
+        // systemBankId is static and might have been initialized by other tests
+        // But for coverage of the null check:
+        TenantContextHolder.setSystemBankId(null);
+        assertThrows(IllegalStateException.class, TenantContextHolder::getSystemBankId);
+    }
+
+    @Test
+    void getSystemBankId_ShouldReturnId_WhenSet() {
+        TenantContextHolder.setSystemBankId("SYSTEM_BANK");
+        assertEquals("SYSTEM_BANK", TenantContextHolder.getSystemBankId());
+    }
 }

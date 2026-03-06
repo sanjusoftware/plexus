@@ -86,6 +86,28 @@ class DroolsExpressionBuilderTest {
     }
 
     @Test
+    @DisplayName("Branch: BundlePricingInput alias mapping")
+    void testBuildExpression_BundlePricingInput_Alias() {
+        TierCondition condition = createCondition("transactionAmount", Operator.EQ, "100.00");
+        PricingInputMetadata metadata = createMetadata("DECIMAL");
+        String result = builder.buildExpression(condition, metadata, "BundlePricingInput");
+        // transactionAmount should be mapped to grossTotalAmount
+        assertTrue(result.contains("grossTotalAmount"));
+    }
+
+    @Test
+    @DisplayName("Branch: Special attribute names (transactionAmount, customerSegment, etc)")
+    void testBuildExpression_SpecialAttributes() {
+        PricingInputMetadata metadata = createMetadata("STRING");
+
+        String result = builder.buildExpression(createCondition("customerSegment", Operator.EQ, "RETAIL"), metadata, "PricingInput");
+        assertEquals("customerSegment == \"RETAIL\"", result);
+
+        result = builder.buildExpression(createCondition("referenceDate", Operator.EQ, "2026-01-01"), createMetadata("DATE"), "PricingInput");
+        assertTrue(result.startsWith("referenceDate.isEqual("));
+    }
+
+    @Test
     @DisplayName("BigDecimal LT - Should verify Less Than branch with compareTo")
     void testBuildExpression_BigDecimal_LT() {
         TierCondition condition = createCondition("limit", Operator.LT, "100.00");
