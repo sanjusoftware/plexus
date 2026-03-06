@@ -404,4 +404,99 @@ class PricingComponentServiceTest extends BaseServiceTest {
 
         assertThrows(NotFoundException.class, () -> componentService.updateTierAndValue(cId, tId, new PricingTierRequest()));
     }
+
+    @Test
+    @DisplayName("Branch: Validation of Component and Value Type compatibility")
+    void testValidateComponentAndValueType_mismatch() {
+        PricingComponent component = new PricingComponent();
+        component.setType(PricingComponent.ComponentType.DISCOUNT); // Discount type
+        PricingTier tier = new PricingTier();
+        PriceValue value = new PriceValue();
+        value.setValueType(PriceValue.ValueType.FEE_ABSOLUTE); // Fee value (Mismatch)
+        tier.setPriceValues(Set.of(value));
+        component.setPricingTiers(List.of(tier));
+
+        PricingComponentRequest request = newPricingComponentRequest("Mismatch");
+        request.setType("DISCOUNT");
+
+        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(pricingComponentMapper.toEntity(any())).thenReturn(component);
+
+        assertThrows(IllegalArgumentException.class, () -> componentService.createComponent(request));
+    }
+
+    @Test
+    @DisplayName("Branch: Validation of Fee Component and Discount Value Type compatibility")
+    void testValidateComponentAndValueType_mismatch_fee() {
+        PricingComponent component = new PricingComponent();
+        component.setType(PricingComponent.ComponentType.FEE);
+        PricingTier tier = new PricingTier();
+        PriceValue value = new PriceValue();
+        value.setValueType(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
+        tier.setPriceValues(Set.of(value));
+        component.setPricingTiers(List.of(tier));
+
+        PricingComponentRequest request = newPricingComponentRequest("Mismatch Fee");
+        request.setType("FEE");
+
+        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(pricingComponentMapper.toEntity(any())).thenReturn(component);
+
+        assertThrows(IllegalArgumentException.class, () -> componentService.createComponent(request));
+    }
+
+    @Test
+    @DisplayName("Branch: Delete tier failure when not found for component")
+    void testDeleteTierAndValue_notFound() {
+        Long cId = 1L, tId = 2L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(cId);
+
+        when(componentRepository.findById(cId)).thenReturn(Optional.of(component));
+        when(tierRepository.findById(tId)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> componentService.deleteTierAndValue(cId, tId));
+    }
+
+    @Test
+    @DisplayName("Branch: Delete tier success")
+    void testDeleteTierAndValue_success() {
+        Long cId = 1L, tId = 2L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(cId);
+
+        PricingTier tier = new PricingTier();
+        tier.setId(tId);
+        tier.setPricingComponent(component);
+
+        when(componentRepository.findById(cId)).thenReturn(Optional.of(component));
+        when(tierRepository.findById(tId)).thenReturn(Optional.of(tier));
+
+        componentService.deleteTierAndValue(cId, tId);
+
+        verify(tierRepository).delete(tier);
+        verify(reloadService).reloadKieContainer();
+    }
+
+    @Test
+    @DisplayName("Branch: findAllComponents success")
+    void testFindAllComponents() {
+        when(pricingComponentMapper.toResponseDtoList(any())).thenReturn(Collections.emptyList());
+        List<PricingComponentResponse> result = componentService.findAllComponents();
+        assertNotNull(result);
+    }
+
+    @Test
+    @DisplayName("Branch: getComponentById success")
+    void testGetComponentById() {
+        Long id = 1L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.ACTIVE);
+        when(componentRepository.findById(id)).thenReturn(Optional.of(component));
+        when(pricingComponentMapper.toResponseDto(component)).thenReturn(PricingComponentResponse.builder().build());
+
+        PricingComponentResponse result = componentService.getComponentById(id);
+        assertNotNull(result);
+    }
 }

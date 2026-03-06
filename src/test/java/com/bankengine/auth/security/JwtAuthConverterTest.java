@@ -90,6 +90,63 @@ class JwtAuthConverterTest {
     }
 
     @Test
+    void convert_ShouldThrowException_WhenBankIdIsNull() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("iss", "https://trusted.com")
+                .build();
+
+        assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
+    }
+
+    @Test
+    void convert_ShouldThrowException_WhenBankIdIsEmpty() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("iss", "https://trusted.com")
+                .claim("bank_id", "  ")
+                .build();
+
+        assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
+    }
+
+    @Test
+    void convert_ShouldThrowException_WhenBankMissing() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("bank_id", "MISSING_BANK")
+                .claim("iss", "https://trusted.com")
+                .build();
+
+        when(bankConfigurationRepository.findByBankIdUnfiltered("MISSING_BANK")).thenReturn(Optional.empty());
+
+        assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
+    }
+
+    @Test
+    void convert_ShouldHandleTrailingSlashInIssuer() {
+        String bankId = "BANK_A";
+        String issuerWithSlash = "https://trusted.com/";
+        String issuerWithoutSlash = "https://trusted.com";
+
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("sub", "user-123")
+                .claim("bank_id", bankId)
+                .claim("iss", issuerWithSlash)
+                .build();
+
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId(bankId);
+        config.setIssuerUrl(issuerWithoutSlash);
+
+        when(bankConfigurationRepository.findByBankIdUnfiltered(bankId)).thenReturn(Optional.of(config));
+
+        var token = converter.convert(jwt);
+        assertNotNull(token);
+    }
+
+    @Test
     void convert_ShouldHandleMissingRoles() {
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")

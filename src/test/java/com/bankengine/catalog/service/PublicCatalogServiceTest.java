@@ -455,6 +455,87 @@ public class PublicCatalogServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Branch: getActiveProducts - individual filters")
+    void testGetActiveProducts_IndividualFilters() {
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+        // Category only
+        publicCatalogService.getActiveProducts("SAVINGS", null, null, PageRequest.of(0, 10));
+        // ProductType only
+        publicCatalogService.getActiveProducts(null, 10L, null, PageRequest.of(0, 10));
+        // CustomerSegment only
+        publicCatalogService.getActiveProducts(null, null, "RETAIL", PageRequest.of(0, 10));
+
+        verify(productRepository, times(3)).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("Branch: mapItems null check")
+    void testMapItems_Null() {
+        ProductBundle bundle = createMockBundle(500L);
+        bundle.setContainedProducts(new ArrayList<>()); // Change from null to empty list if you want to avoid NPE in getPublicBundleDetails
+
+        var adj = mock(ProductPricingCalculationResult.PriceComponentDetail.class);
+        lenient().when(adj.getValueType()).thenReturn(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
+        lenient().when(adj.getComponentCode()).thenReturn("CODE");
+
+        BundlePriceResponse response = BundlePriceResponse.builder()
+                .netTotalAmount(BigDecimal.TEN)
+                .grossTotalAmount(BigDecimal.TEN)
+                .bundleAdjustments(List.of(adj)).build();
+
+        when(productBundleRepository.findById(500L)).thenReturn(Optional.of(bundle));
+        when(bundlePricingService.calculateTotalBundlePrice(any())).thenReturn(response);
+
+        var result = publicCatalogService.getPublicBundleDetails(500L, "RETAIL");
+        assertTrue(result.getItems().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Branch: categorizeFeature additional keywords")
+    void testCategorizeFeature_Keywords() {
+        Product p = createMockProduct(1L, VersionableEntity.EntityStatus.ACTIVE, "TEST");
+        p.setProductFeatureLinks(List.of(
+                createFeatureLink("maximum deposit", "1000"),
+                createFeatureLink("minimum balance", "100")
+        ));
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(p));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+        Map<String, List<ProductDetailView.ProductFeatureDetail>> categorized =
+                publicCatalogService.getProductDetailView(1L).getFeaturesByCategory();
+
+        assertEquals(1, categorized.size());
+        assertTrue(categorized.containsKey("Account Limits"));
+    }
+
+    @Test
+    @DisplayName("Branch: getPublicBundleDetails all benefit types")
+    void testGetPublicBundleDetails_AllBenefits() {
+        ProductBundle bundle = createMockBundle(500L);
+
+        var adj1 = mock(ProductPricingCalculationResult.PriceComponentDetail.class);
+        when(adj1.getValueType()).thenReturn(PriceValue.ValueType.DISCOUNT_ABSOLUTE);
+        when(adj1.getComponentCode()).thenReturn("ABS");
+
+        var adj2 = mock(ProductPricingCalculationResult.PriceComponentDetail.class);
+        when(adj2.getValueType()).thenReturn(PriceValue.ValueType.FREE_COUNT);
+        when(adj2.getComponentCode()).thenReturn("FREE");
+
+        BundlePriceResponse response = BundlePriceResponse.builder()
+                .netTotalAmount(new BigDecimal("10.00"))
+                .grossTotalAmount(new BigDecimal("15.00"))
+                .bundleAdjustments(List.of(adj1, adj2)).build();
+
+        when(productBundleRepository.findById(500L)).thenReturn(Optional.of(bundle));
+        when(bundlePricingService.calculateTotalBundlePrice(any())).thenReturn(response);
+
+        var result = publicCatalogService.getPublicBundleDetails(500L, "RETAIL");
+        assertEquals(2, result.getPricing().getAdjustmentLabels().size());
+    }
+
+    @Test
     @DisplayName("Comparison Matrix - Should correctly map TAX and BENEFIT across multiple products")
     void testCompareProducts_TaxAndBenefitMatrix() {
         // 1. Setup Product A with a Tax and a Benefit

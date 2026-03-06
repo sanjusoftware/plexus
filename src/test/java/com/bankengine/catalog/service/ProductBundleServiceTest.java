@@ -337,4 +337,41 @@ class ProductBundleServiceTest extends BaseServiceTest {
         assertEquals(pastDate, bundle.getExpiryDate());
         assertEquals(VersionableEntity.EntityStatus.ARCHIVED, bundle.getStatus());
     }
+
+    @Test
+    @DisplayName("Branch: updateBundle success with products and pricing")
+    void testUpdateBundle_full() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        bundle.setId(1L);
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(bundleRepository.save(any())).thenReturn(bundle);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setName("Updated Name");
+        request.setProducts(new ArrayList<>());
+        request.setPricing(new ArrayList<>());
+
+        bundleService.updateBundle(1L, request);
+
+        assertEquals("Updated Name", bundle.getName());
+        verify(bundleRepository).save(bundle);
+    }
+
+    @Test
+    @DisplayName("Branch: activateBundle adjustments")
+    void testActivateBundle_adjustments() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        bundle.setActivationDate(null);
+
+        Product activeProd = createValidProduct(101L);
+        bundle.getContainedProducts().add(BundleProductLink.builder().product(activeProd).mainAccount(true).build());
+
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(bundleRepository.save(any())).thenReturn(bundle);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        bundleService.activateBundle(1L);
+        assertEquals(LocalDate.now(), bundle.getActivationDate());
+    }
 }
