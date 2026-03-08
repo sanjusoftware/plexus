@@ -12,6 +12,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Mapper(config = MapStructConfig.class, componentModel = "spring")
@@ -39,7 +40,7 @@ public interface FeatureComponentMapper {
         try {
             return DataType.valueOf(dataType.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid data type provided: " + dataType);
+            throw new IllegalArgumentException("Invalid data type provided: " + dataType + ". Allowed values are: " + Arrays.toString(DataType.values()));
         }
     }
 }

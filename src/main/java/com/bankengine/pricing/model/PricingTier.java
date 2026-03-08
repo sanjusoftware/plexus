@@ -26,18 +26,6 @@ public class PricingTier extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pricing_component_id", nullable = false)
-    private PricingComponent pricingComponent;
-
-    @Builder.Default
-    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private Set<PriceValue> priceValues = new HashSet<>();
-
-    @Builder.Default
-    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private Set<TierCondition> conditions = new HashSet<>();
-
     @Column(nullable = false)
     private String name;
 
@@ -50,9 +38,20 @@ public class PricingTier extends AuditableEntity {
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;
 
-    // "Slab Breaching" flag
     // If true, the fee applies to the WHOLE transaction if the limit is breached
     @Builder.Default
     private boolean applyChargeOnFullBreach = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pricing_component_id", nullable = false)
+    private PricingComponent pricingComponent;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    private Set<PriceValue> priceValues = new HashSet<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "pricingTier", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    private Set<TierCondition> conditions = new HashSet<>();
 
 }

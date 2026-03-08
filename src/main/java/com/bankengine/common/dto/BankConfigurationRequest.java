@@ -16,6 +16,7 @@ public class BankConfigurationRequest {
     private boolean allowProductInMultipleBundles;
     private List<CategoryConflictDto> categoryConflictRules;
     private String issuerUrl;
+    private String currencyCode;
 
     @Data
     @NoArgsConstructor

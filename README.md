@@ -336,6 +336,16 @@ Before any bank can be onboarded, the system itself must be initialized.
    - `bank_id`: `SYSTEM`
    - `roles`: `["SYSTEM_ADMIN"]`
 2. **Startup**: When the app starts, the `SystemAdminSeeder` reads `APP_SECURITY_SYSTEM_BANK_ID` and `APP_SECURITY_SYSTEM_ISSUER` from environment variables and creates the root record.
+3. **Authorize**: If running locally, using `docker compose up`, you can login as system admin first by using the Authorize button on SwaggerUI.
+Visit http://localhost:8080/swagger-ui/index.html to open the swagger UI.
+Click Authorize Button on SwaggerUI which will open take you to mock server: http://identity-provider:9090/ to enter 2 required claims expected by the application:
+Enter name of the user say, 'System Admin' and claims as below to authorize: 
+```json
+{
+  "bank_id": "SYSTEM",
+  "roles": ["SYSTEM_ADMIN"]
+}
+```
 
 ## Step 1: System Admin - Onboard a New Bank
 The System Admin (Platform Owner) initializes the bank. This action creates the tenant record and automatically seeds a `BANK_ADMIN` role for that bank.
@@ -356,7 +366,9 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
 > **Note on Isolation**: Even though the `SYSTEM_ADMIN` creates the bank, they cannot see the bank's products or pricing data. Their authorities are restricted to `system:*` and `auth:*`.
 
 ## Step 2: Bank Admin - Handover & Configuration
-Once the bank is created, the IDP admin for `GLOBAL-BANK-001` must configure their users to have the `bank_id: GLOBAL-BANK-001` and `roles: ["BANK_ADMIN"]` claims. This user then takes over and can update their bank's configuration.
+Once the bank is created, the IDP admin for bank `GLOBAL-BANK-001` must configure their users to have the `bank_id: GLOBAL-BANK-001` and `roles: ["BANK_ADMIN"]` claims. 
+The bank admin can then login using their own IDP provider (provider as issuerUrl while on-boarding to SYSTEM_ADMIN) and update their bank's configuration.
+Note that a `BANK_ADMIN` role is automatically created at the time of on-boarding with all bank-level permissions (excluding `system:*` authorities).
 
 **Request:** `PUT /api/v1/banks/GLOBAL-BANK-001`
 **Authority:** `bank:config:write`
@@ -370,7 +382,7 @@ Once the bank is created, the IDP admin for `GLOBAL-BANK-001` must configure the
 ```
 
 ## Step 3: Bank Admin - Configure Roles & Permissions
-The Bank Admin for `GLOBAL-BANK-001` can now define custom roles. Note that a `BANK_ADMIN` role is automatically created with all bank-level permissions (excluding `system:*` authorities).
+The Bank Admin for `GLOBAL-BANK-001` can then define other custom roles and map those roles to permissions they want to provide.
 
 **Request:** `POST /api/v1/roles/mapping`
 **Authority:** `auth:role:write`
@@ -389,18 +401,20 @@ Define the foundation for products.
 **Authority:** `catalog:type:create`
 ```json
 {
-  "name": "CASA"
+  "name": "Credit Cards",
+  "code": "CARD"
 }
 ```
 *Assuming ID returned is `1`.*
 
 ### B. Create Feature Component
-**Request:** `POST /api/v1/feature-components`
+**Request:** `POST /api/v1/features`
 **Authority:** `catalog:feature:create`
 ```json
 {
-  "name": "Max_Free_ATM_Txn",
-  "dataType": "INTEGER"
+  "code": "LOUNGE-ACCESS",
+  "name": "Free access to all premium airport lounges",
+  "dataType": "STRING"
 }
 ```
 *Assuming ID returned is `10`.*
@@ -410,14 +424,20 @@ Define the foundation for products.
 **Authority:** `pricing:component:create`
 ```json
 {
-  "name": "Monthly_Maintenance_Fee",
+  "code": "MONTHLY_MAIN_FEE",
+  "name": "Monthly maintenance fee",
   "type": "FEE",
   "description": "Standard fee with segment waivers",
   "pricingTiers": [
     {
-      "tierName": "Premium Waiver",
+      "name": "Premium Waiver",
+      "code": "PREMIUM_WAIVER",
+      "minThreshold": 10,
+      "maxThreshold": 100,
+      "applyChargeOnFullBreach": true,
       "conditions": [
-        { "attributeName": "segment", "operator": "EQ", "attributeValue": "PREMIUM" }
+        { "attributeName": "segment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" },
+        { "attributeName": "income", "operator": "GT", "attributeValue": "10000", "connector": "AND" }
       ],
       "priceValue": {
         "priceAmount": 0.00,
@@ -425,7 +445,7 @@ Define the foundation for products.
       }
     },
     {
-      "tierName": "Standard Retail",
+      "name": "Standard Retail",
       "conditions": [
         { "attributeName": "segment", "operator": "EQ", "attributeValue": "RETAIL" }
       ],

@@ -61,7 +61,7 @@ public class PricingComponentController {
                 pricingComponentService.getPricingComponentByCode(code, version)));
     }
 
-    @Operation(summary = "Define a new pricing aggregate",
+    @Operation(summary = "Create pricing component (aggregate)",
             description = "Creates a new pricing component in DRAFT status. You may provide a full list of Tiers and Price Values in the initial request to create the aggregate at once.")
     @ApiResponse(responseCode = "201", description = "Pricing Component successfully created.",
             content = @Content(schema = @Schema(implementation = PricingComponentResponse.class)))
@@ -90,8 +90,8 @@ public class PricingComponentController {
         return ResponseEntity.ok(pricingComponentService.updateComponent(id, requestDto));
     }
 
-    @Operation(summary = "Version a pricing component",
-            description = "Deep-clones a source component into a new DRAFT version. This allows evolving pricing (e.g., updating rates) without affecting products linked to historical versions.")
+    @Operation(summary = "Create a new version of an existing pricing component",
+            description = "Creates a new DRAFT version from an existing pricing component. This allows evolving pricing (e.g., updating rates) without affecting products linked to historical versions.")
     @ApiResponse(responseCode = "201", description = "New pricing version successfully created.")
     @ApiResponse(responseCode = "404", description = "Source component not found.")
     @PostMapping("/{id}/version")

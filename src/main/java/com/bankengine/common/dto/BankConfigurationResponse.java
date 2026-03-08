@@ -15,5 +15,6 @@ public class BankConfigurationResponse {
     private String bankId;
     private String issuerUrl;
     private boolean allowProductInMultipleBundles;
+    private String currencyCode;
     private List<BankConfigurationRequest.CategoryConflictDto> categoryConflictRules;
 }

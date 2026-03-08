@@ -40,6 +40,7 @@ public class BankConfigurationService extends BaseService {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(request.getBankId());
         config.setIssuerUrl(request.getIssuerUrl());
+        config.setCurrencyCode(request.getCurrencyCode());
         config.setAllowProductInMultipleBundles(request.isAllowProductInMultipleBundles());
 
         if (request.getCategoryConflictRules() != null) {
@@ -64,13 +65,18 @@ public class BankConfigurationService extends BaseService {
         if (request.getIssuerUrl() != null) {
             config.setIssuerUrl(request.getIssuerUrl());
         }
+
+        if (request.getCurrencyCode() != null) {
+            config.setCurrencyCode(request.getCurrencyCode());
+        }
+
         config.setAllowProductInMultipleBundles(request.isAllowProductInMultipleBundles());
 
         if (request.getCategoryConflictRules() != null) {
             config.getCategoryConflictRules().clear();
             config.getCategoryConflictRules().addAll(request.getCategoryConflictRules().stream()
                     .map(dto -> new CategoryConflictRule(dto.getCategoryA(), dto.getCategoryB()))
-                    .collect(Collectors.toList()));
+                    .toList());
         }
 
         bankConfigurationRepository.save(config);
@@ -126,6 +132,7 @@ public class BankConfigurationService extends BaseService {
                 .categoryConflictRules(config.getCategoryConflictRules().stream()
                         .map(r -> new BankConfigurationRequest.CategoryConflictDto(r.getCategoryA(), r.getCategoryB()))
                         .collect(Collectors.toList()))
+                .currencyCode(config.getCurrencyCode())
                 .build();
     }
 }

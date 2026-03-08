@@ -65,8 +65,8 @@ public class FeatureComponentController {
                 featureComponentService.getFeatureComponentByCode(code, version)));
     }
 
-    @Operation(summary = "Create a new reusable feature component",
-            description = "Creates a new global feature definition in DRAFT status. These components are designed to be linked across multiple products or bundles.")
+    @Operation(summary = "Create a new feature component",
+            description = "Creates a new product feature definition in DRAFT status. These components are designed to be linked across multiple products or bundles.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Feature component successfully created.",
                     content = @Content(schema = @Schema(implementation = FeatureComponentResponse.class))),
@@ -95,14 +95,14 @@ public class FeatureComponentController {
         return ResponseEntity.ok(featureComponentService.updateFeature(id, requestDto));
     }
 
-    @Operation(summary = "Version a feature component",
-            description = "Creates a new DRAFT version from an existing feature (Deep Clone). Use this for modifying definitions that are already ACTIVE to ensure historical integrity.")
+    @Operation(summary = "Create a new version of an existing feature component",
+            description = "Creates a new DRAFT version from an existing product feature. Use this for modifying definitions that are already ACTIVE to ensure historical integrity.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "New version created successfully.",
                     content = @Content(schema = @Schema(implementation = Long.class))),
             @ApiResponse(responseCode = "404", description = "Source feature component not found.")
     })
-    @PostMapping("/{id}/version")
+    @PostMapping("/{id}/new-version")
     @PreAuthorize("hasAuthority('catalog:feature:create')")
     public ResponseEntity<Long> versionFeature(
             @Parameter(description = "ID of the source feature component to template from", required = true)

@@ -51,8 +51,10 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         standardRequest = new BankConfigurationRequest();
         standardRequest.setBankId(TEST_BANK_ID);
         standardRequest.setAllowProductInMultipleBundles(true);
+        standardRequest.setIssuerUrl("https://test-bank-isser");
+        standardRequest.setCurrencyCode("INR");
         standardRequest.setCategoryConflictRules(new ArrayList<>(List.of(
-                new BankConfigurationRequest.CategoryConflictDto("A", "B")
+                new BankConfigurationRequest.CategoryConflictDto("RETAIL", "CORPORATE")
         )));
     }
 
@@ -68,6 +70,8 @@ class BankConfigurationServiceTest extends BaseServiceTest {
 
         assertNotNull(response);
         assertEquals(TEST_BANK_ID, response.getBankId());
+        assertEquals(standardRequest.getIssuerUrl(), response.getIssuerUrl());
+        assertEquals(standardRequest.getCurrencyCode(), response.getCurrencyCode());
         assertTrue(response.isAllowProductInMultipleBundles());
 
         verify(bankConfigurationRepository).save(any(BankConfiguration.class));
@@ -89,7 +93,6 @@ class BankConfigurationServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("UpdateBank should update fields when bank exists and tenant matches")
     void updateBank_ShouldUpdateExistingConfig() {
-        // Arrange
         BankConfiguration existing = new BankConfiguration();
         existing.setBankId(TEST_BANK_ID);
         existing.setCategoryConflictRules(new ArrayList<>());
