@@ -12,6 +12,7 @@ import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
+import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.pricing.model.BundlePricingLink;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.service.PricingComponentService;
@@ -59,6 +60,7 @@ public class ProductBundleService extends BaseService {
 
     @Transactional
     public ProductBundleResponse createBundle(ProductBundleRequest request) {
+        sanitizeRequest(request);
         validateNewVersionable(productBundleRepository, request.getName(), request.getCode());
 
         // Use Mapper to create DRAFT entity
@@ -80,8 +82,13 @@ public class ProductBundleService extends BaseService {
         return bundleMapper.toResponse(productBundleRepository.save(bundle));
     }
 
+    private void sanitizeRequest(ProductBundleRequest requestDto) {
+        requestDto.setCode(CodeGeneratorUtil.sanitizeCode(requestDto.getCode()));
+    }
+
     @Transactional
     public ProductBundleResponse updateBundle(Long id, ProductBundleRequest dto) {
+        sanitizeRequest(dto);
         ProductBundle bundle = getByIdSecurely(productBundleRepository, id, "Bundle");
         validateDraft(bundle);
 

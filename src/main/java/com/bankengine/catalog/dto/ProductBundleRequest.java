@@ -33,7 +33,7 @@ public class ProductBundleRequest {
     private String description;
 
     @NotBlank(message = "Target customer segments is required (e.g., Retail,SME).")
-    @Schema(example = "RETAIL,WEALTH", description = "Comma-separated target segments.")
+    @Schema(example = "RETAIL,WEALTH", description = "Comma-separated target segments. These are used to match eligibility rules.")
     private String targetCustomerSegments;
 
     @FutureOrPresent(message = "Activation date cannot be in the past.")

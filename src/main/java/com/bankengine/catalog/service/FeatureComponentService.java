@@ -9,9 +9,11 @@ import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
+import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.web.exception.DependencyViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,24 @@ public class FeatureComponentService extends BaseService {
     }
 
     @Transactional(readOnly = true)
+    public List<FeatureComponentResponse> searchFeatures(String code, Integer version, VersionableEntity.EntityStatus status) {
+        Specification<FeatureComponent> spec = Specification.where(null);
+        if (code != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("code"), code));
+        }
+        if (version != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("version"), version));
+        }
+        if (status != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+
+        return componentRepository.findAll(spec).stream()
+                .map(featureComponentMapper::toResponseDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public FeatureComponentResponse getFeatureResponseById(Long id) {
         return featureComponentMapper.toResponseDto(getFeatureComponentById(id));
     }
@@ -45,11 +65,25 @@ public class FeatureComponentService extends BaseService {
         return getByCodeAndVersionSecurely(componentRepository, code, version, "Feature Component");
     }
 
+    @Transactional(readOnly = true)
+    public List<FeatureComponentResponse> getFeaturesByCode(String code, Integer version) {
+        List<FeatureComponent> features;
+        if (version != null) {
+            features = componentRepository.findAllByBankIdAndCodeAndVersion(getCurrentBankId(), code, version);
+        } else {
+            features = componentRepository.findAllByBankIdAndCode(getCurrentBankId(), code);
+        }
+        return features.stream()
+                .map(featureComponentMapper::toResponseDto)
+                .toList();
+    }
+
     // --- WRITE OPERATIONS ---
 
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public FeatureComponentResponse createFeature(FeatureComponentRequest requestDto) {
+        sanitizeRequest(requestDto);
         validateNewVersionable(componentRepository, requestDto.getName(), requestDto.getCode());
 
         FeatureComponent component = featureComponentMapper.toEntity(requestDto);
@@ -60,34 +94,47 @@ public class FeatureComponentService extends BaseService {
         return featureComponentMapper.toResponseDto(componentRepository.save(component));
     }
 
+    private void sanitizeRequest(FeatureComponentRequest requestDto) {
+        requestDto.setCode(CodeGeneratorUtil.sanitizeCode(requestDto.getCode()));
+    }
+
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
-    public Long versionFeature(Long oldId, VersionRequest request) {
+    public FeatureComponentResponse versionFeature(Long oldId, VersionRequest request) {
         FeatureComponent source = getFeatureComponentById(oldId);
         FeatureComponent newVersion = featureComponentMapper.clone(source);
 
         prepareNewVersion(newVersion, source, request, componentRepository);
 
-        return componentRepository.save(newVersion).getId();
+        return featureComponentMapper.toResponseDto(componentRepository.save(newVersion));
     }
 
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public FeatureComponentResponse updateFeature(Long id, FeatureComponentRequest requestDto) {
+        sanitizeRequest(requestDto);
         FeatureComponent component = getFeatureComponentById(id);
         validateDraft(component);
+
+        // Uniqueness check for code if it's being changed
+        if (requestDto.getCode() != null && !requestDto.getCode().equals(component.getCode())) {
+            if (componentRepository.existsByBankIdAndCodeAndVersion(getCurrentBankId(), requestDto.getCode(), component.getVersion())) {
+                throw new IllegalArgumentException("Entity code '" + requestDto.getCode() + "' version " + component.getVersion() + " already exists.");
+            }
+        }
+
         featureComponentMapper.updateFromDto(requestDto, component);
         return featureComponentMapper.toResponseDto(componentRepository.save(component));
     }
 
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
-    public void activateFeature(Long id) {
+    public FeatureComponentResponse activateFeature(Long id) {
         FeatureComponent component = getFeatureComponentById(id);
         validateDraft(component);
 
         component.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-        componentRepository.save(component);
+        return featureComponentMapper.toResponseDto(componentRepository.save(component));
     }
 
     @Transactional

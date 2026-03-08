@@ -37,8 +37,11 @@ public class FeatureComponentController {
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = FeatureComponentResponse.class))))
     @GetMapping
     @PreAuthorize("hasAuthority('catalog:feature:read')")
-    public ResponseEntity<List<FeatureComponentResponse>> getAllFeatures() {
-        return ResponseEntity.ok(featureComponentService.getAllFeatures());
+    public ResponseEntity<List<FeatureComponentResponse>> getAllFeatures(
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) Integer version,
+            @RequestParam(required = false) com.bankengine.common.model.VersionableEntity.EntityStatus status) {
+        return ResponseEntity.ok(featureComponentService.searchFeatures(code, version, status));
     }
 
     @Operation(summary = "Retrieve a feature component by ID",
@@ -58,11 +61,10 @@ public class FeatureComponentController {
 
     @GetMapping("/code/{code}")
     @PreAuthorize("hasAuthority('catalog:feature:read')")
-    public ResponseEntity<FeatureComponentResponse> getFeatureByCode(
+    public ResponseEntity<List<FeatureComponentResponse>> getFeatureByCode(
             @PathVariable String code,
             @RequestParam(required = false) Integer version) {
-        return ResponseEntity.ok(featureComponentMapper.toResponseDto(
-                featureComponentService.getFeatureComponentByCode(code, version)));
+        return ResponseEntity.ok(featureComponentService.getFeaturesByCode(code, version));
     }
 
     @Operation(summary = "Create a new feature component",
@@ -95,16 +97,33 @@ public class FeatureComponentController {
         return ResponseEntity.ok(featureComponentService.updateFeature(id, requestDto));
     }
 
+    @Operation(summary = "Full update of a DRAFT feature",
+            description = "Allows replacing the entire DRAFT feature component. Only permitted while the status is DRAFT.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Feature component successfully updated.",
+                    content = @Content(schema = @Schema(implementation = FeatureComponentResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Modification blocked: Feature is not in DRAFT status."),
+            @ApiResponse(responseCode = "404", description = "Feature component not found.")
+    })
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('catalog:feature:update')")
+    public ResponseEntity<FeatureComponentResponse> updateFeature(
+            @Parameter(description = "ID of the DRAFT feature component to update", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody FeatureComponentRequest requestDto) {
+        return ResponseEntity.ok(featureComponentService.updateFeature(id, requestDto));
+    }
+
     @Operation(summary = "Create a new version of an existing feature component",
             description = "Creates a new DRAFT version from an existing product feature. Use this for modifying definitions that are already ACTIVE to ensure historical integrity.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "New version created successfully.",
-                    content = @Content(schema = @Schema(implementation = Long.class))),
+                    content = @Content(schema = @Schema(implementation = FeatureComponentResponse.class))),
             @ApiResponse(responseCode = "404", description = "Source feature component not found.")
     })
     @PostMapping("/{id}/new-version")
     @PreAuthorize("hasAuthority('catalog:feature:create')")
-    public ResponseEntity<Long> versionFeature(
+    public ResponseEntity<FeatureComponentResponse> versionFeature(
             @Parameter(description = "ID of the source feature component to template from", required = true)
             @PathVariable Long id,
             @Valid @RequestBody VersionRequest requestDto) {
@@ -120,9 +139,8 @@ public class FeatureComponentController {
     })
     @PostMapping("/{id}/activate")
     @PreAuthorize("hasAuthority('catalog:feature:activate')")
-    public ResponseEntity<Void> activateFeature(@PathVariable Long id) {
-        featureComponentService.activateFeature(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<FeatureComponentResponse> activateFeature(@PathVariable Long id) {
+        return ResponseEntity.ok(featureComponentService.activateFeature(id));
     }
 
     @Operation(summary = "Delete or Archive a feature component",

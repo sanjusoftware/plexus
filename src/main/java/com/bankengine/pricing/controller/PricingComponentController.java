@@ -96,7 +96,7 @@ public class PricingComponentController {
     @ApiResponse(responseCode = "404", description = "Source component not found.")
     @PostMapping("/{id}/version")
     @PreAuthorize("hasAuthority('pricing:component:create')")
-    public ResponseEntity<Long> versionComponent(
+    public ResponseEntity<PricingComponentResponse> versionComponent(
             @Parameter(description = "ID of the component to serve as a template", required = true)
             @PathVariable Long id,
             @Valid @RequestBody VersionRequest requestDto) {
@@ -109,9 +109,8 @@ public class PricingComponentController {
     @ApiResponse(responseCode = "400", description = "Activation failed (e.g., status is already ACTIVE).")
     @PostMapping("/{id}/activate")
     @PreAuthorize("hasAuthority('pricing:component:activate')")
-    public ResponseEntity<Void> activateComponent(@PathVariable Long id) {
-        pricingComponentService.activateComponent(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<PricingComponentResponse> activateComponent(@PathVariable Long id) {
+        return ResponseEntity.ok(pricingComponentService.activateComponent(id));
     }
 
     @Operation(summary = "Delete a pricing component (Dependency Checked)",

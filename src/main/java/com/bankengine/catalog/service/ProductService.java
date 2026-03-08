@@ -13,6 +13,7 @@ import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.catalog.specification.ProductSpecification;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
+import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.web.exception.NotFoundException;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
@@ -80,6 +81,7 @@ public class ProductService extends BaseService {
 
     @Transactional
     public ProductResponse createProduct(ProductRequest requestDto) {
+        sanitizeRequest(requestDto);
         validateNewVersionable(productRepository, requestDto.getName(), requestDto.getCode());
 
         ProductType productType = requestDto.getProductTypeCode() != null
@@ -96,8 +98,13 @@ public class ProductService extends BaseService {
         return productMapper.toResponse(productRepository.save(product));
     }
 
+    private void sanitizeRequest(ProductRequest requestDto) {
+        requestDto.setCode(CodeGeneratorUtil.sanitizeCode(requestDto.getCode()));
+    }
+
     @Transactional
     public ProductResponse updateProduct(Long productId, ProductRequest dto) {
+        sanitizeRequest(dto);
         Product product = getProductEntityById(productId);
         validateDraft(product);
 

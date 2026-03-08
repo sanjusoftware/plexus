@@ -446,6 +446,7 @@ Define the foundation for products.
     },
     {
       "name": "Standard Retail",
+      "code": "STANDARD_RETAIL",
       "conditions": [
         { "attributeName": "segment", "operator": "EQ", "attributeValue": "RETAIL" }
       ],
@@ -498,6 +499,15 @@ Plexus uses a **FAT DTO** pattern, allowing you to create the product, its featu
 ### B. Activate Product
 **Request:** `POST /api/v1/products/500/activate`
 **Authority:** `catalog:product:activate`
+
+### C. Create New Version (Optional)
+**Request:** `POST /api/v1/products/500/version`
+**Authority:** `catalog:product:create`
+```json
+{
+  "newActivationDate": "2026-04-01"
+}
+```
 
 ## Step 6: Bank Admin - Create Product Bundle
 **Request:** `POST /api/v1/bundles`
