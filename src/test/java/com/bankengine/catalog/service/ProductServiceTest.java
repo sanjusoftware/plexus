@@ -511,4 +511,61 @@ public class ProductServiceTest extends BaseServiceTest {
         dto.setExpiryDate(LocalDate.now().plusDays(5)); // Expiry before effective
         assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, ProductRequest.builder().pricing(List.of(dto)).build()));
     }
+
+    @Test
+    @DisplayName("Branch: createProduct with productTypeCode")
+    void testCreateProduct_productTypeCode() {
+        ProductRequest dto = new ProductRequest();
+        dto.setProductTypeCode("CARD");
+        dto.setName("New Product");
+
+        Product product = createValidProduct(null);
+        ProductType type = createValidProductType();
+        type.setCode("CARD");
+
+        when(productRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
+        when(productRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(productTypeRepository.findByBankIdAndCode(any(), eq("CARD"))).thenReturn(Optional.of(type));
+
+        when(productMapper.toEntity(any(), any())).thenReturn(product);
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        productService.createProduct(dto);
+
+        verify(productTypeRepository).findByBankIdAndCode(any(), eq("CARD"));
+    }
+
+    @Test
+    @DisplayName("Branch: updateProduct with name and category")
+    void testUpdateProduct_nameAndCategory() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        ProductRequest req = ProductRequest.builder()
+                .name("Updated Name")
+                .category("WEALTH")
+                .build();
+
+        productService.updateProduct(1L, req);
+
+        assertEquals("Updated Name", product.getName());
+        assertEquals("WEALTH", product.getCategory());
+    }
+
+    @Test
+    @DisplayName("Branch: activateProduct with custom date")
+    void testActivateProduct_customDate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        LocalDate customDate = LocalDate.now().plusDays(5);
+        productService.activateProduct(1L, customDate);
+
+        assertEquals(customDate, product.getActivationDate());
+    }
 }

@@ -413,6 +413,57 @@ class BundlePricingServiceTest extends BaseServiceTest {
         assertScaledBigDecimal("110.00", response.getNetTotalAmount());
     }
 
+    @Test
+    @DisplayName("Branch: mapFixedLinkToDetail with full breach tier")
+    void mapFixedLinkToDetail_fullBreach() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(new BundlePriceRequest.BundleProductItem(10L, BigDecimal.ZERO)))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+
+        PricingTier breachTier = PricingTier.builder().applyChargeOnFullBreach(true).build();
+        PricingComponent component = PricingComponent.builder()
+                .name("BREACH_FEE").code("BREACH_FEE")
+                .pricingTiers(List.of(breachTier))
+                .build();
+
+        BundlePricingLink link = BundlePricingLink.builder()
+                .pricingComponent(component)
+                .fixedValue(new BigDecimal("10.00"))
+                .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
+                .build();
+
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(link));
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        assertTrue(response.getBundleAdjustments().getFirst().isApplyChargeOnFullBreach());
+    }
+
+    @Test
+    @DisplayName("Branch: calculateIndividualProductFee with null product price")
+    void calculateIndividualProductFee_nullPrice() {
+        BundlePriceRequest request = BundlePriceRequest.builder()
+                .productBundleId(1L)
+                .products(List.of(new BundlePriceRequest.BundleProductItem(10L, BigDecimal.ZERO)))
+                .build();
+
+        when(productPricingService.getProductPricing(any())).thenReturn(
+                ProductPricingCalculationResult.builder().finalChargeablePrice(null).build());
+        when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
+        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of());
+        when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
+
+        var response = bundlePricingService.calculateTotalBundlePrice(request);
+
+        assertScaledBigDecimal("0.00", response.getNetTotalAmount());
+    }
+
     // -----------------------------------------------------------------------------------
     // HELPERS
     // -----------------------------------------------------------------------------------
