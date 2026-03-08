@@ -168,4 +168,28 @@ class JwtAuthConverterTest {
         assertNotNull(token, "Converter should not return null");
         assertTrue(token.getAuthorities().isEmpty(), "Authorities should be empty when roles claim is missing");
     }
+
+    @Test
+    void convert_ShouldHandleEmptyRoles() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("bank_id", "BANK_A")
+                .claim("iss", "https://trusted.com")
+                .claim("sub", "user-123")
+                .claim("roles", List.of())
+                .build();
+
+        BankConfiguration config = new BankConfiguration();
+        config.setIssuerUrl("https://trusted.com");
+        config.setBankId("BANK_A");
+
+        when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A"))
+                .thenReturn(Optional.of(config));
+        when(permissionMappingService.getPermissionsForRoles(List.of())).thenReturn(Set.of());
+
+        var token = converter.convert(jwt);
+
+        assertNotNull(token);
+        assertTrue(token.getAuthorities().isEmpty());
+    }
 }

@@ -499,4 +499,136 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponentResponse result = componentService.getComponentById(id);
         assertNotNull(result);
     }
+
+    @Test
+    @DisplayName("Branch: Delete component failure when tier association exists")
+    void testDeletePricingComponent_tierConflict() {
+        Long id = 1L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.ACTIVE);
+
+        when(componentRepository.findById(id)).thenReturn(Optional.of(component));
+        when(productPricingLinkRepository.countByPricingComponentId(id)).thenReturn(0L);
+        when(tierRepository.countByPricingComponentId(id)).thenReturn(5L);
+
+        DependencyViolationException ex = assertThrows(DependencyViolationException.class,
+                () -> componentService.deletePricingComponent(id));
+        assertTrue(ex.getMessage().contains("association with 5 tiers exists"));
+    }
+
+    @Test
+    @DisplayName("Branch: updateTierAndValue with empty conditions list")
+    void testUpdateTierAndValue_emptyConditions() {
+        Long cId = 1L, tId = 2L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(cId);
+
+        PricingTier tier = new PricingTier();
+        tier.setId(tId);
+        tier.setPricingComponent(component);
+        tier.setConditions(new HashSet<>(Set.of(new TierCondition())));
+        tier.setPriceValues(new HashSet<>(List.of(new PriceValue())));
+
+        when(componentRepository.findById(cId)).thenReturn(Optional.of(component));
+        when(tierRepository.findById(tId)).thenReturn(Optional.of(tier));
+        when(tierRepository.save(any())).thenReturn(tier);
+
+        PricingTierRequest request = new PricingTierRequest();
+        request.setConditions(new ArrayList<>()); // Empty list
+
+        componentService.updateTierAndValue(cId, tId, request);
+
+        assertTrue(tier.getConditions().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Branch: cloneTiersInternal with null tiers")
+    void testCloneTiersInternal_nullTiers() {
+        PricingComponent source = getValidPricingComponent(VersionableEntity.EntityStatus.ACTIVE);
+        source.setPricingTiers(null);
+        source.setCode("PRC-NULL");
+        PricingComponent target = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        target.setCode("PRC-NULL");
+        target.setPricingTiers(new ArrayList<>()); // MapStruct often initializes collections
+
+        when(componentRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(pricingComponentMapper.clone(source)).thenReturn(target);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(componentRepository.save(any())).thenReturn(target);
+
+        componentService.versionComponent(1L, new VersionRequest());
+        assertTrue(target.getPricingTiers().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Branch: cloneTiersInternal with null priceValues and conditions")
+    void testCloneTiersInternal_nullNested() {
+        PricingComponent source = getValidPricingComponent(VersionableEntity.EntityStatus.ACTIVE);
+        source.setCode("PRC-NESTED-NULL");
+        PricingTier tier = new PricingTier();
+        tier.setPriceValues(null);
+        tier.setConditions(null);
+        source.setPricingTiers(List.of(tier));
+
+        PricingComponent target = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        target.setCode("PRC-NESTED-NULL");
+        PricingTier clonedTier = new PricingTier();
+        clonedTier.setPriceValues(new HashSet<>());
+        clonedTier.setConditions(new HashSet<>());
+
+        when(componentRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(pricingComponentMapper.clone(source)).thenReturn(target);
+        when(pricingTierMapper.clone(tier)).thenReturn(clonedTier);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(componentRepository.save(any())).thenReturn(target);
+
+        componentService.versionComponent(1L, new VersionRequest());
+
+        assertNotNull(target.getPricingTiers());
+        assertTrue(target.getPricingTiers().get(0).getPriceValues().isEmpty());
+        assertTrue(target.getPricingTiers().get(0).getConditions().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Branch: PricingComponent.ComponentType.PACKAGE_FEE validation")
+    void testValidateComponentAndValueType_packageFee() {
+        PricingComponent component = new PricingComponent();
+        component.setType(PricingComponent.ComponentType.PACKAGE_FEE);
+        PricingTier tier = new PricingTier();
+        PriceValue value = new PriceValue();
+        value.setValueType(PriceValue.ValueType.FEE_ABSOLUTE);
+        tier.setPriceValues(Set.of(value));
+        component.setPricingTiers(List.of(tier));
+
+        PricingComponentRequest request = newPricingComponentRequest("Package Fee");
+        request.setType("PACKAGE_FEE");
+
+        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(pricingComponentMapper.toEntity(any())).thenReturn(component);
+        when(componentRepository.save(any())).thenReturn(component);
+
+        assertDoesNotThrow(() -> componentService.createComponent(request));
+    }
+
+    @Test
+    @DisplayName("Branch: PricingComponent.ComponentType.WAIVER validation")
+    void testValidateComponentAndValueType_waiver() {
+        PricingComponent component = new PricingComponent();
+        component.setType(PricingComponent.ComponentType.WAIVER);
+        PricingTier tier = new PricingTier();
+        PriceValue value = new PriceValue();
+        value.setValueType(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
+        tier.setPriceValues(Set.of(value));
+        component.setPricingTiers(List.of(tier));
+
+        PricingComponentRequest request = newPricingComponentRequest("Waiver");
+        request.setType("WAIVER");
+
+        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(pricingComponentMapper.toEntity(any())).thenReturn(component);
+        when(componentRepository.save(any())).thenReturn(component);
+
+        assertDoesNotThrow(() -> componentService.createComponent(request));
+    }
 }

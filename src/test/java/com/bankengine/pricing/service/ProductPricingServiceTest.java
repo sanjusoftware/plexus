@@ -279,6 +279,42 @@ class ProductPricingServiceTest extends BaseServiceTest {
         assertEquals(1L, input.getCustomAttributes().get("productId"));
     }
 
+    @Test
+    @DisplayName("Branch: mapFactToDetail should use entity code if matchedTierCode is null")
+    void mapFactToDetail_shouldUseEntityCode() {
+        ProductPricingLink rulesLink = createPricingLink(700L, "EntityCodeComp", null, null, true);
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+
+        KieSession mockSession = setupMockDrools();
+        PriceValue fact = createFact("FEE_CODE", "15.00", PriceValue.ValueType.FEE_ABSOLUTE);
+        fact.setMatchedTierCode(null); // Flat field is null
+
+        PricingTier tier = new PricingTier();
+        tier.setCode("TIER_ENTITY_CODE");
+        tier.setPricingComponent(new PricingComponent());
+        fact.setPricingTier(tier);
+
+        when(mockSession.getObjects(any())).thenReturn((Collection) List.of(fact));
+        when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+
+        ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
+
+        assertEquals("TIER_ENTITY_CODE", result.getComponentBreakdown().getFirst().getMatchedTierCode());
+    }
+
+    @Test
+    @DisplayName("Branch: determinePriceWithDrools should handle null customAttributes")
+    void determinePriceWithDrools_nullCustomAttributes() {
+        request.setCustomAttributes(null);
+        ProductPricingLink rulesLink = createPricingLink(800L, "NullCustomComp", null, null, true);
+        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+
+        KieSession mockSession = setupMockDrools();
+        when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+
+        assertDoesNotThrow(() -> productPricingService.getProductPricing(request));
+    }
+
     // --- Helper Methods ---
 
     private KieSession setupMockDrools() {
