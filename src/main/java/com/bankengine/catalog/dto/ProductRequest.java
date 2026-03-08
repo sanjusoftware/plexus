@@ -26,14 +26,14 @@ public class ProductRequest {
     @Schema(example = "Standard Savings Account", description = "Marketing name of the product.")
     private String name;
 
-    @Schema(example = "1", description = "ID of the associated Product Type (e.g., CASA).")
+    @Schema(example = "1", description = "ID of the associated Product Type (e.g., 1 for CASA). Note: Either productTypeId or productTypeCode must be provided.")
     private Long productTypeId;
 
-    @Schema(example = "CASA", description = "Code of the associated Product Type.")
+    @Schema(example = "CASA", description = "Code of the associated Product Type. Note: Either productTypeId or productTypeCode must be provided.")
     private String productTypeCode;
 
     @NotBlank(message = "Product category is required (e.g., RETAIL, WEALTH, CORPORATE).")
-    @Schema(example = "RETAIL", description = "Primary business category.")
+    @Schema(example = "RETAIL", description = "Primary business category. Examples: RETAIL, WEALTH, CORPORATE, INVESTMENT")
     private String category;
 
     @FutureOrPresent(message = "Activation date cannot be in the past.")
