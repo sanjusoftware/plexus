@@ -1,7 +1,7 @@
 # Plexus
 ### Project Status
 [![CI Build](https://github.com/sanjusoftware/plexus/actions/workflows/ci-build.yml/badge.svg)](https://github.com/sanjusoftware/plexus/actions/workflows/ci-build.yml)
-[![CD Deployment](https://github.com/sanjusoftware/plexus/actions/workflows/cd-deploy.yml/badge.svg)](https://github.com/sanjusoftware/plexus/actions/workflows/cd-deploy-azure.yml)
+[![CD Deployment](https://github.com/sanjusoftware/plexus/actions/workflows/cd-deploy-azure.yml/badge.svg)](https://github.com/sanjusoftware/plexus/actions/workflows/cd-deploy-azure.yml)
 [![codecov](https://codecov.io/gh/sanjusoftware/plexus/graph/badge.svg?token=VUBI1YTP2B)](https://codecov.io/gh/sanjusoftware/plexus)
 
 Configurable Banking Product & Pricing Engine. A flexible microservice built on Spring Boot for defining, managing, and calculating complex global banking products, features, and pricing rules.
