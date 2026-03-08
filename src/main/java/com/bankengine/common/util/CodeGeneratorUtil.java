@@ -32,4 +32,12 @@ public class CodeGeneratorUtil {
 
         return sanitized + suffix;
     }
+
+    /**
+     * Sanitizes and uppercases a code string.
+     */
+    public static String sanitizeCode(String code) {
+        if (code == null) return null;
+        return code.toUpperCase().trim().replace(" ", "_").replaceAll("[^A-Z0-9_-]", "");
+    }
 }

@@ -3,6 +3,7 @@ package com.bankengine.pricing.service;
 import com.bankengine.catalog.dto.VersionRequest;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
+import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.pricing.converter.PriceValueMapper;
 import com.bankengine.pricing.converter.PricingComponentMapper;
 import com.bankengine.pricing.converter.PricingTierMapper;
@@ -12,6 +13,7 @@ import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
+import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
@@ -65,6 +67,7 @@ public class PricingComponentService extends BaseService {
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public PricingComponentResponse createComponent(PricingComponentRequest requestDto) {
+        sanitizeRequest(requestDto);
         validateNewVersionable(pricingComponentRepository, requestDto.getName(), requestDto.getCode());
         validateComponentType(requestDto.getType());
         PricingComponent component = pricingComponentMapper.toEntity(requestDto);
@@ -80,25 +83,30 @@ public class PricingComponentService extends BaseService {
         return pricingComponentMapper.toResponseDto(saved);
     }
 
+    private void sanitizeRequest(PricingComponentRequest requestDto) {
+        requestDto.setCode(CodeGeneratorUtil.sanitizeCode(requestDto.getCode()));
+    }
+
     /**
      * Versions a Pricing Component (Deep Clone).
      * Evicts cache because the catalog needs to recognize the new version availability.
      */
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
-    public Long versionComponent(Long oldId, VersionRequest request) {
+    public PricingComponentResponse versionComponent(Long oldId, VersionRequest request) {
         PricingComponent source = getPricingComponentById(oldId);
         PricingComponent newVersion = pricingComponentMapper.clone(source);
         prepareNewVersion(newVersion, source, request, pricingComponentRepository);
         cloneTiersInternal(source, newVersion);
         PricingComponent saved = pricingComponentRepository.save(newVersion);
         reloadService.reloadKieContainer();
-        return saved.getId();
+        return pricingComponentMapper.toResponseDto(saved);
     }
 
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public PricingComponentResponse updateComponent(Long id, PricingComponentRequest requestDto) {
+        sanitizeRequest(requestDto);
         PricingComponent component = getPricingComponentById(id);
         validateDraft(component);
         if (requestDto.getType() != null) {
@@ -116,12 +124,13 @@ public class PricingComponentService extends BaseService {
 
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
-    public void activateComponent(Long id) {
+    public PricingComponentResponse activateComponent(Long id) {
         PricingComponent component = getPricingComponentById(id);
         validateDraft(component);
         component.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-        pricingComponentRepository.save(component);
+        PricingComponent saved = pricingComponentRepository.save(component);
         reloadService.reloadKieContainer();
+        return pricingComponentMapper.toResponseDto(saved);
     }
 
     @Transactional
@@ -150,6 +159,9 @@ public class PricingComponentService extends BaseService {
 
         List<PricingTier> tiers = tierDtos.stream().map(tierDto -> {
             PricingTier tier = pricingTierMapper.toEntity(tierDto);
+            if (tierDto.getPriority() == null) {
+                tier.setPriority(Integer.MIN_VALUE);
+            }
             tier.setPricingComponent(component);
             tier.setBankId(component.getBankId());
 
@@ -221,6 +233,9 @@ public class PricingComponentService extends BaseService {
         validatePriceValueType(valueDto.getValueType());
 
         PricingTier tier = pricingTierMapper.toEntity(tierDto);
+        if (tierDto.getPriority() == null) {
+            tier.setPriority(Integer.MIN_VALUE);
+        }
         tier.setPricingComponent(component);
         tier.setBankId(component.getBankId());
 
@@ -263,6 +278,9 @@ public class PricingComponentService extends BaseService {
 
         // 4. Update core fields
         pricingTierMapper.updateFromDto(tierDto, tier);
+        if (tierDto.getPriority() == null) {
+            tier.setPriority(Integer.MIN_VALUE);
+        }
 
         // 5. Handle Conditions explicitly (Clear if empty list provided)
         if (tierDto.getConditions() != null) {

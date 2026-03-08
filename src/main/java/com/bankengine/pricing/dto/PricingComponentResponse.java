@@ -16,6 +16,7 @@ public class PricingComponentResponse {
     private String name;
     private String code;
     private Integer version;
+    private String status;
     private ComponentType type;
     private boolean proRataApplicable;
     private LocalDateTime createdAt;

@@ -40,8 +40,12 @@ public class BankConfigurationService extends BaseService {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(request.getBankId());
         config.setIssuerUrl(request.getIssuerUrl());
-        config.setCurrencyCode(request.getCurrencyCode());
-        config.setAllowProductInMultipleBundles(request.isAllowProductInMultipleBundles());
+        if (request.getCurrencyCode() != null) {
+            config.setCurrencyCode(request.getCurrencyCode());
+        }
+        if (request.getAllowProductInMultipleBundles() != null) {
+            config.setAllowProductInMultipleBundles(request.getAllowProductInMultipleBundles());
+        }
 
         if (request.getCategoryConflictRules() != null) {
             config.setCategoryConflictRules(request.getCategoryConflictRules().stream()
@@ -70,7 +74,9 @@ public class BankConfigurationService extends BaseService {
             config.setCurrencyCode(request.getCurrencyCode());
         }
 
-        config.setAllowProductInMultipleBundles(request.isAllowProductInMultipleBundles());
+        if (request.getAllowProductInMultipleBundles() != null) {
+            config.setAllowProductInMultipleBundles(request.getAllowProductInMultipleBundles());
+        }
 
         if (request.getCategoryConflictRules() != null) {
             config.getCategoryConflictRules().clear();

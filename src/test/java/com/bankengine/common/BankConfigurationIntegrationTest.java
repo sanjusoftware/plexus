@@ -71,7 +71,12 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithSystemAdminRole
     void systemAdmin_CanCreateAndSeeAllBanks() throws Exception {
-        BankConfigurationRequest request = new BankConfigurationRequest("NEW_BANK", true, List.of(), NEW_ISSUER);
+        BankConfigurationRequest request = BankConfigurationRequest.builder()
+                .bankId("NEW_BANK")
+                .allowProductInMultipleBundles(true)
+                .categoryConflictRules(List.of())
+                .issuerUrl(NEW_ISSUER)
+                .build();
 
         // Create a bank
         mockMvc.perform(post("/api/v1/banks")
@@ -118,7 +123,12 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void unauthorizedUser_CannotCreateBank() throws Exception {
-        BankConfigurationRequest request = new BankConfigurationRequest("FAIL", true, List.of(), "https://fail-issuer.com");
+        BankConfigurationRequest request = BankConfigurationRequest.builder()
+                .bankId("FAIL")
+                .allowProductInMultipleBundles(true)
+                .categoryConflictRules(List.of())
+                .issuerUrl("https://fail-issuer.com")
+                .build();
 
         mockMvc.perform(post("/api/v1/banks")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -133,7 +143,12 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {BANK_A_ADMIN_ROLE}, bankId = "BANK_A")
     void bankAdmin_UpdatingOtherBank_Returns404Not403() throws Exception {
-        BankConfigurationRequest request = new BankConfigurationRequest("BANK_B", true, List.of(), ISSUER_A);
+        BankConfigurationRequest request = BankConfigurationRequest.builder()
+                .bankId("BANK_B")
+                .allowProductInMultipleBundles(true)
+                .categoryConflictRules(List.of())
+                .issuerUrl(ISSUER_A)
+                .build();
 
         mockMvc.perform(get("/api/v1/banks/BANK_B")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -159,7 +174,12 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
         });
 
         // 2. Update via API
-        BankConfigurationRequest updateRequest = new BankConfigurationRequest("UPDATE_TEST", true, List.of(), ISSUER_A);
+        BankConfigurationRequest updateRequest = BankConfigurationRequest.builder()
+                .bankId("UPDATE_TEST")
+                .allowProductInMultipleBundles(true)
+                .categoryConflictRules(List.of())
+                .issuerUrl(ISSUER_A)
+                .build();
 
         mockMvc.perform(put("/api/v1/banks/UPDATE_TEST")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -185,7 +205,12 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
             }
         });
 
-        BankConfigurationRequest request = new BankConfigurationRequest("BANK_A", true, List.of(), ISSUER_A);
+        BankConfigurationRequest request = BankConfigurationRequest.builder()
+                .bankId("BANK_A")
+                .allowProductInMultipleBundles(true)
+                .categoryConflictRules(List.of())
+                .issuerUrl(ISSUER_A)
+                .build();
 
         mockMvc.perform(put("/api/v1/banks/BANK_A")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -205,7 +230,12 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
             return null;
         });
 
-        BankConfigurationRequest request = new BankConfigurationRequest("DUPLICATE_BANK", true, List.of(), ISSUER_A);
+        BankConfigurationRequest request = BankConfigurationRequest.builder()
+                .bankId("DUPLICATE_BANK")
+                .allowProductInMultipleBundles(true)
+                .categoryConflictRules(List.of())
+                .issuerUrl(ISSUER_A)
+                .build();
         mockMvc.perform(post("/api/v1/banks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

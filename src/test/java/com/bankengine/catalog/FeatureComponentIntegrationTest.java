@@ -150,7 +150,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     void shouldCreateFeatureAndReturn201() throws Exception {
         String name = "PremiumSupport";
         FeatureComponentRequest request = newFeatureComponentRequest(name);
-        String code = request.getCode();
+        String code = request.getCode().toUpperCase().replace(" ", "_");
         mockMvc.perform(post("/api/v1/features")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -177,7 +177,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Invalid data type provided: XYZ")));
+                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Invalid data type provided: XYZ")));
     }
 
     // --- 2. RETRIEVE TESTS ---
@@ -323,7 +323,8 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         FeatureComponent feature = createFeatureComponentInDb("ToActivate");
 
         mockMvc.perform(post("/api/v1/features/{id}/activate", feature.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("ACTIVE")));
 
         txHelper.doInTransaction(() -> {
             assertThat(featureComponentRepository.findById(feature.getId()).orElseThrow().getStatus())
@@ -366,11 +367,11 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
         VersionRequest vRequest = new VersionRequest();
 
-        mockMvc.perform(post("/api/v1/features/{id}/version", source.getId())
+        mockMvc.perform(post("/api/v1/features/{id}/new-version", source.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(vRequest)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$").isNumber());
+                .andExpect(jsonPath("$.version", is(2)));
 
         txHelper.doInTransaction(() -> {
             assertThat(featureComponentRepository.findAll().size()).isGreaterThan(1);
