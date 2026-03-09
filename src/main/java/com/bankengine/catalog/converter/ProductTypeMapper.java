@@ -18,9 +18,11 @@ public interface ProductTypeMapper {
 
     @ToAuditableEntity
     @Mapping(target = "code", source = "code")
+    @Mapping(target = "status", ignore = true)
     ProductType toEntity(ProductTypeDto dto);
 
     @ToAuditableEntity
     @Mapping(target = "code", source = "code")
+    @Mapping(target = "status", ignore = true)
     void updateFromDto(ProductTypeDto dto, @MappingTarget ProductType entity);
 }
