@@ -49,4 +49,7 @@ public class BankConfiguration extends AuditableEntity {
 
     @Column(name = "issuer_url", nullable = false)
     private String issuerUrl; // e.g., "https://login.microsoftonline.com/{tenantId}/v2.0"
+
+    @Column(name = "client_id")
+    private String clientId;
 }

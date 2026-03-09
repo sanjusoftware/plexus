@@ -40,6 +40,7 @@ public class BankConfigurationService extends BaseService {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(request.getBankId());
         config.setIssuerUrl(request.getIssuerUrl());
+        config.setClientId(request.getClientId());
         if (request.getCurrencyCode() != null) {
             config.setCurrencyCode(request.getCurrencyCode());
         }
@@ -70,6 +71,10 @@ public class BankConfigurationService extends BaseService {
             config.setIssuerUrl(request.getIssuerUrl());
         }
 
+        if (request.getClientId() != null) {
+            config.setClientId(request.getClientId());
+        }
+
         if (request.getCurrencyCode() != null) {
             config.setCurrencyCode(request.getCurrencyCode());
         }
@@ -97,6 +102,19 @@ public class BankConfigurationService extends BaseService {
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
         return mapToResponse(config);
+    }
+
+    @Transactional(readOnly = true)
+    public BankConfigurationResponse getPublicBankConfig(String bankId) {
+        // Unfiltered because the user is not yet authenticated, so no tenant context
+        BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+
+        return BankConfigurationResponse.builder()
+                .bankId(config.getBankId())
+                .issuerUrl(config.getIssuerUrl())
+                .clientId(config.getClientId())
+                .build();
     }
 
     private void validateTenantAccess(String requestedBankId) {
@@ -135,6 +153,7 @@ public class BankConfigurationService extends BaseService {
                 .bankId(config.getBankId())
                 .allowProductInMultipleBundles(config.isAllowProductInMultipleBundles())
                 .issuerUrl(config.getIssuerUrl())
+                .clientId(config.getClientId())
                 .categoryConflictRules(config.getCategoryConflictRules().stream()
                         .map(r -> new BankConfigurationRequest.CategoryConflictDto(r.getCategoryA(), r.getCategoryB()))
                         .collect(Collectors.toList()))

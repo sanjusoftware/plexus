@@ -14,6 +14,7 @@ import java.util.List;
 public class BankConfigurationResponse {
     private String bankId;
     private String issuerUrl;
+    private String clientId;
     private boolean allowProductInMultipleBundles;
     private String currencyCode;
     private List<BankConfigurationRequest.CategoryConflictDto> categoryConflictRules;

@@ -5,6 +5,8 @@ import com.bankengine.catalog.dto.ProductCatalogCard;
 import com.bankengine.catalog.dto.ProductComparisonView;
 import com.bankengine.catalog.dto.ProductDetailView;
 import com.bankengine.catalog.service.PublicCatalogService;
+import com.bankengine.common.dto.BankConfigurationResponse;
+import com.bankengine.common.service.BankConfigurationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
@@ -22,9 +24,11 @@ import java.util.List;
 public class PublicCatalogController {
 
     private final PublicCatalogService catalogService;
+    private final BankConfigurationService bankConfigurationService;
 
-    public PublicCatalogController(PublicCatalogService catalogService) {
+    public PublicCatalogController(PublicCatalogService catalogService, BankConfigurationService bankConfigurationService) {
         this.catalogService = catalogService;
+        this.bankConfigurationService = bankConfigurationService;
     }
 
     @Operation(summary = "Browse all active products available for subscription")
@@ -65,5 +69,11 @@ public class PublicCatalogController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "RETAIL") String segment) {
         return ResponseEntity.ok(catalogService.getPublicBundleDetails(id, segment));
+    }
+
+    @Operation(summary = "Get public OIDC configuration for a specific bank")
+    @GetMapping("/config/{bankId}")
+    public ResponseEntity<BankConfigurationResponse> getPublicBankConfig(@PathVariable String bankId) {
+        return ResponseEntity.ok(bankConfigurationService.getPublicBankConfig(bankId));
     }
 }
