@@ -163,7 +163,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("Invalid component type")));
+                .andExpect(jsonPath("$.message", containsString("Invalid value for pricing component type")));
     }
 
     @Test
@@ -245,7 +245,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("Invalid value type")));
+                .andExpect(jsonPath("$.message", containsString("Invalid value for price value type")));
     }
 
     // --- CONFLICT & ERROR HANDLING ---

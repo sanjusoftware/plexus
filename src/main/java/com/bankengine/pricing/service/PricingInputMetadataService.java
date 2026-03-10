@@ -2,7 +2,8 @@ package com.bankengine.pricing.service;
 
 import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.converter.PricingInputMetadataMapper;
-import com.bankengine.pricing.dto.PricingMetadataDto;
+import com.bankengine.pricing.dto.PricingMetadataRequest;
+import com.bankengine.pricing.dto.PricingMetadataResponse;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.TierConditionRepository;
@@ -66,21 +67,21 @@ public class PricingInputMetadataService extends BaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<PricingMetadataDto> findAllMetadata() {
+    public List<PricingMetadataResponse> findAllMetadata() {
         return pricingInputMetadataRepository.findAll().stream()
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public PricingMetadataDto getMetadataByKey(String attributeKey) {
+    public PricingMetadataResponse getMetadataByKey(String attributeKey) {
         return pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .map(mapper::toResponse)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
     }
 
     @Transactional
-    public PricingMetadataDto createMetadata(PricingMetadataDto dto) {
+    public PricingMetadataResponse createMetadata(PricingMetadataRequest dto) {
         // Business Rule: Key must be unique. Check before attempting save.
         if (pricingInputMetadataRepository.findByAttributeKey(dto.getAttributeKey()).isPresent()) {
             throw new DependencyViolationException(
@@ -98,7 +99,7 @@ public class PricingInputMetadataService extends BaseService {
     }
 
     @Transactional
-    public PricingMetadataDto updateMetadata(String attributeKey, PricingMetadataDto dto) {
+    public PricingMetadataResponse updateMetadata(String attributeKey, PricingMetadataRequest dto) {
         PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 

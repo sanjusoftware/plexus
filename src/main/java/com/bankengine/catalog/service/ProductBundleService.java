@@ -36,12 +36,7 @@ public class ProductBundleService extends BaseService {
 
     @Override
     protected <T extends VersionableEntity> void handleTemporalVersioning(T newEntity, T oldEntity, VersionRequest request) {
-        if (newEntity instanceof ProductBundle bundle && oldEntity instanceof ProductBundle oldBundle) {
-            LocalDate date = request.getNewActivationDate() != null
-                    ? request.getNewActivationDate()
-                    : oldBundle.getActivationDate();
-            bundle.setActivationDate(date);
-        }
+        // BaseService handles common activationDate and expiryDate
     }
 
     // --- READ OPERATIONS ---
@@ -121,6 +116,10 @@ public class ProductBundleService extends BaseService {
 
         prepareNewVersion(newVersion, source, request, productBundleRepository);
 
+        // Clear links in the clone to avoid duplicate IDs
+        newVersion.getContainedProducts().clear();
+        newVersion.getBundlePricingLinks().clear();
+
         cloneProductLinks(source, newVersion);
         cloneBundlePricingLinks(source, newVersion); // Ensures pricing is deep-copied
 
@@ -172,21 +171,21 @@ public class ProductBundleService extends BaseService {
     }
 
     private void syncBundlePricingInternal(ProductBundle bundle, List<ProductPricingDto> pricingDtos) {
-        Map<Long, BundlePricingLink> existingMap = bundle.getBundlePricingLinks().stream()
-                .collect(Collectors.toMap(l -> l.getPricingComponent().getId(), l -> l));
+        Map<String, BundlePricingLink> existingMap = bundle.getBundlePricingLinks().stream()
+                .collect(Collectors.toMap(l -> l.getPricingComponent().getCode(), l -> l));
 
-        Set<Long> incomingIds = pricingDtos.stream()
-                .map(ProductPricingDto::getPricingComponentId)
+        Set<String> incomingCodes = pricingDtos.stream()
+                .map(ProductPricingDto::getPricingComponentCode)
                 .collect(Collectors.toSet());
 
         // Orphan Removal
-        bundle.getBundlePricingLinks().removeIf(link -> !incomingIds.contains(link.getPricingComponent().getId()));
+        bundle.getBundlePricingLinks().removeIf(link -> !incomingCodes.contains(link.getPricingComponent().getCode()));
 
         for (ProductPricingDto dto : pricingDtos) {
-            if (existingMap.containsKey(dto.getPricingComponentId())) {
-                mapBundlePricingFields(existingMap.get(dto.getPricingComponentId()), dto);
+            if (existingMap.containsKey(dto.getPricingComponentCode())) {
+                mapBundlePricingFields(existingMap.get(dto.getPricingComponentCode()), dto);
             } else {
-                PricingComponent comp = pricingComponentService.getPricingComponentById(dto.getPricingComponentId());
+                PricingComponent comp = pricingComponentService.getPricingComponentByCode(dto.getPricingComponentCode(), null);
                 BundlePricingLink link = new BundlePricingLink();
                 link.setProductBundle(bundle);
                 link.setPricingComponent(comp);
@@ -236,9 +235,9 @@ public class ProductBundleService extends BaseService {
         List<Product> processedProducts = new ArrayList<>();
 
         productDtos.forEach(item -> {
-            Product product = getByIdSecurely(productRepository, item.getProductId(), "Product");
+            Product product = getByCodeAndVersionSecurely(productRepository, item.getProductCode(), null, "Product");
 
-            constraintService.validateProductCanBeBundled(item.getProductId());
+            constraintService.validateProductCanBeBundled(product.getId());
             constraintService.validateCategoryCompatibility(product, List.copyOf(processedProducts));
 
             BundleProductLink link = bundleMapper.toLink(item);

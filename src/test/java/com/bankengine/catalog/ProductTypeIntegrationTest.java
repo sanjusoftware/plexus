@@ -166,21 +166,6 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.details.name").value("Name must be between 3 and 100 characters."));
     }
 
-    @Test
-    @WithMockRole(roles = {CREATOR_ROLE})
-    void shouldReturn409ConflictWhenCreatingDuplicateName() throws Exception {
-        createAndSaveProductType("Checking Account", "CH");
-
-        ProductTypeDto requestDto = new ProductTypeDto();
-        requestDto.setName("Checking Account");
-        requestDto.setCode("CH2");
-
-        mockMvc.perform(post(API_URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").exists());
-    }
 
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})

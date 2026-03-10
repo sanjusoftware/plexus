@@ -81,7 +81,12 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
         try {
             TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelperStatic.doInTransaction(() -> {
-                ProductType type = ProductType.builder().name("Sync Test Type").code("STT").bankId(TEST_BANK_ID).build();
+                ProductType type = ProductType.builder()
+                        .name("Sync Test Type")
+                        .code("STT")
+                        .bankId(TEST_BANK_ID)
+                        .status(VersionableEntity.EntityStatus.ACTIVE)
+                        .build();
                 EXISTING_PRODUCT_TYPE_ID = productTypeRepoStatic.save(type).getId();
 
                 PricingComponent comp = PricingComponent.builder()
@@ -140,8 +145,8 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
 
         ProductRequest syncRequest = ProductRequest.builder()
                 .features(List.of(
-                        ProductFeatureDto.builder().featureComponentId(comps.get("LIMIT").getId()).featureValue("200").build(),
-                        ProductFeatureDto.builder().featureComponentId(comps.get("ACCESS").getId()).featureValue("true").build()
+                        ProductFeatureDto.builder().featureComponentCode(comps.get("LIMIT").getCode()).featureValue("200").build(),
+                        ProductFeatureDto.builder().featureComponentCode(comps.get("ACCESS").getCode()).featureValue("true").build()
                 )).build();
 
         mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
@@ -178,7 +183,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
 
         ProductRequest syncRequest = ProductRequest.builder()
                 .pricing(List.of(
-                        ProductPricingDto.builder().pricingComponentId(comps.get("TAX").getId())
+                        ProductPricingDto.builder().pricingComponentCode(comps.get("TAX").getCode())
                                 .fixedValue(BigDecimal.valueOf(5.0))
                                 .effectiveDate(LocalDate.now())
                                 .build()
@@ -211,7 +216,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
         // Request with NO dates
         ProductRequest request = ProductRequest.builder()
                 .pricing(List.of(ProductPricingDto.builder()
-                        .pricingComponentId(fee.getId())
+                        .pricingComponentCode(fee.getCode())
                         .fixedValue(BigDecimal.TEN)
                         .build()))
                 .build();
@@ -260,7 +265,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
     void shouldReturn404OnInvalidComponentId() throws Exception {
         Long productId = createDraftProductInDb("Invalid Ref Product");
         ProductRequest badRequest = ProductRequest.builder()
-                .features(List.of(ProductFeatureDto.builder().featureComponentId(9999L).featureValue("Err").build()))
+                .features(List.of(ProductFeatureDto.builder().featureComponentCode("INVALID_CODE").featureValue("Err").build()))
                 .build();
 
         mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
@@ -278,11 +283,12 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
                 txHelper.createValidProduct("Past Date Test",
                         "SAVINGS", VersionableEntity.EntityStatus.DRAFT)
         );
+        String pricingCode = txHelper.doInTransaction(() -> pricingComponentRepository.findById(EXISTING_PRICING_COMP_ID).orElseThrow().getCode());
 
         // Create request with a date from yesterday
         ProductRequest request = ProductRequest.builder()
                 .pricing(List.of(ProductPricingDto.builder()
-                        .pricingComponentId(EXISTING_PRICING_COMP_ID)
+                        .pricingComponentCode(pricingCode)
                         .effectiveDate(LocalDate.now().minusDays(1)) // <--- THE VIOLATION
                         .build()))
                 .build();

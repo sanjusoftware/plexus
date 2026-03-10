@@ -28,11 +28,6 @@ public class Product extends VersionableEntity {
     private Long id;
 
 
-    @Column(name = "expiry_date")
-    private LocalDate expiryDate;
-
-    @Column(name = "activation_date")
-    private LocalDate activationDate;
 
     @Column(name = "category", nullable = false)
     @NotBlank(message = "Product category is mandatory for compatibility validation.")

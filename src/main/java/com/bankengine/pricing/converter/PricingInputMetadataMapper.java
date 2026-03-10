@@ -2,21 +2,24 @@ package com.bankengine.pricing.converter;
 
 import com.bankengine.common.mapping.ToAuditableEntity;
 import com.bankengine.config.MapStructConfig;
-import com.bankengine.pricing.dto.PricingMetadataDto;
+import com.bankengine.pricing.dto.PricingMetadataRequest;
+import com.bankengine.pricing.dto.PricingMetadataResponse;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 @Mapper(config = MapStructConfig.class, componentModel = "spring")
 public interface PricingInputMetadataMapper {
 
-    PricingMetadataDto toResponse(PricingInputMetadata pricingInputMetadata);
+    PricingMetadataResponse toResponse(PricingInputMetadata pricingInputMetadata);
 
     @ToAuditableEntity
-    PricingInputMetadata toEntity(PricingMetadataDto pricingMetadataDto);
+    @Mapping(target = "dataType", expression = "java(pricingMetadataDto.getDataType() != null ? pricingMetadataDto.getDataType().toUpperCase() : null)")
+    PricingInputMetadata toEntity(PricingMetadataRequest pricingMetadataDto);
 
     @ToAuditableEntity
-    void updateFromDto(PricingMetadataDto dto, @MappingTarget PricingInputMetadata entity);
+    void updateFromDto(PricingMetadataRequest dto, @MappingTarget PricingInputMetadata entity);
 
     @ToAuditableEntity
     PricingInputMetadata clone(PricingInputMetadata source);

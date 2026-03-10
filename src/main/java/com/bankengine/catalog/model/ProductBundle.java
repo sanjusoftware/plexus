@@ -34,11 +34,6 @@ public class ProductBundle extends VersionableEntity {
     @Column(nullable = false)
     private String targetCustomerSegments; // e.g., "Retail", "SME"
 
-    @Column(name = "activation_date")
-    private LocalDate activationDate;
-
-    @Column(name = "expiry_date")
-    private LocalDate expiryDate;
 
     @OneToMany(mappedBy = "productBundle", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

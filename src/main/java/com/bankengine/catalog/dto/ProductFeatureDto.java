@@ -2,7 +2,6 @@ package com.bankengine.catalog.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,9 +17,9 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Feature link detail for a product.")
 public class ProductFeatureDto {
 
-    @NotNull(message = "Feature Component ID is required")
-    @Schema(example = "10", description = "ID of the master feature component (e.g., Interest Rate).")
-    private Long featureComponentId;
+    @NotBlank(message = "Feature component code is required")
+    @Schema(example = "LOUNGE-ACCESS", description = "Unique code of the feature component.")
+    private String featureComponentCode;
 
     @Schema(example = "Interest Rate", description = "Name of the feature (returned in response).")
     private String featureName;
