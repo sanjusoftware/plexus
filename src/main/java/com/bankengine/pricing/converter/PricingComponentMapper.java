@@ -24,12 +24,16 @@ public interface PricingComponentMapper {
     @ToNewEntity
     @Mapping(target = "type", source = "type", qualifiedByName = "mapComponentType")
     @Mapping(target = "pricingTiers", ignore = true)
+    @Mapping(target = "activationDate", source = "activationDate")
+    @Mapping(target = "expiryDate", source = "expiryDate")
     PricingComponent toEntity(PricingComponentRequest dto);
 
     @ToVersionableEntity
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "type", source = "type", qualifiedByName = "mapComponentType")
     @Mapping(target = "pricingTiers", ignore = true)
+    @Mapping(target = "activationDate", source = "activationDate")
+    @Mapping(target = "expiryDate", source = "expiryDate")
     void updateFromDto(PricingComponentRequest dto, @MappingTarget PricingComponent entity);
 
     @ToNewEntity
@@ -42,7 +46,7 @@ public interface PricingComponentMapper {
         try {
             return ComponentType.valueOf(type.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid component type provided: " + type);
+            throw new IllegalArgumentException("Invalid value for pricing component type. Valid values are FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, TAX");
         }
     }
 }

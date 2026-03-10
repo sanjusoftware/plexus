@@ -98,7 +98,7 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         existing.setCategoryConflictRules(new ArrayList<>());
         when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(existing));
 
-        BankConfigurationResponse response = bankConfigurationService.updateBank(TEST_BANK_ID, standardRequest);
+        BankConfigurationResponse response = bankConfigurationService.updateBank(standardRequest);
 
         assertNotNull(response);
         assertTrue(response.isAllowProductInMultipleBundles());
@@ -117,9 +117,10 @@ class BankConfigurationServiceTest extends BaseServiceTest {
     void updateBank_WhenNotExists_ShouldTriggerLambda() {
         TenantContextHolder.setBankId("SYSTEM");
         String missingId = "MISSING";
+        standardRequest.setBankId(missingId);
         when(bankConfigurationRepository.findByBankId(missingId)).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () ->
-                bankConfigurationService.updateBank(missingId, standardRequest)
+                bankConfigurationService.updateBank(standardRequest)
         );
     }
 

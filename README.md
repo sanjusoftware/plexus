@@ -398,6 +398,23 @@ The Bank Admin for `GLOBAL-BANK-001` can then define other custom roles and map 
 ## Step 4: Bank Admin - Setup Product Metadata
 Define the foundation for products.
 
+### 0. Register Pricing Input Metadata (Mandatory)
+Before creating a **Pricing Component**, any attribute used in the rules (e.g., `income`, `customerSegment`) must be registered in the metadata registry. Failure to do so will result in errors like:
+`"Invalid rule attribute 'income'. Not found in PricingInputMetadata registry."`
+
+**Request:** `POST /api/v1/pricing-metadata`
+**Authority:** `pricing:metadata:create`
+```json
+{
+  "attributeKey": "income",
+  "displayName": "Annual Income",
+  "dataType": "DECIMAL"
+}
+```
+* **attributeKey**: The internal key used in rules (typically snake_case).
+* **displayName**: User-friendly label for the UI.
+* **dataType**: Used for validation and rule generation. Allowed: `STRING`, `DECIMAL`, `INTEGER`, `BOOLEAN`, `DATE`.
+
 ### A. Create Product Type
 **Request:** `POST /api/v1/product-types`
 **Authority:** `catalog:type:create`

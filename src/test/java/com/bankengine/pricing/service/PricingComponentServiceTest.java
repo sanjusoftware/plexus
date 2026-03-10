@@ -81,11 +81,11 @@ class PricingComponentServiceTest extends BaseServiceTest {
 
         PricingComponent entity = new PricingComponent();
         entity.setBankId(TEST_BANK_ID);
+        entity.setCode("MTH-FEE");
         entity.setType(PricingComponent.ComponentType.FEE);
         entity.setPricingTiers(new ArrayList<>());
 
-        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
-        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq("MTH-FEE"), anyInt())).thenReturn(false);
         when(pricingComponentMapper.toEntity(request)).thenReturn(entity);
         when(componentRepository.save(any())).thenReturn(entity);
 
@@ -101,12 +101,12 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponentRequest request = newPricingComponentRequest("Test");
         request.setType("INVALID_TYPE");
 
-        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
-        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        // The service calls validateComponentType(request.getType()) BEFORE toEntity
+        // So it will throw before even reaching MapStruct mapper in this test setup.
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> componentService.createComponent(request));
-        assertTrue(ex.getMessage().contains("Invalid component type provided"),
+        assertTrue(ex.getMessage().contains("Invalid value for pricing component type"),
             "Exception message should indicate the type error. Found: " + ex.getMessage());
     }
 
@@ -239,7 +239,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         when(componentRepository.save(any())).thenReturn(target);
 
         // 3. ACT
-        componentService.versionComponent(oldId, new VersionRequest("V2", null, null));
+        componentService.versionComponent(oldId, new VersionRequest("V2", null, null, null));
 
         // 4. ASSERT: Verify the "Deep" part of the clone
         verify(pricingTierMapper).clone(oldTier);
@@ -286,7 +286,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponent newVersion = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
         newVersion.setVersion(2);
 
-        VersionRequest request = new VersionRequest("New Version Name", null, null);
+        VersionRequest request = new VersionRequest("New Version Name", null, null, null);
 
         when(componentRepository.findById(oldId)).thenReturn(Optional.of(source));
         when(pricingComponentMapper.clone(source)).thenReturn(newVersion);
@@ -345,8 +345,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponentRequest request = newPricingComponentRequest("Complex");
         request.setPricingTiers(List.of(tierReq));
 
-        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
-        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq(TEST_CODE), anyInt())).thenReturn(false);
         when(pricingComponentMapper.toEntity(any())).thenReturn(component);
         when(componentRepository.save(any())).thenReturn(component);
 
@@ -419,8 +418,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponentRequest request = newPricingComponentRequest("Mismatch");
         request.setType("DISCOUNT");
 
-        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
-        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq(TEST_CODE), anyInt())).thenReturn(false);
         when(pricingComponentMapper.toEntity(any())).thenReturn(component);
 
         assertThrows(IllegalArgumentException.class, () -> componentService.createComponent(request));
@@ -440,8 +438,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponentRequest request = newPricingComponentRequest("Mismatch Fee");
         request.setType("FEE");
 
-        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
-        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq(TEST_CODE), anyInt())).thenReturn(false);
         when(pricingComponentMapper.toEntity(any())).thenReturn(component);
 
         assertThrows(IllegalArgumentException.class, () -> componentService.createComponent(request));
@@ -602,8 +599,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponentRequest request = newPricingComponentRequest("Package Fee");
         request.setType("PACKAGE_FEE");
 
-        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
-        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq(TEST_CODE), anyInt())).thenReturn(false);
         when(pricingComponentMapper.toEntity(any())).thenReturn(component);
         when(componentRepository.save(any())).thenReturn(component);
 
@@ -624,8 +620,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponentRequest request = newPricingComponentRequest("Waiver");
         request.setType("WAIVER");
 
-        when(componentRepository.existsByNameAndBankId(any(), any())).thenReturn(false);
-        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq(TEST_CODE), anyInt())).thenReturn(false);
         when(pricingComponentMapper.toEntity(any())).thenReturn(component);
         when(componentRepository.save(any())).thenReturn(component);
 

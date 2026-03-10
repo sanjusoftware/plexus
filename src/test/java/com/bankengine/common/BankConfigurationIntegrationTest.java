@@ -181,7 +181,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl(ISSUER_A)
                 .build();
 
-        mockMvc.perform(put("/api/v1/banks/UPDATE_TEST")
+        mockMvc.perform(put("/api/v1/banks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -212,7 +212,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl(ISSUER_A)
                 .build();
 
-        mockMvc.perform(put("/api/v1/banks/BANK_A")
+        mockMvc.perform(put("/api/v1/banks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());

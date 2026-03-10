@@ -72,10 +72,10 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
             TenantContextHolder.setBankId(TEST_BANK_ID);
 
             txHelperStatic.doInTransaction(() -> {
-                linkRepoStatic.deleteAllInBatch();
-                featureRepoStatic.deleteAllInBatch();
-                productRepoStatic.deleteAllInBatch();
-                productTypeRepoStatic.deleteAllInBatch();
+                linkRepoStatic.deleteAll();
+                featureRepoStatic.deleteAll();
+                productRepoStatic.deleteAll();
+                productTypeRepoStatic.deleteAll();
 
                 ProductType type = new ProductType();
                 type.setName("Test Type for Link");
@@ -355,26 +355,32 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     // --- 6. VERSIONING TESTS ---
 
     @Test
-    @DisplayName("Versioning - Should create new DRAFT version from ACTIVE feature")
+    @DisplayName("Versioning - Should create new ACTIVE version from ACTIVE feature")
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldVersionFeatureSuccessfully() throws Exception {
         FeatureComponent source = createFeatureComponentInDb("BaseFeature");
+        final String code = source.getCode();
         txHelper.doInTransaction(() -> {
-            source.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-            source.setVersion(1);
-            featureComponentRepository.save(source);
+            FeatureComponent fc = featureComponentRepository.findById(source.getId()).orElseThrow();
+            fc.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+            fc.setVersion(1);
+            featureComponentRepository.save(fc);
         });
 
         VersionRequest vRequest = new VersionRequest();
 
-        mockMvc.perform(post("/api/v1/features/{id}/new-version", source.getId())
+        mockMvc.perform(post("/api/v1/features/{id}/create-new-version", source.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(vRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.version", is(2)));
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
+                .andExpect(status().isCreated());
 
         txHelper.doInTransaction(() -> {
-            assertThat(featureComponentRepository.findAll().size()).isGreaterThan(1);
+            FeatureComponent v2 = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 2).orElseThrow();
+            assertThat(v2.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ACTIVE);
+
+            FeatureComponent v1 = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 1).orElseThrow();
+            assertThat(v1.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ARCHIVED);
         });
     }
 

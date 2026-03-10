@@ -58,4 +58,29 @@ public class ProductTypeController {
         ProductType createdType = productTypeService.createProductType(requestDto);
         return new ResponseEntity<>(productTypeMapper.toResponse(createdType), HttpStatus.CREATED);
     }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('catalog:product-type:update')")
+    public ResponseEntity<ProductTypeDto> updateProductType(@PathVariable Long id, @Valid @RequestBody ProductTypeDto dto) {
+        return ResponseEntity.ok(productTypeMapper.toResponse(productTypeService.updateProductType(id, dto)));
+    }
+
+    @PostMapping("/{id}/activate")
+    @PreAuthorize("hasAuthority('catalog:product-type:activate')")
+    public ResponseEntity<ProductTypeDto> activateProductType(@PathVariable Long id) {
+        return ResponseEntity.ok(productTypeMapper.toResponse(productTypeService.activateProductType(id)));
+    }
+
+    @PostMapping("/{id}/archive")
+    @PreAuthorize("hasAuthority('catalog:product-type:archive')")
+    public ResponseEntity<ProductTypeDto> archiveProductType(@PathVariable Long id) {
+        return ResponseEntity.ok(productTypeMapper.toResponse(productTypeService.archiveProductType(id)));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('catalog:product-type:delete')")
+    public void deleteProductType(@PathVariable Long id) {
+        productTypeService.deleteProductType(id);
+    }
 }

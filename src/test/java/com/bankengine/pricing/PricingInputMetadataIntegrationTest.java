@@ -1,6 +1,7 @@
 package com.bankengine.pricing;
 
-import com.bankengine.pricing.dto.PricingMetadataDto;
+import com.bankengine.pricing.dto.PricingMetadataRequest;
+import com.bankengine.pricing.dto.PricingMetadataResponse;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
@@ -122,7 +123,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldCreateMetadataAndReturn201() throws Exception {
-        PricingMetadataDto requestDto = PricingMetadataDto.builder()
+        PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
                 .attributeKey("NewAttribute")
                 .displayName("New Attribute Display")
                 .dataType("DECIMAL").build();
@@ -138,7 +139,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn409OnDuplicateKeyCreation() throws Exception {
         createTestMetadata("ExistingKey");
-        PricingMetadataDto requestDto = PricingMetadataDto.builder()
+        PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
                 .attributeKey("ExistingKey")
                 .displayName("Duplicate Display")
                 .dataType("INTEGER").build();
@@ -157,7 +158,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     void shouldUpdateMetadataAndReturn200() throws Exception {
         createTestMetadata("UpdatableKey");
 
-        PricingMetadataDto requestDto = PricingMetadataDto.builder()
+        PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
                 .attributeKey("NewAttribute")
                 .displayName("Updated Display Name")
                 .dataType("BOOLEAN").build();
@@ -173,7 +174,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn404OnUpdateIfNotFound() throws Exception {
-        PricingMetadataDto requestDto = PricingMetadataDto.builder()
+        PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
                 .attributeKey("NewAttribute")
                 .displayName("Test")
                 .dataType("STRING").build();

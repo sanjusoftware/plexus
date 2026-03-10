@@ -77,10 +77,6 @@ public abstract class BaseService {
 
         String bankId = getCurrentBankId();
 
-        if (repository.existsByNameAndBankId(name, bankId)) {
-            throw new IllegalArgumentException("Entity name '" + name + "' already exists.");
-        }
-
         if (repository.existsByBankIdAndCodeAndVersion(bankId, code, 1)) {
             throw new IllegalArgumentException("Entity code '" + code + "' version 1 already exists.");
         }
@@ -111,17 +107,19 @@ public abstract class BaseService {
 
         if (isSameCode) {
             // --- REQUIREMENT 1: REVISION (Same Code) ---
-            // Must be ACTIVE to version the same lineage
-            if (!oldEntity.isActive()) {
-                throw new IllegalStateException("Only ACTIVE entities can be versioned under the same code.");
-            }
-
+            // Versioning an ACTIVE entity makes it ACTIVE (v+1) and archives old.
+            // Versioning a DRAFT entity (copying) makes it DRAFT.
             targetCode = oldEntity.getCode();
             targetVersion = oldEntity.getVersion() + 1;
-            targetStatus = oldEntity.getStatus(); // Same status as old (ACTIVE)
 
-            // ARCHIVE the old entity
-            oldEntity.setStatus(VersionableEntity.EntityStatus.ARCHIVED);
+            if (oldEntity.isActive()) {
+                targetStatus = VersionableEntity.EntityStatus.ACTIVE;
+                oldEntity.setStatus(VersionableEntity.EntityStatus.ARCHIVED);
+            } else {
+                targetStatus = VersionableEntity.EntityStatus.DRAFT;
+                // Old draft remains as is or do we archive it?
+                // Usually multiple drafts of same version aren't allowed, but here version is incremented.
+            }
         } else {
             // --- REQUIREMENT 2: BRANCH (Different Code) ---
             targetCode = request.getNewCode();

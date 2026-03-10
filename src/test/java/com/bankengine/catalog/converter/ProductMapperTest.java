@@ -54,7 +54,7 @@ class ProductMapperTest {
 
         VersionRequest requestDto = new VersionRequest();
         requestDto.setNewName("Improved Savings V2");
-        requestDto.setNewActivationDate(LocalDate.now().plusDays(7));
+        requestDto.setActivationDate(LocalDate.now().plusDays(7));
 
         Product newProduct = mapper.createNewVersionFrom(oldProduct, requestDto);
 

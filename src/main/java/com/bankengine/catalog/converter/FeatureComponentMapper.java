@@ -20,6 +20,8 @@ public interface FeatureComponentMapper {
 
     @ToNewEntity
     @Mapping(target = "dataType", source = "dataType", qualifiedByName = "mapDataType")
+    @Mapping(target = "activationDate", source = "activationDate")
+    @Mapping(target = "expiryDate", source = "expiryDate")
     FeatureComponent toEntity(FeatureComponentRequest dto);
 
     FeatureComponentResponse toResponseDto(FeatureComponent entity);
@@ -29,6 +31,8 @@ public interface FeatureComponentMapper {
     @ToVersionableEntity
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "dataType", source = "dataType", qualifiedByName = "mapDataType")
+    @Mapping(target = "activationDate", source = "activationDate")
+    @Mapping(target = "expiryDate", source = "expiryDate")
     void updateFromDto(FeatureComponentRequest dto, @MappingTarget FeatureComponent entity);
 
     @ToNewEntity

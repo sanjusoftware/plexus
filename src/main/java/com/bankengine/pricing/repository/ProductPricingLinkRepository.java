@@ -28,4 +28,9 @@ public interface ProductPricingLinkRepository extends TenantRepository<ProductPr
     @Modifying
     @Transactional
     void deleteByPricingComponentId(Long pricingComponentId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE ProductPricingLink l SET l.pricingComponent = :newComponent WHERE l.pricingComponent.id = :oldId")
+    void updateComponentReference(@Param("oldId") Long oldId, @Param("newComponent") com.bankengine.pricing.model.PricingComponent newComponent);
 }

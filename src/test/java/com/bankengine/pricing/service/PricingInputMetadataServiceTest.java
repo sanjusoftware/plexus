@@ -1,7 +1,8 @@
 package com.bankengine.pricing.service;
 
 import com.bankengine.pricing.converter.PricingInputMetadataMapper;
-import com.bankengine.pricing.dto.PricingMetadataDto;
+import com.bankengine.pricing.dto.PricingMetadataRequest;
+import com.bankengine.pricing.dto.PricingMetadataResponse;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.TierConditionRepository;
@@ -54,7 +55,7 @@ class PricingInputMetadataServiceTest {
 
     @Test
     void createMetadata_ShouldSaveAndReload_WhenKeyIsUnique() {
-        PricingMetadataDto dto = new PricingMetadataDto();
+        PricingMetadataRequest dto = new PricingMetadataRequest();
         dto.setAttributeKey("new_key");
         PricingInputMetadata entity = new PricingInputMetadata();
 
@@ -71,7 +72,7 @@ class PricingInputMetadataServiceTest {
 
     @Test
     void createMetadata_ShouldThrowException_WhenKeyAlreadyExists() {
-        PricingMetadataDto dto = new PricingMetadataDto();
+        PricingMetadataRequest dto = new PricingMetadataRequest();
         dto.setAttributeKey("existing");
         when(pricingInputMetadataRepository.findByAttributeKey("existing")).thenReturn(Optional.of(new PricingInputMetadata()));
 
@@ -85,7 +86,7 @@ class PricingInputMetadataServiceTest {
     @Test
     void updateMetadata_ShouldUpdateAndReload_WhenExists() {
         String key = "target";
-        PricingMetadataDto dto = new PricingMetadataDto();
+        PricingMetadataRequest dto = new PricingMetadataRequest();
         dto.setDisplayName("New Display");
         PricingInputMetadata existing = new PricingInputMetadata();
 

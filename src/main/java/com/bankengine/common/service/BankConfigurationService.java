@@ -61,8 +61,10 @@ public class BankConfigurationService extends BaseService {
 
     @Transactional
     @SystemAdminBypass
-    public BankConfigurationResponse updateBank(String bankId, BankConfigurationRequest request) {
-        validateTenantAccess(bankId);
+    public BankConfigurationResponse updateBank(BankConfigurationRequest request) {
+        String bankId = (request.getBankId() != null && getSystemBankId().equals(getCurrentBankId()))
+                ? request.getBankId() : getCurrentBankId();
+
         BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 

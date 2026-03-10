@@ -93,7 +93,7 @@ public class ProductBundleController {
         @ApiResponse(responseCode = "400", description = "Invalid versioning request."),
         @ApiResponse(responseCode = "404", description = "Source bundle not found.")
     })
-    @PostMapping("/{id}/version")
+    @PostMapping("/{id}/create-new-version")
     @PreAuthorize("hasAuthority('catalog:bundle:create')")
     public ResponseEntity<ProductBundleResponse> versionBundle(
             @Parameter(description = "ID of the source bundle to use as a template", required = true)

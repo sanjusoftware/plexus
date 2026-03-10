@@ -14,7 +14,6 @@ import java.util.List;
 public interface PricingLinkMapper {
 
     @Mapping(target = "pricingComponentName", source = "link.pricingComponent.name")
-    @Mapping(target = "pricingComponentId", source = "link.pricingComponent.id")
     @Mapping(target = "pricingComponentCode", source = "link.pricingComponent.code")
     @Mapping(target = "targetComponentCode", source = "link.targetComponentCode")
     ProductPricingDto toResponse(ProductPricingLink link);

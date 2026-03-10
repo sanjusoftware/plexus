@@ -14,5 +14,6 @@ import java.time.LocalDate;
 public class VersionRequest {
     private String newName; // Optional: If null, keep old name
     private String newCode; // Optional: If provided, triggers "New Product/Branch" (v1)
-    private LocalDate newActivationDate; // Optional: If null, keep old date
+    private LocalDate activationDate; // Optional: For activationDate
+    private LocalDate expiryDate; // Optional: For expiryDate
 }
