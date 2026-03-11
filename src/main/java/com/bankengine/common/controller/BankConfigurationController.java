@@ -26,11 +26,26 @@ public class BankConfigurationController {
         return new ResponseEntity<>(bankConfigurationService.createBank(request), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{bankId}")
+    @PutMapping
     @PreAuthorize("hasAuthority('system:bank:write') or hasAuthority('bank:config:write')")
     @Operation(summary = "Update an existing bank configuration")
-    public ResponseEntity<BankConfigurationResponse> updateBank(@PathVariable String bankId, @RequestBody BankConfigurationRequest request) {
-        return ResponseEntity.ok(bankConfigurationService.updateBank(bankId, request));
+    public ResponseEntity<BankConfigurationResponse> updateBank(@RequestBody BankConfigurationRequest request) {
+        return ResponseEntity.ok(bankConfigurationService.updateBank(request));
+    }
+
+    @PutMapping("/{bankId}")
+    @PreAuthorize("hasAuthority('system:bank:write')")
+    @Operation(summary = "Update an existing bank configuration (System Admin only)")
+    public ResponseEntity<BankConfigurationResponse> updateBankById(@PathVariable String bankId, @RequestBody BankConfigurationRequest request) {
+        request.setBankId(bankId);
+        return ResponseEntity.ok(bankConfigurationService.updateBank(request));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAuthority('system:bank:read')")
+    @Operation(summary = "List all bank configurations", description = "Retrieves all banks in the system. Restricted to System Admin.")
+    public ResponseEntity<java.util.List<BankConfigurationResponse>> getAllBanks() {
+        return ResponseEntity.ok(bankConfigurationService.getAllBanks());
     }
 
     @GetMapping("/{bankId}")

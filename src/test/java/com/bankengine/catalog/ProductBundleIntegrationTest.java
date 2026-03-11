@@ -123,13 +123,13 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = BUNDLE_ADMIN)
     @DisplayName("createBundle - Should successfully create a DRAFT bundle with a unique product")
     void createBundle_ShouldSucceed() throws Exception {
-        Long newProductId = txHelper.doInTransaction(() -> {
+        String newProductCode = txHelper.doInTransaction(() -> {
             ProductType type = txHelper.getOrCreateProductType("SAVINGS");
-            return txHelper.getOrCreateProduct("Unique Product " + UUID.randomUUID(), type, "RETAIL").getId();
+            return txHelper.getOrCreateProduct("Unique Product " + UUID.randomUUID(), type, "RETAIL").getCode();
         });
 
         ProductBundleRequest request = createBaseRequest("New Bundle");
-        request.setProducts(List.of(createItem(newProductId, true)));
+        request.setProducts(List.of(createItem(newProductCode, true)));
 
         mockMvc.perform(post("/api/v1/bundles")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -167,7 +167,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         versionRequest.setNewName("Cloned Premium Bundle");
         versionRequest.setNewCode("NEW-LINEAGE-CODE");
 
-        mockMvc.perform(post("/api/v1/bundles/{id}/version", existingBundleId)
+        mockMvc.perform(post("/api/v1/bundles/{id}/create-new-version", existingBundleId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(versionRequest)))
                 .andExpect(status().isCreated())
@@ -178,7 +178,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {BUNDLE_ADMIN, BUNDLE_ACTIVATOR})
-    @DisplayName("versionBundle - Should increment version to 2 and inherit ACTIVE status")
+    @DisplayName("versionBundle - Should increment version to 2 and maintain ACTIVE status")
     void versionBundle_ShouldIncrementVersion() throws Exception {
         // 1. Fetch the bundle and ACTIVATE it first
         txHelper.doInTransaction(() -> {
@@ -199,13 +199,12 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         versionRequest.setNewName("Premium Bundle V2");
 
         // 2. Perform versioning
-        mockMvc.perform(post("/api/v1/bundles/{id}/version", existingBundleId)
+        mockMvc.perform(post("/api/v1/bundles/{id}/create-new-version", existingBundleId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(versionRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.version").value(2))
                 .andExpect(jsonPath("$.code").value(originalCode))
-                // FIX: Assert ACTIVE because status is inherited in Revisions
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
         // 3. Verify original is archived
@@ -250,19 +249,19 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @DisplayName("Validation - Should fail with specific message on category conflict")
     void createBundle_ShouldFail_OnCategoryConflict() throws Exception {
         // Create two fresh products that aren't in any bundle yet
-        Long retailProduct = txHelper.doInTransaction(() -> {
+        String retailProductCode = txHelper.doInTransaction(() -> {
             ProductType type = txHelper.getOrCreateProductType("SAVINGS");
-            return txHelper.getOrCreateProduct("Retail P", type, "RETAIL").getId();
+            return txHelper.getOrCreateProduct("Retail P", type, "RETAIL").getCode();
         });
-        Long wealthProduct = txHelper.doInTransaction(() -> {
+        String wealthProductCode = txHelper.doInTransaction(() -> {
             ProductType type = txHelper.getOrCreateProductType("INVEST");
-            return txHelper.getOrCreateProduct("Wealth P", type, "WEALTH").getId();
+            return txHelper.getOrCreateProduct("Wealth P", type, "WEALTH").getCode();
         });
 
         ProductBundleRequest request = createBaseRequest("Conflict Bundle");
         request.setProducts(List.of(
-                createItem(retailProduct, true),
-                createItem(wealthProduct, false)
+                createItem(retailProductCode, true),
+                createItem(wealthProductCode, false)
         ));
 
         String expectedErrorMessage = String.format(
@@ -280,10 +279,12 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = BUNDLE_ADMIN)
     @DisplayName("Validation - Should fail when more than one product is marked as Main Account")
     void createBundle_ShouldFail_WhenMultipleMainProductsExist() throws Exception {
+        String retailProductCode = txHelper.doInTransaction(() -> productRepository.findById(retailProductId).orElseThrow().getCode());
+        String wealthProductCode = txHelper.doInTransaction(() -> productRepository.findById(wealthProductId).orElseThrow().getCode());
         ProductBundleRequest request = createBaseRequest("Invalid Multi Main");
         request.setProducts(List.of(
-                createItem(retailProductId, true),
-                createItem(wealthProductId, true)
+                createItem(retailProductCode, true),
+                createItem(wealthProductCode, true)
         ));
 
         mockMvc.perform(post("/api/v1/bundles")
@@ -312,9 +313,9 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         return request;
     }
 
-    private ProductBundleRequest.BundleProduct createItem(Long id, boolean main) {
+    private ProductBundleRequest.BundleProduct createItem(String code, boolean main) {
         ProductBundleRequest.BundleProduct item = new ProductBundleRequest.BundleProduct();
-        item.setProductId(id);
+        item.setProductCode(code);
         item.setMainAccount(main);
         return item;
     }

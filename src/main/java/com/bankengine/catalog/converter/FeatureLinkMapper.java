@@ -14,7 +14,7 @@ import java.util.List;
 public interface FeatureLinkMapper {
 
     @Mapping(target = "featureName", source = "link.featureComponent.name")
-    @Mapping(target = "featureComponentId", source = "link.featureComponent.id")
+    @Mapping(target = "featureComponentCode", source = "link.featureComponent.code")
     ProductFeatureDto toResponse(ProductFeatureLink link);
 
     List<ProductFeatureDto> toResponseList(List<ProductFeatureLink> links);

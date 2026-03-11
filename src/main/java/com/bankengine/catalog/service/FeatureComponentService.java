@@ -106,7 +106,14 @@ public class FeatureComponentService extends BaseService {
 
         prepareNewVersion(newVersion, source, request, componentRepository);
 
-        return featureComponentMapper.toResponseDto(componentRepository.save(newVersion));
+        FeatureComponent saved = componentRepository.save(newVersion);
+
+        // Update links if it was a revision of an ACTIVE component
+        if (source.isArchived() && saved.isActive()) {
+            linkRepository.updateFeatureComponentReference(source.getId(), saved);
+        }
+
+        return featureComponentMapper.toResponseDto(saved);
     }
 
     @Transactional

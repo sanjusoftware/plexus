@@ -100,7 +100,21 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
-        return buildResponseEntity(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());
+        String message = ex.getMessage();
+        if (message.contains("com.bankengine.catalog.model.FeatureComponent$DataType")) {
+            message = "Invalid data type provided. Valid values are: STRING, DECIMAL, INTEGER, BOOLEAN, DATE.";
+        } else if (message.contains("com.bankengine.pricing.model.PricingComponent$ComponentType")) {
+            message = "Invalid value for pricing component type. Valid values are FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, TAX";
+        } else if (message.contains("com.bankengine.pricing.model.PriceValue$ValueType")) {
+            message = "Invalid value for price value type. Valid values are FEE_ABSOLUTE, FEE_PERCENTAGE, DISCOUNT_PERCENTAGE, DISCOUNT_ABSOLUTE, FREE_COUNT";
+        } else if (message.contains("java.lang.Boolean") || message.contains("boolean")) {
+            if (message.contains("allowProductInMultipleBundles")) {
+                message = "Invalid value for Boolean allowProductInMultipleBundles. Should be true or false";
+            } else {
+                message = "Invalid value for Boolean. Should be true or false";
+            }
+        }
+        return buildResponseEntity(HttpStatus.BAD_REQUEST, "Bad Request", message);
     }
 
     /**

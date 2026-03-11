@@ -116,7 +116,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         return ProductRequest.builder()
                 .name("Standard Product Name")
                 .code("CODE_" + UUID.randomUUID().toString().substring(0, 8))
-                .productTypeId(EXISTING_PRODUCT_TYPE_ID)
+                .productTypeCode("BCT")
                 .category("RETAIL")
                 .activationDate(LocalDate.now().plusDays(1))
                 .expiryDate(LocalDate.now().plusYears(1));
@@ -199,7 +199,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404WhenCreatingProductWithNonExistentProductType() throws Exception {
-        ProductRequest requestDto = defaultRequestBuilder().productTypeId(99999L).build();
+        ProductRequest requestDto = defaultRequestBuilder().productTypeCode("INVALID_TYPE").build();
         mockMvc.perform(post(PRODUCT_API_BASE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -344,9 +344,9 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         });
 
         // 2. Act: Use the ORIGINAL code to trigger a REVISION (Archiving)
-        VersionRequest versionDto = new VersionRequest("Checking V2", originalCode, LocalDate.now().plusMonths(1));
+        VersionRequest versionDto = new VersionRequest("Checking V2", originalCode, LocalDate.now().plusMonths(1), null);
 
-        String response = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/version", oldProductId)
+        String response = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/create-new-version", oldProductId)
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(versionDto)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
 

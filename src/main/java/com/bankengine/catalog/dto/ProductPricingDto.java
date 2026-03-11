@@ -2,7 +2,7 @@ package com.bankengine.catalog.dto;
 
 import com.bankengine.pricing.model.PriceValue;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -16,10 +16,7 @@ import java.time.LocalDate;
 @Schema(description = "Pricing link detail for a product.")
 public class ProductPricingDto {
 
-    @NotNull(message = "Pricing Component ID is required.")
-    @Schema(example = "100", description = "ID of the master pricing component.")
-    private Long pricingComponentId;
-
+    @NotBlank(message = "Pricing component code is required.")
     @Schema(example = "FEE_001", description = "Unique code of the pricing component.")
     private String pricingComponentCode;
 

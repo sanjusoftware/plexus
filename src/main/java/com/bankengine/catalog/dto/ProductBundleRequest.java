@@ -58,9 +58,9 @@ public class ProductBundleRequest {
     @Data
     @Schema(description = "Link between a bundle and a product.")
     public static class BundleProduct {
-        @NotNull(message = "Product ID is required for linking.")
-        @Schema(example = "500", description = "ID of the product to include.")
-        private Long productId;
+        @NotBlank(message = "Product code is required for linking.")
+        @Schema(example = "SAV-001", description = "Code of the product to include.")
+        private String productCode;
 
         @Schema(example = "true", description = "If true, this product acts as the primary account for the bundle.")
         private boolean mainAccount = false;

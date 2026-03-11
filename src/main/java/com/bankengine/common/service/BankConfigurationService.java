@@ -66,8 +66,10 @@ public class BankConfigurationService extends BaseService {
 
     @Transactional
     @SystemAdminBypass
-    public BankConfigurationResponse updateBank(String bankId, BankConfigurationRequest request) {
-        validateTenantAccess(bankId);
+    public BankConfigurationResponse updateBank(BankConfigurationRequest request) {
+        String bankId = (request.getBankId() != null && getSystemBankId().equals(getCurrentBankId()))
+                ? request.getBankId() : getCurrentBankId();
+
         BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
@@ -96,6 +98,17 @@ public class BankConfigurationService extends BaseService {
 
         bankConfigurationRepository.save(config);
         return mapToResponse(config);
+    }
+
+    @Transactional(readOnly = true)
+    @SystemAdminBypass
+    public java.util.List<BankConfigurationResponse> getAllBanks() {
+        if (!getSystemBankId().equals(getCurrentBankId())) {
+            throw new org.springframework.security.access.AccessDeniedException("System Admin authority required.");
+        }
+        return bankConfigurationRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

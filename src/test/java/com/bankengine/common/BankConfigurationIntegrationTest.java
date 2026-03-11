@@ -90,6 +90,38 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bankId").value("NEW_BANK"))
                 .andExpect(jsonPath("$.issuerUrl").value(NEW_ISSUER));
+
+        // System admin can list all banks
+        mockMvc.perform(get("/api/v1/banks"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].bankId").value("NEW_BANK"));
+    }
+
+    @Test
+    @WithSystemAdminRole
+    void systemAdmin_CanUpdateBankById() throws Exception {
+        txHelper.doInTransaction(() -> {
+            TenantContextHolder.setSystemMode(true);
+            BankConfiguration bank = new BankConfiguration();
+            bank.setBankId("ID_UPDATE_TEST");
+            bank.setIssuerUrl(ISSUER_A);
+            bankConfigurationRepository.save(bank);
+            return null;
+        });
+
+        BankConfigurationRequest updateRequest = BankConfigurationRequest.builder()
+                .allowProductInMultipleBundles(true)
+                .issuerUrl(NEW_ISSUER)
+                .build();
+
+        mockMvc.perform(put("/api/v1/banks/ID_UPDATE_TEST")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bankId").value("ID_UPDATE_TEST"))
+                .andExpect(jsonPath("$.issuerUrl").value(NEW_ISSUER))
+                .andExpect(jsonPath("$.allowProductInMultipleBundles").value(true));
     }
 
     @Test
@@ -181,7 +213,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl(ISSUER_A)
                 .build();
 
-        mockMvc.perform(put("/api/v1/banks/UPDATE_TEST")
+        mockMvc.perform(put("/api/v1/banks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -212,7 +244,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl(ISSUER_A)
                 .build();
 
-        mockMvc.perform(put("/api/v1/banks/BANK_A")
+        mockMvc.perform(put("/api/v1/banks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());

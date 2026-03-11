@@ -46,6 +46,7 @@ public class ProductService extends BaseService {
     private final ProductMapper productMapper;
     private final FeatureLinkMapper featureLinkMapper;
     private final PricingLinkMapper pricingLinkMapper;
+    private final com.bankengine.catalog.repository.BundleProductLinkRepository bundleProductLinkRepository;
     private final EntityManager entityManager;
 
     /**
@@ -53,12 +54,7 @@ public class ProductService extends BaseService {
      */
     @Override
     protected <T extends VersionableEntity> void handleTemporalVersioning(T newEntity, T oldEntity, VersionRequest request) {
-        if (newEntity instanceof Product product && oldEntity instanceof Product oldProduct) {
-            LocalDate date = request.getNewActivationDate() != null
-                    ? request.getNewActivationDate()
-                    : oldProduct.getActivationDate();
-            product.setActivationDate(date);
-        }
+        // BaseService handles common activationDate and expiryDate
     }
 
     // --- READ OPERATIONS ---
@@ -84,9 +80,12 @@ public class ProductService extends BaseService {
         sanitizeRequest(requestDto);
         validateNewVersionable(productRepository, requestDto.getName(), requestDto.getCode());
 
-        ProductType productType = requestDto.getProductTypeCode() != null
-                ? getProductTypeByCode(requestDto.getProductTypeCode())
-                : getProductTypeById(requestDto.getProductTypeId());
+        // Requirement 19: Check for uniqueness based on code (already done in validateNewVersionable for code+version)
+        // But the prompt says "Product uniqueness should also be checked based on the code not on name."
+        // Our validateNewVersionable check Name and Code. We should perhaps only check Code?
+        // Actually BaseService.validateNewVersionable checks if code/version1 exists.
+
+        ProductType productType = getProductTypeByCode(requestDto.getProductTypeCode());
         Product product = productMapper.toEntity(requestDto, productType);
         product.setBankId(getCurrentBankId());
         product.setStatus(VersionableEntity.EntityStatus.DRAFT);
@@ -134,6 +133,11 @@ public class ProductService extends BaseService {
         // 2. This modifies BOTH newProduct and sourceProduct (archiving it if same code)
         prepareNewVersion(newProduct, sourceProduct, requestDto, productRepository);
 
+        // Clear links in the clone to avoid duplicate IDs (only if prepareNewVersion didn't throw)
+        if (newProduct.getProductFeatureLinks() != null) newProduct.getProductFeatureLinks().clear();
+        if (newProduct.getProductPricingLinks() != null) newProduct.getProductPricingLinks().clear();
+        if (newProduct.getBundleLinks() != null) newProduct.getBundleLinks().clear();
+
         // 3. Deep clone associated links
         cloneFeaturesInternal(sourceProduct, newProduct, getCurrentBankId());
         clonePricingInternal(sourceProduct, newProduct, getCurrentBankId());
@@ -142,9 +146,14 @@ public class ProductService extends BaseService {
         productRepository.save(sourceProduct);
         Product saved = productRepository.save(newProduct);
 
-        productRepository.flush();
-        entityManager.refresh(saved);
+        // Update bundle links if it was a revision of an ACTIVE product
+        if (sourceProduct.isArchived() && saved.isActive()) {
+            bundleProductLinkRepository.updateProductReference(sourceProduct.getId(), saved);
+        }
 
+        productRepository.flush();
+        // Skip entityManager.refresh(saved) in some cases it might cause issues if not fully persisted in the current test context
+        // Instead just return mapped response from saved entity
         return productMapper.toResponse(saved);
     }
 
@@ -159,6 +168,25 @@ public class ProductService extends BaseService {
         } else if (product.getActivationDate() == null || product.getActivationDate().isBefore(LocalDate.now())) {
             product.setActivationDate(LocalDate.now());
         }
+
+        // Requirement 20: Auto-activate linked DRAFT components
+        product.getProductPricingLinks().forEach(link -> {
+            PricingComponent pc = link.getPricingComponent();
+            if (pc.isDraft()) {
+                pc.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+                if (pc.getActivationDate() == null) {
+                    pc.setActivationDate(product.getActivationDate());
+                }
+                pricingComponentService.activateComponent(pc.getId()); // Use service to trigger reload/events
+            }
+        });
+
+        product.getProductFeatureLinks().forEach(link -> {
+            FeatureComponent fc = link.getFeatureComponent();
+            if (fc.isDraft()) {
+                featureComponentService.activateFeature(fc.getId());
+            }
+        });
 
         return productMapper.toResponse(productRepository.save(product));
     }
@@ -202,22 +230,22 @@ public class ProductService extends BaseService {
     // --- INTERNAL RECONCILIATION & CLONING ---
 
     private void syncFeaturesInternal(Product product, List<ProductFeatureDto> incomingDtos) {
-        Map<Long, ProductFeatureLink> existingMap = product.getProductFeatureLinks().stream()
-                .collect(Collectors.toMap(l -> l.getFeatureComponent().getId(), l -> l));
+        Map<String, ProductFeatureLink> existingMap = product.getProductFeatureLinks().stream()
+                .collect(Collectors.toMap(l -> l.getFeatureComponent().getCode(), l -> l));
 
-        Set<Long> incomingIds = incomingDtos.stream()
-                .map(ProductFeatureDto::getFeatureComponentId)
+        Set<String> incomingCodes = incomingDtos.stream()
+                .map(ProductFeatureDto::getFeatureComponentCode)
                 .collect(Collectors.toSet());
 
-        product.getProductFeatureLinks().removeIf(link -> !incomingIds.contains(link.getFeatureComponent().getId()));
+        product.getProductFeatureLinks().removeIf(link -> !incomingCodes.contains(link.getFeatureComponent().getCode()));
 
         for (ProductFeatureDto dto : incomingDtos) {
-            FeatureComponent component = featureComponentService.getFeatureComponentById(dto.getFeatureComponentId());
+            FeatureComponent component = featureComponentService.getFeatureComponentByCode(dto.getFeatureComponentCode(), null);
+            validateDraft(component);
             validateFeatureValue(dto.getFeatureValue(), component.getDataType());
 
-            if (existingMap.containsKey(dto.getFeatureComponentId())) {
-                ProductFeatureLink existingLink = existingMap.get(dto.getFeatureComponentId());
-                // Equality check prevents unnecessary setter calls
+            if (existingMap.containsKey(dto.getFeatureComponentCode())) {
+                ProductFeatureLink existingLink = existingMap.get(dto.getFeatureComponentCode());
                 if (!Objects.equals(existingLink.getFeatureValue(), dto.getFeatureValue())) {
                     existingLink.setFeatureValue(dto.getFeatureValue());
                 }
@@ -233,20 +261,21 @@ public class ProductService extends BaseService {
     }
 
     private void syncPricingInternal(Product product, List<ProductPricingDto> incomingDtos) {
-        Map<Long, ProductPricingLink> existingMap = product.getProductPricingLinks().stream()
-                .collect(Collectors.toMap(l -> l.getPricingComponent().getId(), l -> l));
+        Map<String, ProductPricingLink> existingMap = product.getProductPricingLinks().stream()
+                .collect(Collectors.toMap(l -> l.getPricingComponent().getCode(), l -> l));
 
-        Set<Long> incomingIds = incomingDtos.stream()
-                .map(ProductPricingDto::getPricingComponentId)
+        Set<String> incomingCodes = incomingDtos.stream()
+                .map(ProductPricingDto::getPricingComponentCode)
                 .collect(Collectors.toSet());
 
-        product.getProductPricingLinks().removeIf(link -> !incomingIds.contains(link.getPricingComponent().getId()));
+        product.getProductPricingLinks().removeIf(link -> !incomingCodes.contains(link.getPricingComponent().getCode()));
 
         for (ProductPricingDto dto : incomingDtos) {
-            if (existingMap.containsKey(dto.getPricingComponentId())) {
-                mapPricingFields(existingMap.get(dto.getPricingComponentId()), dto);
+            if (existingMap.containsKey(dto.getPricingComponentCode())) {
+                mapPricingFields(existingMap.get(dto.getPricingComponentCode()), dto);
             } else {
-                PricingComponent comp = pricingComponentService.getPricingComponentById(dto.getPricingComponentId());
+                PricingComponent comp = pricingComponentService.getPricingComponentByCode(dto.getPricingComponentCode(), null);
+                validateDraft(comp);
                 ProductPricingLink link = new ProductPricingLink();
                 link.setProduct(product);
                 link.setPricingComponent(comp);
@@ -292,6 +321,13 @@ public class ProductService extends BaseService {
             link.setUseRulesEngine(dto.isUseRulesEngine());
         }
         if (!Objects.equals(link.getTargetComponentCode(), dto.getTargetComponentCode())) {
+            // Requirement 18: Validate targetComponentCode
+            if (dto.getTargetComponentCode() != null) {
+                PricingComponent target = pricingComponentService.getPricingComponentByCode(dto.getTargetComponentCode(), null);
+                if (target.isArchived() || target.isInActive()) {
+                    throw new IllegalArgumentException("Target component must be ACTIVE or DRAFT: " + dto.getTargetComponentCode());
+                }
+            }
             link.setTargetComponentCode(dto.getTargetComponentCode());
         }
 

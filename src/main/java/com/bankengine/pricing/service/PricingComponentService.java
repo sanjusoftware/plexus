@@ -96,9 +96,19 @@ public class PricingComponentService extends BaseService {
     public PricingComponentResponse versionComponent(Long oldId, VersionRequest request) {
         PricingComponent source = getPricingComponentById(oldId);
         PricingComponent newVersion = pricingComponentMapper.clone(source);
+
         prepareNewVersion(newVersion, source, request, pricingComponentRepository);
+
+        // Clear tiers in the clone to avoid duplicate IDs
+        newVersion.getPricingTiers().clear();
         cloneTiersInternal(source, newVersion);
         PricingComponent saved = pricingComponentRepository.save(newVersion);
+
+        // If it's a revision of an ACTIVE component, update all product links
+        if (source.isArchived() && saved.isActive()) {
+            productPricingLinkRepository.updateComponentReference(source.getId(), saved);
+        }
+
         reloadService.reloadKieContainer();
         return pricingComponentMapper.toResponseDto(saved);
     }
@@ -339,15 +349,16 @@ public class PricingComponentService extends BaseService {
         try {
             PriceValue.ValueType.valueOf(type.toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid value type provided: " + type);
+            throw new IllegalArgumentException("Invalid value for price value type. Valid values are FEE_ABSOLUTE, FEE_PERCENTAGE, DISCOUNT_PERCENTAGE, DISCOUNT_ABSOLUTE, FREE_COUNT");
         }
     }
 
     private void validateComponentType(String type) {
+        if (type == null) return;
         try {
             PricingComponent.ComponentType.valueOf(type.toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid component type provided: " + type);
+            throw new IllegalArgumentException("Invalid value for pricing component type. Valid values are FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, TAX");
         }
     }
 

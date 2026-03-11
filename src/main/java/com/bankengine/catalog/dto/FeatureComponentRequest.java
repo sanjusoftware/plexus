@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 public class FeatureComponentRequest {
@@ -20,4 +22,10 @@ public class FeatureComponentRequest {
     @NotBlank(message = "Data Type is required (e.g., STRING, BOOLEAN, INTEGER).")
     @Schema(example = "BOOLEAN", description = "The data type of the feature value. Allowed values: STRING, INTEGER, BOOLEAN, DECIMAL, DATE")
     private String dataType;
+
+    @Schema(description = "Optional activation date.")
+    private LocalDate activationDate;
+
+    @Schema(description = "Optional expiry date.")
+    private LocalDate expiryDate;
 }

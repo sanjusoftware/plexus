@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @MappedSuperclass
@@ -36,6 +38,12 @@ public abstract class VersionableEntity extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     protected EntityStatus status = EntityStatus.DRAFT;
+
+    @Column(name = "activation_date")
+    protected LocalDate activationDate;
+
+    @Column(name = "expiry_date")
+    protected LocalDate expiryDate;
 
     public enum EntityStatus {
         DRAFT,

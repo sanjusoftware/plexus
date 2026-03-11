@@ -103,7 +103,7 @@ public class ProductController {
             content = @Content(schema = @Schema(implementation = ProductResponse.class)))
     @ApiResponse(responseCode = "400", description = "Invalid version request.")
     @ApiResponse(responseCode = "404", description = "Source product not found.")
-    @PostMapping("/{id}/version")
+    @PostMapping("/{id}/create-new-version")
     @PreAuthorize("hasAuthority('catalog:product:create')")
     public ResponseEntity<ProductResponse> versionProduct(
             @Parameter(description = "ID of the source product to use as a template", required = true)

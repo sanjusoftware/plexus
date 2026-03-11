@@ -33,13 +33,8 @@ const Dashboard = () => {
 
         if (isSystemAdmin) {
           // System Admin sees all banks
-          // Note: In a real app, we'd have a GET /api/v1/banks that returns a list
-          // For now, let's try to fetch what's available
-          try {
-            // This is a placeholder as we don't have a list-all-banks endpoint yet
-            // but we can try to fetch the current one if we know it.
-             setData([{ bankId: 'SYSTEM', issuerUrl: 'Built-in' }]);
-          } catch (e) {}
+          const response = await axios.get('/api/v1/banks', config);
+          setData(response.data || []);
         } else {
           // Bank Admin sees their products
           const response = await axios.get('/api/v1/products', config);

@@ -94,7 +94,7 @@ public class PricingComponentController {
             description = "Creates a new DRAFT version from an existing pricing component. This allows evolving pricing (e.g., updating rates) without affecting products linked to historical versions.")
     @ApiResponse(responseCode = "201", description = "New pricing version successfully created.")
     @ApiResponse(responseCode = "404", description = "Source component not found.")
-    @PostMapping("/{id}/version")
+    @PostMapping("/{id}/create-new-version")
     @PreAuthorize("hasAuthority('pricing:component:create')")
     public ResponseEntity<PricingComponentResponse> versionComponent(
             @Parameter(description = "ID of the component to serve as a template", required = true)

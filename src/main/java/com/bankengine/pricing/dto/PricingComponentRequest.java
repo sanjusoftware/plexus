@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -33,6 +34,12 @@ public class PricingComponentRequest {
 
     @Schema(example = "true", description = "Indicates if the fee should be calculated pro-rata based on the number of days the product was active in a period.")
     private boolean proRataApplicable;
+
+    @Schema(description = "Optional activation date.")
+    private LocalDate activationDate;
+
+    @Schema(description = "Optional expiry date.")
+    private LocalDate expiryDate;
 
     @Valid
     @Schema(description = "List of pricing tiers that define the rules and values for this component.")

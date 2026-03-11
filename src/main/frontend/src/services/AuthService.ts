@@ -7,7 +7,7 @@ export class AuthService {
   private createUserManager(bankId: string, issuerUrl: string, clientId?: string): UserManager {
     const settings = {
       authority: issuerUrl,
-      client_id: clientId || 'bank-engine-api-client',
+      client_id: clientId || '36c1e1c7-c5ab-4fef-9faf-04929c1f1cba',
       redirect_uri: `${window.location.origin}/auth/callback`,
       response_type: 'code',
       scope: 'openid profile offline_access api://bank-engine-api/access_as_user',

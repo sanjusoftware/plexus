@@ -121,7 +121,7 @@ public class FeatureComponentController {
                     content = @Content(schema = @Schema(implementation = FeatureComponentResponse.class))),
             @ApiResponse(responseCode = "404", description = "Source feature component not found.")
     })
-    @PostMapping("/{id}/new-version")
+    @PostMapping("/{id}/create-new-version")
     @PreAuthorize("hasAuthority('catalog:feature:create')")
     public ResponseEntity<FeatureComponentResponse> versionFeature(
             @Parameter(description = "ID of the source feature component to template from", required = true)
