@@ -13,6 +13,7 @@ import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,9 @@ public class BankConfigurationService extends BaseService {
     private final RoleRepository roleRepository;
     private final AuthorityDiscoveryService authorityDiscoveryService;
     private final PermissionMappingService permissionMappingService;
+
+    @Value("${springdoc.swagger-ui.oauth.client-id:}")
+    private String defaultClientId;
 
     @Transactional
     @SystemAdminBypass // Allows SYSTEM to create/update across tenants
@@ -110,10 +114,12 @@ public class BankConfigurationService extends BaseService {
         BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
+        String clientId = config.getClientId() != null ? config.getClientId() : defaultClientId;
+
         return BankConfigurationResponse.builder()
                 .bankId(config.getBankId())
                 .issuerUrl(config.getIssuerUrl())
-                .clientId(config.getClientId())
+                .clientId(clientId)
                 .build();
     }
 
