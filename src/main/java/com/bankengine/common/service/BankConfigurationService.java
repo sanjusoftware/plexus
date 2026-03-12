@@ -13,6 +13,7 @@ import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,9 @@ public class BankConfigurationService extends BaseService {
     private final AuthorityDiscoveryService authorityDiscoveryService;
     private final PermissionMappingService permissionMappingService;
 
+    @Value("${springdoc.swagger-ui.oauth.client-id:}")
+    private String defaultClientId;
+
     @Transactional
     @SystemAdminBypass // Allows SYSTEM to create/update across tenants
     public BankConfigurationResponse createBank(BankConfigurationRequest request) {
@@ -40,6 +44,7 @@ public class BankConfigurationService extends BaseService {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(request.getBankId());
         config.setIssuerUrl(request.getIssuerUrl());
+        config.setClientId(request.getClientId());
         if (request.getCurrencyCode() != null) {
             config.setCurrencyCode(request.getCurrencyCode());
         }
@@ -72,6 +77,10 @@ public class BankConfigurationService extends BaseService {
             config.setIssuerUrl(request.getIssuerUrl());
         }
 
+        if (request.getClientId() != null) {
+            config.setClientId(request.getClientId());
+        }
+
         if (request.getCurrencyCode() != null) {
             config.setCurrencyCode(request.getCurrencyCode());
         }
@@ -93,12 +102,38 @@ public class BankConfigurationService extends BaseService {
 
     @Transactional(readOnly = true)
     @SystemAdminBypass
+    public java.util.List<BankConfigurationResponse> getAllBanks() {
+        if (!getSystemBankId().equals(getCurrentBankId())) {
+            throw new org.springframework.security.access.AccessDeniedException("System Admin authority required.");
+        }
+        return bankConfigurationRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    @SystemAdminBypass
     public BankConfigurationResponse getBank(String bankId) {
         validateTenantAccess(bankId);
         BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
         return mapToResponse(config);
+    }
+
+    @Transactional(readOnly = true)
+    public BankConfigurationResponse getPublicBankConfig(String bankId) {
+        // Unfiltered because the user is not yet authenticated, so no tenant context
+        BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+
+        String clientId = config.getClientId() != null ? config.getClientId() : defaultClientId;
+
+        return BankConfigurationResponse.builder()
+                .bankId(config.getBankId())
+                .issuerUrl(config.getIssuerUrl())
+                .clientId(clientId)
+                .build();
     }
 
     private void validateTenantAccess(String requestedBankId) {
@@ -137,6 +172,7 @@ public class BankConfigurationService extends BaseService {
                 .bankId(config.getBankId())
                 .allowProductInMultipleBundles(config.isAllowProductInMultipleBundles())
                 .issuerUrl(config.getIssuerUrl())
+                .clientId(config.getClientId())
                 .categoryConflictRules(config.getCategoryConflictRules().stream()
                         .map(r -> new BankConfigurationRequest.CategoryConflictDto(r.getCategoryA(), r.getCategoryB()))
                         .collect(Collectors.toList()))

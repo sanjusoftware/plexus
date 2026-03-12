@@ -1,5 +1,10 @@
 # Stage 1: Build the application
 FROM eclipse-temurin:21-jdk-jammy AS build
+
+# Install Node.js for frontend build
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
 WORKDIR /app
 
 # Copy gradle files

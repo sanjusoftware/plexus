@@ -76,6 +76,32 @@ def coverageExclusions = [
     "org/drools/drl/parser/lang/**"
 ]
 
+def frontendDir = "$projectDir/src/main/frontend"
+
+task installFrontend(type: Exec) {
+    workingDir "$frontendDir"
+    inputs.file("$frontendDir/package.json")
+    outputs.dir("$frontendDir/node_modules")
+    commandLine 'npm', 'install'
+}
+
+task buildFrontend(type: Exec) {
+    dependsOn installFrontend
+    workingDir "$frontendDir"
+    inputs.dir("$frontendDir/src")
+    inputs.dir("$frontendDir/public")
+    outputs.dir("$frontendDir/build")
+    commandLine 'npm', 'run', 'build'
+}
+
+task copyFrontend(type: Copy) {
+    dependsOn buildFrontend
+    from "$frontendDir/build"
+    into "$buildDir/resources/main/static"
+}
+
+processResources.dependsOn copyFrontend
+
 tasks.named('test') {
     useJUnitPlatform()
 
@@ -87,7 +113,7 @@ tasks.named('test') {
 }
 
 jacocoTestReport {
-    dependsOn test
+    dependsOn test, compileJava, processResources, copyFrontend
     reports {
         xml.required = true
         html.required = true
