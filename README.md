@@ -11,9 +11,33 @@ Plexus is a scalable banking platform built with Java and Spring Boot. It implem
 ## Key Capabilities:
 1.  **Product Catalog Service (PCS):** Define any banking product using flexible, reusable feature components (e.g., tenure, collateral type, network).
 2.  **Pricing Engine Service (PES):** Manage tiered pricing, fees, and interest rates, accessible via a dedicated calculation endpoint.
-3.  **Role-Based Access Control (RBAC):** Implemented using **JWTs** and a custom **Resource Server** architecture, enabling **granular permission checks** on all API endpoints.
+3.  **Admin Thin Client (React):** A built-in, multi-tenant administrative UI for platform owners and bank administrators.
+4.  **Role-Based Access Control (RBAC):** Implemented using **JWTs** and a custom **Resource Server** architecture, enabling **granular permission checks** on all API endpoints.
 4.  **Rule Management Service (RMS) Integration:** Supports integration with external rules engines for dynamic calculation of discounts, waivers, and eligibility.
 5.  **Multi-Bank Support:** Designed for global deployment.
+
+***
+
+# Admin Client (React UI)
+
+Plexus includes a built-in React-based administrative thin client for managing banks, products, and pricing.
+
+### Features
+- **Multi-tenant OIDC Discovery**: Users authenticate against their specific bank's Identity Provider by entering their Bank ID. The client supports OIDC Authorization Code Flow with PKCE.
+- **System Dashboard**: Global overview for platform owners to onboard and manage banks.
+- **Bank Dashboard**: Role-based view for bank administrators to manage their product catalog and pricing rules.
+- **Responsive Design**: Built with Tailwind CSS and Lucide icons for a modern, mobile-friendly experience.
+
+### Accessing the UI
+The UI is integrated and served directly from the Spring Boot application:
+- **Landing Page**: `http://localhost:8080/`
+- **Login/Discovery**: `http://localhost:8080/login`
+- **Dashboard**: `http://localhost:8080/dashboard`
+
+### Development & Build
+The React source code is located in `src/main/frontend`.
+- **Development Mode**: Run `npm start` inside `src/main/frontend` to start the dev server with HMR. It proxies API requests to `localhost:8080`.
+- **Production Build**: Integrated into the Gradle lifecycle. Running `./gradlew build` will automatically install dependencies, build the production assets, and package them into `src/main/resources/static`.
 
 ***
 
