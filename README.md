@@ -29,15 +29,32 @@ Plexus includes a built-in React-based administrative thin client for managing b
 - **Responsive Design**: Built with Tailwind CSS and Lucide icons for a modern, mobile-friendly experience.
 
 ### Accessing the UI
-The UI is integrated and served directly from the Spring Boot application:
+The UI is integrated and served directly from the Spring Boot application on port **8080**.
+
+**When running via Docker Compose (`docker-compose up`):**
 - **Landing Page**: `http://localhost:8080/`
 - **Login/Discovery**: `http://localhost:8080/login`
 - **Dashboard**: `http://localhost:8080/dashboard`
+- *Note: The UI is bundled into the Java application. There is no separate port 3000 in the Docker production build.*
 
 ### Development & Build
 The React source code is located in `src/main/frontend`.
-- **Development Mode**: Run `npm start` inside `src/main/frontend` to start the dev server with HMR. It proxies API requests to `localhost:8080`.
-- **Production Build**: Integrated into the Gradle lifecycle. Running `./gradlew build` will automatically install dependencies, build the production assets, and package them into `src/main/resources/static`.
+
+#### 1. Development Mode (Hot Reloading)
+For the best development experience with hot-reloading:
+1. Ensure the Spring Boot backend is running on `localhost:8080`.
+2. Navigate to `src/main/frontend`.
+3. Run `npm install` and then `npm start`.
+4. Access the dev UI at **`http://localhost:3000`**.
+   - *Note: The dev server is configured to proxy API requests to `localhost:8080` automatically.*
+
+#### 2. Production Build
+The frontend build is fully integrated into the Gradle lifecycle:
+- Running `./gradlew build` or `./gradlew bootJar` will:
+  1. Execute `npm install` to fetch dependencies.
+  2. Execute `npm run build` to generate optimized production assets.
+  3. Copy the assets into `src/main/resources/static`.
+- These assets are then served by Spring Boot as static resources.
 
 ***
 
