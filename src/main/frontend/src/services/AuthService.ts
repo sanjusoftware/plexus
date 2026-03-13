@@ -5,9 +5,12 @@ export class AuthService {
   private currentBankId: string | null = null;
 
   private createUserManager(bankId: string, issuerUrl: string, clientId?: string): UserManager {
+    if (!clientId) {
+      throw new Error("clientId is required for AuthService initialization");
+    }
     const settings = {
       authority: issuerUrl,
-      client_id: clientId || '36c1e1c7-c5ab-4fef-9faf-04929c1f1cba',
+      client_id: clientId,
       redirect_uri: `${window.location.origin}/auth/callback`,
       response_type: 'code',
       scope: 'openid profile offline_access api://bank-engine-api/access_as_user',

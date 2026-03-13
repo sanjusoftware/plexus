@@ -22,6 +22,12 @@ const LoginPage = () => {
       const response = await axios.get(`/api/v1/public/catalog/config/${bankId}`);
       const { issuerUrl, clientId } = response.data;
 
+      if (!clientId) {
+        setError('client_id is missing for the bank');
+        setLoading(false);
+        return;
+      }
+
       // Store bank info for OIDC flow
       localStorage.setItem('plexus_bank_id', bankId);
       localStorage.setItem('plexus_issuer_url', issuerUrl);

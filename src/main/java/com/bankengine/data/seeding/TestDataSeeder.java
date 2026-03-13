@@ -123,6 +123,7 @@ public class TestDataSeeder implements CommandLineRunner {
             BankConfiguration config = new BankConfiguration();
             config.setBankId(bankId);
             config.setIssuerUrl(issuerUrl);
+            config.setClientId("dev-client-id-" + bankId);
             config.setAllowProductInMultipleBundles(bankId.equals(BANK_A));
 
             List<CategoryConflictRule> rules = new ArrayList<>();

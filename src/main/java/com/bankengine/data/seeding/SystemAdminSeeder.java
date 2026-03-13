@@ -28,6 +28,9 @@ public class SystemAdminSeeder implements CommandLineRunner {
     @Value("${app.security.system-issuer}")
     private String systemIssuer;
 
+    @Value("${springdoc.swagger-ui.oauth.client-id:}")
+    private String defaultClientId;
+
     @Override
     @Transactional
     public void run(String... args) {
@@ -41,19 +44,29 @@ public class SystemAdminSeeder implements CommandLineRunner {
             // 1. Manage System Bank Configuration
             bankConfigurationRepository.findByBankIdUnfiltered(systemBankId).ifPresentOrElse(
                 config -> {
+                    boolean updated = false;
                     if (!normalizedIssuer.equalsIgnoreCase(config.getIssuerUrl())) {
                         config.setIssuerUrl(normalizedIssuer);
-                        bankConfigurationRepository.save(config);
+                        updated = true;
                         System.out.println("Updated issuer for " + systemBankId);
+                    }
+                    if (config.getClientId() == null || config.getClientId().isBlank()) {
+                        config.setClientId(defaultClientId);
+                        updated = true;
+                        System.out.println("Updated client_id for " + systemBankId);
+                    }
+                    if (updated) {
+                        bankConfigurationRepository.save(config);
                     }
                 },
                 () -> {
                     BankConfiguration config = new BankConfiguration();
                     config.setBankId(systemBankId);
                     config.setIssuerUrl(normalizedIssuer);
+                    config.setClientId(defaultClientId);
                     config.setAllowProductInMultipleBundles(true);
                     bankConfigurationRepository.save(config);
-                    System.out.println("Created root bank: " + systemBankId);
+                    System.out.println("Created root bank: " + systemBankId + " with client_id: " + defaultClientId);
                 }
             );
 

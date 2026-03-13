@@ -34,6 +34,12 @@ public class BankConfigurationService extends BaseService {
     @Value("${springdoc.swagger-ui.oauth.client-id:}")
     private String defaultClientId;
 
+    private String getSystemClientId() {
+        return bankConfigurationRepository.findByBankIdUnfiltered(getSystemBankId())
+                .map(BankConfiguration::getClientId)
+                .orElse(defaultClientId);
+    }
+
     @Transactional
     @SystemAdminBypass // Allows SYSTEM to create/update across tenants
     public BankConfigurationResponse createBank(BankConfigurationRequest request) {
@@ -44,7 +50,8 @@ public class BankConfigurationService extends BaseService {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(request.getBankId());
         config.setIssuerUrl(request.getIssuerUrl());
-        config.setClientId(request.getClientId());
+        config.setClientId(request.getClientId() != null && !request.getClientId().isBlank()
+                ? request.getClientId() : getSystemClientId());
         if (request.getCurrencyCode() != null) {
             config.setCurrencyCode(request.getCurrencyCode());
         }
@@ -78,7 +85,7 @@ public class BankConfigurationService extends BaseService {
         }
 
         if (request.getClientId() != null) {
-            config.setClientId(request.getClientId());
+            config.setClientId(request.getClientId().isBlank() ? getSystemClientId() : request.getClientId());
         }
 
         if (request.getCurrencyCode() != null) {
@@ -122,17 +129,16 @@ public class BankConfigurationService extends BaseService {
     }
 
     @Transactional(readOnly = true)
+    @SystemAdminBypass
     public BankConfigurationResponse getPublicBankConfig(String bankId) {
         // Unfiltered because the user is not yet authenticated, so no tenant context
         BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
-        String clientId = config.getClientId() != null ? config.getClientId() : defaultClientId;
-
         return BankConfigurationResponse.builder()
                 .bankId(config.getBankId())
                 .issuerUrl(config.getIssuerUrl())
-                .clientId(clientId)
+                .clientId(config.getClientId())
                 .build();
     }
 
