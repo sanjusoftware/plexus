@@ -8,8 +8,13 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.Query;
+
 public interface PricingComponentRepository extends VersionableRepository<PricingComponent> {
     @EntityGraph(value = "component-with-tiers-values-conditions", type = EntityGraph.EntityGraphType.LOAD)
+    @Query("SELECT DISTINCT pc FROM PricingComponent pc")
     List<PricingComponent> findAllWithDetailsBy();
+
+    @Query("SELECT DISTINCT pc FROM PricingComponent pc WHERE pc.type IN :types")
     List<PricingComponent> findByTypeIn(List<ComponentType> types);
 }
