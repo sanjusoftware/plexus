@@ -9,12 +9,12 @@ Configurable Banking Product & Pricing Engine. A flexible microservice built on 
 Plexus is a scalable banking platform built with Java and Spring Boot. It implements a component-based architecture to provide complete flexibility for product managers.
 
 ## Key Capabilities:
-1.  **Product Catalog Service (PCS):** Define any banking product using flexible, reusable feature components (e.g., tenure, collateral type, network).
-2.  **Pricing Engine Service (PES):** Manage tiered pricing, fees, and interest rates, accessible via a dedicated calculation endpoint.
-3.  **Admin Thin Client (React):** A built-in, multi-tenant administrative UI for platform owners and bank administrators.
-4.  **Role-Based Access Control (RBAC):** Implemented using **JWTs** and a custom **Resource Server** architecture, enabling **granular permission checks** on all API endpoints.
-4.  **Rule Management Service (RMS) Integration:** Supports integration with external rules engines for dynamic calculation of discounts, waivers, and eligibility.
-5.  **Multi-Bank Support:** Designed for global deployment.
+1. **Product Catalog Service (PCS):** Define any banking product using flexible, reusable feature components (e.g., tenure, collateral type, network).
+2. **Pricing Engine Service (PES):** Manage tiered pricing, fees, and interest rates, accessible via a dedicated calculation endpoint.
+3. **Admin Thin Client (React):** A built-in, multi-tenant administrative UI for platform owners and bank administrators.
+4. **Role-Based Access Control (RBAC):** Implemented using **JWTs** and a custom **Resource Server** architecture, enabling **granular permission checks** on all API endpoints.
+5. **Rule Management Service (RMS) Integration:** Supports integration with external rules engines for dynamic calculation of discounts, waivers, and eligibility.
+6. **Multi-Bank Support:** Designed for global deployment.
 
 ***
 

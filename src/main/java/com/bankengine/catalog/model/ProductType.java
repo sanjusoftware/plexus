@@ -13,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "product_type", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"bank_id", "code"})
+        @UniqueConstraint(columnNames = { "bank_id", "code" })
 })
 @Getter
 @Setter
@@ -35,6 +35,6 @@ public class ProductType extends AuditableEntity {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20, columnDefinition = "varchar(20) default 'DRAFT'")
     private VersionableEntity.EntityStatus status = VersionableEntity.EntityStatus.DRAFT;
 }

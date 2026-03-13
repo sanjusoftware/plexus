@@ -78,29 +78,55 @@ def coverageExclusions = [
 
 def frontendDir = "$projectDir/src/main/frontend"
 
-task installFrontend(type: Exec) {
+// Check if `npm` is available on the host. Tasks that require npm will be
+// skipped when npm is not present so the Java build can run on machines
+// without Node installed.
+def isWindows = System.properties['os.name'].toLowerCase().contains('windows')
+def npmCheckCmd = isWindows ? ['cmd','/c','where npm'] : ['sh','-c','which npm']
+def npmAvailable = { ->
+    try {
+        def proc = npmCheckCmd.execute()
+        proc.waitFor()
+        return proc.exitValue() == 0
+    } catch(Exception e) {
+        return false
+    }
+}
+
+tasks.register('installFrontend', Exec) {
+    onlyIf { npmAvailable() && file("$frontendDir/package.json").exists() }
     workingDir "$frontendDir"
     inputs.file("$frontendDir/package.json")
     outputs.dir("$frontendDir/node_modules")
-    commandLine 'npm', 'install'
+    if (isWindows) {
+        commandLine 'cmd', '/c', 'npm', 'install'
+    } else {
+        commandLine 'npm', 'install'
+    }
 }
 
-task buildFrontend(type: Exec) {
-    dependsOn installFrontend
+tasks.register('buildFrontend', Exec) {
+    onlyIf { npmAvailable() && file("$frontendDir/src").exists() }
+    dependsOn 'installFrontend'
     workingDir "$frontendDir"
     inputs.dir("$frontendDir/src")
     inputs.dir("$frontendDir/public")
     outputs.dir("$frontendDir/build")
-    commandLine 'npm', 'run', 'build'
+    if (isWindows) {
+        commandLine 'cmd', '/c', 'npm', 'run', 'build'
+    } else {
+        commandLine 'npm', 'run', 'build'
+    }
 }
 
-task copyFrontend(type: Copy) {
-    dependsOn buildFrontend
+tasks.register('copyFrontend', Copy) {
+    onlyIf { file("$frontendDir/build").exists() }
+    dependsOn 'buildFrontend'
     from "$frontendDir/build"
     into "$buildDir/resources/main/static"
 }
 
-processResources.dependsOn copyFrontend
+processResources.dependsOn 'copyFrontend'
 
 tasks.named('test') {
     useJUnitPlatform()
@@ -113,7 +139,7 @@ tasks.named('test') {
 }
 
 jacocoTestReport {
-    dependsOn test, compileJava, processResources, copyFrontend
+    dependsOn test, compileJava, processResources, 'copyFrontend'
     reports {
         xml.required = true
         html.required = true

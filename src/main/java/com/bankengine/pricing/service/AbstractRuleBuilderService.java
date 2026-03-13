@@ -76,9 +76,22 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 .toList();
 
         for (PricingComponent component : components) {
-            String body = component.getPricingTiers().stream()
-                    .map(tier -> buildSingleRule(component, tier))
-                    .collect(Collectors.joining("\n\n"));
+            // Deduplicate tiers by code to guard against duplicate join-fetch results
+            List<PricingTier> tiers = component.getPricingTiers() == null ? List.of() :
+                component.getPricingTiers().stream()
+                    .collect(Collectors.toMap(
+                        t -> t.getCode(),
+                        t -> t,
+                        (existing, replacement) -> existing,
+                        java.util.LinkedHashMap::new
+                    ))
+                    .values()
+                    .stream()
+                    .toList();
+
+            String body = tiers.stream()
+                .map(tier -> buildSingleRule(component, tier))
+                .collect(Collectors.joining("\n\n"));
             drl.append(body).append("\n\n");
         }
 

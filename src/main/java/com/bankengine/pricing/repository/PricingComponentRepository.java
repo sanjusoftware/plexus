@@ -1,14 +1,13 @@
 package com.bankengine.pricing.repository;
 
+import java.util.List;
+
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Query;
+
 import com.bankengine.common.repository.VersionableRepository;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingComponent.ComponentType;
-import org.springframework.data.jpa.repository.EntityGraph;
-
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.data.jpa.repository.Query;
 
 public interface PricingComponentRepository extends VersionableRepository<PricingComponent> {
     @EntityGraph(value = "component-with-tiers-values-conditions", type = EntityGraph.EntityGraphType.LOAD)
