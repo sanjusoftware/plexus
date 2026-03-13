@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.is;
+import com.bankengine.auth.security.TenantContextHolder;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -62,6 +64,15 @@ class PublicCatalogIntegrationTest extends AbstractIntegrationTest {
     void testPublicBrowse() throws Exception {
         mockMvc.perform(get("/api/v1/public/catalog/products"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Public Access - Get bank config should work without login even if context is empty")
+    void testPublicBankConfigNoContext() throws Exception {
+        TenantContextHolder.clear(); // Simulate no authentication context at all
+        mockMvc.perform(get("/api/v1/public/catalog/config/SYSTEM"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bankId", is("SYSTEM")));
     }
 
     @Test

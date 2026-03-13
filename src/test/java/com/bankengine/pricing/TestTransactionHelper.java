@@ -342,6 +342,7 @@ public class TestTransactionHelper {
 
             config.setBankId(bankId);
             config.setIssuerUrl(issuerUrl);
+            config.setClientId("test-client-id-" + bankId);
             config.setAllowProductInMultipleBundles(true);
 
             return bankConfigurationRepository.save(config);

@@ -399,12 +399,24 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
 {
   "bankId": "GLOBAL-BANK-001",
   "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
+  "clientId": "36c1e1c7-c5ab-4fef-9faf-04929c1f1cba",
   "allowProductInMultipleBundles": true,
   "categoryConflictRules": [
     { "categoryA": "RETAIL", "categoryB": "WEALTH" }
   ]
 }
 ```
+
+### Note on `clientId`:
+The `clientId` is a mandatory field. It represents the Application (Client) ID registered in the tenant bank's Identity Provider (IDP).
+- If not provided during onboarding, it defaults to the `clientId` of the `SYSTEM` bank.
+- This ID is required by the React Admin Client to initiate the OIDC login flow.
+
+**Instructions for Tenant IDP Admins:**
+1. Register a new "Single Page Application" (SPA) in your IDP (e.g., EntraID, Keycloak).
+2. Configure the Redirect URI to: `http://localhost:8080/auth/callback` (or your production domain).
+3. Enable "Authorization Code Flow with PKCE".
+4. Provide the resulting **Application (Client) ID** to the Plexus System Admin for onboarding.
 
 > **Note on Isolation**: Even though the `SYSTEM_ADMIN` creates the bank, they cannot see the bank's products or pricing data. Their authorities are restricted to `system:*` and `auth:*`.
 
