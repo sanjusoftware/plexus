@@ -60,7 +60,21 @@ public abstract class AbstractRuleBuilderService extends BaseService {
         StringBuilder drl = new StringBuilder();
         drl.append(getDrlHeader());
 
-        List<PricingComponent> components = fetchComponents();
+        List<PricingComponent> allComponents = fetchComponents();
+
+        // Ensure we only process each component (code + version) once to avoid duplicate rule names
+        // This handles cases where the repository might return duplicates due to join fetches
+        List<PricingComponent> components = allComponents.stream()
+                .collect(Collectors.toMap(
+                        c -> c.getCode() + ":" + c.getVersion(),
+                        c -> c,
+                        (existing, replacement) -> existing,
+                        java.util.LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .toList();
+
         for (PricingComponent component : components) {
             String body = component.getPricingTiers().stream()
                     .map(tier -> buildSingleRule(component, tier))
