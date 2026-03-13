@@ -97,18 +97,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
 
         String finalDrl = components.isEmpty() ? buildPlaceholderRules() : drl.toString();
 
-        // --- DEBUG LOGGING ADDED HERE ---
-        logGeneratedDrl(finalDrl);
-
         return finalDrl;
-    }
-
-    private void logGeneratedDrl(String drl) {
-        log.info("========================================================");
-        log.info("GENERATED DRL FOR PACKAGE: " + getPackageSubPath());
-        log.info("========================================================");
-        log.info(drl);
-        log.info("========================================================");
     }
 
     private String buildSingleRule(PricingComponent component, PricingTier tier) {
@@ -118,12 +107,6 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 getPackageSubPath().toUpperCase(), getSafeBankIdForDrl(),
                 component.getCode(), component.getVersion(), tier.getCode(), tier.getId());
 
-        // Added a debug print to the RHS (then) of the rule so you know if it fires
-        String rhsWithLogging = String.format("""
-                log.info("🔥 Rule Fired: %s");
-                %s
-                """, ruleName, buildRHSAction(component, tier));
-
         return String.format("""
                 rule "%s"
                     no-loop true
@@ -132,7 +115,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 %s
                     then
                 %s
-                end""", ruleName, tier.getPriority(), buildLHSCondition(tier, component.getCode(), component.getVersion()), rhsWithLogging);
+                end""", ruleName, tier.getPriority(), buildLHSCondition(tier, component.getCode(), component.getVersion()), buildRHSAction(component, tier));
     }
 
     // --- Common Shared Logic ---
