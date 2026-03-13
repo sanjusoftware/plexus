@@ -35,6 +35,6 @@ public class ProductType extends AuditableEntity {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20, columnDefinition = "VARCHAR(20) DEFAULT 'DRAFT'")
     private VersionableEntity.EntityStatus status = VersionableEntity.EntityStatus.DRAFT;
 }

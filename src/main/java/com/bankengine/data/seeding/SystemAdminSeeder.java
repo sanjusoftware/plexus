@@ -58,19 +58,35 @@ public class SystemAdminSeeder implements CommandLineRunner {
             );
 
             // 2. Manage SYSTEM_ADMIN Role
-            if (roleRepository.findByNameAndBankId("SYSTEM_ADMIN", systemBankId).isEmpty()) {
-                Role admin = new Role();
-                admin.setName("SYSTEM_ADMIN");
-                admin.setBankId(systemBankId);
-                admin.setAuthorities(Set.of(
-                    "system:bank:write",
-                    "system:bank:read",
-                    "auth:role:write",
-                    "auth:role:read"
-                ));
-                roleRepository.save(admin);
-                System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);
-            }
+            roleRepository.findByNameAndBankId("SYSTEM_ADMIN", systemBankId).ifPresentOrElse(
+                role -> {
+                    // Update authorities if they change
+                    Set<String> requiredAuthorities = Set.of(
+                            "system:bank:write",
+                            "system:bank:read",
+                            "auth:role:write",
+                            "auth:role:read"
+                    );
+                    if (!role.getAuthorities().equals(requiredAuthorities)) {
+                        role.setAuthorities(requiredAuthorities);
+                        roleRepository.save(role);
+                        System.out.println("Updated SYSTEM_ADMIN authorities for " + systemBankId);
+                    }
+                },
+                () -> {
+                    Role admin = new Role();
+                    admin.setName("SYSTEM_ADMIN");
+                    admin.setBankId(systemBankId);
+                    admin.setAuthorities(Set.of(
+                            "system:bank:write",
+                            "system:bank:read",
+                            "auth:role:write",
+                            "auth:role:read"
+                    ));
+                    roleRepository.save(admin);
+                    System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);
+                }
+            );
         } finally {
             TenantContextHolder.clear();
         }

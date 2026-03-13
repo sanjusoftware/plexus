@@ -76,7 +76,20 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 .toList();
 
         for (PricingComponent component : components) {
-            String body = component.getPricingTiers().stream()
+            // Deduplicate tiers by ID to prevent duplicate rules if the JPA fetch caused Cartesian products
+            List<PricingTier> uniqueTiers = component.getPricingTiers().stream()
+                    .filter(t -> t.getId() != null)
+                    .collect(Collectors.toMap(
+                            PricingTier::getId,
+                            t -> t,
+                            (existing, replacement) -> existing,
+                            java.util.LinkedHashMap::new
+                    ))
+                    .values()
+                    .stream()
+                    .toList();
+
+            String body = uniqueTiers.stream()
                     .map(tier -> buildSingleRule(component, tier))
                     .collect(Collectors.joining("\n\n"));
             drl.append(body).append("\n\n");
@@ -99,9 +112,11 @@ public abstract class AbstractRuleBuilderService extends BaseService {
     }
 
     private String buildSingleRule(PricingComponent component, PricingTier tier) {
-        String ruleName = String.format("%s_%s_%s_V%d_Tier_%s",
+        // Include tier ID to ensure uniqueness, especially when multiple tiers might share codes
+        // or during Cartesian product issues in JPA fetches.
+        String ruleName = String.format("%s_%s_%s_V%d_Tier_%s_%d",
                 getPackageSubPath().toUpperCase(), getSafeBankIdForDrl(),
-                component.getCode(), component.getVersion(), tier.getCode());
+                component.getCode(), component.getVersion(), tier.getCode(), tier.getId());
 
         // Added a debug print to the RHS (then) of the rule so you know if it fires
         String rhsWithLogging = String.format("""
