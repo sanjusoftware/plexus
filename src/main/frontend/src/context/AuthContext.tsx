@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from 'oidc-client-ts';
-import { authService } from '../services/AuthService';
+import { authService, UserProfile } from '../services/AuthService';
+import axios from 'axios';
 
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   loading: boolean;
-  login: (bankId: string, issuerUrl: string, clientId?: string) => Promise<void>;
+  login: (bankId: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   bankId: string | null;
@@ -14,30 +14,37 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [bankId, setBankId] = useState<string | null>(null);
 
   useEffect(() => {
+    axios.defaults.withCredentials = true;
+
+    const interceptor = axios.interceptors.request.use((config) => {
+      const token = authService.getCsrfToken();
+      if (token) {
+        config.headers['X-XSRF-TOKEN'] = token;
+      }
+      return config;
+    });
+
     const initAuth = async () => {
-      const storedBankId = localStorage.getItem('plexus_bank_id');
       const currentUser = await authService.getUser();
       setUser(currentUser);
-      setBankId(storedBankId);
       setLoading(false);
     };
     initAuth();
+
+    return () => axios.interceptors.request.eject(interceptor);
   }, []);
 
-  const login = async (bankId: string, issuerUrl: string, clientId?: string) => {
-    await authService.init(bankId, issuerUrl, clientId);
-    await authService.login();
+  const login = async (bankId: string) => {
+    await authService.login(bankId);
   };
 
   const logout = async () => {
     await authService.logout();
     setUser(null);
-    setBankId(null);
   };
 
   return (
@@ -47,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       isAuthenticated: !!user,
-      bankId
+      bankId: user?.bank_id || null
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Cpu, ArrowLeft, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
@@ -19,23 +18,8 @@ const LoginPage = () => {
     setError('');
 
     try {
-      const response = await axios.get(`/api/v1/public/catalog/config/${bankId}`);
-      const { issuerUrl, clientId } = response.data;
-
-      if (!clientId) {
-        setError('client_id is missing for the bank');
-        setLoading(false);
-        return;
-      }
-
-      // Store bank info for OIDC flow
-      localStorage.setItem('plexus_bank_id', bankId);
-      localStorage.setItem('plexus_issuer_url', issuerUrl);
-      if (clientId) localStorage.setItem('plexus_client_id', clientId);
-
-      // Trigger OIDC redirect
-      await login(bankId, issuerUrl, clientId);
-
+      // Trigger OIDC redirect via backend BFF
+      await login(bankId);
     } catch (err) {
       setError('Invalid Bank ID or bank not configured.');
     } finally {
