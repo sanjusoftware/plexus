@@ -399,7 +399,7 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
 {
   "bankId": "GLOBAL-BANK-001",
   "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
-  "clientId": "36c1e1c7-c5ab-4fef-9faf-04929c1f1cba",
+  "clientId": "bank-engine-api",
   "allowProductInMultipleBundles": true,
   "categoryConflictRules": [
     { "categoryA": "RETAIL", "categoryB": "WEALTH" }
