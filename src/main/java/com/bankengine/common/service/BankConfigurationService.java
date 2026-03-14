@@ -52,6 +52,8 @@ public class BankConfigurationService extends BaseService {
         config.setIssuerUrl(request.getIssuerUrl());
         config.setClientId(request.getClientId() != null && !request.getClientId().isBlank()
                 ? request.getClientId() : getSystemClientId());
+        config.setClientSecret(request.getClientSecret());
+
         if (request.getCurrencyCode() != null) {
             config.setCurrencyCode(request.getCurrencyCode());
         }
@@ -86,6 +88,10 @@ public class BankConfigurationService extends BaseService {
 
         if (request.getClientId() != null) {
             config.setClientId(request.getClientId().isBlank() ? getSystemClientId() : request.getClientId());
+        }
+
+        if (request.getClientSecret() != null) {
+            config.setClientSecret(request.getClientSecret().isBlank() ? null : request.getClientSecret());
         }
 
         if (request.getCurrencyCode() != null) {
@@ -139,6 +145,7 @@ public class BankConfigurationService extends BaseService {
                 .bankId(config.getBankId())
                 .issuerUrl(config.getIssuerUrl())
                 .clientId(config.getClientId())
+                .hasClientSecret(config.getClientSecret() != null && !config.getClientSecret().isBlank())
                 .build();
     }
 
@@ -179,6 +186,7 @@ public class BankConfigurationService extends BaseService {
                 .allowProductInMultipleBundles(config.isAllowProductInMultipleBundles())
                 .issuerUrl(config.getIssuerUrl())
                 .clientId(config.getClientId())
+                .hasClientSecret(config.getClientSecret() != null && !config.getClientSecret().isBlank())
                 .categoryConflictRules(config.getCategoryConflictRules().stream()
                         .map(r -> new BankConfigurationRequest.CategoryConflictDto(r.getCategoryA(), r.getCategoryB()))
                         .collect(Collectors.toList()))

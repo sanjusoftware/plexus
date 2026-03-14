@@ -52,4 +52,7 @@ public class BankConfiguration extends AuditableEntity {
 
     @Column(name = "client_id", nullable = false)
     private String clientId;
+
+    @Column(name = "client_secret")
+    private String clientSecret;
 }

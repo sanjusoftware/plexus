@@ -63,6 +63,7 @@ class BankConfigurationServiceTest extends BaseServiceTest {
     void createBank_ShouldSaveConfigAndCreateSuperAdmin() {
         // Arrange
         TenantContextHolder.setBankId("SYSTEM");
+        standardRequest.setClientSecret("secret123");
         when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of("catalog:read", "system:admin"));
         when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.empty());
 
@@ -73,8 +74,11 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         assertEquals(standardRequest.getIssuerUrl(), response.getIssuerUrl());
         assertEquals(standardRequest.getCurrencyCode(), response.getCurrencyCode());
         assertTrue(response.isAllowProductInMultipleBundles());
+        assertTrue(response.isHasClientSecret());
 
-        verify(bankConfigurationRepository).save(any(BankConfiguration.class));
+        ArgumentCaptor<BankConfiguration> configCaptor = ArgumentCaptor.forClass(BankConfiguration.class);
+        verify(bankConfigurationRepository).save(configCaptor.capture());
+        assertEquals("secret123", configCaptor.getValue().getClientSecret());
 
         ArgumentCaptor<Role> roleCaptor = ArgumentCaptor.forClass(Role.class);
         verify(roleRepository).save(roleCaptor.capture());
@@ -98,10 +102,13 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         existing.setCategoryConflictRules(new ArrayList<>());
         when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(existing));
 
+        standardRequest.setClientSecret("new-secret");
         BankConfigurationResponse response = bankConfigurationService.updateBank(standardRequest);
 
         assertNotNull(response);
         assertTrue(response.isAllowProductInMultipleBundles());
+        assertTrue(response.isHasClientSecret());
+        assertEquals("new-secret", existing.getClientSecret());
         verify(bankConfigurationRepository).save(existing);
     }
 

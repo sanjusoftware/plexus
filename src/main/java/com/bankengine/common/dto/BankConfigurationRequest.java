@@ -17,6 +17,7 @@ public class BankConfigurationRequest {
     private List<CategoryConflictDto> categoryConflictRules;
     private String issuerUrl;
     private String clientId;
+    private String clientSecret;
     private String currencyCode;
 
     @Data

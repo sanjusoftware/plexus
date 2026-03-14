@@ -75,6 +75,21 @@ Isolation is enforced at the database level using a shared-schema, row-level fil
   - `allowProductInMultipleBundles`: Business rule flag.
 - **`Role`**: Bank-specific roles (e.g., `BANK_ADMIN` for `BANK_A`) are stored with their mapped permissions.
 
+## 3. BFF Authentication Architecture (Secret-less)
+Plexus utilizes a **Backend-for-Frontend (BFF)** pattern for authentication, providing a secure and simplified onboarding experience for banks.
+
+### How it Works:
+1.  **Confidential Client:** The Spring Boot backend acts as the OAuth2 Confidential Client. It handles the OIDC flow entirely, ensuring that sensitive OIDC tokens (ID tokens, Access tokens) are never exposed to the browser.
+2.  **Session-Based Security:** Once authentication is successful, the backend establishes a secure, HttpOnly, encrypted session with the React frontend. The frontend communicates with the API using a standard session cookie, protected by CSRF tokens.
+3.  **Secret-less PKCE Flow:** By default, Plexus uses **PKCE (Proof Key for Code Exchange)** for the OIDC flow, even for the backend client.
+    - **No Client Secret Required:** This allows banks to onboard without sharing a `client_secret` with the platform, significantly reducing security risks and simplifying their internal IT approval processes.
+    - **Legacy Support:** While PKCE is preferred, the platform optionally supports a `client_secret` for Identity Providers that do not yet support secret-less flows for confidential clients.
+
+### Benefits:
+- **Zero-Trust Onboarding:** Banks never have to hand over their IDP secrets.
+- **Enhanced Security:** OIDC tokens are kept exclusively in the backend.
+- **Simplicity:** Onboarding only requires a `bankId`, `issuerUrl`, and `clientId`.
+
 ***
 
 # Product Catalog and Pricing Model
@@ -400,6 +415,7 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
   "bankId": "GLOBAL-BANK-001",
   "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
   "clientId": "bank-engine-api",
+  "clientSecret": "optional-secret-only-if-required-by-idp",
   "allowProductInMultipleBundles": true,
   "categoryConflictRules": [
     { "categoryA": "RETAIL", "categoryB": "WEALTH" }
@@ -407,10 +423,9 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
 }
 ```
 
-### Note on `clientId`:
-The `clientId` is a mandatory field. It represents the Application (Client) ID registered in the tenant bank's Identity Provider (IDP).
-- If not provided during onboarding, it defaults to the `clientId` of the `SYSTEM` bank.
-- This ID is required by the React Admin Client to initiate the OIDC login flow.
+### Note on `clientId` and `clientSecret`:
+- **`clientId`**: Mandatory. The Application (Client) ID registered in the tenant bank's IDP. If omitted, it defaults to the `SYSTEM` bank's ID.
+- **`clientSecret`**: **Optional**. Only required if the tenant's IDP does not support PKCE for confidential clients. For security, Plexus uses PKCE by default, so most banks should leave this field empty.
 
 **Instructions for Tenant IDP Admins:**
 1. Register a new "Single Page Application" (SPA) in your IDP (e.g., EntraID, Keycloak).

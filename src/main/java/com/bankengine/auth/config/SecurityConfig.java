@@ -61,6 +61,10 @@ public class SecurityConfig {
                 .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
+        // Configure Authorization Request Resolver to keep bankId in session for callback matching
+        // Alternatively, use a custom AuthorizationCodeTokenResponseClient or similar if needed.
+        // For now, we will use a common callback and ensure registration matching.
+
         if (csrfEnabled) {
             http.csrf(csrf -> csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
@@ -97,6 +101,7 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .clientRegistrationRepository(clientRegistrationRepository)
+                        .loginProcessingUrl("/login/oauth2/code/callback")
                         .defaultSuccessUrl("/dashboard", true)
                         .failureUrl("/login?error=auth_failed")
                 )

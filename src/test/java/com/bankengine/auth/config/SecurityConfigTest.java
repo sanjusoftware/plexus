@@ -25,13 +25,14 @@ class SecurityConfigTest {
     @Mock private BankConfigurationRepository bankConfigurationRepository;
     @Mock private CustomAuthenticationEntryPoint authenticationEntryPoint;
     @Mock private CustomAccessDeniedHandler accessDeniedHandler;
+    @Mock private DynamicClientRegistrationRepository clientRegistrationRepository;
 
     private SecurityConfig securityConfig;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        securityConfig = new SecurityConfig(jwtAuthConverter, tenantContextFilter, bankConfigurationRepository, authenticationEntryPoint, accessDeniedHandler);
+        securityConfig = new SecurityConfig(jwtAuthConverter, tenantContextFilter, bankConfigurationRepository, authenticationEntryPoint, accessDeniedHandler, clientRegistrationRepository);
     }
 
     @Test
