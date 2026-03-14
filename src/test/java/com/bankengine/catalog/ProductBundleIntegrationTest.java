@@ -84,7 +84,8 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
             config.setCategoryConflictRules(new ArrayList<>(List.of(
                     new CategoryConflictRule("RETAIL", "WEALTH")
             )));
-            config.setIssuerUrl("https://trusted-issuer.com");
+            config.setIssuerUrl(TEST_BANK_ISS_URL);
+            config.setClientId(TEST_BANK_CLINET_ID);
             bankConfigRepository.save(config);
 
             ProductBundle bundle = txHelper.setupFullBundleWithPricing(

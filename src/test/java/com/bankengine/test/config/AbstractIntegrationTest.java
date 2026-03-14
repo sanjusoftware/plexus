@@ -21,6 +21,8 @@ import java.util.Set;
 @MockBean(JwtDecoder.class)
 public abstract class AbstractIntegrationTest {
     public static final String TEST_BANK_ID = "BANK_A";
+    public static final String TEST_BANK_CLINET_ID = "36c1e1c7-c5ab-4fef-9faf-04929c1f1cba";
+    public static final String TEST_BANK_ISS_URL = "https://trusted-issuer.com";
     @Autowired protected EntityManager entityManager;
 
     @BeforeEach

@@ -42,7 +42,9 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     // Standard test issuers
     private static final String ISSUER_A = "https://login.microsoftonline.com/tenant-a/v2.0";
+    private static final String CLIENT_ID_A = "CLIENT_ID_A";
     private static final String ISSUER_B = "https://login.microsoftonline.com/tenant-b/v2.0";
+    private static final String CLIENT_ID_B = "CLIENT_ID_B";
     private static final String NEW_ISSUER = "https://login.microsoftonline.com/new-tenant/v2.0";
 
     @BeforeAll
@@ -101,15 +103,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithSystemAdminRole
     void systemAdmin_CanUpdateBankById() throws Exception {
-        txHelper.doInTransaction(() -> {
-            TenantContextHolder.setSystemMode(true);
-            BankConfiguration bank = new BankConfiguration();
-            bank.setBankId("ID_UPDATE_TEST");
-            bank.setIssuerUrl(ISSUER_A);
-            bankConfigurationRepository.save(bank);
-            return null;
-        });
-
+        createBank("ID_UPDATE_TEST");
         BankConfigurationRequest updateRequest = BankConfigurationRequest.builder()
                 .allowProductInMultipleBundles(true)
                 .issuerUrl(NEW_ISSUER)
@@ -133,11 +127,13 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
             BankConfiguration otherBank = new BankConfiguration();
             otherBank.setBankId("BANK_B");
             otherBank.setIssuerUrl(ISSUER_B);
+            otherBank.setClientId(CLIENT_ID_B);
             otherBank.setAllowProductInMultipleBundles(false);
 
             BankConfiguration ownBank = new BankConfiguration();
             ownBank.setBankId("BANK_A");
             ownBank.setIssuerUrl(ISSUER_A);
+            ownBank.setClientId(CLIENT_ID_A);
             ownBank.setAllowProductInMultipleBundles(true);
 
             bankConfigurationRepository.saveAll(List.of(otherBank, ownBank));
@@ -191,21 +187,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithSystemAdminRole
     void systemAdmin_CanUpdateBank() throws Exception {
-        txHelper.doInTransaction(() -> {
-            try {
-                TenantContextHolder.setSystemMode(true);
-                BankConfiguration bank = new BankConfiguration();
-                bank.setBankId("UPDATE_TEST");
-                bank.setIssuerUrl(ISSUER_A);
-                bank.setAllowProductInMultipleBundles(false);
-                bankConfigurationRepository.save(bank);
-                return null;
-            } finally {
-                TenantContextHolder.setSystemMode(false);
-            }
-        });
-
-        // 2. Update via API
+        createBank("UPDATE_TEST");
         BankConfigurationRequest updateRequest = BankConfigurationRequest.builder()
                 .bankId("UPDATE_TEST")
                 .allowProductInMultipleBundles(true)
@@ -223,20 +205,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {BANK_A_ADMIN_ROLE}, bankId = "BANK_A")
     void bankAdmin_CanUpdateOwnBank() throws Exception {
-        txHelper.doInTransaction(() -> {
-            try {
-                TenantContextHolder.setSystemMode(true);
-                BankConfiguration bank = new BankConfiguration();
-                bank.setBankId("BANK_A");
-                bank.setIssuerUrl(ISSUER_A);
-                bank.setAllowProductInMultipleBundles(false);
-                bankConfigurationRepository.save(bank);
-                return null;
-            } finally {
-                TenantContextHolder.setSystemMode(false);
-            }
-        });
-
+        createBank("BANK_A");
         BankConfigurationRequest request = BankConfigurationRequest.builder()
                 .bankId("BANK_A")
                 .allowProductInMultipleBundles(true)
@@ -253,15 +222,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithSystemAdminRole
     void systemAdmin_CannotCreateDuplicateIssuer() throws Exception {
-        txHelper.doInTransaction(() -> {
-            TenantContextHolder.setSystemMode(true);
-            BankConfiguration bank = new BankConfiguration();
-            bank.setBankId("EXISTING_BANK");
-            bank.setIssuerUrl(ISSUER_A);
-            bankConfigurationRepository.save(bank);
-            return null;
-        });
-
+        createBank("EXISTING_BANK");
         BankConfigurationRequest request = BankConfigurationRequest.builder()
                 .bankId("DUPLICATE_BANK")
                 .allowProductInMultipleBundles(true)
@@ -290,4 +251,22 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 // This validates your specific log/error message logic
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Untrusted issuer")));
     }
+
+    private void createBank(String bank_id) {
+        txHelper.doInTransaction(() -> {
+            try {
+                TenantContextHolder.setSystemMode(true);
+                BankConfiguration bank = new BankConfiguration();
+                bank.setBankId(bank_id);
+                bank.setIssuerUrl(ISSUER_A);
+                bank.setClientId(CLIENT_ID_A);
+                bank.setAllowProductInMultipleBundles(false);
+                bankConfigurationRepository.save(bank);
+                return null;
+            } finally {
+                TenantContextHolder.setSystemMode(false);
+            }
+        });
+    }
+
 }
