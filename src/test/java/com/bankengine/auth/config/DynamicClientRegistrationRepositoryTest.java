@@ -14,8 +14,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.test.util.ReflectionTestUtils;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 class DynamicClientRegistrationRepositoryTest {
 
@@ -27,7 +30,17 @@ class DynamicClientRegistrationRepositoryTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        repository = new DynamicClientRegistrationRepository(bankConfigurationRepository);
+        repository = spy(new DynamicClientRegistrationRepository(bankConfigurationRepository));
+        ReflectionTestUtils.setField(repository, "apiScope", "api://test-scope");
+
+        // Mock createBuilder to avoid real OIDC discovery calls
+        doAnswer(invocation -> {
+            String issuer = invocation.getArgument(0);
+            return ClientRegistration.withRegistrationId("temp")
+                    .authorizationUri(issuer + "/auth")
+                    .tokenUri(issuer + "/token")
+                    .jwkSetUri(issuer + "/keys");
+        }).when(repository).createBuilder(anyString());
     }
 
     @Test
@@ -45,6 +58,27 @@ class DynamicClientRegistrationRepositoryTest {
         assertThat(registration.getRegistrationId()).isEqualTo("TEST_BANK");
         assertThat(registration.getClientId()).isEqualTo("test-client");
         assertThat(registration.getClientAuthenticationMethod()).isEqualTo(ClientAuthenticationMethod.NONE);
+        assertThat(registration.getScopes()).contains("api://test-scope");
+        assertThat(registration.getRedirectUri()).isEqualTo("{baseUrl}/login/oauth2/code/callback");
+    }
+
+    @Test
+    void findByRegistrationId_ShouldReturnRegistrationWithSecret_WhenBankHasSecret() {
+        BankConfiguration config = BankConfiguration.builder()
+                .bankId("SECRET_BANK")
+                .clientId("secret-client")
+                .clientSecret("secret-value")
+                .issuerUrl("http://issuer")
+                .build();
+        when(bankConfigurationRepository.findByBankIdUnfiltered("SECRET_BANK")).thenReturn(Optional.of(config));
+
+        ClientRegistration registration = repository.findByRegistrationId("SECRET_BANK");
+
+        assertThat(registration).isNotNull();
+        assertThat(registration.getRegistrationId()).isEqualTo("SECRET_BANK");
+        assertThat(registration.getClientId()).isEqualTo("secret-client");
+        assertThat(registration.getClientSecret()).isEqualTo("secret-value");
+        assertThat(registration.getClientAuthenticationMethod()).isEqualTo(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
     }
 
 
