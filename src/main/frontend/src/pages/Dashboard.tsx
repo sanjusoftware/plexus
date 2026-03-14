@@ -13,7 +13,7 @@ const Dashboard = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const authorities = (user?.profile?.roles as string[]) || [];
+  const authorities = (user?.roles as string[]) || [];
   const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
   const isBankAdmin = authorities.includes('BANK_ADMIN');
 
@@ -27,17 +27,13 @@ const Dashboard = () => {
       if (!user) return;
       setLoading(true);
       try {
-        const config = {
-          headers: { Authorization: `Bearer ${user.access_token}` }
-        };
-
         if (isSystemAdmin) {
           // System Admin sees all banks
-          const response = await axios.get('/api/v1/banks', config);
+          const response = await axios.get('/api/v1/banks');
           setData(response.data || []);
         } else {
           // Bank Admin sees their products
-          const response = await axios.get('/api/v1/products', config);
+          const response = await axios.get('/api/v1/products');
           setData(response.data.content || []);
         }
       } catch (err) {
@@ -104,7 +100,7 @@ const Dashboard = () => {
           </h1>
           <div className="flex items-center space-x-4">
             <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">{user?.profile?.name || user?.profile?.sub}</p>
+              <p className="text-sm font-semibold text-gray-900">{user?.name || user?.sub}</p>
               <p className="text-xs text-gray-500">{authorities.join(', ')}</p>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -141,8 +137,8 @@ const Dashboard = () => {
               <h3 className="text-2xl font-bold text-blue-600">{bankId}</h3>
             </div>
             <div className="bg-white p-6 rounded-2xl border shadow-sm">
-              <p className="text-gray-500 text-sm font-medium uppercase mb-1">Authorised Scopes</p>
-              <h3 className="text-xl font-bold text-gray-700 truncate">{user?.scope}</h3>
+              <p className="text-gray-500 text-sm font-medium uppercase mb-1">Email</p>
+              <h3 className="text-xl font-bold text-gray-700 truncate">{user?.email}</h3>
             </div>
           </div>
 

@@ -5,6 +5,7 @@ import com.bankengine.common.repository.BankConfigurationRepository;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,7 +13,6 @@ import org.springframework.security.authentication.AuthenticationManagerResolver
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -21,6 +21,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 import java.text.ParseException;
 
@@ -35,23 +36,41 @@ public class SecurityConfig {
     private final BankConfigurationRepository bankConfigurationRepository;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
+    private final DynamicClientRegistrationRepository clientRegistrationRepository;
 
     public SecurityConfig(JwtAuthConverter jwtAuthConverter,
                           TenantContextFilter tenantContextFilter,
-                          BankConfigurationRepository bankConfigurationRepository, CustomAuthenticationEntryPoint authenticationEntryPoint, CustomAccessDeniedHandler accessDeniedHandler) {
+                          BankConfigurationRepository bankConfigurationRepository,
+                          CustomAuthenticationEntryPoint authenticationEntryPoint,
+                          CustomAccessDeniedHandler accessDeniedHandler,
+                          DynamicClientRegistrationRepository clientRegistrationRepository) {
         this.jwtAuthConverter = jwtAuthConverter;
         this.tenantContextFilter = tenantContextFilter;
         this.bankConfigurationRepository = bankConfigurationRepository;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
+        this.clientRegistrationRepository = clientRegistrationRepository;
     }
+
+    @Value("${app.security.csrf.enabled:true}")
+    private boolean csrfEnabled;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+
+        if (csrfEnabled) {
+            http.csrf(csrf -> csrf
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                    .ignoringRequestMatchers("/api/v1/public/catalog/**", "/api/v1/auth/login", "/h2-console/**", "/api/v1/pricing/calculate**")
+            );
+        } else {
+            http.csrf(csrf -> csrf.disable());
+        }
+
+        http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/",
@@ -69,11 +88,17 @@ public class SecurityConfig {
                                 "/h2-console/**",
                                 "/error",
                                 "/actuator/health",
-                                "/api/v1/public/catalog/**"
+                                "/api/v1/public/catalog/**",
+                                "/api/v1/auth/login"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products").authenticated()
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .clientRegistrationRepository(clientRegistrationRepository)
+                        .defaultSuccessUrl("/dashboard", true)
+                        .failureUrl("/login?error=auth_failed")
                 )
                 // Use the Dynamic Resolver instead of a static JWT Decoder
                 .oauth2ResourceServer(oauth2 -> oauth2

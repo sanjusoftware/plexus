@@ -1,23 +1,21 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/AuthService';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    const processCallback = async () => {
-      try {
-        await authService.handleCallback();
+    if (!loading) {
+      if (user) {
         navigate('/dashboard');
-      } catch (err) {
-        console.error('Login failed:', err);
+      } else {
         navigate('/login?error=auth_failed');
       }
-    };
-    processCallback();
-  }, [navigate]);
+    }
+  }, [user, loading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
