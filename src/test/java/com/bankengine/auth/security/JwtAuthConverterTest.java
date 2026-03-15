@@ -41,32 +41,36 @@ class JwtAuthConverterTest {
     void convert_ShouldThrowException_WhenBankNotActive() {
         String bankId = "BANK_B";
         String issuer = "https://trusted.com";
+        String clientId = "client-b";
 
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
-                .claim("bank_id", bankId)
+                .claim("azp", clientId)
                 .claim("iss", issuer)
                 .build();
 
         BankConfiguration config = new BankConfiguration();
         config.setBankId(bankId);
         config.setIssuerUrl(issuer);
+        config.setClientId(clientId);
         config.setStatus(com.bankengine.common.model.BankStatus.REQUEST); // NOT ACTIVE
 
-        when(bankConfigurationRepository.findByBankIdUnfiltered(bankId)).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
+                .thenReturn(Optional.of(config));
 
         assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
     }
 
     @Test
-    void convert_ShouldSucceed_WhenBankIdAndIssuerMatch() {
+    void convert_ShouldSucceed_WhenIssuerAndClientIdMatch() {
         String bankId = "BANK_A";
         String issuer = "https://login.microsoftonline.com/tenant-a/v2.0";
+        String clientId = "client-a";
 
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
                 .claim("sub", "user-123")
-                .claim("bank_id", bankId)
+                .claim("azp", clientId)
                 .claim("iss", issuer)
                 .claim("roles", List.of("ADMIN"))
                 .build();
@@ -74,9 +78,11 @@ class JwtAuthConverterTest {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(bankId);
         config.setIssuerUrl(issuer);
+        config.setClientId(clientId);
         config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
-        when(bankConfigurationRepository.findByBankIdUnfiltered(bankId)).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
+                .thenReturn(Optional.of(config));
         when(permissionMappingService.getPermissionsForRoles(List.of("ADMIN")))
                 .thenReturn(Set.of("READ_PRODUCT"));
 
@@ -91,18 +97,17 @@ class JwtAuthConverterTest {
 
     @Test
     void convert_ShouldThrowException_WhenIssuerMismatches() {
+        String issuer = "https://hacker-issuer.com";
+        String clientId = "client-a";
+
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
-                .claim("bank_id", "BANK_A")
-                .claim("iss", "https://hacker-issuer.com")
+                .claim("azp", clientId)
+                .claim("iss", issuer)
                 .build();
 
-        BankConfiguration config = new BankConfiguration();
-        config.setBankId("BANK_A");
-        config.setIssuerUrl("https://trusted-issuer.com");
-        config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
-
-        when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A")).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
+                .thenReturn(Optional.empty());
 
         assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
     }
@@ -111,7 +116,7 @@ class JwtAuthConverterTest {
     void convert_ShouldThrowException_WhenIssuerIsNull() {
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
-                .claim("bank_id", "BANK_A")
+                .claim("azp", "client-a")
                 // No 'iss' claim
                 .build();
 
@@ -119,21 +124,11 @@ class JwtAuthConverterTest {
     }
 
     @Test
-    void convert_ShouldThrowException_WhenBankIdIsNull() {
+    void convert_ShouldThrowException_WhenClientIdIsNull() {
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
                 .claim("iss", "https://trusted.com")
-                .build();
-
-        assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
-    }
-
-    @Test
-    void convert_ShouldThrowException_WhenBankIdIsEmpty() {
-        Jwt jwt = Jwt.withTokenValue("token")
-                .header("alg", "RS256")
-                .claim("iss", "https://trusted.com")
-                .claim("bank_id", "  ")
+                // No 'azp' or 'aud' claim
                 .build();
 
         assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
@@ -141,13 +136,17 @@ class JwtAuthConverterTest {
 
     @Test
     void convert_ShouldThrowException_WhenBankMissing() {
+        String issuer = "https://trusted.com";
+        String clientId = "MISSING_CLIENT";
+
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
-                .claim("bank_id", "MISSING_BANK")
-                .claim("iss", "https://trusted.com")
+                .claim("azp", clientId)
+                .claim("iss", issuer)
                 .build();
 
-        when(bankConfigurationRepository.findByBankIdUnfiltered("MISSING_BANK")).thenReturn(Optional.empty());
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
+                .thenReturn(Optional.empty());
 
         assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
     }
@@ -156,21 +155,24 @@ class JwtAuthConverterTest {
     void convert_ShouldHandleTrailingSlashInIssuer() {
         String bankId = "BANK_A";
         String issuerWithSlash = "https://trusted.com/";
-        String issuerWithoutSlash = "https://trusted.com";
+        String normalizedIssuer = "https://trusted.com";
+        String clientId = "client-a";
 
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
                 .claim("sub", "user-123")
-                .claim("bank_id", bankId)
+                .claim("azp", clientId)
                 .claim("iss", issuerWithSlash)
                 .build();
 
         BankConfiguration config = new BankConfiguration();
         config.setBankId(bankId);
-        config.setIssuerUrl(issuerWithoutSlash);
+        config.setIssuerUrl(normalizedIssuer);
+        config.setClientId(clientId);
         config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
-        when(bankConfigurationRepository.findByBankIdUnfiltered(bankId)).thenReturn(Optional.of(config));
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(normalizedIssuer, clientId))
+                .thenReturn(Optional.of(config));
 
         var token = converter.convert(jwt);
         assertNotNull(token);
@@ -178,20 +180,24 @@ class JwtAuthConverterTest {
 
     @Test
     void convert_ShouldHandleMissingRoles() {
+        String issuer = "https://trusted.com";
+        String clientId = "client-a";
+
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
-                .claim("bank_id", "BANK_A")
-                .claim("iss", "https://trusted.com")
+                .claim("azp", clientId)
+                .claim("iss", issuer)
                 .claim("sub", "user-123")
                 // Explicitly NO 'roles' claim
                 .build();
 
         BankConfiguration config = new BankConfiguration();
-        config.setIssuerUrl("https://trusted.com");
+        config.setIssuerUrl(issuer);
+        config.setClientId(clientId);
         config.setBankId("BANK_A");
         config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
-        when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A"))
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
                 .thenReturn(Optional.of(config));
 
         var token = converter.convert(jwt);
@@ -202,20 +208,24 @@ class JwtAuthConverterTest {
 
     @Test
     void convert_ShouldHandleEmptyRoles() {
+        String issuer = "https://trusted.com";
+        String clientId = "client-a";
+
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
-                .claim("bank_id", "BANK_A")
-                .claim("iss", "https://trusted.com")
+                .claim("azp", clientId)
+                .claim("iss", issuer)
                 .claim("sub", "user-123")
                 .claim("roles", List.of())
                 .build();
 
         BankConfiguration config = new BankConfiguration();
-        config.setIssuerUrl("https://trusted.com");
+        config.setIssuerUrl(issuer);
+        config.setClientId(clientId);
         config.setBankId("BANK_A");
         config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
-        when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A"))
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
                 .thenReturn(Optional.of(config));
         when(permissionMappingService.getPermissionsForRoles(List.of())).thenReturn(Set.of());
 
