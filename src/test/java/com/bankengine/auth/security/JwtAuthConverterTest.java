@@ -1,5 +1,6 @@
 package com.bankengine.auth.security;
 
+import com.bankengine.auth.service.AuthorityMappingService;
 import com.bankengine.auth.service.PermissionMappingService;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.repository.BankConfigurationRepository;
@@ -11,24 +12,29 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 class JwtAuthConverterTest {
 
     @Mock private PermissionMappingService permissionMappingService;
     @Mock private BankConfigurationRepository bankConfigurationRepository;
+    private AuthorityMappingService authorityMappingService;
 
     private JwtAuthConverter converter;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        converter = new JwtAuthConverter(permissionMappingService, bankConfigurationRepository);
+        authorityMappingService = new AuthorityMappingService(permissionMappingService, bankConfigurationRepository);
+        converter = new JwtAuthConverter(authorityMappingService);
     }
 
     @Test
