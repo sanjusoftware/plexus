@@ -37,19 +37,25 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
     private final DynamicClientRegistrationRepository clientRegistrationRepository;
+    private final CustomOidcUserService customOidcUserService;
+    private final CustomOAuth2UserService customOAuth2UserService;
 
     public SecurityConfig(JwtAuthConverter jwtAuthConverter,
                           TenantContextFilter tenantContextFilter,
                           BankConfigurationRepository bankConfigurationRepository,
                           CustomAuthenticationEntryPoint authenticationEntryPoint,
                           CustomAccessDeniedHandler accessDeniedHandler,
-                          DynamicClientRegistrationRepository clientRegistrationRepository) {
+                          DynamicClientRegistrationRepository clientRegistrationRepository,
+                          CustomOidcUserService customOidcUserService,
+                          CustomOAuth2UserService customOAuth2UserService) {
         this.jwtAuthConverter = jwtAuthConverter;
         this.tenantContextFilter = tenantContextFilter;
         this.bankConfigurationRepository = bankConfigurationRepository;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.clientRegistrationRepository = clientRegistrationRepository;
+        this.customOidcUserService = customOidcUserService;
+        this.customOAuth2UserService = customOAuth2UserService;
     }
 
     @Value("${app.security.csrf.enabled:true}")
@@ -110,6 +116,10 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .clientRegistrationRepository(clientRegistrationRepository)
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .oidcUserService(customOidcUserService)
+                                .userService(customOAuth2UserService)
+                        )
                         .loginProcessingUrl("/login/oauth2/code/callback")
                         .defaultSuccessUrl("/dashboard", true)
                         .failureUrl("/login?error=auth_failed")

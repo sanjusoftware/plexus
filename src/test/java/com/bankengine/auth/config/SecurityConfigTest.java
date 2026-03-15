@@ -1,9 +1,6 @@
 package com.bankengine.auth.config;
 
-import com.bankengine.auth.security.CustomAccessDeniedHandler;
-import com.bankengine.auth.security.CustomAuthenticationEntryPoint;
-import com.bankengine.auth.security.JwtAuthConverter;
-import com.bankengine.auth.security.TenantContextFilter;
+import com.bankengine.auth.security.*;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,13 +23,15 @@ class SecurityConfigTest {
     @Mock private CustomAuthenticationEntryPoint authenticationEntryPoint;
     @Mock private CustomAccessDeniedHandler accessDeniedHandler;
     @Mock private DynamicClientRegistrationRepository clientRegistrationRepository;
+    @Mock private CustomOidcUserService customOidcUserService;
+    @Mock private CustomOAuth2UserService customOAuth2UserService;
 
     private SecurityConfig securityConfig;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        securityConfig = new SecurityConfig(jwtAuthConverter, tenantContextFilter, bankConfigurationRepository, authenticationEntryPoint, accessDeniedHandler, clientRegistrationRepository);
+        securityConfig = new SecurityConfig(jwtAuthConverter, tenantContextFilter, bankConfigurationRepository, authenticationEntryPoint, accessDeniedHandler, clientRegistrationRepository, customOidcUserService, customOAuth2UserService);
     }
 
     @Test
