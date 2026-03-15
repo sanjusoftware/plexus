@@ -416,7 +416,6 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
   "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
   "clientId": "bank-engine-api",
   "clientSecret": "optional-secret-only-if-required-by-idp",
-  "status": "ACTIVE",
   "adminName": "John Doe",
   "adminEmail": "john.doe@globalbank.com",
   "allowProductInMultipleBundles": true,
