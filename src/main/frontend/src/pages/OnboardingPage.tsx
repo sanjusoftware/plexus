@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Cpu, ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 const OnboardingPage = () => {
@@ -15,6 +15,8 @@ const OnboardingPage = () => {
     captchaAnswer: ''
   });
 
+  const [customCurrency, setCustomCurrency] = useState('');
+  const [isCustomCurrency, setIsCustomCurrency] = useState(false);
   const [captcha, setCaptcha] = useState({ question: '', id: '' });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -33,12 +35,38 @@ const OnboardingPage = () => {
     }
   };
 
+  const validateForm = () => {
+    if (formData.adminName.length < 3 || formData.adminName.length > 50) {
+      setMessage('Admin Name must be between 3 and 50 characters.');
+      return false;
+    }
+    const urlPattern = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
+    if (!urlPattern.test(formData.issuerUrl)) {
+      setMessage('Please enter a valid OIDC Issuer URL (starting with http:// or https://).');
+      return false;
+    }
+    const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (formData.clientId && !guidPattern.test(formData.clientId)) {
+      setMessage('Client ID must be a valid GUID (e.g., 12345678-1234-1234-1234-1234567890ab).');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) {
+      setStatus('error');
+      return;
+    }
     setLoading(true);
     setStatus('idle');
     try {
-      await axios.post('/api/v1/public/onboarding/submit', formData);
+      const submissionData = {
+        ...formData,
+        currencyCode: isCustomCurrency ? customCurrency.toUpperCase() : formData.currencyCode
+      };
+      await axios.post('/api/v1/public/onboarding/submit', submissionData);
       setStatus('success');
       setMessage('Your onboarding request has been submitted successfully! A system administrator will review your request shortly.');
     } catch (err: any) {
@@ -73,7 +101,7 @@ const OnboardingPage = () => {
       {/* Information Panel */}
       <div className="md:w-1/3 bg-blue-900 text-white p-12 flex flex-col">
         <div className="flex items-center space-x-2 mb-12">
-          <Cpu className="h-8 w-8 text-blue-400" />
+          <img src="/logo-plexus.svg" alt="Plexus Logo" className="h-8 w-8 brightness-0 invert" />
           <span className="text-2xl font-bold tracking-tight">Plexus</span>
         </div>
 
@@ -114,8 +142,16 @@ const OnboardingPage = () => {
       </div>
 
       {/* Form Panel */}
-      <div className="flex-1 p-8 md:p-20 flex items-center justify-center">
+      <div className="flex-1 p-8 md:p-20 flex items-center justify-center relative">
         <div className="max-w-xl w-full">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center text-blue-600 hover:text-blue-800 font-medium mb-8 transition"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Home
+          </button>
+
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Get Started</h2>
           <p className="text-gray-500 mb-10">Fill out the form below to submit an onboarding request for your institution.</p>
 
@@ -141,24 +177,60 @@ const OnboardingPage = () => {
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Currency</label>
-                <select
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  value={formData.currencyCode}
-                  onChange={e => setFormData({ ...formData, currencyCode: e.target.value })}
-                >
-                  <option value="USD">USD - US Dollar</option>
-                  <option value="EUR">EUR - Euro</option>
-                  <option value="GBP">GBP - British Pound</option>
-                  <option value="JPY">JPY - Japanese Yen</option>
-                </select>
+                <div className="relative">
+                  {!isCustomCurrency ? (
+                    <>
+                      <select
+                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition appearance-none"
+                        value={formData.currencyCode}
+                        onChange={e => {
+                          if (e.target.value === 'OTHER') {
+                            setIsCustomCurrency(true);
+                          } else {
+                            setFormData({ ...formData, currencyCode: e.target.value });
+                          }
+                        }}
+                      >
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="JPY">JPY - Japanese Yen</option>
+                        <option value="OTHER">Other (Enter code...)</option>
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                    </>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="e.g. AUD"
+                        className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                        value={customCurrency}
+                        onChange={e => setCustomCurrency(e.target.value.toUpperCase())}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCurrency(false)}
+                        className="px-3 text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">OIDC Issuer URL</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">OIDC Issuer URL</label>
+              <p className="text-xs text-gray-500 mb-2">
+                The discovery URL of your Identity Provider.
+                <br />Example (Entra ID): <code className="bg-gray-100 px-1 rounded">https://login.microsoftonline.com/&#123;tenant-id&#125;/v2.0</code>
+              </p>
               <input
                 required
-                type="url"
+                type="text"
                 placeholder="https://login.microsoftonline.com/..."
                 className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
                 value={formData.issuerUrl}
@@ -167,10 +239,14 @@ const OnboardingPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Client ID (optional)</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Client ID (optional)</label>
+              <p className="text-xs text-gray-500 mb-2">
+                The Application (client) ID registered in your IDP.
+                <br />Example (Entra ID): Found in the "Overview" section of your App Registration.
+              </p>
               <input
                 type="text"
-                placeholder="The application ID in your IDP"
+                placeholder="e.g. 12345678-1234-1234-1234-1234567890ab"
                 className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
                 value={formData.clientId}
                 onChange={e => setFormData({ ...formData, clientId: e.target.value })}

@@ -97,6 +97,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/h2-console/**",
                                 "/error",
+                                "/onboarding",
+                                "/*.svg",
                                 "/actuator/health",
                                 "/api/v1/public/catalog/**",
                                 "/api/v1/public/onboarding/**",

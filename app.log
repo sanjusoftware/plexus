@@ -1,0 +1,563 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.1)
+
+2026-03-15T10:15:49.650Z  INFO 3762 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Starting PlexusApplication v0.0.1-SNAPSHOT using Java 21.0.10 with PID 3762 (/app/build/libs/plexus-0.0.1-SNAPSHOT.jar started by jules in /app)
+2026-03-15T10:15:49.655Z DEBUG 3762 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Running with Spring Boot v3.3.1, Spring v6.1.10
+2026-03-15T10:15:49.656Z  INFO 3762 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : The following 1 profile is active: "dev"
+2026-03-15T10:15:51.572Z  INFO 3762 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-15T10:15:51.725Z  INFO 3762 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 137 ms. Found 15 JPA repository interfaces.
+2026-03-15T10:15:54.061Z  INFO 3762 --- [           main] [                                                 ] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-15T10:15:54.081Z  INFO 3762 --- [           main] [                                                 ] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-15T10:15:54.082Z  INFO 3762 --- [           main] [                                                 ] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.25]
+2026-03-15T10:15:54.135Z  INFO 3762 --- [           main] [                                                 ] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-15T10:15:54.137Z  INFO 3762 --- [           main] [                                                 ] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4321 ms
+2026-03-15T10:15:54.619Z  INFO 3762 --- [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-15T10:15:54.913Z  INFO 3762 --- [           main] [                                                 ] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:plexusdb user=SA
+2026-03-15T10:15:54.915Z  INFO 3762 --- [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-15T10:15:54.935Z  INFO 3762 --- [           main] [                                                 ] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:plexusdb'
+2026-03-15T10:15:55.163Z DEBUG 3762 --- [           main] [                                                 ] c.b.auth.security.TenantContextFilter    : Filter 'tenantContextFilter' configured for use
+2026-03-15T10:15:55.361Z  INFO 3762 --- [           main] [                                                 ] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-15T10:15:55.465Z  INFO 3762 --- [           main] [                                                 ] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.2.Final
+2026-03-15T10:15:55.524Z  INFO 3762 --- [           main] [                                                 ] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-15T10:15:56.143Z  INFO 3762 --- [           main] [                                                 ] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-15T10:15:56.228Z  WARN 3762 --- [           main] [                                                 ] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-03-15T10:15:58.651Z  INFO 3762 --- [           main] [                                                 ] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: drop table if exists bank_category_conflicts cascade
+Hibernate: drop table if exists bank_configuration cascade
+Hibernate: drop table if exists bundle_pricing_link cascade
+Hibernate: drop table if exists bundle_product_link cascade
+Hibernate: drop table if exists feature_component cascade
+Hibernate: drop table if exists price_value cascade
+Hibernate: drop table if exists pricing_component cascade
+Hibernate: drop table if exists pricing_input_metadata cascade
+Hibernate: drop table if exists pricing_tier cascade
+Hibernate: drop table if exists product cascade
+Hibernate: drop table if exists product_bundle cascade
+Hibernate: drop table if exists product_feature_link cascade
+Hibernate: drop table if exists product_pricing_link cascade
+Hibernate: drop table if exists product_type cascade
+Hibernate: drop table if exists role cascade
+Hibernate: drop table if exists role_authority cascade
+Hibernate: drop table if exists tier_condition cascade
+Hibernate: create table bank_category_conflicts (config_id bigint not null, categorya varchar(255), categoryb varchar(255))
+Hibernate: create table bank_configuration (allow_multi_bundle_product boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, admin_email varchar(255), admin_name varchar(255), client_id varchar(255) not null, client_secret varchar(255), created_by varchar(255), currency_code varchar(255) not null, issuer_url varchar(255) not null, updated_by varchar(255), status enum ('ACTIVE','INACTIVE','REJECTED','REQUEST') not null, primary key (id), constraint uk_bank_issuer_combination unique (bank_id, issuer_url), constraint uk_bank_issuer_url unique (issuer_url))
+Hibernate: create table bundle_pricing_link (effective_date date, expiry_date date, fixed_value numeric(38,2), use_rules_engine boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_component_id bigint not null, product_bundle_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), fixed_value_type enum ('DISCOUNT_ABSOLUTE','DISCOUNT_PERCENTAGE','FEE_ABSOLUTE','FEE_PERCENTAGE','FREE_COUNT'), primary key (id))
+Hibernate: create table bundle_product_link (is_main_account boolean not null, is_mandatory boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, product_bundle_id bigint not null, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id), constraint UK_bundle_product_link_unique unique (product_bundle_id, product_id))
+Hibernate: create table feature_component (activation_date date, expiry_date date, version integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), data_type enum ('BOOLEAN','DATE','DECIMAL','INTEGER','STRING'), status enum ('ACTIVE','ARCHIVED','DRAFT','INACTIVE') not null, primary key (id), unique (bank_id, code, version))
+Hibernate: create table price_value (raw_value numeric(38,2) not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_tier_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), value_type enum ('DISCOUNT_ABSOLUTE','DISCOUNT_PERCENTAGE','FEE_ABSOLUTE','FEE_PERCENTAGE','FREE_COUNT'), primary key (id))
+Hibernate: create table pricing_component (activation_date date, expiry_date date, pro_rata_applicable boolean not null, version integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, created_by varchar(255), description varchar(255), name varchar(255) not null, updated_by varchar(255), status enum ('ACTIVE','ARCHIVED','DRAFT','INACTIVE') not null, type enum ('BENEFIT','DISCOUNT','FEE','INTEREST_RATE','PACKAGE_FEE','TAX','WAIVER'), primary key (id), unique (bank_id, code, version))
+Hibernate: create table pricing_input_metadata (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, attribute_key varchar(255) not null, created_by varchar(255), data_type varchar(255) not null, display_name varchar(255), updated_by varchar(255), primary key (id), unique (bank_id, attribute_key))
+Hibernate: create table pricing_tier (apply_charge_on_full_breach boolean not null, max_threshold numeric(38,2), min_threshold numeric(38,2), priority integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_component_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), primary key (id))
+Hibernate: create table product (activation_date date, display_order integer, expiry_date date, is_featured boolean, version integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, product_type_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, tagline varchar(100), icon_url varchar(500), full_description varchar(2000), category varchar(255) not null, created_by varchar(255), name varchar(255) not null, target_customer_segments varchar(255), terms_and_conditions TEXT, updated_by varchar(255), status enum ('ACTIVE','ARCHIVED','DRAFT','INACTIVE') not null, primary key (id), unique (bank_id, code, version))
+Hibernate: create table product_bundle (activation_date date, expiry_date date, version integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, description varchar(500), created_by varchar(255), name varchar(255) not null, target_customer_segments varchar(255) not null, updated_by varchar(255), status enum ('ACTIVE','ARCHIVED','DRAFT','INACTIVE') not null, primary key (id), unique (bank_id, code, version))
+Hibernate: create table product_feature_link (created_at timestamp(6) not null, feature_component_id bigint not null, id bigint generated by default as identity, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, feature_value varchar(1000) not null, created_by varchar(255), updated_by varchar(255), primary key (id), constraint UK_product_feature_link unique (product_id, feature_component_id))
+Hibernate: create table product_pricing_link (effective_date date, expiry_date date, fixed_value numeric(38,2), use_rules_engine boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_component_id bigint not null, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), target_component_code varchar(255), updated_by varchar(255), fixed_value_type enum ('DISCOUNT_ABSOLUTE','DISCOUNT_PERCENTAGE','FEE_ABSOLUTE','FEE_PERCENTAGE','FREE_COUNT'), primary key (id))
+Hibernate: create table product_type (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), status varchar(20) default 'DRAFT' not null, primary key (id), unique (bank_id, code))
+Hibernate: create table role (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, name varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id), unique (bank_id, name))
+Hibernate: create table role_authority (role_id bigint not null, authority_name varchar(100) not null, primary key (role_id, authority_name))
+Hibernate: create table tier_condition (created_at timestamp(6) not null, id bigint generated by default as identity, pricing_tier_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, attribute_name varchar(255) not null, attribute_value varchar(255) not null, created_by varchar(255), updated_by varchar(255), connector enum ('AND','OR'), operator enum ('EQ','GE','GT','IN','LE','LT','NE') not null, primary key (id))
+Hibernate: create index idx_pricing_tier_code on pricing_tier (code)
+Hibernate: alter table if exists bank_category_conflicts add constraint FKr0vrtot93e79suavixq45d7lh foreign key (config_id) references bank_configuration
+Hibernate: alter table if exists bundle_pricing_link add constraint FK7xek441d2oiaw0qry67re3cyh foreign key (pricing_component_id) references pricing_component
+Hibernate: alter table if exists bundle_pricing_link add constraint FKb6uvgka986o2w6tr4tqj26qcm foreign key (product_bundle_id) references product_bundle
+Hibernate: alter table if exists bundle_product_link add constraint FKoaef6c64w9i5ks8w6bnf4jhuy foreign key (product_id) references product
+Hibernate: alter table if exists bundle_product_link add constraint FKb3qfh82701omsauktkjj8qjow foreign key (product_bundle_id) references product_bundle
+Hibernate: alter table if exists price_value add constraint FKqw5h759fdsasyg6uw07fsfl3p foreign key (pricing_tier_id) references pricing_tier
+Hibernate: alter table if exists pricing_tier add constraint FKew0ymctj353jmtgqi12pqyy12 foreign key (pricing_component_id) references pricing_component
+Hibernate: alter table if exists product add constraint FKlabq3c2e90ybbxk58rc48byqo foreign key (product_type_id) references product_type
+Hibernate: alter table if exists product_feature_link add constraint FKijhxky9yjt15afkrnxknw06q5 foreign key (feature_component_id) references feature_component
+Hibernate: alter table if exists product_feature_link add constraint FKoprgvgys5k9qo9gfbo861c5ou foreign key (product_id) references product
+Hibernate: alter table if exists product_pricing_link add constraint FKm4wkb51iswgwhgu20bwtbew7x foreign key (pricing_component_id) references pricing_component
+Hibernate: alter table if exists product_pricing_link add constraint FKbcr1wkacs2jh6j5oismthncsk foreign key (product_id) references product
+Hibernate: alter table if exists role_authority add constraint FK2052966dco7y9f97s1a824bj1 foreign key (role_id) references role
+Hibernate: alter table if exists tier_condition add constraint FKrr97dtiopm88a00d0it7k5v9r foreign key (pricing_tier_id) references pricing_tier
+2026-03-15T10:15:58.786Z  INFO 3762 --- [           main] [                                                 ] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-15T10:15:59.790Z  INFO 3762 --- [           main] [                                                 ] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-03-15T10:16:00.941Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-15T10:16:00.941Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select distinct pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pt1_0.pricing_component_id,pt1_0.id,pt1_0.apply_charge_on_full_breach,pt1_0.bank_id,pt1_0.code,c1_0.pricing_tier_id,c1_0.id,c1_0.attribute_name,c1_0.attribute_value,c1_0.bank_id,c1_0.connector,c1_0.created_at,c1_0.created_by,c1_0.operator,c1_0.updated_at,c1_0.updated_by,pt1_0.created_at,pt1_0.created_by,pt1_0.max_threshold,pt1_0.min_threshold,pt1_0.name,pv1_0.pricing_tier_id,pv1_0.id,pv1_0.bank_id,pv1_0.created_at,pv1_0.created_by,pv1_0.raw_value,pv1_0.updated_at,pv1_0.updated_by,pv1_0.value_type,pt1_0.priority,pt1_0.updated_at,pt1_0.updated_by,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 left join pricing_tier pt1_0 on pc1_0.id=pt1_0.pricing_component_id left join tier_condition c1_0 on pt1_0.id=c1_0.pricing_tier_id left join price_value pv1_0 on pt1_0.id=pv1_0.pricing_tier_id
+2026-03-15T10:16:01.136Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-15T10:16:01.137Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : GENERATED DRL FOR PACKAGE: pricing
+2026-03-15T10:16:01.137Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-15T10:16:01.137Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : package bankengine.pricing.rules.system;
+
+import com.bankengine.rules.model.PricingInput;
+import com.bankengine.pricing.model.PriceValue;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+global org.slf4j.Logger log;
+
+rule "Placeholder_pricing"
+    when
+        $input : PricingInput ( )
+    then
+        // No rules defined for this tenant
+end
+
+2026-03-15T10:16:01.137Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-15T10:16:01.142Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-15T10:16:01.142Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select distinct pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.type in (?,?)
+2026-03-15T10:16:01.162Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-15T10:16:01.162Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : GENERATED DRL FOR PACKAGE: bundle
+2026-03-15T10:16:01.162Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-15T10:16:01.162Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : package bankengine.bundle.rules.system;
+
+import com.bankengine.rules.model.BundlePricingInput;
+import com.bankengine.pricing.model.PriceValue;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+global org.slf4j.Logger log;
+
+rule "Placeholder_bundle"
+    when
+        $input : BundlePricingInput ( )
+    then
+        // No rules defined for this tenant
+end
+
+2026-03-15T10:16:01.162Z  INFO 3762 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-15T10:16:01.472Z  WARN 3762 --- [           main] [                                                 ] o.k.m.i.embedder.MavenSettings           : Environment variable M2_HOME is not set
+2026-03-15T10:16:05.091Z  INFO 3762 --- [           main] [                                                 ] c.b.a.s.TenantSecurityInitializer        : Initializing TenantContextHolder with System Bank ID: SYSTEM
+2026-03-15T10:16:05.513Z  WARN 3762 --- [           main] [                                                 ] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-03-15T10:16:05.624Z DEBUG 3762 --- [           main] [                                                 ] swordEncoderAuthenticationManagerBuilder : No authenticationProviders and no parentAuthenticationManager defined. Returning null.
+2026-03-15T10:16:05.830Z  INFO 3762 --- [           main] [                                                 ] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-03-15T10:16:06.540Z  INFO 3762 --- [           main] [                                                 ] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-03-15T10:16:06.672Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-15T10:16:06.673Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select bc1_0.id,bc1_0.admin_email,bc1_0.admin_name,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.client_id,bc1_0.client_secret,bc1_0.created_at,bc1_0.created_by,bc1_0.currency_code,bc1_0.issuer_url,bc1_0.status,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
+2026-03-15T10:16:06.799Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-15T10:16:06.800Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select bc1_0.id,bc1_0.admin_email,bc1_0.admin_name,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.client_id,bc1_0.client_secret,bc1_0.created_at,bc1_0.created_by,bc1_0.currency_code,bc1_0.issuer_url,bc1_0.status,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
+2026-03-15T10:16:06.926Z DEBUG 3762 --- [           main] [                                                 ] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, CorsFilter, CsrfFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, DefaultLoginPageGeneratingFilter, DefaultLogoutPageGeneratingFilter, BearerTokenAuthenticationFilter, TenantContextFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-03-15T10:16:07.892Z  INFO 3762 --- [           main] [                                                 ] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-15T10:16:07.916Z  INFO 3762 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Started PlexusApplication in 18.992 seconds (process running for 19.781)
+--- Seeding System Admin: SYSTEM with ISSUER: https://login.microsoftonline.com/5dafae79-1a4c-4aac-b6f4-842a5ba73a33/v2.0 ---
+2026-03-15T10:16:08.020Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-15T10:16:08.020Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
+2026-03-15T10:16:08.087Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-15T10:16:08.087Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Created root bank: SYSTEM with client_id: bank-engine-api
+2026-03-15T10:16:08.195Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-15T10:16:08.195Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=? and r1_0.bank_id=?
+2026-03-15T10:16:08.217Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-15T10:16:08.217Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+Seeded SYSTEM_ADMIN for SYSTEM
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+--- Seeding Comprehensive Development Data ---
+
+--- Seeding Tenant: GLOBAL-BANK-001 ---
+2026-03-15T10:16:08.239Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.239Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
+2026-03-15T10:16:08.244Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.244Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Seeded Bank Configuration for GLOBAL-BANK-001 with Issuer: https://dev-identity.bankengine.com/GLOBAL-BANK-001
+2026-03-15T10:16:08.276Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.276Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
+2026-03-15T10:16:08.282Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.282Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+Seeded new BANK_ADMIN for GLOBAL-BANK-001 with 42 permissions.
+2026-03-15T10:16:08.286Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.286Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select count(*) from pricing_input_metadata pim1_0
+Seeding Core Pricing Input Metadata for bank: GLOBAL-BANK-001
+2026-03-15T10:16:08.312Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.312Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.325Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.325Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
+2026-03-15T10:16:08.330Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.330Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product_type (bank_id,code,created_at,created_by,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Seeded Product Types for GLOBAL-BANK-001
+2026-03-15T10:16:08.337Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.337Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
+2026-03-15T10:16:08.342Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.343Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select fc1_0.id,fc1_0.activation_date,fc1_0.bank_id,fc1_0.code,fc1_0.created_at,fc1_0.created_by,fc1_0.data_type,fc1_0.expiry_date,fc1_0.name,fc1_0.status,fc1_0.updated_at,fc1_0.updated_by,fc1_0.version from feature_component fc1_0 where fc1_0.bank_id=? and fc1_0.code=? and fc1_0.version=?
+2026-03-15T10:16:08.350Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.350Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into feature_component (activation_date,bank_id,code,created_at,created_by,data_type,expiry_date,name,status,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.385Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.385Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.403Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.403Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product_feature_link (bank_id,created_at,created_by,feature_component_id,feature_value,product_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.411Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.411Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.bank_id=? and pc1_0.code=? and pc1_0.version=?
+2026-03-15T10:16:08.417Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.417Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into pricing_component (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,pro_rata_applicable,status,type,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.427Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.428Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into pricing_tier (apply_charge_on_full_breach,bank_id,code,created_at,created_by,max_threshold,min_threshold,name,pricing_component_id,priority,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.437Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.438Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into tier_condition (attribute_name,attribute_value,bank_id,connector,created_at,created_by,operator,pricing_tier_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.446Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.446Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into price_value (bank_id,created_at,created_by,pricing_tier_id,raw_value,updated_at,updated_by,value_type,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.453Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.454Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-15T10:16:08.465Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.466Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product_pricing_link (bank_id,created_at,created_by,effective_date,expiry_date,fixed_value,fixed_value_type,pricing_component_id,product_id,target_component_code,updated_at,updated_by,use_rules_engine,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.473Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.473Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-15T10:16:08.479Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.479Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-15T10:16:08.485Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-15T10:16:08.485Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product_bundle (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,status,target_customer_segments,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
+Seeded Product Bundle for GLOBAL-BANK-001
+Hibernate: insert into bank_category_conflicts (config_id,categorya,categoryb) values (?,?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+
+--- Seeding Tenant: LOCAL-BANK-002 ---
+2026-03-15T10:16:08.519Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.519Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
+2026-03-15T10:16:08.522Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.522Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Seeded Bank Configuration for LOCAL-BANK-002 with Issuer: https://dev-identity.bankengine.com/LOCAL-BANK-002
+2026-03-15T10:16:08.525Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.526Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
+Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
+2026-03-15T10:16:08.541Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.541Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Updated BANK_ADMIN for LOCAL-BANK-002 with 42 permissions.
+2026-03-15T10:16:08.544Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.545Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select count(*) from pricing_input_metadata pim1_0
+2026-03-15T10:16:08.551Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.551Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
+2026-03-15T10:16:08.555Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.555Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product_type (bank_id,code,created_at,created_by,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Seeded Product Types for LOCAL-BANK-002
+2026-03-15T10:16:08.557Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.557Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
+2026-03-15T10:16:08.560Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.560Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select fc1_0.id,fc1_0.activation_date,fc1_0.bank_id,fc1_0.code,fc1_0.created_at,fc1_0.created_by,fc1_0.data_type,fc1_0.expiry_date,fc1_0.name,fc1_0.status,fc1_0.updated_at,fc1_0.updated_by,fc1_0.version from feature_component fc1_0 where fc1_0.bank_id=? and fc1_0.code=? and fc1_0.version=?
+2026-03-15T10:16:08.564Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.564Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into feature_component (activation_date,bank_id,code,created_at,created_by,data_type,expiry_date,name,status,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.567Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.567Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.571Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.571Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product_feature_link (bank_id,created_at,created_by,feature_component_id,feature_value,product_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.573Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.573Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.bank_id=? and pc1_0.code=? and pc1_0.version=?
+2026-03-15T10:16:08.578Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.578Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into pricing_component (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,pro_rata_applicable,status,type,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.583Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.583Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into pricing_tier (apply_charge_on_full_breach,bank_id,code,created_at,created_by,max_threshold,min_threshold,name,pricing_component_id,priority,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.586Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.586Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into tier_condition (attribute_name,attribute_value,bank_id,connector,created_at,created_by,operator,pricing_tier_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.588Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.588Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into price_value (bank_id,created_at,created_by,pricing_tier_id,raw_value,updated_at,updated_by,value_type,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.590Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.590Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-15T10:16:08.595Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.595Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product_pricing_link (bank_id,created_at,created_by,effective_date,expiry_date,fixed_value,fixed_value_type,pricing_component_id,product_id,target_component_code,updated_at,updated_by,use_rules_engine,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-15T10:16:08.597Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.597Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-15T10:16:08.600Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.601Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-15T10:16:08.604Z DEBUG 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-15T10:16:08.605Z  INFO 3762 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode detected. Disabling Hibernate Filter: bankTenantFilter
+Hibernate: insert into product_bundle (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,status,target_customer_segments,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
+Seeded Product Bundle for LOCAL-BANK-002
+Hibernate: update role set name=?,updated_at=?,updated_by=? where id=?
+Hibernate: delete from role_authority where role_id=?
+Hibernate: insert into bank_category_conflicts (config_id,categorya,categoryb) values (?,?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+
+--- Seeding Complete ---
+2026-03-15T10:16:14.729Z  INFO 3762 --- [nio-8080-exec-1] [                                                 ] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-15T10:16:14.730Z  INFO 3762 --- [nio-8080-exec-1] [                                                 ] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-15T10:16:14.732Z  INFO 3762 --- [nio-8080-exec-1] [                                                 ] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-03-15T10:16:14.799Z DEBUG 3762 --- [nio-8080-exec-1] [69b686eebee3fb5bfef7194def998550-fef7194def998550] o.s.security.web.FilterChainProxy        : Securing GET /
+2026-03-15T10:16:14.817Z  WARN 3762 --- [nio-8080-exec-1] [69b686eebee3fb5bfef7194def998550-1366d251389bab87] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:14.820Z DEBUG 3762 --- [nio-8080-exec-1] [69b686eebee3fb5bfef7194def998550-1366d251389bab87] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:14.830Z DEBUG 3762 --- [nio-8080-exec-1] [69b686eebee3fb5bfef7194def998550-60e657d90cbd0035] o.s.security.web.FilterChainProxy        : Secured GET /
+2026-03-15T10:16:14.886Z DEBUG 3762 --- [nio-8080-exec-1] [69b686eebee3fb5bfef7194def998550-60e657d90cbd0035] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2026-03-15T10:16:14.890Z DEBUG 3762 --- [nio-8080-exec-1] [69b686eebee3fb5bfef7194def998550-7848bdc4e7462450] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2026-03-15T10:16:14.936Z DEBUG 3762 --- [nio-8080-exec-3] [69b686eebae5752aaa10e1ffd18e702f-aa10e1ffd18e702f] o.s.security.web.FilterChainProxy        : Securing GET /static/css/main.bf056c78.css
+2026-03-15T10:16:14.937Z DEBUG 3762 --- [nio-8080-exec-2] [69b686eef3c7e45563774354154e6fa3-63774354154e6fa3] o.s.security.web.FilterChainProxy        : Securing GET /static/js/main.8a144d67.js
+2026-03-15T10:16:14.938Z  WARN 3762 --- [nio-8080-exec-2] [69b686eef3c7e45563774354154e6fa3-4e35cb9d46905340] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:14.938Z DEBUG 3762 --- [nio-8080-exec-2] [69b686eef3c7e45563774354154e6fa3-4e35cb9d46905340] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:14.940Z DEBUG 3762 --- [nio-8080-exec-2] [69b686eef3c7e45563774354154e6fa3-ee0a6b616872e767] o.s.security.web.FilterChainProxy        : Secured GET /static/js/main.8a144d67.js
+2026-03-15T10:16:14.945Z  WARN 3762 --- [nio-8080-exec-3] [69b686eebae5752aaa10e1ffd18e702f-e2b869181df201b7] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:14.946Z DEBUG 3762 --- [nio-8080-exec-3] [69b686eebae5752aaa10e1ffd18e702f-e2b869181df201b7] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:14.947Z DEBUG 3762 --- [nio-8080-exec-3] [69b686eebae5752aaa10e1ffd18e702f-50a031fe9c1cc7b2] o.s.security.web.FilterChainProxy        : Secured GET /static/css/main.bf056c78.css
+2026-03-15T10:16:15.100Z DEBUG 3762 --- [nio-8080-exec-4] [69b686ef8884dde2250cf1920bca650d-250cf1920bca650d] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/user
+2026-03-15T10:16:15.103Z  WARN 3762 --- [nio-8080-exec-4] [69b686ef8884dde2250cf1920bca650d-11d47028e85fd34a] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:15.104Z DEBUG 3762 --- [nio-8080-exec-4] [69b686ef8884dde2250cf1920bca650d-11d47028e85fd34a] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:15.121Z DEBUG 3762 --- [nio-8080-exec-4] [69b686ef8884dde2250cf1920bca650d-11d47028e85fd34a] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@2a906344, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]
+2026-03-15T10:16:15.122Z DEBUG 3762 --- [nio-8080-exec-4] [69b686ef8884dde2250cf1920bca650d-11d47028e85fd34a] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@5241e263
+2026-03-15T10:16:15.124Z DEBUG 3762 --- [nio-8080-exec-4] [69b686ef8884dde2250cf1920bca650d-11d47028e85fd34a] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost:8080/login
+2026-03-15T10:16:15.147Z DEBUG 3762 --- [nio-8080-exec-5] [69b686ef0819f80b84ab8569d24a3c65-84ab8569d24a3c65] o.s.security.web.FilterChainProxy        : Securing GET /login
+2026-03-15T10:16:15.316Z DEBUG 3762 --- [nio-8080-exec-6] [69b686ef8656186a49636e0a68d45b28-49636e0a68d45b28] o.s.security.web.FilterChainProxy        : Securing GET /onboarding
+2026-03-15T10:16:15.317Z  WARN 3762 --- [nio-8080-exec-6] [69b686ef8656186a49636e0a68d45b28-a6ddacdadb8490bb] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:15.318Z DEBUG 3762 --- [nio-8080-exec-6] [69b686ef8656186a49636e0a68d45b28-a6ddacdadb8490bb] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:15.320Z DEBUG 3762 --- [nio-8080-exec-6] [69b686ef8656186a49636e0a68d45b28-9224f57748759b00] o.s.security.web.FilterChainProxy        : Secured GET /onboarding
+2026-03-15T10:16:15.323Z DEBUG 3762 --- [nio-8080-exec-6] [69b686ef8656186a49636e0a68d45b28-9224f57748759b00] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2026-03-15T10:16:15.324Z DEBUG 3762 --- [nio-8080-exec-6] [69b686ef8656186a49636e0a68d45b28-f18520fb5942b117] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2026-03-15T10:16:15.340Z DEBUG 3762 --- [nio-8080-exec-8] [69b686eff2eb8445d199214099e852e9-d199214099e852e9] o.s.security.web.FilterChainProxy        : Securing GET /static/js/main.8a144d67.js
+2026-03-15T10:16:15.340Z DEBUG 3762 --- [nio-8080-exec-7] [69b686ef7e63cb5d3cb9557c59f6aefe-3cb9557c59f6aefe] o.s.security.web.FilterChainProxy        : Securing GET /static/css/main.bf056c78.css
+2026-03-15T10:16:15.341Z  WARN 3762 --- [nio-8080-exec-8] [69b686eff2eb8445d199214099e852e9-3311f231ee756817] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:15.341Z  WARN 3762 --- [nio-8080-exec-7] [69b686ef7e63cb5d3cb9557c59f6aefe-da63c310f43d92c7] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:15.341Z DEBUG 3762 --- [nio-8080-exec-7] [69b686ef7e63cb5d3cb9557c59f6aefe-da63c310f43d92c7] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:15.341Z DEBUG 3762 --- [nio-8080-exec-8] [69b686eff2eb8445d199214099e852e9-3311f231ee756817] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:15.342Z DEBUG 3762 --- [nio-8080-exec-7] [69b686ef7e63cb5d3cb9557c59f6aefe-8465c887d113c118] o.s.security.web.FilterChainProxy        : Secured GET /static/css/main.bf056c78.css
+2026-03-15T10:16:15.342Z DEBUG 3762 --- [nio-8080-exec-8] [69b686eff2eb8445d199214099e852e9-1475667877b01f78] o.s.security.web.FilterChainProxy        : Secured GET /static/js/main.8a144d67.js
+2026-03-15T10:16:15.399Z DEBUG 3762 --- [nio-8080-exec-9] [69b686efb1d36a7caf180036311e6878-af180036311e6878] o.s.security.web.FilterChainProxy        : Securing GET /logo-plexus.svg
+2026-03-15T10:16:15.400Z  WARN 3762 --- [nio-8080-exec-9] [69b686efb1d36a7caf180036311e6878-1abd40f1636b863b] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:15.400Z DEBUG 3762 --- [nio-8080-exec-9] [69b686efb1d36a7caf180036311e6878-1abd40f1636b863b] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:15.402Z DEBUG 3762 --- [nio-8080-exec-9] [69b686efb1d36a7caf180036311e6878-ee158a51f7eceaf2] o.s.security.web.FilterChainProxy        : Secured GET /logo-plexus.svg
+2026-03-15T10:16:15.449Z DEBUG 3762 --- [nio-8080-exec-1] [69b686efb58c1be4560ae478fc76e909-560ae478fc76e909] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/user
+2026-03-15T10:16:15.450Z DEBUG 3762 --- [io-8080-exec-10] [69b686efcd7aaa57f6da26c5eb9b5270-f6da26c5eb9b5270] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/public/onboarding/captcha
+2026-03-15T10:16:15.451Z  WARN 3762 --- [io-8080-exec-10] [69b686efcd7aaa57f6da26c5eb9b5270-6567c83dd9c9d0a6] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:15.451Z DEBUG 3762 --- [io-8080-exec-10] [69b686efcd7aaa57f6da26c5eb9b5270-6567c83dd9c9d0a6] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:15.452Z DEBUG 3762 --- [io-8080-exec-10] [69b686efcd7aaa57f6da26c5eb9b5270-24708c1a37d87d6d] o.s.security.web.FilterChainProxy        : Secured GET /api/v1/public/onboarding/captcha
+2026-03-15T10:16:15.450Z  WARN 3762 --- [nio-8080-exec-1] [69b686efb58c1be4560ae478fc76e909-2d0a9d44effc5255] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:16:15.453Z DEBUG 3762 --- [nio-8080-exec-1] [69b686efb58c1be4560ae478fc76e909-2d0a9d44effc5255] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:16:15.454Z DEBUG 3762 --- [nio-8080-exec-1] [69b686efb58c1be4560ae478fc76e909-2d0a9d44effc5255] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@2a906344, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]
+2026-03-15T10:16:15.455Z DEBUG 3762 --- [nio-8080-exec-1] [69b686efb58c1be4560ae478fc76e909-2d0a9d44effc5255] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@5241e263
+2026-03-15T10:16:15.455Z DEBUG 3762 --- [nio-8080-exec-1] [69b686efb58c1be4560ae478fc76e909-2d0a9d44effc5255] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost:8080/login
+2026-03-15T10:16:15.471Z DEBUG 3762 --- [nio-8080-exec-3] [69b686ef0e637a9ac918ec10bee36a60-c918ec10bee36a60] o.s.security.web.FilterChainProxy        : Securing GET /login
+2026-03-15T10:17:02.059Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871eca6071e81a2c389b379f5ba6-1a2c389b379f5ba6] o.s.security.web.FilterChainProxy        : Securing GET /
+2026-03-15T10:17:02.061Z  WARN 3762 --- [nio-8080-exec-5] [69b6871eca6071e81a2c389b379f5ba6-9a8d73ef2360bbd0] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.061Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871eca6071e81a2c389b379f5ba6-9a8d73ef2360bbd0] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.063Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871eca6071e81a2c389b379f5ba6-933d38ac0cc58fd0] o.s.security.web.FilterChainProxy        : Secured GET /
+2026-03-15T10:17:02.065Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871eca6071e81a2c389b379f5ba6-933d38ac0cc58fd0] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2026-03-15T10:17:02.067Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871eca6071e81a2c389b379f5ba6-c07bfd708976441e] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2026-03-15T10:17:02.083Z DEBUG 3762 --- [nio-8080-exec-7] [69b6871e9bab141a2520afffd87f2506-2520afffd87f2506] o.s.security.web.FilterChainProxy        : Securing GET /static/css/main.bf056c78.css
+2026-03-15T10:17:02.084Z  WARN 3762 --- [nio-8080-exec-7] [69b6871e9bab141a2520afffd87f2506-bfda45f4effb0aeb] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.084Z DEBUG 3762 --- [nio-8080-exec-7] [69b6871e9bab141a2520afffd87f2506-bfda45f4effb0aeb] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.082Z DEBUG 3762 --- [nio-8080-exec-6] [69b6871e55f77523d7648944af989584-d7648944af989584] o.s.security.web.FilterChainProxy        : Securing GET /static/js/main.8a144d67.js
+2026-03-15T10:17:02.085Z  WARN 3762 --- [nio-8080-exec-6] [69b6871e55f77523d7648944af989584-784854dc8c65ff9f] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.086Z DEBUG 3762 --- [nio-8080-exec-6] [69b6871e55f77523d7648944af989584-784854dc8c65ff9f] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.087Z DEBUG 3762 --- [nio-8080-exec-6] [69b6871e55f77523d7648944af989584-9f7d9a3c3fab6030] o.s.security.web.FilterChainProxy        : Secured GET /static/js/main.8a144d67.js
+2026-03-15T10:17:02.087Z DEBUG 3762 --- [nio-8080-exec-7] [69b6871e9bab141a2520afffd87f2506-fb9c73ccfb2f0ffa] o.s.security.web.FilterChainProxy        : Secured GET /static/css/main.bf056c78.css
+2026-03-15T10:17:02.237Z DEBUG 3762 --- [nio-8080-exec-8] [69b6871eb0d4dc25eb1ff70f0393199e-eb1ff70f0393199e] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/user
+2026-03-15T10:17:02.238Z  WARN 3762 --- [nio-8080-exec-8] [69b6871eb0d4dc25eb1ff70f0393199e-60436fa2ef9959f8] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.239Z DEBUG 3762 --- [nio-8080-exec-8] [69b6871eb0d4dc25eb1ff70f0393199e-60436fa2ef9959f8] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.240Z DEBUG 3762 --- [nio-8080-exec-8] [69b6871eb0d4dc25eb1ff70f0393199e-60436fa2ef9959f8] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@2a906344, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]
+2026-03-15T10:17:02.240Z DEBUG 3762 --- [nio-8080-exec-8] [69b6871eb0d4dc25eb1ff70f0393199e-60436fa2ef9959f8] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@5241e263
+2026-03-15T10:17:02.240Z DEBUG 3762 --- [nio-8080-exec-8] [69b6871eb0d4dc25eb1ff70f0393199e-60436fa2ef9959f8] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost:8080/login
+2026-03-15T10:17:02.252Z DEBUG 3762 --- [nio-8080-exec-9] [69b6871ea3e7ca7d46a6e44744ce5fec-46a6e44744ce5fec] o.s.security.web.FilterChainProxy        : Securing GET /login
+2026-03-15T10:17:02.411Z DEBUG 3762 --- [nio-8080-exec-1] [69b6871e0cdda24ba07d0e73b8a7ecc8-a07d0e73b8a7ecc8] o.s.security.web.FilterChainProxy        : Securing GET /onboarding
+2026-03-15T10:17:02.412Z  WARN 3762 --- [nio-8080-exec-1] [69b6871e0cdda24ba07d0e73b8a7ecc8-3277b4c477f6716f] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.413Z DEBUG 3762 --- [nio-8080-exec-1] [69b6871e0cdda24ba07d0e73b8a7ecc8-3277b4c477f6716f] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.414Z DEBUG 3762 --- [nio-8080-exec-1] [69b6871e0cdda24ba07d0e73b8a7ecc8-2dae97ac7c78e1be] o.s.security.web.FilterChainProxy        : Secured GET /onboarding
+2026-03-15T10:17:02.416Z DEBUG 3762 --- [nio-8080-exec-1] [69b6871e0cdda24ba07d0e73b8a7ecc8-2dae97ac7c78e1be] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2026-03-15T10:17:02.417Z DEBUG 3762 --- [nio-8080-exec-1] [69b6871e0cdda24ba07d0e73b8a7ecc8-9dd0aec24dd3a972] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2026-03-15T10:17:02.432Z DEBUG 3762 --- [nio-8080-exec-3] [69b6871ea5ce2a4851521fbf754c4ee2-51521fbf754c4ee2] o.s.security.web.FilterChainProxy        : Securing GET /static/js/main.8a144d67.js
+2026-03-15T10:17:02.433Z  WARN 3762 --- [nio-8080-exec-3] [69b6871ea5ce2a4851521fbf754c4ee2-e36d28f8ce5d3660] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.433Z DEBUG 3762 --- [io-8080-exec-10] [69b6871e66c99a156d6688ae4998bbfd-6d6688ae4998bbfd] o.s.security.web.FilterChainProxy        : Securing GET /static/css/main.bf056c78.css
+2026-03-15T10:17:02.433Z DEBUG 3762 --- [nio-8080-exec-3] [69b6871ea5ce2a4851521fbf754c4ee2-e36d28f8ce5d3660] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.433Z  WARN 3762 --- [io-8080-exec-10] [69b6871e66c99a156d6688ae4998bbfd-df15f21cb2248594] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.434Z DEBUG 3762 --- [io-8080-exec-10] [69b6871e66c99a156d6688ae4998bbfd-df15f21cb2248594] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.434Z DEBUG 3762 --- [nio-8080-exec-3] [69b6871ea5ce2a4851521fbf754c4ee2-4917066041484c64] o.s.security.web.FilterChainProxy        : Secured GET /static/js/main.8a144d67.js
+2026-03-15T10:17:02.434Z DEBUG 3762 --- [io-8080-exec-10] [69b6871e66c99a156d6688ae4998bbfd-84f873a64e9705e6] o.s.security.web.FilterChainProxy        : Secured GET /static/css/main.bf056c78.css
+2026-03-15T10:17:02.475Z DEBUG 3762 --- [nio-8080-exec-4] [69b6871ef122596a60cf2c9706c7eca4-60cf2c9706c7eca4] o.s.security.web.FilterChainProxy        : Securing GET /logo-plexus.svg
+2026-03-15T10:17:02.476Z  WARN 3762 --- [nio-8080-exec-4] [69b6871ef122596a60cf2c9706c7eca4-9990598377466a25] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.476Z DEBUG 3762 --- [nio-8080-exec-4] [69b6871ef122596a60cf2c9706c7eca4-9990598377466a25] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.477Z DEBUG 3762 --- [nio-8080-exec-4] [69b6871ef122596a60cf2c9706c7eca4-22a508465a2c5b93] o.s.security.web.FilterChainProxy        : Secured GET /logo-plexus.svg
+2026-03-15T10:17:02.495Z DEBUG 3762 --- [nio-8080-exec-2] [69b6871ed70e23c8f9bec9227cc3700f-f9bec9227cc3700f] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/public/onboarding/captcha
+2026-03-15T10:17:02.495Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871e714b76d2b0e9a311784213bb-b0e9a311784213bb] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/user
+2026-03-15T10:17:02.496Z  WARN 3762 --- [nio-8080-exec-2] [69b6871ed70e23c8f9bec9227cc3700f-ad5fc42a391c4361] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.496Z DEBUG 3762 --- [nio-8080-exec-2] [69b6871ed70e23c8f9bec9227cc3700f-ad5fc42a391c4361] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.498Z DEBUG 3762 --- [nio-8080-exec-2] [69b6871ed70e23c8f9bec9227cc3700f-589b961c9aca5dd1] o.s.security.web.FilterChainProxy        : Secured GET /api/v1/public/onboarding/captcha
+2026-03-15T10:17:02.496Z  WARN 3762 --- [nio-8080-exec-5] [69b6871e714b76d2b0e9a311784213bb-b13a2bc33d9b07f7] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:02.501Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871e714b76d2b0e9a311784213bb-b13a2bc33d9b07f7] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:02.512Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871e714b76d2b0e9a311784213bb-b13a2bc33d9b07f7] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@2a906344, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]
+2026-03-15T10:17:02.512Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871e714b76d2b0e9a311784213bb-b13a2bc33d9b07f7] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@5241e263
+2026-03-15T10:17:02.513Z DEBUG 3762 --- [nio-8080-exec-5] [69b6871e714b76d2b0e9a311784213bb-b13a2bc33d9b07f7] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost:8080/login
+2026-03-15T10:17:02.525Z DEBUG 3762 --- [nio-8080-exec-7] [69b6871e3c4d0668c6db5bdfe2be8415-c6db5bdfe2be8415] o.s.security.web.FilterChainProxy        : Securing GET /login
+2026-03-15T10:17:51.682Z DEBUG 3762 --- [nio-8080-exec-9] [69b6874f6991c7baf398fc03b3f7793b-f398fc03b3f7793b] o.s.security.web.FilterChainProxy        : Securing GET /
+2026-03-15T10:17:51.683Z  WARN 3762 --- [nio-8080-exec-9] [69b6874f6991c7baf398fc03b3f7793b-0ca907cb9aa5e6d8] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:51.683Z DEBUG 3762 --- [nio-8080-exec-9] [69b6874f6991c7baf398fc03b3f7793b-0ca907cb9aa5e6d8] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:51.684Z DEBUG 3762 --- [nio-8080-exec-9] [69b6874f6991c7baf398fc03b3f7793b-1ef23464aec5f414] o.s.security.web.FilterChainProxy        : Secured GET /
+2026-03-15T10:17:51.686Z DEBUG 3762 --- [nio-8080-exec-9] [69b6874f6991c7baf398fc03b3f7793b-1ef23464aec5f414] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2026-03-15T10:17:51.688Z DEBUG 3762 --- [nio-8080-exec-9] [69b6874f6991c7baf398fc03b3f7793b-2dcaecdeca92eee5] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2026-03-15T10:17:51.707Z DEBUG 3762 --- [io-8080-exec-10] [69b6874f1ea7993ab2a028577d80c2b0-b2a028577d80c2b0] o.s.security.web.FilterChainProxy        : Securing GET /static/css/main.bf056c78.css
+2026-03-15T10:17:51.706Z DEBUG 3762 --- [nio-8080-exec-1] [69b6874f4f0db45e7090a5d62063b6c1-7090a5d62063b6c1] o.s.security.web.FilterChainProxy        : Securing GET /static/js/main.8a144d67.js
+2026-03-15T10:17:51.708Z  WARN 3762 --- [io-8080-exec-10] [69b6874f1ea7993ab2a028577d80c2b0-e603ac727d5ba7ed] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:51.708Z  WARN 3762 --- [nio-8080-exec-1] [69b6874f4f0db45e7090a5d62063b6c1-5fbf5f98992fdbe9] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:51.708Z DEBUG 3762 --- [nio-8080-exec-1] [69b6874f4f0db45e7090a5d62063b6c1-5fbf5f98992fdbe9] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:51.708Z DEBUG 3762 --- [io-8080-exec-10] [69b6874f1ea7993ab2a028577d80c2b0-e603ac727d5ba7ed] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:51.709Z DEBUG 3762 --- [nio-8080-exec-1] [69b6874f4f0db45e7090a5d62063b6c1-9c0d67e4ee35c673] o.s.security.web.FilterChainProxy        : Secured GET /static/js/main.8a144d67.js
+2026-03-15T10:17:51.709Z DEBUG 3762 --- [io-8080-exec-10] [69b6874f1ea7993ab2a028577d80c2b0-791b4f79ffd84cea] o.s.security.web.FilterChainProxy        : Secured GET /static/css/main.bf056c78.css
+2026-03-15T10:17:51.874Z DEBUG 3762 --- [nio-8080-exec-3] [69b6874f0769890c2d35ade85d3c6bd6-2d35ade85d3c6bd6] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/user
+2026-03-15T10:17:51.875Z  WARN 3762 --- [nio-8080-exec-3] [69b6874f0769890c2d35ade85d3c6bd6-8b70b583adea6774] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:51.875Z DEBUG 3762 --- [nio-8080-exec-3] [69b6874f0769890c2d35ade85d3c6bd6-8b70b583adea6774] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:51.877Z DEBUG 3762 --- [nio-8080-exec-3] [69b6874f0769890c2d35ade85d3c6bd6-8b70b583adea6774] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@2a906344, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]
+2026-03-15T10:17:51.877Z DEBUG 3762 --- [nio-8080-exec-3] [69b6874f0769890c2d35ade85d3c6bd6-8b70b583adea6774] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@5241e263
+2026-03-15T10:17:51.877Z DEBUG 3762 --- [nio-8080-exec-3] [69b6874f0769890c2d35ade85d3c6bd6-8b70b583adea6774] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost:8080/login
+2026-03-15T10:17:51.882Z DEBUG 3762 --- [nio-8080-exec-4] [69b6874f198a8c4e38338ad9f20869be-38338ad9f20869be] o.s.security.web.FilterChainProxy        : Securing GET /login
+2026-03-15T10:17:52.027Z DEBUG 3762 --- [nio-8080-exec-2] [69b687509c2e50694b7730cd2098be17-4b7730cd2098be17] o.s.security.web.FilterChainProxy        : Securing GET /onboarding
+2026-03-15T10:17:52.028Z  WARN 3762 --- [nio-8080-exec-2] [69b687509c2e50694b7730cd2098be17-908589c8e152d7ba] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:52.028Z DEBUG 3762 --- [nio-8080-exec-2] [69b687509c2e50694b7730cd2098be17-908589c8e152d7ba] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:52.029Z DEBUG 3762 --- [nio-8080-exec-2] [69b687509c2e50694b7730cd2098be17-986f3e367411fde8] o.s.security.web.FilterChainProxy        : Secured GET /onboarding
+2026-03-15T10:17:52.032Z DEBUG 3762 --- [nio-8080-exec-2] [69b687509c2e50694b7730cd2098be17-986f3e367411fde8] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2026-03-15T10:17:52.034Z DEBUG 3762 --- [nio-8080-exec-2] [69b687509c2e50694b7730cd2098be17-5755c4b15765a180] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2026-03-15T10:17:52.051Z DEBUG 3762 --- [nio-8080-exec-7] [69b6875043c264940d503dc39de21792-0d503dc39de21792] o.s.security.web.FilterChainProxy        : Securing GET /static/js/main.8a144d67.js
+2026-03-15T10:17:52.052Z DEBUG 3762 --- [nio-8080-exec-5] [69b68750efc4a9e2e52ddfa3ac992447-e52ddfa3ac992447] o.s.security.web.FilterChainProxy        : Securing GET /static/css/main.bf056c78.css
+2026-03-15T10:17:52.052Z  WARN 3762 --- [nio-8080-exec-7] [69b6875043c264940d503dc39de21792-5b10687cee5cee4f] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:52.052Z DEBUG 3762 --- [nio-8080-exec-7] [69b6875043c264940d503dc39de21792-5b10687cee5cee4f] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:52.053Z  WARN 3762 --- [nio-8080-exec-5] [69b68750efc4a9e2e52ddfa3ac992447-298494d73e181508] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:52.053Z DEBUG 3762 --- [nio-8080-exec-7] [69b6875043c264940d503dc39de21792-8c9810f8cf7b4c8c] o.s.security.web.FilterChainProxy        : Secured GET /static/js/main.8a144d67.js
+2026-03-15T10:17:52.054Z DEBUG 3762 --- [nio-8080-exec-5] [69b68750efc4a9e2e52ddfa3ac992447-298494d73e181508] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:52.056Z DEBUG 3762 --- [nio-8080-exec-5] [69b68750efc4a9e2e52ddfa3ac992447-7428f12d88bf7e3f] o.s.security.web.FilterChainProxy        : Secured GET /static/css/main.bf056c78.css
+2026-03-15T10:17:52.089Z DEBUG 3762 --- [nio-8080-exec-8] [69b68750c4d38741330ee5163657aa94-330ee5163657aa94] o.s.security.web.FilterChainProxy        : Securing GET /logo-plexus.svg
+2026-03-15T10:17:52.090Z  WARN 3762 --- [nio-8080-exec-8] [69b68750c4d38741330ee5163657aa94-5a5659f71a867360] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:52.090Z DEBUG 3762 --- [nio-8080-exec-8] [69b68750c4d38741330ee5163657aa94-5a5659f71a867360] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:52.092Z DEBUG 3762 --- [nio-8080-exec-8] [69b68750c4d38741330ee5163657aa94-e0a95837b6137f81] o.s.security.web.FilterChainProxy        : Secured GET /logo-plexus.svg
+2026-03-15T10:17:52.111Z DEBUG 3762 --- [nio-8080-exec-6] [69b68750f1b8d04f3764d277c1c35f5a-3764d277c1c35f5a] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/public/onboarding/captcha
+2026-03-15T10:17:52.112Z  WARN 3762 --- [nio-8080-exec-6] [69b68750f1b8d04f3764d277c1c35f5a-39379935437ac237] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:52.113Z DEBUG 3762 --- [nio-8080-exec-6] [69b68750f1b8d04f3764d277c1c35f5a-39379935437ac237] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:52.116Z DEBUG 3762 --- [nio-8080-exec-9] [69b68750462aac91e27d66096ea43a8c-e27d66096ea43a8c] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/user
+2026-03-15T10:17:52.117Z  WARN 3762 --- [nio-8080-exec-9] [69b68750462aac91e27d66096ea43a8c-5063d5ef657f36c6] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-03-15T10:17:52.117Z DEBUG 3762 --- [nio-8080-exec-9] [69b68750462aac91e27d66096ea43a8c-5063d5ef657f36c6] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-15T10:17:52.120Z DEBUG 3762 --- [nio-8080-exec-6] [69b68750f1b8d04f3764d277c1c35f5a-92ddda44efbf3e8d] o.s.security.web.FilterChainProxy        : Secured GET /api/v1/public/onboarding/captcha
+2026-03-15T10:17:52.119Z DEBUG 3762 --- [nio-8080-exec-9] [69b68750462aac91e27d66096ea43a8c-5063d5ef657f36c6] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@2a906344, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]
+2026-03-15T10:17:52.122Z DEBUG 3762 --- [nio-8080-exec-9] [69b68750462aac91e27d66096ea43a8c-5063d5ef657f36c6] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@5241e263
+2026-03-15T10:17:52.122Z DEBUG 3762 --- [nio-8080-exec-9] [69b68750462aac91e27d66096ea43a8c-5063d5ef657f36c6] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost:8080/login
+2026-03-15T10:17:52.135Z DEBUG 3762 --- [io-8080-exec-10] [69b687506cbf375091c6bb69476845e2-91c6bb69476845e2] o.s.security.web.FilterChainProxy        : Securing GET /login
