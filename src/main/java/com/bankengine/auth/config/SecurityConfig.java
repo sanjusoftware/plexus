@@ -97,7 +97,9 @@ public class SecurityConfig {
                                 "/*.json",
                                 "/*.ico",
                                 "/login-view",
+                                "/login",
                                 "/api/v1/auth/check-bank",
+                                "/api/v1/auth/csrf",
                                 "/dashboard",
                                 "/auth/**",
                                 "/v3/api-docs/**",
@@ -129,6 +131,10 @@ public class SecurityConfig {
                 // Use the Dynamic Resolver instead of a static JWT Decoder
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(tenantAuthenticationManagerResolver())
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
+                .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
                 )

@@ -45,12 +45,8 @@ function App() {
           <Routes>
             <Route path="/" element={<PublicHome />} />
             <Route path="/login-view" element={<LoginPage />} />
-            <Route path="/onboarding" element={<OnboardingWrapper />} />
-            <Route path="/" element={<PublicHome />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/onboarding" element={
-               <OnboardingWrapper />
-            } />
+            <Route path="/onboarding" element={<OnboardingWrapper />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
