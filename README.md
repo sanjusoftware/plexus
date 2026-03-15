@@ -393,7 +393,13 @@ Before any bank can be onboarded, the system itself must be initialized.
 1. **IDP Setup**: Configure your Identity Provider to issue a token with:
    - `bank_id`: `SYSTEM`
    - `roles`: `["SYSTEM_ADMIN"]`
-2. **Startup**: When the app starts, the `SystemAdminSeeder` reads `APP_SECURITY_SYSTEM_BANK_ID` and `APP_SECURITY_SYSTEM_ISSUER` from environment variables and creates the root record.
+2. **Startup**: When the app starts, the `SystemAdminSeeder` reads the following from environment variables (or `application.properties`) and creates/updates the root record:
+   - `APP_SECURITY_SYSTEM_BANK_ID`: The unique ID for the system bank (default: `SYSTEM`).
+   - `APP_SECURITY_SYSTEM_ISSUER`: The OIDC Issuer URI for the system bank.
+   - `APP_SECURITY_SYSTEM_BANK_NAME`: The name of the system bank.
+   - `APP_SECURITY_SYSTEM_BANK_ADMIN_NAME`: The name of the system administrator.
+   - `APP_SECURITY_SYSTEM_BANK_ADMIN_EMAIL`: The email of the system administrator.
+   - `APP_SECURITY_SYSTEM_BANK_CURRENCY_CODE`: The default currency code for the system bank.
 3. **Authorize**: If running locally, using `docker compose up`, you can login as system admin first by using the Authorize button on SwaggerUI.
 Visit http://localhost:8080/swagger-ui/index.html to open the swagger UI.
 Click Authorize Button on SwaggerUI which will open take you to mock server: http://identity-provider:9090/ to enter 2 required claims expected by the application:
@@ -429,8 +435,13 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
 ### Note on `clientId` and `clientSecret`:
 - **`clientId`**: Mandatory. The Application (Client) ID registered in the tenant bank's IDP. If omitted, it defaults to the `SYSTEM` bank's ID.
 - **`clientSecret`**: **Optional**. Only required if the tenant's IDP does not support PKCE for confidential clients. For security, Plexus uses PKCE by default, so most banks should leave this field empty.
-- **`status`**: The operational status of the bank. Valid values are `DRAFT`, `ACTIVE`, `REJECTED`, `INACTIVE`. Only `ACTIVE` banks can authenticate.
 - **`adminName` & `adminEmail`**: Contact details for the bank's primary administrator.
+- **`currencyCode`**: The base currency for the bank's products and pricing.
+
+### Bank Lifecycle Management
+The `status` of a bank cannot be set directly during creation or update. Instead, it is managed via dedicated administrative actions:
+1. **Activation**: `POST /api/v1/banks/{bankId}/activate` - Moves a bank from `DRAFT` or `INACTIVE` to `ACTIVE`. Only `ACTIVE` banks can authenticate users.
+2. **Deactivation**: `POST /api/v1/banks/{bankId}/deactivate` - Moves an `ACTIVE` bank to `INACTIVE`. This prevents further logins for that tenant.
 
 **Instructions for Tenant IDP Admins:**
 1. Register a new "Single Page Application" (SPA) in your IDP (e.g., EntraID, Keycloak).

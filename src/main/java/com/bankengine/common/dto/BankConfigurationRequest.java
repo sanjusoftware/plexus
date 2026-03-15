@@ -20,7 +20,6 @@ public class BankConfigurationRequest {
     private String clientId;
     private String clientSecret;
     private String currencyCode;
-    private String status;
     private String adminName;
     private String adminEmail;
 

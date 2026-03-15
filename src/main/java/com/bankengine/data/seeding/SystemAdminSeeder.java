@@ -29,6 +29,18 @@ public class SystemAdminSeeder implements CommandLineRunner {
     @Value("${app.security.system-issuer}")
     private String systemIssuer;
 
+    @Value("${app.security.system-bank-name}")
+    private String systemBankName;
+
+    @Value("${app.security.system-bank-admin-name}")
+    private String systemAdminName;
+
+    @Value("${app.security.system-bank-admin-email}")
+    private String systemAdminEmail;
+
+    @Value("${app.security.system-bank-admin-currency-code}")
+    private String systemCurrencyCode;
+
     @Value("${springdoc.swagger-ui.oauth.client-id:}")
     private String defaultClientId;
 
@@ -60,12 +72,20 @@ public class SystemAdminSeeder implements CommandLineRunner {
                         config.setStatus(BankStatus.ACTIVE);
                         updated = true;
                     }
-                    if (config.getAdminName() == null) {
-                        config.setAdminName("Sanjeev");
+                    if (!systemBankName.equals(config.getName())) {
+                        config.setName(systemBankName);
                         updated = true;
                     }
-                    if (config.getAdminEmail() == null) {
-                        config.setAdminEmail("sanjusoftware@gmail.com");
+                    if (!systemAdminName.equals(config.getAdminName())) {
+                        config.setAdminName(systemAdminName);
+                        updated = true;
+                    }
+                    if (!systemAdminEmail.equals(config.getAdminEmail())) {
+                        config.setAdminEmail(systemAdminEmail);
+                        updated = true;
+                    }
+                    if (!systemCurrencyCode.equals(config.getCurrencyCode())) {
+                        config.setCurrencyCode(systemCurrencyCode);
                         updated = true;
                     }
                     if (updated) {
@@ -75,12 +95,14 @@ public class SystemAdminSeeder implements CommandLineRunner {
                 () -> {
                     BankConfiguration config = new BankConfiguration();
                     config.setBankId(systemBankId);
+                    config.setName(systemBankName);
                     config.setIssuerUrl(normalizedIssuer);
                     config.setClientId(defaultClientId);
                     config.setAllowProductInMultipleBundles(true);
                     config.setStatus(BankStatus.ACTIVE);
-                    config.setAdminName("Sanjeev");
-                    config.setAdminEmail("sanjusoftware@gmail.com");
+                    config.setAdminName(systemAdminName);
+                    config.setAdminEmail(systemAdminEmail);
+                    config.setCurrencyCode(systemCurrencyCode);
                     bankConfigurationRepository.save(config);
                     System.out.println("Created root bank: " + systemBankId + " with client_id: " + defaultClientId);
                 }

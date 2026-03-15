@@ -24,6 +24,14 @@ class AuthorityDiscoveryServiceTest {
         public void methodEmpty() {}
 
         public void methodNoAnnotation() {}
+
+        @PreAuthorize("hasAuthority('SINGLE_METHOD')")
+        public void method2() {}
+    }
+
+    @RestController
+    static class AnotherController {
+        public void noPreAuth() {}
     }
 
     @Test

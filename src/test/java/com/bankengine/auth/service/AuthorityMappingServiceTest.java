@@ -16,7 +16,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class AuthorityMappingServiceTest {
 
@@ -185,5 +186,92 @@ class AuthorityMappingServiceTest {
         authorityMappingService.mapAuthorities(claims, issuerWithSlash);
 
         verify(bankConfigurationRepository).findByIssuerUrlAndClientIdUnfiltered(normalizedIssuer, clientId);
+    }
+
+    @Test
+    void resolveBankId_ShouldThrowException_WhenIssuerIsNull() {
+        assertThrows(OAuth2AuthenticationException.class, () ->
+            authorityMappingService.resolveBankId(null, "client-id")
+        );
+    }
+
+    @Test
+    void resolveBankId_ShouldThrowException_WhenClientIdIsNull() {
+        assertThrows(OAuth2AuthenticationException.class, () ->
+            authorityMappingService.resolveBankId("https://idp.com", null)
+        );
+    }
+
+    @Test
+    void mapAuthorities_ShouldHandleMissingRolesClaim() {
+        String issuer = "https://idp.com";
+        String clientId = "client-123";
+        Map<String, Object> claims = Map.of(
+                "iss", issuer,
+                "azp", clientId
+        );
+
+        BankConfiguration config = BankConfiguration.builder()
+                .bankId("BANK-1")
+                .issuerUrl(issuer)
+                .clientId(clientId)
+                .status(BankStatus.ACTIVE)
+                .build();
+
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
+                .thenReturn(Optional.of(config));
+
+        var authorities = authorityMappingService.mapAuthorities(claims, issuer);
+        assertTrue(authorities.isEmpty());
+    }
+
+    @Test
+    void mapAuthorities_ShouldHandleAudListWithNonStringElements() {
+        String issuer = "https://idp.com";
+        Map<String, Object> claims = Map.of(
+                "iss", issuer,
+                "aud", List.of(123, 456)
+        );
+
+        assertThrows(OAuth2AuthenticationException.class, () ->
+            authorityMappingService.mapAuthorities(claims, issuer)
+        );
+    }
+
+    @Test
+    void mapAuthorities_ShouldHandleAzpBlank() {
+        String issuer = "https://idp.com";
+        String bankId = "BANK-1";
+        Map<String, Object> claims = Map.of(
+                "iss", issuer,
+                "azp", " ",
+                "aud", "client-123"
+        );
+
+        BankConfiguration config = BankConfiguration.builder()
+                .bankId(bankId)
+                .issuerUrl(issuer)
+                .clientId("client-123")
+                .status(BankStatus.ACTIVE)
+                .build();
+
+        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, "client-123"))
+                .thenReturn(Optional.of(config));
+
+        authorityMappingService.mapAuthorities(claims, issuer);
+        assertEquals(bankId, TenantContextHolder.getBankId());
+    }
+
+    @Test
+    void mapAuthorities_ShouldHandleAudBlank() {
+        String issuer = "https://idp.com";
+        Map<String, Object> claims = Map.of(
+                "iss", issuer,
+                "aud", " "
+        );
+
+        assertThrows(OAuth2AuthenticationException.class, () ->
+            authorityMappingService.mapAuthorities(claims, issuer)
+        );
     }
 }
