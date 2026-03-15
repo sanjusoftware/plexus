@@ -29,6 +29,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const initAuth = async () => {
+      // Initialize CSRF token first
+      try {
+        await axios.get('/api/v1/auth/csrf');
+      } catch (err) {
+        console.error('Failed to initialize CSRF token');
+      }
+
       const currentUser = await authService.getUser();
       setUser(currentUser);
       setLoading(false);

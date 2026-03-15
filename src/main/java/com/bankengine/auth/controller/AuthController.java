@@ -1,9 +1,9 @@
 package com.bankengine.auth.controller;
 
 import com.bankengine.auth.dto.UserResponse;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
-import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.web.dto.ApiError;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -111,6 +114,17 @@ public class AuthController {
 
         String bankId = principal.getAttribute("bank_id") != null ? principal.getAttribute("bank_id") : "UNKNOWN";
         String sub = principal.getAttribute("sub") != null ? principal.getAttribute("sub") : "unknown-sub";
+        String picture = principal.getAttribute("picture") != null ? principal.getAttribute("picture") : null;
+
+        String bankName = "Unknown Bank";
+        try {
+            TenantContextHolder.setSystemMode(true);
+            bankName = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                    .map(config -> config.getName() != null ? config.getName() : bankId)
+                    .orElse(bankId);
+        } finally {
+            TenantContextHolder.setSystemMode(false);
+        }
 
         // Return profile information from the principal
         return ResponseEntity.ok(UserResponse.builder()
@@ -118,7 +132,9 @@ public class AuthController {
                 .email(email)
                 .roles(roles)
                 .bank_id(bankId)
+                .bankName(bankName)
                 .sub(sub)
+                .picture(picture)
                 .build());
     }
 

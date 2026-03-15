@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, ChevronDown } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, ChevronDown, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 const OnboardingPage = () => {
@@ -89,27 +89,215 @@ const OnboardingPage = () => {
 
   if (status === 'success') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className={`${isAdmin ? '' : 'min-h-screen bg-gray-50'} flex items-center justify-center p-4`}>
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center">
           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto mb-6" />
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Request Submitted!</h2>
           <p className="text-gray-600 mb-8">{message}</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
           >
-            Return to Home
+            {isAdmin ? 'Back to Dashboard' : 'Return to Home'}
           </button>
         </div>
       </div>
     );
   }
 
+  const renderForm = () => (
+    <div className="max-w-xl w-full mx-auto">
+      {!isAdmin && (
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center text-blue-600 hover:text-blue-800 font-medium mb-8 transition"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Home
+        </button>
+      )}
+
+      <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        {isAdmin ? 'Add New Bank' : 'Get Started'}
+      </h2>
+      <p className="text-gray-500 mb-10">
+        {isAdmin ? 'Fill out the form below to register a new bank in the system.' : 'Fill out the form below to submit an onboarding request for your institution.'}
+      </p>
+
+      {status === 'error' && (
+        <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center text-red-700">
+          <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0" />
+          <p className="text-sm font-medium">{message}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Bank Name</label>
+            <input
+              required
+              type="text"
+              placeholder="e.g. Global Bank"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              value={formData.name}
+              onChange={e => {
+                const name = e.target.value;
+                const bankId = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                setFormData({ ...formData, name, bankId });
+              }}
+            />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Bank ID (Generated)</label>
+            <input
+              required
+              type="text"
+              placeholder="e.g. GLOBAL-BANK-001"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              value={formData.bankId}
+              onChange={e => setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '_') })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Currency</label>
+            <div className="relative">
+              {!isCustomCurrency ? (
+                <>
+                  <select
+                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition appearance-none"
+                    value={formData.currencyCode}
+                    onChange={e => {
+                      if (e.target.value === 'OTHER') {
+                        setIsCustomCurrency(true);
+                      } else {
+                        setFormData({ ...formData, currencyCode: e.target.value });
+                      }
+                    }}
+                  >
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="JPY">JPY - Japanese Yen</option>
+                    <option value="OTHER">Other (Enter code...)</option>
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                </>
+              ) : (
+                <div className="flex space-x-2">
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="e.g. AUD"
+                    className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    value={customCurrency}
+                    onChange={e => setCustomCurrency(e.target.value.toUpperCase())}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomCurrency(false)}
+                    className="px-3 text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1">OIDC Issuer URL</label>
+          <p className="text-xs text-gray-500 mb-2">
+            The discovery URL of your Identity Provider.
+            <br />Example (Entra ID): <code className="bg-gray-100 px-1 rounded">https://login.microsoftonline.com/&#123;tenant-id&#125;/v2.0</code>
+          </p>
+          <input
+            required
+            type="text"
+            placeholder="https://login.microsoftonline.com/..."
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+            value={formData.issuerUrl}
+            onChange={e => setFormData({ ...formData, issuerUrl: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-1">Client ID (optional)</label>
+          <p className="text-xs text-gray-500 mb-2">
+            The Application (client) ID registered in your IDP.
+            <br />Example (Entra ID): Found in the "Overview" section of your App Registration.
+          </p>
+          <input
+            type="text"
+            placeholder="e.g. 12345678-1234-1234-1234-1234567890ab"
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+            value={formData.clientId}
+            onChange={e => setFormData({ ...formData, clientId: e.target.value })}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Admin Name</label>
+            <input
+              required
+              type="text"
+              placeholder="Full Name"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              value={formData.adminName}
+              onChange={e => setFormData({ ...formData, adminName: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Admin Email</label>
+            <input
+              required
+              type="email"
+              placeholder="email@bank.com"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              value={formData.adminEmail}
+              onChange={e => setFormData({ ...formData, adminEmail: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-blue-900 mb-1">Security Check</p>
+            <p className="text-blue-700 text-lg font-mono">{captcha.question}</p>
+          </div>
+          <input
+            required
+            type="text"
+            placeholder="?"
+            className="w-20 px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold"
+            value={formData.captchaAnswer}
+            onChange={e => setFormData({ ...formData, captchaAnswer: e.target.value })}
+          />
+        </div>
+
+        <button
+          disabled={loading}
+          type="submit"
+          className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg disabled:opacity-50 flex items-center justify-center"
+        >
+          {loading ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Submitting...</> : 'Submit Request'}
+        </button>
+      </form>
+    </div>
+  );
+
+  if (isAdmin) {
+    return <div className="p-8">{renderForm()}</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       {/* Information Panel */}
       <div className="md:w-1/3 bg-blue-900 text-white p-12 flex flex-col">
-        <div className="flex items-center space-x-2 mb-12">
+        <div className="flex items-center space-x-2 mb-12 cursor-pointer" onClick={() => navigate('/')}>
           <img src="/logo-plexus.svg" alt="Plexus Logo" className="h-8 w-8 brightness-0 invert" />
           <span className="text-2xl font-bold tracking-tight">Plexus</span>
         </div>
@@ -152,194 +340,10 @@ const OnboardingPage = () => {
 
       {/* Form Panel */}
       <div className="flex-1 p-8 md:p-20 flex items-center justify-center relative">
-        <div className="max-w-xl w-full">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center text-blue-600 hover:text-blue-800 font-medium mb-8 transition"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
-          </button>
-
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            {isAdmin ? 'Add New Bank' : 'Get Started'}
-          </h2>
-          <p className="text-gray-500 mb-10">
-            {isAdmin ? 'Fill out the form below to register a new bank in the system.' : 'Fill out the form below to submit an onboarding request for your institution.'}
-          </p>
-
-          {status === 'error' && (
-            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center text-red-700">
-              <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-              <p className="text-sm font-medium">{message}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Bank Name</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="e.g. Global Bank"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  value={formData.name}
-                  onChange={e => {
-                    const name = e.target.value;
-                    const bankId = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
-                    setFormData({ ...formData, name, bankId });
-                  }}
-                />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Bank ID (Generated)</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="e.g. GLOBAL-BANK-001"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  value={formData.bankId}
-                  onChange={e => setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '_') })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Currency</label>
-                <div className="relative">
-                  {!isCustomCurrency ? (
-                    <>
-                      <select
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition appearance-none"
-                        value={formData.currencyCode}
-                        onChange={e => {
-                          if (e.target.value === 'OTHER') {
-                            setIsCustomCurrency(true);
-                          } else {
-                            setFormData({ ...formData, currencyCode: e.target.value });
-                          }
-                        }}
-                      >
-                        <option value="USD">USD - US Dollar</option>
-                        <option value="EUR">EUR - Euro</option>
-                        <option value="GBP">GBP - British Pound</option>
-                        <option value="JPY">JPY - Japanese Yen</option>
-                        <option value="OTHER">Other (Enter code...)</option>
-                      </select>
-                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                    </>
-                  ) : (
-                    <div className="flex space-x-2">
-                      <input
-                        autoFocus
-                        type="text"
-                        placeholder="e.g. AUD"
-                        className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                        value={customCurrency}
-                        onChange={e => setCustomCurrency(e.target.value.toUpperCase())}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setIsCustomCurrency(false)}
-                        className="px-3 text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        Reset
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">OIDC Issuer URL</label>
-              <p className="text-xs text-gray-500 mb-2">
-                The discovery URL of your Identity Provider.
-                <br />Example (Entra ID): <code className="bg-gray-100 px-1 rounded">https://login.microsoftonline.com/&#123;tenant-id&#125;/v2.0</code>
-              </p>
-              <input
-                required
-                type="text"
-                placeholder="https://login.microsoftonline.com/..."
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                value={formData.issuerUrl}
-                onChange={e => setFormData({ ...formData, issuerUrl: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Client ID (optional)</label>
-              <p className="text-xs text-gray-500 mb-2">
-                The Application (client) ID registered in your IDP.
-                <br />Example (Entra ID): Found in the "Overview" section of your App Registration.
-              </p>
-              <input
-                type="text"
-                placeholder="e.g. 12345678-1234-1234-1234-1234567890ab"
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                value={formData.clientId}
-                onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Admin Name</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Full Name"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  value={formData.adminName}
-                  onChange={e => setFormData({ ...formData, adminName: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Admin Email</label>
-                <input
-                  required
-                  type="email"
-                  placeholder="email@bank.com"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  value={formData.adminEmail}
-                  onChange={e => setFormData({ ...formData, adminEmail: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-blue-900 mb-1">Security Check</p>
-                <p className="text-blue-700 text-lg font-mono">{captcha.question}</p>
-              </div>
-              <input
-                required
-                type="text"
-                placeholder="?"
-                className="w-20 px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold"
-                value={formData.captchaAnswer}
-                onChange={e => setFormData({ ...formData, captchaAnswer: e.target.value })}
-              />
-            </div>
-
-            <button
-              disabled={loading}
-              type="submit"
-              className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg disabled:opacity-50 flex items-center justify-center"
-            >
-              {loading ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Submitting...</> : 'Submit Request'}
-            </button>
-          </form>
-        </div>
+        {renderForm()}
       </div>
     </div>
   );
 };
-
-const Loader2 = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-  </svg>
-);
 
 export default OnboardingPage;
