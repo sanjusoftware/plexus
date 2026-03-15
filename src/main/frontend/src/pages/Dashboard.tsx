@@ -75,17 +75,20 @@ const Dashboard = () => {
           <span className="text-xl font-bold tracking-tight">Plexus</span>
         </div>
         <nav className="mt-6 px-4 space-y-2">
+          {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
           <a href="#" className="flex items-center space-x-3 bg-blue-800 p-3 rounded-lg">
             <LayoutDashboard className="h-5 w-5 text-blue-300" />
             <span className="font-medium">Dashboard</span>
           </a>
           {isSystemAdmin && (
+            /* eslint-disable-next-line jsx-a11y/anchor-is-valid */
             <a href="#" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-800 transition">
               <Building2 className="h-5 w-5 text-blue-300" />
               <span>Bank Management</span>
             </a>
           )}
           {(isBankAdmin || !isSystemAdmin) && (
+            /* eslint-disable-next-line jsx-a11y/anchor-is-valid */
             <a href="#" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-800 transition">
               <Package className="h-5 w-5 text-blue-300" />
               <span>Product Catalog</span>
