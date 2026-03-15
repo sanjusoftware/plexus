@@ -119,6 +119,42 @@ class SecurityContextImplTest {
     }
 
     @Test
+    void getCurrentBankId_ShouldReturnBankId_FromOAuth2UserAudienceList() {
+        OAuth2User user = mock(OAuth2User.class);
+        when(user.getAttribute("bank_id")).thenReturn(null);
+        when(user.getAttribute("aud")).thenReturn(List.of("AUD_LIST_BANK"));
+        setupMockAuthentication(user);
+
+        String bankId = securityContext.getCurrentBankId();
+
+        assertThat(bankId).isEqualTo("AUD_LIST_BANK");
+    }
+
+    @Test
+    void getCurrentBankId_ShouldReturnBankId_FromOAuth2UserAudienceString() {
+        OAuth2User user = mock(OAuth2User.class);
+        when(user.getAttribute("bank_id")).thenReturn(null);
+        when(user.getAttribute("aud")).thenReturn("AUD_STRING_BANK");
+        setupMockAuthentication(user);
+
+        String bankId = securityContext.getCurrentBankId();
+
+        assertThat(bankId).isEqualTo("AUD_STRING_BANK");
+    }
+
+    @Test
+    void getCurrentBankId_ShouldThrow_WhenOAuth2UserClaimsMissing() {
+        OAuth2User user = mock(OAuth2User.class);
+        when(user.getAttribute("bank_id")).thenReturn(null);
+        when(user.getAttribute("aud")).thenReturn(null);
+        setupMockAuthentication(user);
+
+        assertThatThrownBy(securityContext::getCurrentBankId)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("OAuth2User does not contain bank_id or audience attribute");
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void getCurrentBankId_ShouldFallbackToIssuer_WhenClaimsMissing() throws Exception {
         Jwt jwt = mock(Jwt.class);
@@ -136,6 +172,22 @@ class SecurityContextImplTest {
         String bankId = securityContext.getCurrentBankId();
 
         assertThat(bankId).isEqualTo("ISSUER_BANK");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getCurrentBankId_ShouldThrow_WhenIssuerUnknown() throws Exception {
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaimAsString("bank_id")).thenReturn(null);
+        when(jwt.getAudience()).thenReturn(List.of());
+        when(jwt.getIssuer()).thenReturn(new URL("https://unknown.com/"));
+        setupMockAuthentication(jwt);
+
+        when(bankConfigurationRepository.findAll()).thenReturn(List.of());
+
+        assertThatThrownBy(securityContext::getCurrentBankId)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("No bank configuration found for issuer");
     }
 
     private void setupMockAuthentication(Object principal) {
