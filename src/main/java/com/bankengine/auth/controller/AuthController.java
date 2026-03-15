@@ -1,6 +1,7 @@
 package com.bankengine.auth.controller;
 
 import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.auth.security.TenantContextHolder;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,11 +30,17 @@ public class AuthController {
 
         try {
             TenantContextHolder.setSystemMode(true);
-            boolean exists = bankConfigurationRepository.findByBankIdUnfiltered(bankId).isPresent();
+            var bankConfigOpt = bankConfigurationRepository.findByBankIdUnfiltered(bankId);
 
-            if (!exists) {
+            if (bankConfigOpt.isEmpty()) {
                 log.warn("[AUTH] Invalid bankId: {}", bankId);
                 response.sendError(HttpStatus.BAD_REQUEST.value(), "Invalid Bank ID");
+                return;
+            }
+
+            if (bankConfigOpt.get().getStatus() != BankStatus.ACTIVE) {
+                log.warn("[AUTH] Login denied: Bank {} is in {} status", bankId, bankConfigOpt.get().getStatus());
+                response.sendError(HttpStatus.FORBIDDEN.value(), "Bank account is not active");
                 return;
             }
         } finally {

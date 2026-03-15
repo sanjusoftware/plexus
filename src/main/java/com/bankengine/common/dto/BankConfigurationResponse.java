@@ -18,5 +18,8 @@ public class BankConfigurationResponse {
     private boolean hasClientSecret;
     private boolean allowProductInMultipleBundles;
     private String currencyCode;
+    private String status;
+    private String adminName;
+    private String adminEmail;
     private List<BankConfigurationRequest.CategoryConflictDto> categoryConflictRules;
 }

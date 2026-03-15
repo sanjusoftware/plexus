@@ -4,6 +4,7 @@ import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,6 +56,18 @@ public class SystemAdminSeeder implements CommandLineRunner {
                         updated = true;
                         System.out.println("Updated client_id for " + systemBankId);
                     }
+                    if (config.getStatus() != BankStatus.ACTIVE) {
+                        config.setStatus(BankStatus.ACTIVE);
+                        updated = true;
+                    }
+                    if (config.getAdminName() == null) {
+                        config.setAdminName("Sanjeev");
+                        updated = true;
+                    }
+                    if (config.getAdminEmail() == null) {
+                        config.setAdminEmail("sanjusoftware@gmail.com");
+                        updated = true;
+                    }
                     if (updated) {
                         bankConfigurationRepository.save(config);
                     }
@@ -65,6 +78,9 @@ public class SystemAdminSeeder implements CommandLineRunner {
                     config.setIssuerUrl(normalizedIssuer);
                     config.setClientId(defaultClientId);
                     config.setAllowProductInMultipleBundles(true);
+                    config.setStatus(BankStatus.ACTIVE);
+                    config.setAdminName("Sanjeev");
+                    config.setAdminEmail("sanjusoftware@gmail.com");
                     bankConfigurationRepository.save(config);
                     System.out.println("Created root bank: " + systemBankId + " with client_id: " + defaultClientId);
                 }

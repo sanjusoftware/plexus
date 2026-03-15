@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -82,6 +83,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
 
         // Create a bank
         mockMvc.perform(post("/api/v1/banks")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -110,6 +112,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .build();
 
         mockMvc.perform(put("/api/v1/banks/ID_UPDATE_TEST")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -159,6 +162,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .build();
 
         mockMvc.perform(post("/api/v1/banks")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden())
@@ -196,6 +200,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .build();
 
         mockMvc.perform(put("/api/v1/banks")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -214,6 +219,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .build();
 
         mockMvc.perform(put("/api/v1/banks")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -230,6 +236,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl(ISSUER_A)
                 .build();
         mockMvc.perform(post("/api/v1/banks")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict());

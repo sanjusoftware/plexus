@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon,
-  ShieldCheck, Loader2, Plus, ArrowRight, ExternalLink
+  ShieldCheck, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -45,6 +45,18 @@ const Dashboard = () => {
 
     fetchData();
   }, [user, authLoading, navigate, isSystemAdmin]);
+
+  const handleStatusUpdate = async (bankId: string, newStatus: string) => {
+    try {
+      await axios.put(`/api/v1/banks/${bankId}`, { status: newStatus });
+      // Refresh data
+      const response = await axios.get('/api/v1/banks');
+      setData(response.data || []);
+    } catch (err) {
+      console.error('Failed to update bank status:', err);
+      alert('Failed to update status. Make sure you have SYSTEM_ADMIN permissions.');
+    }
+  };
 
   if (authLoading || (user && loading && data.length === 0)) {
     return (
@@ -166,11 +178,53 @@ const Dashboard = () => {
                         {isSystemAdmin ? <Building2 className="h-5 w-5 text-blue-600" /> : <Package className="h-5 w-5 text-blue-600" />}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{isSystemAdmin ? item.bankId : item.name}</p>
+                        <div className="flex items-center space-x-2">
+                          <p className="font-semibold text-gray-900">{isSystemAdmin ? item.bankId : item.name}</p>
+                          {isSystemAdmin && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                              item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                               item.status === 'REQUEST' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {item.status}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500">{isSystemAdmin ? item.issuerUrl : item.code}</p>
+                        {isSystemAdmin && item.adminName && (
+                          <p className="text-xs text-gray-400">Admin: {item.adminName} ({item.adminEmail})</p>
+                        )}
                       </div>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-gray-300" />
+                    <div className="flex items-center space-x-2">
+                      {isSystemAdmin && item.status === 'REQUEST' && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'ACTIVE'); }}
+                            className="p-2 hover:bg-green-50 text-green-600 rounded-full transition"
+                            title="Approve"
+                          >
+                            <CheckCircle2 className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'REJECTED'); }}
+                            className="p-2 hover:bg-red-50 text-red-600 rounded-full transition"
+                            title="Reject"
+                          >
+                            <XCircle className="h-5 w-5" />
+                          </button>
+                        </>
+                      )}
+                      {isSystemAdmin && item.status === 'ACTIVE' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'INACTIVE'); }}
+                          className="p-2 hover:bg-gray-100 text-gray-400 rounded-full transition"
+                          title="Deactivate"
+                        >
+                          <Clock className="h-5 w-5" />
+                        </button>
+                      )}
+                      <ArrowRight className="h-5 w-5 text-gray-300" />
+                    </div>
                   </div>
                 ))
               )}

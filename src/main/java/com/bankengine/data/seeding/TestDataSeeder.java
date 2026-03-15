@@ -8,6 +8,7 @@ import com.bankengine.catalog.model.*;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
 import com.bankengine.catalog.repository.*;
 import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
@@ -125,6 +126,9 @@ public class TestDataSeeder implements CommandLineRunner {
             config.setIssuerUrl(issuerUrl);
             config.setClientId("dev-client-id-" + bankId);
             config.setAllowProductInMultipleBundles(bankId.equals(BANK_A));
+            config.setStatus(BankStatus.ACTIVE);
+            config.setAdminName("Dev Admin " + bankId);
+            config.setAdminEmail("admin@" + bankId.toLowerCase() + ".com");
 
             List<CategoryConflictRule> rules = new ArrayList<>();
             rules.add(new CategoryConflictRule("RETAIL", "WEALTH"));
