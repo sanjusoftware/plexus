@@ -1,13 +1,19 @@
 package com.bankengine.auth.security;
 
+import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.repository.BankConfigurationRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jwt.Jwt;
 
+import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -16,7 +22,8 @@ import static org.mockito.Mockito.when;
 
 class SecurityContextImplTest {
 
-    private final SecurityContextImpl securityContext = new SecurityContextImpl();
+    private final BankConfigurationRepository bankConfigurationRepository = mock(BankConfigurationRepository.class);
+    private final SecurityContextImpl securityContext = new SecurityContextImpl(bankConfigurationRepository);
 
     @BeforeEach
     @AfterEach
@@ -67,24 +74,68 @@ class SecurityContextImplTest {
     }
 
     @Test
-    void getCurrentBankId_ShouldThrow_WhenPrincipalNotJwt() {
-        setupMockAuthentication("NotAJwtObject");
+    void getCurrentBankId_ShouldThrow_WhenPrincipalUnsupported() {
+        setupMockAuthentication("NotASupportedPrincipal");
 
         assertThatThrownBy(securityContext::getCurrentBankId)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("principal is not a JWT");
+                .hasMessageContaining("Unsupported authentication principal type");
     }
 
     @Test
-    void getCurrentBankId_ShouldThrow_WhenClaimsMissing() {
+    void getCurrentBankId_ShouldThrow_WhenClaimsAndIssuerMissing() {
         Jwt jwt = mock(Jwt.class);
         when(jwt.getClaimAsString("bank_id")).thenReturn(null);
         when(jwt.getAudience()).thenReturn(List.of()); // Empty audience
+        when(jwt.getIssuer()).thenReturn(null);
         setupMockAuthentication(jwt);
 
         assertThatThrownBy(securityContext::getCurrentBankId)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Authenticated principal (JWT) does not contain bank_id");
+    }
+
+    @Test
+    void getCurrentBankId_ShouldReturnBankId_FromOAuth2Token() {
+        OAuth2AuthenticationToken auth = mock(OAuth2AuthenticationToken.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getAuthorizedClientRegistrationId()).thenReturn("OAUTH_BANK");
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        String bankId = securityContext.getCurrentBankId();
+
+        assertThat(bankId).isEqualTo("OAUTH_BANK");
+    }
+
+    @Test
+    void getCurrentBankId_ShouldReturnBankId_FromOAuth2User() {
+        OAuth2User user = mock(OAuth2User.class);
+        when(user.getAttribute("bank_id")).thenReturn("USER_BANK");
+        setupMockAuthentication(user);
+
+        String bankId = securityContext.getCurrentBankId();
+
+        assertThat(bankId).isEqualTo("USER_BANK");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getCurrentBankId_ShouldFallbackToIssuer_WhenClaimsMissing() throws Exception {
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaimAsString("bank_id")).thenReturn(null);
+        when(jwt.getAudience()).thenReturn(List.of());
+        when(jwt.getIssuer()).thenReturn(new URL("https://idp.example.com/"));
+        setupMockAuthentication(jwt);
+
+        BankConfiguration config = BankConfiguration.builder()
+                .bankId("ISSUER_BANK")
+                .issuerUrl("https://idp.example.com")
+                .build();
+        when(bankConfigurationRepository.findAll()).thenReturn(List.of(config));
+
+        String bankId = securityContext.getCurrentBankId();
+
+        assertThat(bankId).isEqualTo("ISSUER_BANK");
     }
 
     private void setupMockAuthentication(Object principal) {
