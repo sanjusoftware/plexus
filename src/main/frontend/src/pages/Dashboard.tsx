@@ -46,15 +46,9 @@ const Dashboard = () => {
     fetchData();
   }, [user, authLoading, navigate, isSystemAdmin]);
 
-  const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'REJECTED') => {
+  const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate') => {
     try {
-      if (action === 'REJECTED') {
-        // Fallback or specific reject logic if needed, for now we only have activate/deactivate endpoints
-        // If there's no reject endpoint, we might need one or use update with status
-        await axios.put(`/api/v1/banks/${targetBankId}`, { status: 'REJECTED' });
-      } else {
-        await axios.post(`/api/v1/banks/${targetBankId}/${action}`);
-      }
+      await axios.post(`/api/v1/banks/${targetBankId}/${action}`);
 
       // Refresh data
       const response = await axios.get('/api/v1/banks');
@@ -214,22 +208,13 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       {isSystemAdmin && item.status === 'DRAFT' && (
-                        <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                            className="p-2 hover:bg-green-50 text-green-600 rounded-full transition"
-                            title="Approve"
-                          >
-                            <CheckCircle2 className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'REJECTED'); }}
-                            className="p-2 hover:bg-red-50 text-red-600 rounded-full transition"
-                            title="Reject"
-                          >
-                            <XCircle className="h-5 w-5" />
-                          </button>
-                        </>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
+                          className="p-2 hover:bg-green-50 text-green-600 rounded-full transition"
+                          title="Approve"
+                        >
+                          <CheckCircle2 className="h-5 w-5" />
+                        </button>
                       )}
                       {isSystemAdmin && item.status === 'ACTIVE' && (
                         <button
