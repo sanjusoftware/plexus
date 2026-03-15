@@ -1,6 +1,6 @@
 package com.bankengine.auth.controller;
 
-import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.auth.dto.UserResponse;
 import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.auth.security.TenantContextHolder;
@@ -14,7 +14,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.Collections;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -52,19 +53,35 @@ public class AuthController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<Map<String, Object>> getUser(@AuthenticationPrincipal OAuth2User principal) {
+    public ResponseEntity<UserResponse> getUser(@AuthenticationPrincipal OAuth2User principal) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
+        String name = principal.getAttribute("name") != null ? principal.getAttribute("name") : "unknown user";
+
+        String email = "unknown@email";
+        if (principal.getAttribute("preferred_username") != null) {
+            email = principal.getAttribute("preferred_username");
+        } else if (principal.getAttribute("email") != null) {
+            email = principal.getAttribute("email");
+        }
+
+        List<String> roles = principal.getAttribute("roles") instanceof List<?> list
+                ? list.stream().map(Object::toString).toList()
+                : Collections.emptyList();
+
+        String bankId = principal.getAttribute("bank_id") != null ? principal.getAttribute("bank_id") : "UNKNOWN";
+        String sub = principal.getAttribute("sub") != null ? principal.getAttribute("sub") : "unknown-sub";
+
         // Return profile information from the principal
-        return ResponseEntity.ok(Map.of(
-            "name", principal.getAttribute("name"),
-            "email", principal.getAttribute("preferred_username") != null ? principal.getAttribute("preferred_username") : (principal.getAttribute("email") != null ? principal.getAttribute("email") : ""),
-            "roles", principal.getAttribute("roles"),
-            "bank_id", principal.getAttribute("bank_id"),
-            "sub", principal.getAttribute("sub")
-        ));
+        return ResponseEntity.ok(UserResponse.builder()
+                .name(name)
+                .email(email)
+                .roles(roles)
+                .bank_id(bankId)
+                .sub(sub)
+                .build());
     }
 
     @GetMapping("/csrf")
