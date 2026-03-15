@@ -1,10 +1,11 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import OnboardingPage from './pages/OnboardingPage';
+import ErrorPage from './pages/ErrorPage';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -18,8 +19,9 @@ function App() {
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/error" element={<ErrorPage />} />
             {/* Fallback for client-side routing */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<ErrorPage />} />
           </Routes>
         </div>
       </Router>
