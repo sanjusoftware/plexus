@@ -123,7 +123,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     }
 
     private Long createProductViaApi(ProductRequest request) throws Exception {
-        String json = mockMvc.perform(post(PRODUCT_API_BASE)
+        String json = mockMvc.perform(postWithCsrf(PRODUCT_API_BASE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -178,7 +178,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenCreatingProductWithoutPermission() throws Exception {
-        mockMvc.perform(post(PRODUCT_API_BASE)
+        mockMvc.perform(postWithCsrf(PRODUCT_API_BASE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(defaultRequestBuilder().build())))
                 .andExpect(status().isForbidden());
@@ -188,7 +188,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldCreateProductAsDraftByDefault() throws Exception {
         ProductRequest request = defaultRequestBuilder().build();
-        mockMvc.perform(post(PRODUCT_API_BASE)
+        mockMvc.perform(postWithCsrf(PRODUCT_API_BASE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -200,7 +200,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404WhenCreatingProductWithNonExistentProductType() throws Exception {
         ProductRequest requestDto = defaultRequestBuilder().productTypeCode("INVALID_TYPE").build();
-        mockMvc.perform(post(PRODUCT_API_BASE)
+        mockMvc.perform(postWithCsrf(PRODUCT_API_BASE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isNotFound());
@@ -222,7 +222,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         Long productId = createProductInStatus("DRAFT");
         ProductRequest updateDto = defaultRequestBuilder().name("Updated Name").build();
 
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{productId}", productId)
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{productId}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -235,7 +235,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         Long productId = createProductInStatus("ACTIVE");
         ProductRequest updateDto = defaultRequestBuilder().name("Illegal Update").build();
 
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isConflict());
@@ -245,7 +245,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenUpdatingProductWithoutPermission() throws Exception {
         Long productId = txHelper.createProductInDb("Secured", EXISTING_PRODUCT_TYPE_ID, "RETAIL");
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(defaultRequestBuilder().build())))
                 .andExpect(status().isForbidden());
@@ -259,7 +259,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {UNAUTHORIZED_ROLE})
     void shouldReturn403WhenActivatingProductWithoutPermission() throws Exception {
         Long productId = createProductInStatus("DRAFT");
-        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/activate", productId)).andExpect(status().isForbidden());
+        mockMvc.perform(postWithCsrf(PRODUCT_API_BASE + "/{id}/activate", productId)).andExpect(status().isForbidden());
     }
 
     @Test
@@ -268,7 +268,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         Long productId = createProductInStatus("DRAFT");
         LocalDate actDate = LocalDate.now().plusDays(2);
 
-        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/activate", productId)
+        mockMvc.perform(postWithCsrf(PRODUCT_API_BASE + "/{id}/activate", productId)
                         .param("activationDate", actDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
@@ -279,7 +279,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldDeactivateActiveProduct() throws Exception {
         Long productId = createProductInStatus("ACTIVE");
-        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/deactivate", productId))
+        mockMvc.perform(postWithCsrf(PRODUCT_API_BASE + "/{id}/deactivate", productId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("INACTIVE"));
     }
@@ -292,7 +292,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         LocalDate newExp = LocalDate.now().plusYears(2);
 
         // 2. Act: Call the dedicated extension endpoint
-        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/extend-expiry", productId)
+        mockMvc.perform(postWithCsrf(PRODUCT_API_BASE + "/{id}/extend-expiry", productId)
                         .param("newExpiryDate", newExp.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.expiryDate").value(newExp.toString()));
@@ -306,7 +306,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         LocalDate newExp = LocalDate.now().plusYears(2);
 
         // 2. Act & Assert: Should fail with 409 (or 400 depending on your Global Exception Handler)
-        mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/extend-expiry", productId)
+        mockMvc.perform(postWithCsrf(PRODUCT_API_BASE + "/{id}/extend-expiry", productId)
                         .param("newExpiryDate", newExp.toString()))
                 .andExpect(status().isConflict());
     }
@@ -346,7 +346,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         // 2. Act: Use the ORIGINAL code to trigger a REVISION (Archiving)
         VersionRequest versionDto = new VersionRequest("Checking V2", originalCode, LocalDate.now().plusMonths(1), null);
 
-        String response = mockMvc.perform(post(PRODUCT_API_BASE + "/{id}/create-new-version", oldProductId)
+        String response = mockMvc.perform(postWithCsrf(PRODUCT_API_BASE + "/{id}/create-new-version", oldProductId)
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(versionDto)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
 

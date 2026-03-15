@@ -11,9 +11,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.util.Map;
 import java.util.Set;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,5 +47,21 @@ public abstract class AbstractIntegrationTest {
         } finally {
             TenantContextHolder.clear();
         }
+    }
+
+    protected MockHttpServletRequestBuilder postWithCsrf(String url, Object... vars) {
+        return post(url, vars).with(csrf());
+    }
+
+    protected MockHttpServletRequestBuilder putWithCsrf(String url, Object... vars) {
+        return put(url, vars).with(csrf());
+    }
+
+    protected MockHttpServletRequestBuilder patchWithCsrf(String url, Object... vars) {
+        return patch(url, vars).with(csrf());
+    }
+
+    protected MockHttpServletRequestBuilder deleteWithCsrf(String url, Object... vars) {
+        return delete(url, vars).with(csrf());
     }
 }

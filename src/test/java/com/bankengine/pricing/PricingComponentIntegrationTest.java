@@ -126,7 +126,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldHandleComponentCrudOperations() throws Exception {
         // CREATE
-        String createJson = mockMvc.perform(post(BASE_URL)
+        String createJson = mockMvc.perform(postWithCsrf(BASE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newPricingComponentRequest("CrudFee"))))
                 .andExpect(status().isCreated())
@@ -137,7 +137,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         // UPDATE
         PricingComponentRequest update = newPricingComponentRequest("UpdatedCrudFee");
-        mockMvc.perform(patch(BASE_URL + "/{id}", id)
+        mockMvc.perform(patchWithCsrf(BASE_URL + "/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(update)))
                 .andExpect(status().isOk())
@@ -149,7 +149,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.id", is(id.intValue())));
 
         // DELETE
-        mockMvc.perform(delete(BASE_URL + "/{id}", id))
+        mockMvc.perform(deleteWithCsrf(BASE_URL + "/{id}", id))
                 .andExpect(status().isNoContent());
     }
 
@@ -159,7 +159,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingComponentRequest dto = newPricingComponentRequest("BadType");
         dto.setType("INVALID_ENUM_VALUE");
 
-        mockMvc.perform(post(BASE_URL)
+        mockMvc.perform(postWithCsrf(BASE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
@@ -169,7 +169,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturnForbiddenWhenCreatingWithoutPermission() throws Exception {
-        mockMvc.perform(post(BASE_URL)
+        mockMvc.perform(postWithCsrf(BASE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newPricingComponentRequest("NoAccess"))))
                 .andExpect(status().isForbidden());
@@ -184,7 +184,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingTierRequest tierReq = getValidTierDto();
 
         // 1. ADD TIER
-        String addJson = mockMvc.perform(post(BASE_URL + "/{id}/tiers", component.getId())
+        String addJson = mockMvc.perform(postWithCsrf(BASE_URL + "/{id}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(tierReq)))
                 .andExpect(status().isCreated())
@@ -197,7 +197,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         tierReq.getPriceValue().setPriceAmount(new BigDecimal("12.50"));
         tierReq.getPriceValue().setValueType("FEE_PERCENTAGE");
 
-        mockMvc.perform(put(BASE_URL + "/{cId}/tiers/{tId}", component.getId(), tierId)
+        mockMvc.perform(putWithCsrf(BASE_URL + "/{cId}/tiers/{tId}", component.getId(), tierId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(tierReq)))
                 .andExpect(status().isOk())
@@ -205,7 +205,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.valueType", is("FEE_PERCENTAGE")));
 
         // 3. DELETE TIER
-        mockMvc.perform(delete(BASE_URL + "/{cId}/tiers/{tId}", component.getId(), tierId))
+        mockMvc.perform(deleteWithCsrf(BASE_URL + "/{cId}/tiers/{tId}", component.getId(), tierId))
                 .andExpect(status().isNoContent());
     }
 
@@ -222,7 +222,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingTierRequest updateReq = getValidTierDto();
         updateReq.setConditions(List.of()); // Explicitly empty
 
-        mockMvc.perform(put(BASE_URL + "/{cId}/tiers/{tId}", compId, tierId)
+        mockMvc.perform(putWithCsrf(BASE_URL + "/{cId}/tiers/{tId}", compId, tierId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateReq)))
                 .andExpect(status().isOk());
@@ -241,7 +241,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingTierRequest req = getValidTierDto();
         req.getPriceValue().setValueType("INVALID_PRICE_TYPE");
 
-        mockMvc.perform(post(BASE_URL + "/{id}/tiers", component.getId())
+        mockMvc.perform(postWithCsrf(BASE_URL + "/{id}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
@@ -262,7 +262,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
             txHelper.linkProductToPricingComponent(product.getId(), compId, BigDecimal.ZERO);
         });
 
-        mockMvc.perform(delete(BASE_URL + "/{id}", compId))
+        mockMvc.perform(deleteWithCsrf(BASE_URL + "/{id}", compId))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message", containsString("linked to 1 products")));
 
@@ -270,7 +270,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         txHelper.doInTransaction(() -> productPricingLinkRepository.deleteAllInBatch());
         txHelper.doInTransaction(() -> txHelper.createCommittedTierDependency(compId, "StandaloneTier"));
 
-        mockMvc.perform(delete(BASE_URL + "/{id}", compId))
+        mockMvc.perform(deleteWithCsrf(BASE_URL + "/{id}", compId))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message", containsString("association with 2 tiers exists")));
     }
@@ -281,7 +281,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingTierRequest dto = getValidTierDto();
 
         // Non-existent component ID
-        mockMvc.perform(put(BASE_URL + "/99999/tiers/1")
+        mockMvc.perform(putWithCsrf(BASE_URL + "/99999/tiers/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNotFound())

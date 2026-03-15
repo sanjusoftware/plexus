@@ -132,7 +132,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         ProductBundleRequest request = createBaseRequest("New Bundle");
         request.setProducts(List.of(createItem(newProductCode, true)));
 
-        mockMvc.perform(post("/api/v1/bundles")
+        mockMvc.perform(postWithCsrf("/api/v1/bundles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -149,7 +149,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         ProductBundleRequest updateRequest = new ProductBundleRequest();
         updateRequest.setName("Updated In-Place Name");
 
-        mockMvc.perform(patch("/api/v1/bundles/{id}", existingBundleId)
+        mockMvc.perform(patchWithCsrf("/api/v1/bundles/{id}", existingBundleId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -168,7 +168,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         versionRequest.setNewName("Cloned Premium Bundle");
         versionRequest.setNewCode("NEW-LINEAGE-CODE");
 
-        mockMvc.perform(post("/api/v1/bundles/{id}/create-new-version", existingBundleId)
+        mockMvc.perform(postWithCsrf("/api/v1/bundles/{id}/create-new-version", existingBundleId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(versionRequest)))
                 .andExpect(status().isCreated())
@@ -200,7 +200,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
         versionRequest.setNewName("Premium Bundle V2");
 
         // 2. Perform versioning
-        mockMvc.perform(post("/api/v1/bundles/{id}/create-new-version", existingBundleId)
+        mockMvc.perform(postWithCsrf("/api/v1/bundles/{id}/create-new-version", existingBundleId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(versionRequest)))
                 .andExpect(status().isCreated())
@@ -224,7 +224,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
             productRepository.findById(retailProductId).ifPresent(p -> p.setStatus(VersionableEntity.EntityStatus.ACTIVE));
         });
 
-        mockMvc.perform(post("/api/v1/bundles/{id}/activate", existingBundleId))
+        mockMvc.perform(postWithCsrf("/api/v1/bundles/{id}/activate", existingBundleId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
@@ -233,7 +233,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = BUNDLE_ACTIVATOR)
     @DisplayName("archiveBundle - Should soft-delete the bundle by setting ARCHIVED status")
     void archiveBundle_ShouldSucceed() throws Exception {
-        mockMvc.perform(delete("/api/v1/bundles/{id}", existingBundleId))
+        mockMvc.perform(deleteWithCsrf("/api/v1/bundles/{id}", existingBundleId))
                 .andExpect(status().isNoContent());
 
         txHelper.doInTransaction(() -> {
@@ -269,7 +269,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
                 "Conflict: Category 'WEALTH' cannot be bundled with category 'RETAIL' for bank %s.",
                 TEST_BANK_ID);
 
-        mockMvc.perform(post("/api/v1/bundles")
+        mockMvc.perform(postWithCsrf("/api/v1/bundles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnprocessableEntity())
@@ -288,7 +288,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
                 createItem(wealthProductCode, true)
         ));
 
-        mockMvc.perform(post("/api/v1/bundles")
+        mockMvc.perform(postWithCsrf("/api/v1/bundles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -299,7 +299,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Security - Should return 403 when user lacks authorities")
     void security_ShouldFail_WhenUnauthorized() throws Exception {
-        mockMvc.perform(delete("/api/v1/bundles/{id}", existingBundleId))
+        mockMvc.perform(deleteWithCsrf("/api/v1/bundles/{id}", existingBundleId))
                 .andExpect(status().isForbidden());
     }
 

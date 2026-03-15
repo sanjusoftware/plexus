@@ -58,7 +58,7 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
         RoleAuthorityMappingDto dto = getMappingDto(roleName, authorities);
 
         // POST: Create
-        mockMvc.perform(post(ROLE_API + "/mapping")
+        mockMvc.perform(postWithCsrf(ROLE_API + "/mapping")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated());
@@ -90,7 +90,7 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
         Set<String> newAuths = Set.of("pricing:component:create", "pricing:tier:delete");
         RoleAuthorityMappingDto updateDto = getMappingDto(roleName, newAuths);
 
-        mockMvc.perform(post(ROLE_API + "/mapping")
+        mockMvc.perform(postWithCsrf(ROLE_API + "/mapping")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isCreated());
@@ -107,7 +107,7 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
     void shouldDenyAccessWithoutAuthority() throws Exception {
         RoleAuthorityMappingDto dto = getMappingDto("DENIED_ROLE", Set.of("catalog:feature:read"));
 
-        mockMvc.perform(post(ROLE_API + "/mapping")
+        mockMvc.perform(postWithCsrf(ROLE_API + "/mapping")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isForbidden());

@@ -65,7 +65,8 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         TenantContextHolder.setBankId("SYSTEM");
         standardRequest.setClientSecret("secret123");
         when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of("catalog:read", "system:admin"));
-        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.empty());
+        when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.empty());
+        when(bankConfigurationRepository.findByBankIdUnfiltered("SYSTEM")).thenReturn(Optional.empty());
 
         BankConfigurationResponse response = bankConfigurationService.createBank(standardRequest);
 
@@ -150,7 +151,8 @@ class BankConfigurationServiceTest extends BaseServiceTest {
     void createBank_WithNullRules_ShouldSucceed() {
         TenantContextHolder.setBankId("SYSTEM");
         standardRequest.setCategoryConflictRules(null);
-        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.empty());
+        when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.empty());
+        when(bankConfigurationRepository.findByBankIdUnfiltered("SYSTEM")).thenReturn(Optional.empty());
         when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of());
         assertDoesNotThrow(() -> bankConfigurationService.createBank(standardRequest));
         verify(bankConfigurationRepository).save(argThat(config ->

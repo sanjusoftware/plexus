@@ -127,7 +127,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setEffectiveDate(LocalDate.now());
         request.setCustomAttributes(Map.of("transactionAmount", new BigDecimal("1000")));
 
-        mockMvc.perform(post(BASE_URL + "/calculate/product")
+        mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -166,7 +166,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         request.setProducts(List.of(pr1, pr2));
 
-        mockMvc.perform(post(BASE_URL + "/calculate/bundle")
+        mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/bundle")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -213,7 +213,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         ));
 
         // 2. ACT & ASSERT
-        mockMvc.perform(post(BASE_URL + "/calculate/bundle")
+        mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/bundle")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -267,7 +267,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setEffectiveDate(LocalDate.now());
 
         // 2. ACT & ASSERT
-        mockMvc.perform(post(BASE_URL + "/calculate/product")
+        mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -316,7 +316,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setCustomerSegment("DEFAULT_SEGMENT");
         request.setTransactionAmount(new BigDecimal("1000.00"));
 
-        mockMvc.perform(post(BASE_URL + "/calculate/product")
+        mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -365,7 +365,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         request.setTransactionAmount(BigDecimal.ZERO);
         request.setEffectiveDate(LocalDate.now());
 
-        mockMvc.perform(post(BASE_URL + "/calculate/product")
+        mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -380,7 +380,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     void calculateProductPrice_ShouldReturn400_WhenValidationFails() throws Exception {
         ProductPriceRequest request = new ProductPriceRequest();
 
-        mockMvc.perform(post(BASE_URL + "/calculate/product")
+        mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -391,7 +391,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     void calculateProductPrice_ShouldReturn401_WhenUnauthenticated() throws Exception {
         ProductPriceRequest request = new ProductPriceRequest();
 
-        mockMvc.perform(post(BASE_URL + "/calculate/product")
+        mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
