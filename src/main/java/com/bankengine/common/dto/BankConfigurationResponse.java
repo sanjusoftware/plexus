@@ -13,6 +13,7 @@ import java.util.List;
 @Builder
 public class BankConfigurationResponse {
     private String bankId;
+    private String name;
     private String issuerUrl;
     private String clientId;
     private boolean hasClientSecret;

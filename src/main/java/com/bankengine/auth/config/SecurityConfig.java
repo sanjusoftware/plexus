@@ -78,6 +78,7 @@ public class SecurityConfig {
                             "/api/v1/public/catalog/**",
                             "/api/v1/public/onboarding/**",
                             "/api/v1/auth/login",
+                            "/logout",
                             "/h2-console/**",
                             "/api/v1/pricing/calculate/**"
                     )

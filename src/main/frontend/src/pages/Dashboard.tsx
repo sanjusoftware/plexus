@@ -46,15 +46,22 @@ const Dashboard = () => {
     fetchData();
   }, [user, authLoading, navigate, isSystemAdmin]);
 
-  const handleStatusUpdate = async (bankId: string, newStatus: string) => {
+  const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'REJECTED') => {
     try {
-      await axios.put(`/api/v1/banks/${bankId}`, { status: newStatus });
+      if (action === 'REJECTED') {
+        // Fallback or specific reject logic if needed, for now we only have activate/deactivate endpoints
+        // If there's no reject endpoint, we might need one or use update with status
+        await axios.put(`/api/v1/banks/${targetBankId}`, { status: 'REJECTED' });
+      } else {
+        await axios.post(`/api/v1/banks/${targetBankId}/${action}`);
+      }
+
       // Refresh data
       const response = await axios.get('/api/v1/banks');
       setData(response.data || []);
-    } catch (err) {
-      console.error('Failed to update bank status:', err);
-      alert('Failed to update status. Make sure you have SYSTEM_ADMIN permissions.');
+    } catch (err: any) {
+      console.error(`Failed to ${action} bank:`, err);
+      alert(err.response?.data?.message || `Failed to ${action} bank. Make sure you have SYSTEM_ADMIN permissions.`);
     }
   };
 
@@ -163,7 +170,10 @@ const Dashboard = () => {
               <h3 className="font-bold text-gray-900">
                 {isSystemAdmin ? 'Managed Banks' : 'Available Products'}
               </h3>
-              <button className="flex items-center text-sm font-semibold text-blue-600 hover:text-blue-700 transition">
+              <button
+                onClick={() => isSystemAdmin ? navigate('/onboarding?admin=true') : null}
+                className="flex items-center text-sm font-semibold text-blue-600 hover:text-blue-700 transition"
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 {isSystemAdmin ? 'Add Bank' : 'New Product'}
               </button>
@@ -182,11 +192,15 @@ const Dashboard = () => {
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <p className="font-semibold text-gray-900">{isSystemAdmin ? item.bankId : item.name}</p>
+                          <p className="font-semibold text-gray-900">
+                            {isSystemAdmin ? (item.name || item.bankId) : item.name}
+                            {isSystemAdmin && item.name && <span className="text-xs text-gray-400 font-normal ml-2">({item.bankId})</span>}
+                          </p>
                           {isSystemAdmin && (
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                               item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                               item.status === 'REQUEST' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                               item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
+                               item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
                             }`}>
                               {item.status}
                             </span>
@@ -199,10 +213,10 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      {isSystemAdmin && item.status === 'REQUEST' && (
+                      {isSystemAdmin && item.status === 'DRAFT' && (
                         <>
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'ACTIVE'); }}
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
                             className="p-2 hover:bg-green-50 text-green-600 rounded-full transition"
                             title="Approve"
                           >
@@ -219,11 +233,20 @@ const Dashboard = () => {
                       )}
                       {isSystemAdmin && item.status === 'ACTIVE' && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'INACTIVE'); }}
+                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'deactivate'); }}
                           className="p-2 hover:bg-gray-100 text-gray-400 rounded-full transition"
                           title="Deactivate"
                         >
                           <Clock className="h-5 w-5" />
+                        </button>
+                      )}
+                      {isSystemAdmin && item.status === 'INACTIVE' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
+                          className="p-2 hover:bg-green-50 text-green-600 rounded-full transition"
+                          title="Re-activate"
+                        >
+                          <CheckCircle2 className="h-5 w-5" />
                         </button>
                       )}
                       <ArrowRight className="h-5 w-5 text-gray-300" />

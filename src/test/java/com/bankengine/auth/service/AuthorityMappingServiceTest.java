@@ -151,7 +151,7 @@ class AuthorityMappingServiceTest {
                 .bankId("INACTIVE-BANK")
                 .issuerUrl(issuer)
                 .clientId(clientId)
-                .status(BankStatus.REQUEST)
+                .status(BankStatus.DRAFT)
                 .build();
 
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))

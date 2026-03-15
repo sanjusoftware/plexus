@@ -44,17 +44,20 @@ public class BankConfigurationService extends BaseService {
     @Transactional
     @SystemAdminBypass // Allows SYSTEM to create/update across tenants
     public BankConfigurationResponse createBank(BankConfigurationRequest request) {
-        if (bankConfigurationRepository.findByBankIdUnfiltered(request.getBankId()).isPresent()) {
-             throw new IllegalStateException("Bank already exists: " + request.getBankId());
+        String bankId = deriveBankId(request);
+
+        if (bankConfigurationRepository.findByBankIdUnfiltered(bankId).isPresent()) {
+             throw new IllegalStateException("Bank already exists: " + bankId);
         }
 
         BankConfiguration config = new BankConfiguration();
-        config.setBankId(request.getBankId());
+        config.setBankId(bankId);
+        config.setName(request.getName());
         config.setIssuerUrl(request.getIssuerUrl() != null ? request.getIssuerUrl().replaceAll("/$", "") : null);
         config.setClientId(request.getClientId() != null && !request.getClientId().isBlank()
                 ? request.getClientId() : getSystemClientId());
         config.setClientSecret(request.getClientSecret());
-        config.setStatus(request.getStatus() != null ? BankStatus.valueOf(request.getStatus()) : BankStatus.ACTIVE);
+        config.setStatus(BankStatus.DRAFT);
         config.setAdminName(request.getAdminName());
         config.setAdminEmail(request.getAdminEmail());
 
@@ -72,31 +75,44 @@ public class BankConfigurationService extends BaseService {
         }
 
         bankConfigurationRepository.save(config);
-        createBankAdminRole(request.getBankId());
+        createBankAdminRole(bankId);
 
         return mapToResponse(config);
+    }
+
+    private String deriveBankId(BankConfigurationRequest request) {
+        if (request.getBankId() != null && !request.getBankId().isBlank()) {
+            return com.bankengine.common.util.CodeGeneratorUtil.sanitizeCode(request.getBankId());
+        }
+        if (request.getName() != null && !request.getName().isBlank()) {
+            return com.bankengine.common.util.CodeGeneratorUtil.sanitizeCode(request.getName());
+        }
+        throw new IllegalArgumentException("Bank ID or Name is required to derive Bank ID.");
     }
 
     @Transactional
     @SystemAdminBypass
     public BankConfigurationResponse submitOnboarding(BankConfigurationRequest request) {
-        if (bankConfigurationRepository.findByBankIdUnfiltered(request.getBankId()).isPresent()) {
-            throw new IllegalStateException("Bank ID already in use: " + request.getBankId());
+        String bankId = deriveBankId(request);
+
+        if (bankConfigurationRepository.findByBankIdUnfiltered(bankId).isPresent()) {
+            throw new IllegalStateException("Bank ID already in use: " + bankId);
         }
 
         BankConfiguration config = BankConfiguration.builder()
-                .bankId(request.getBankId())
+                .bankId(bankId)
+                .name(request.getName())
                 .issuerUrl(request.getIssuerUrl() != null ? request.getIssuerUrl().replaceAll("/$", "") : null)
                 .clientId(request.getClientId())
                 .currencyCode(request.getCurrencyCode())
                 .adminName(request.getAdminName())
                 .adminEmail(request.getAdminEmail())
-                .status(BankStatus.REQUEST)
+                .status(BankStatus.DRAFT)
                 .allowProductInMultipleBundles(true)
                 .build();
 
         bankConfigurationRepository.save(config);
-        createBankAdminRole(request.getBankId());
+        createBankAdminRole(bankId);
         return mapToResponse(config);
     }
 
@@ -108,6 +124,10 @@ public class BankConfigurationService extends BaseService {
 
         BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+
+        if (request.getName() != null) {
+            config.setName(request.getName());
+        }
 
         if (request.getIssuerUrl() != null) {
             config.setIssuerUrl(request.getIssuerUrl().replaceAll("/$", ""));
@@ -129,10 +149,6 @@ public class BankConfigurationService extends BaseService {
             config.setAllowProductInMultipleBundles(request.getAllowProductInMultipleBundles());
         }
 
-        if (request.getStatus() != null) {
-            config.setStatus(BankStatus.valueOf(request.getStatus()));
-        }
-
         if (request.getAdminName() != null) {
             config.setAdminName(request.getAdminName());
         }
@@ -152,13 +168,43 @@ public class BankConfigurationService extends BaseService {
         return mapToResponse(config);
     }
 
+    @Transactional
+    @SystemAdminBypass
+    public BankConfigurationResponse activateBank(String bankId) {
+        BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+        config.setStatus(BankStatus.ACTIVE);
+        bankConfigurationRepository.save(config);
+        return mapToResponse(config);
+    }
+
+    @Transactional
+    @SystemAdminBypass
+    public BankConfigurationResponse deactivateBank(String bankId) {
+        if (bankId.equals(getCurrentBankId())) {
+            throw new IllegalStateException("System Admin cannot deactivate their own bank.");
+        }
+        BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+
+        if (config.getStatus() != BankStatus.ACTIVE) {
+            throw new IllegalStateException("Only ACTIVE banks can be deactivated.");
+        }
+
+        config.setStatus(BankStatus.INACTIVE);
+        bankConfigurationRepository.save(config);
+        return mapToResponse(config);
+    }
+
     @Transactional(readOnly = true)
     @SystemAdminBypass
     public java.util.List<BankConfigurationResponse> getAllBanks() {
-        if (!getSystemBankId().equals(getCurrentBankId())) {
+        String currentBankId = getCurrentBankId();
+        if (!getSystemBankId().equals(currentBankId)) {
             throw new org.springframework.security.access.AccessDeniedException("System Admin authority required.");
         }
         return bankConfigurationRepository.findAll().stream()
+                .filter(b -> !b.getBankId().equals(currentBankId))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -222,6 +268,7 @@ public class BankConfigurationService extends BaseService {
     private BankConfigurationResponse mapToResponse(BankConfiguration config) {
         return BankConfigurationResponse.builder()
                 .bankId(config.getBankId())
+                .name(config.getName())
                 .allowProductInMultipleBundles(config.isAllowProductInMultipleBundles())
                 .issuerUrl(config.getIssuerUrl())
                 .clientId(config.getClientId())
