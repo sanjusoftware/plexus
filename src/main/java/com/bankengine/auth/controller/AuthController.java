@@ -139,8 +139,12 @@ public class AuthController {
     }
 
     @GetMapping("/csrf")
-    public ResponseEntity<Void> getCsrf() {
-        // Just calling this endpoint ensures the CSRF cookie is set by CookieCsrfTokenRepository
+    public ResponseEntity<Void> getCsrf(jakarta.servlet.http.HttpServletRequest request) {
+        // Explicitly access the CSRF token to ensure the deferred token is generated and sent as a cookie
+        org.springframework.security.web.csrf.CsrfToken csrfToken = (org.springframework.security.web.csrf.CsrfToken) request.getAttribute(org.springframework.security.web.csrf.CsrfToken.class.getName());
+        if (csrfToken != null) {
+            log.debug("[AUTH] CSRF token accessed: {}", csrfToken.getHeaderName());
+        }
         return ResponseEntity.ok().build();
     }
 }
