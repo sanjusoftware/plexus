@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class ViewController {
 
-    @GetMapping(value = { "/", "/login", "/dashboard", "/error", "/onboarding", "/auth/**", "/{path:[^\\.]*}" })
+    @GetMapping(value = { "/", "/login-view", "/dashboard", "/error", "/onboarding", "/auth/**", "/{path:[^\\.]*}" })
     public String forward() {
         return "forward:/index.html";
     }

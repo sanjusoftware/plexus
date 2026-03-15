@@ -20,7 +20,7 @@ const LandingPage = () => {
         </div>
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/login-view')}
             className="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition"
           >
             Login

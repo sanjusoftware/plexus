@@ -12,7 +12,7 @@ const AuthCallback = () => {
       if (user) {
         navigate('/dashboard');
       } else {
-        navigate('/login?error=auth_failed');
+        navigate('/login-view?error=auth_failed');
       }
     }
   }, [user, loading, navigate]);

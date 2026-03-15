@@ -10,8 +10,22 @@ export interface UserProfile {
 
 export class AuthService {
   public async login(bankId: string) {
-    // Redirect to backend login endpoint which initiates OIDC flow
-    window.location.href = `/api/v1/auth/login?bankId=${bankId}`;
+    try {
+      // First, check if the bank is valid and active
+      await axios.get(`/api/v1/auth/check-bank?bankId=${bankId}`);
+
+      // If successful, redirect to backend login endpoint which initiates OIDC flow
+      window.location.href = `/api/v1/auth/login?bankId=${bankId}`;
+    } catch (err: any) {
+      if (err.response) {
+        const { status, data } = err.response;
+        const message = data?.message || 'Authentication failed';
+        const timestamp = data?.timestamp || new Date().toISOString();
+        window.location.href = `/error?status=${status}&message=${encodeURIComponent(message)}&timestamp=${encodeURIComponent(timestamp)}`;
+      } else {
+        window.location.href = `/error?status=500&message=${encodeURIComponent('Connection error')}`;
+      }
+    }
   }
 
   public async getUser(): Promise<UserProfile | null> {
