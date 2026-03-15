@@ -82,7 +82,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .build();
 
         // Create a bank
-        mockMvc.perform(post("/api/v1/banks")
+        mockMvc.perform(postWithCsrf("/api/v1/banks")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -111,7 +111,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl(NEW_ISSUER)
                 .build();
 
-        mockMvc.perform(put("/api/v1/banks/ID_UPDATE_TEST")
+        mockMvc.perform(putWithCsrf("/api/v1/banks/ID_UPDATE_TEST")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -161,7 +161,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl("https://fail-issuer.com")
                 .build();
 
-        mockMvc.perform(post("/api/v1/banks")
+        mockMvc.perform(postWithCsrf("/api/v1/banks")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -199,7 +199,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl(ISSUER_A)
                 .build();
 
-        mockMvc.perform(put("/api/v1/banks")
+        mockMvc.perform(putWithCsrf("/api/v1/banks")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -218,7 +218,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .issuerUrl(ISSUER_A)
                 .build();
 
-        mockMvc.perform(put("/api/v1/banks")
+        mockMvc.perform(putWithCsrf("/api/v1/banks")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -235,7 +235,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .categoryConflictRules(List.of())
                 .issuerUrl(ISSUER_A)
                 .build();
-        mockMvc.perform(post("/api/v1/banks")
+        mockMvc.perform(postWithCsrf("/api/v1/banks")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

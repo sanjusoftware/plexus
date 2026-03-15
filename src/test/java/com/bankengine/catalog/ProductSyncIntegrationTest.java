@@ -149,7 +149,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
                         ProductFeatureDto.builder().featureComponentCode(comps.get("ACCESS").getCode()).featureValue("true").build()
                 )).build();
 
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncRequest)))
                 .andExpect(status().isOk());
@@ -189,7 +189,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
                                 .build()
                 )).build(); // FEE is omitted, should be deleted
 
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(syncRequest)))
                 .andExpect(status().isOk());
@@ -221,7 +221,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
                         .build()))
                 .build();
 
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -249,7 +249,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
                 .pricing(List.of())
                 .build();
 
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(clearRequest)))
                 .andExpect(status().isOk());
@@ -268,7 +268,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
                 .features(List.of(ProductFeatureDto.builder().featureComponentCode("INVALID_CODE").featureValue("Err").build()))
                 .build();
 
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", productId)
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(badRequest)))
                 .andExpect(status().isNotFound())
@@ -294,7 +294,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
                 .build();
 
         // Act & Assert
-        mockMvc.perform(patch(PRODUCT_API_BASE + "/{id}", product.getId())
+        mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest()) // 400

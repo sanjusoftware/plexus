@@ -73,7 +73,7 @@ public class SecurityConfig {
                             "/api/v1/public/onboarding/**",
                             "/api/v1/auth/login",
                             "/h2-console/**",
-                            "/api/v1/pricing/calculate**"
+                            "/api/v1/pricing/calculate/**"
                     )
             );
         } else {

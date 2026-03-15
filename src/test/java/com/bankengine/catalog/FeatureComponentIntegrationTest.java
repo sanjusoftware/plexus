@@ -139,7 +139,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn403WhenCreatingFeatureWithoutPermission() throws Exception {
-        mockMvc.perform(post("/api/v1/features")
+        mockMvc.perform(postWithCsrf("/api/v1/features")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newFeatureComponentRequest("ForbiddenFeature"))))
                 .andExpect(status().isForbidden());
@@ -151,7 +151,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         String name = "PremiumSupport";
         FeatureComponentRequest request = newFeatureComponentRequest(name);
         String code = request.getCode().toUpperCase().replace(" ", "_");
-        mockMvc.perform(post("/api/v1/features")
+        mockMvc.perform(postWithCsrf("/api/v1/features")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -173,7 +173,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         FeatureComponentRequest dto = newFeatureComponentRequest("BadTypeFeature");
         dto.setDataType("XYZ");
 
-        mockMvc.perform(post("/api/v1/features")
+        mockMvc.perform(postWithCsrf("/api/v1/features")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
@@ -217,7 +217,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
         FeatureComponentRequest updateDto = newFeatureComponentRequest("NewName");
 
-        mockMvc.perform(patch("/api/v1/features/{id}", savedComponent.getId())
+        mockMvc.perform(patchWithCsrf("/api/v1/features/{id}", savedComponent.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isForbidden());
@@ -232,7 +232,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         updateDto.setCode(savedComponent.getCode()); // Keep existing code
         updateDto.setDataType("BOOLEAN");
 
-        mockMvc.perform(patch("/api/v1/features/{id}", savedComponent.getId())
+        mockMvc.perform(patchWithCsrf("/api/v1/features/{id}", savedComponent.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -243,7 +243,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404OnUpdateNonExistentFeature() throws Exception {
-        mockMvc.perform(patch("/api/v1/features/99999")
+        mockMvc.perform(patchWithCsrf("/api/v1/features/99999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newFeatureComponentRequest("Test"))))
                 .andExpect(status().isNotFound());
@@ -255,7 +255,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn403WhenDeletingFeatureWithoutPermission() throws Exception {
         FeatureComponent savedComponent = createFeatureComponentInDb("ForbiddenFeature");
-        mockMvc.perform(delete("/api/v1/features/{id}", savedComponent.getId()))
+        mockMvc.perform(deleteWithCsrf("/api/v1/features/{id}", savedComponent.getId()))
                 .andExpect(status().isForbidden());
     }
 
@@ -266,7 +266,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         FeatureComponent savedComponent = createFeatureComponentInDb("DeletableFeature");
         Long idToDelete = savedComponent.getId();
 
-        mockMvc.perform(delete("/api/v1/features/{id}", idToDelete))
+        mockMvc.perform(deleteWithCsrf("/api/v1/features/{id}", idToDelete))
                 .andExpect(status().isNoContent());
 
         // Assert physical removal via API and DB
@@ -284,7 +284,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
             featureComponentRepository.save(savedComponent);
         });
 
-        mockMvc.perform(delete("/api/v1/features/{id}", savedComponent.getId()))
+        mockMvc.perform(deleteWithCsrf("/api/v1/features/{id}", savedComponent.getId()))
                 .andExpect(status().isNoContent());
 
         // Verify logical existence with ARCHIVED status
@@ -309,7 +309,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
             linkRepository.save(link);
         });
 
-        mockMvc.perform(delete("/api/v1/features/{id}", linkedComponent.getId()))
+        mockMvc.perform(deleteWithCsrf("/api/v1/features/{id}", linkedComponent.getId()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message", is("Cannot delete feature as it is linked to 1 product(s).")));
     }
@@ -322,7 +322,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     void shouldActivateFeature() throws Exception {
         FeatureComponent feature = createFeatureComponentInDb("ToActivate");
 
-        mockMvc.perform(post("/api/v1/features/{id}/activate", feature.getId()))
+        mockMvc.perform(postWithCsrf("/api/v1/features/{id}/activate", feature.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("ACTIVE")));
 
@@ -345,7 +345,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         FeatureComponentRequest request = newFeatureComponentRequest("AttemptedChange");
         request.setCode(activeFeature.getCode());
 
-        mockMvc.perform(patch("/api/v1/features/{id}", activeFeature.getId())
+        mockMvc.perform(patchWithCsrf("/api/v1/features/{id}", activeFeature.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -369,7 +369,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
         VersionRequest vRequest = new VersionRequest();
 
-        mockMvc.perform(post("/api/v1/features/{id}/create-new-version", source.getId())
+        mockMvc.perform(postWithCsrf("/api/v1/features/{id}/create-new-version", source.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(vRequest)))
                 .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
@@ -415,7 +415,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
             linkRepository.saveAll(List.of(link1, link2));
         });
 
-        mockMvc.perform(delete("/api/v1/features/{id}", feature.getId()))
+        mockMvc.perform(deleteWithCsrf("/api/v1/features/{id}", feature.getId()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message", is("Cannot delete feature as it is linked to 2 product(s).")));
     }

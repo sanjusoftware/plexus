@@ -118,7 +118,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         requestDto.setName("Fixed Deposit");
         requestDto.setCode("FD");
 
-        mockMvc.perform(post(API_URL)
+        mockMvc.perform(postWithCsrf(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
@@ -134,7 +134,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         requestDto.setName("Forbidden Type");
         requestDto.setCode("FT");
 
-        mockMvc.perform(post(API_URL)
+        mockMvc.perform(postWithCsrf(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isForbidden());
@@ -146,7 +146,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         ProductTypeDto requestDto = new ProductTypeDto();
         requestDto.setName(null);
 
-        mockMvc.perform(post(API_URL)
+        mockMvc.perform(postWithCsrf(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
@@ -159,7 +159,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         ProductTypeDto requestDto = new ProductTypeDto();
         requestDto.setName("A");
 
-        mockMvc.perform(post(API_URL)
+        mockMvc.perform(postWithCsrf(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
@@ -176,7 +176,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         requestDto.setName("Checking Account 2");
         requestDto.setCode("CH");
 
-        mockMvc.perform(post(API_URL)
+        mockMvc.perform(postWithCsrf(API_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isConflict())

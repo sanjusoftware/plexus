@@ -128,7 +128,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
                 .displayName("New Attribute Display")
                 .dataType("DECIMAL").build();
 
-        mockMvc.perform(post(API_PATH)
+        mockMvc.perform(postWithCsrf(API_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
@@ -144,7 +144,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
                 .displayName("Duplicate Display")
                 .dataType("INTEGER").build();
 
-        mockMvc.perform(post(API_PATH)
+        mockMvc.perform(postWithCsrf(API_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isConflict())
@@ -163,7 +163,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
                 .displayName("Updated Display Name")
                 .dataType("BOOLEAN").build();
 
-        mockMvc.perform(put(API_PATH + "/UpdatableKey")
+        mockMvc.perform(putWithCsrf(API_PATH + "/UpdatableKey")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
@@ -179,7 +179,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
                 .displayName("Test")
                 .dataType("STRING").build();
 
-        mockMvc.perform(put(API_PATH + "/NotFoundKey")
+        mockMvc.perform(putWithCsrf(API_PATH + "/NotFoundKey")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isNotFound());
@@ -192,7 +192,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     void shouldDeleteMetadataAndReturn204() throws Exception {
         createTestMetadata("DeletableKey");
 
-        mockMvc.perform(delete(API_PATH + "/DeletableKey"))
+        mockMvc.perform(deleteWithCsrf(API_PATH + "/DeletableKey"))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get(API_PATH + "/DeletableKey"))
@@ -204,7 +204,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     void shouldReturn409WhenDeletingMetadataWithDependencies() throws Exception {
         Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ComponentForConflict", "TierForConflict"));
 
-        mockMvc.perform(delete(API_PATH + "/customerSegment"))
+        mockMvc.perform(deleteWithCsrf(API_PATH + "/customerSegment"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Cannot delete Pricing Input Metadata 'customerSegment': It is used in one or more active tier conditions."));
 
@@ -226,7 +226,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @WithMockRole(roles = {READER_ROLE})
     void shouldReturn403ForUnauthorizedDelete() throws Exception {
         createTestMetadata("TestSecurity");
-        mockMvc.perform(delete(API_PATH + "/TestSecurity"))
+        mockMvc.perform(deleteWithCsrf(API_PATH + "/TestSecurity"))
                 .andExpect(status().isForbidden());
     }
 }

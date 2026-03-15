@@ -32,6 +32,27 @@ class JwtAuthConverterTest {
     }
 
     @Test
+    void convert_ShouldThrowException_WhenBankNotActive() {
+        String bankId = "BANK_B";
+        String issuer = "https://trusted.com";
+
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("bank_id", bankId)
+                .claim("iss", issuer)
+                .build();
+
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId(bankId);
+        config.setIssuerUrl(issuer);
+        config.setStatus(com.bankengine.common.model.BankStatus.REQUEST); // NOT ACTIVE
+
+        when(bankConfigurationRepository.findByBankIdUnfiltered(bankId)).thenReturn(Optional.of(config));
+
+        assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
+    }
+
+    @Test
     void convert_ShouldSucceed_WhenBankIdAndIssuerMatch() {
         String bankId = "BANK_A";
         String issuer = "https://login.microsoftonline.com/tenant-a/v2.0";
@@ -47,6 +68,7 @@ class JwtAuthConverterTest {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(bankId);
         config.setIssuerUrl(issuer);
+        config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
         when(bankConfigurationRepository.findByBankIdUnfiltered(bankId)).thenReturn(Optional.of(config));
         when(permissionMappingService.getPermissionsForRoles(List.of("ADMIN")))
@@ -72,6 +94,7 @@ class JwtAuthConverterTest {
         BankConfiguration config = new BankConfiguration();
         config.setBankId("BANK_A");
         config.setIssuerUrl("https://trusted-issuer.com");
+        config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
         when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A")).thenReturn(Optional.of(config));
 
@@ -139,6 +162,7 @@ class JwtAuthConverterTest {
         BankConfiguration config = new BankConfiguration();
         config.setBankId(bankId);
         config.setIssuerUrl(issuerWithoutSlash);
+        config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
         when(bankConfigurationRepository.findByBankIdUnfiltered(bankId)).thenReturn(Optional.of(config));
 
@@ -159,6 +183,7 @@ class JwtAuthConverterTest {
         BankConfiguration config = new BankConfiguration();
         config.setIssuerUrl("https://trusted.com");
         config.setBankId("BANK_A");
+        config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
         when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A"))
                 .thenReturn(Optional.of(config));
@@ -182,6 +207,7 @@ class JwtAuthConverterTest {
         BankConfiguration config = new BankConfiguration();
         config.setIssuerUrl("https://trusted.com");
         config.setBankId("BANK_A");
+        config.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
 
         when(bankConfigurationRepository.findByBankIdUnfiltered("BANK_A"))
                 .thenReturn(Optional.of(config));

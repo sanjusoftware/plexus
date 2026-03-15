@@ -311,7 +311,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Management - Reload endpoint security check")
     void testManagementReloadEndpoint() throws Exception {
-        mockMvc.perform(post("/api/v1/rules/reload")).andExpect(status().isOk());
+        mockMvc.perform(postWithCsrf("/api/v1/rules/reload")).andExpect(status().isOk());
     }
 
     private void reloadRules() {
