@@ -36,7 +36,7 @@ public class CodeGeneratorUtil {
     /**
      * Sanitizes and uppercases a code string.
      */
-    public static String sanitizeCode(String code) {
+    public static String sanitizeAsCode(String code) {
         if (code == null) return null;
         return code.toUpperCase().trim().replace(" ", "_").replaceAll("[^A-Z0-9_-]", "");
     }

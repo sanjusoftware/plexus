@@ -95,7 +95,7 @@ public class FeatureComponentService extends BaseService {
     }
 
     private void sanitizeRequest(FeatureComponentRequest requestDto) {
-        requestDto.setCode(CodeGeneratorUtil.sanitizeCode(requestDto.getCode()));
+        requestDto.setCode(CodeGeneratorUtil.sanitizeAsCode(requestDto.getCode()));
     }
 
     @Transactional

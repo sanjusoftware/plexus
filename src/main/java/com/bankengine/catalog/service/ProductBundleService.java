@@ -78,7 +78,7 @@ public class ProductBundleService extends BaseService {
     }
 
     private void sanitizeRequest(ProductBundleRequest requestDto) {
-        requestDto.setCode(CodeGeneratorUtil.sanitizeCode(requestDto.getCode()));
+        requestDto.setCode(CodeGeneratorUtil.sanitizeAsCode(requestDto.getCode()));
     }
 
     @Transactional

@@ -93,7 +93,7 @@ public class ProductTypeService extends BaseService {
 
     private void sanitizeRequest(ProductTypeDto dto) {
         if (dto.getCode() != null) {
-            dto.setCode(CodeGeneratorUtil.sanitizeCode(dto.getCode()));
+            dto.setCode(CodeGeneratorUtil.sanitizeAsCode(dto.getCode()));
         }
     }
 }

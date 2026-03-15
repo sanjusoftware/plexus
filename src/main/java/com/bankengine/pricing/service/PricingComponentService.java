@@ -13,7 +13,6 @@ import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
-import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
 import com.bankengine.pricing.repository.ProductPricingLinkRepository;
@@ -84,7 +83,7 @@ public class PricingComponentService extends BaseService {
     }
 
     private void sanitizeRequest(PricingComponentRequest requestDto) {
-        requestDto.setCode(CodeGeneratorUtil.sanitizeCode(requestDto.getCode()));
+        requestDto.setCode(CodeGeneratorUtil.sanitizeAsCode(requestDto.getCode()));
     }
 
     /**

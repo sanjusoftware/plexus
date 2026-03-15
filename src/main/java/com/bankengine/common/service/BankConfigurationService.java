@@ -11,6 +11,7 @@ import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.repository.BankConfigurationRepository;
+import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -82,10 +83,10 @@ public class BankConfigurationService extends BaseService {
 
     private String deriveBankId(BankConfigurationRequest request) {
         if (request.getBankId() != null && !request.getBankId().isBlank()) {
-            return com.bankengine.common.util.CodeGeneratorUtil.sanitizeCode(request.getBankId());
+            return CodeGeneratorUtil.sanitizeAsCode(request.getBankId());
         }
         if (request.getName() != null && !request.getName().isBlank()) {
-            return com.bankengine.common.util.CodeGeneratorUtil.sanitizeCode(request.getName());
+            return CodeGeneratorUtil.sanitizeAsCode(request.getName());
         }
         throw new IllegalArgumentException("Bank ID or Name is required to derive Bank ID.");
     }

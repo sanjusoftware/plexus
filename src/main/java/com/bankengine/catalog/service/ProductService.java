@@ -14,10 +14,10 @@ import com.bankengine.catalog.specification.ProductSpecification;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.common.util.CodeGeneratorUtil;
-import com.bankengine.web.exception.NotFoundException;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.PricingComponentService;
+import com.bankengine.web.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -98,7 +98,7 @@ public class ProductService extends BaseService {
     }
 
     private void sanitizeRequest(ProductRequest requestDto) {
-        requestDto.setCode(CodeGeneratorUtil.sanitizeCode(requestDto.getCode()));
+        requestDto.setCode(CodeGeneratorUtil.sanitizeAsCode(requestDto.getCode()));
     }
 
     @Transactional

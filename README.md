@@ -420,6 +420,7 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
   "adminName": "John Doe",
   "adminEmail": "john.doe@globalbank.com",
   "allowProductInMultipleBundles": true,
+  "currencyCode": "NO_CURR",
   "categoryConflictRules": [
     { "categoryA": "RETAIL", "categoryB": "WEALTH" }
   ]
