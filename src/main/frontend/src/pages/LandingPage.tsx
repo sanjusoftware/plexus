@@ -40,12 +40,15 @@ const LandingPage = () => {
           </p>
           <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4">
             <button
-              onClick={() => window.location.href = '/swagger-ui.html'}
+              onClick={() => window.open('/swagger-ui.html', '_blank')}
               className="bg-white border-2 border-blue-600 text-blue-600 px-8 py-3 rounded-full font-bold hover:bg-blue-50 transition"
             >
               Explore API
             </button>
-            <button className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-700 transition shadow-lg">
+            <button
+              onClick={() => navigate('/onboarding')}
+              className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-700 transition shadow-lg"
+            >
               Get Started
             </button>
           </div>

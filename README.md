@@ -416,6 +416,9 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
   "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
   "clientId": "bank-engine-api",
   "clientSecret": "optional-secret-only-if-required-by-idp",
+  "status": "ACTIVE",
+  "adminName": "John Doe",
+  "adminEmail": "john.doe@globalbank.com",
   "allowProductInMultipleBundles": true,
   "categoryConflictRules": [
     { "categoryA": "RETAIL", "categoryB": "WEALTH" }
@@ -426,6 +429,8 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
 ### Note on `clientId` and `clientSecret`:
 - **`clientId`**: Mandatory. The Application (Client) ID registered in the tenant bank's IDP. If omitted, it defaults to the `SYSTEM` bank's ID.
 - **`clientSecret`**: **Optional**. Only required if the tenant's IDP does not support PKCE for confidential clients. For security, Plexus uses PKCE by default, so most banks should leave this field empty.
+- **`status`**: The operational status of the bank. Valid values are `DRAFT`, `ACTIVE`, `REJECTED`, `INACTIVE`. Only `ACTIVE` banks can authenticate.
+- **`adminName` & `adminEmail`**: Contact details for the bank's primary administrator.
 
 **Instructions for Tenant IDP Admins:**
 1. Register a new "Single Page Application" (SPA) in your IDP (e.g., EntraID, Keycloak).

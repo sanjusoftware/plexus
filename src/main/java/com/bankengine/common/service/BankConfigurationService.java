@@ -8,6 +8,7 @@ import com.bankengine.common.annotation.SystemAdminBypass;
 import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.dto.BankConfigurationResponse;
 import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.web.exception.NotFoundException;
@@ -43,7 +44,7 @@ public class BankConfigurationService extends BaseService {
     @Transactional
     @SystemAdminBypass // Allows SYSTEM to create/update across tenants
     public BankConfigurationResponse createBank(BankConfigurationRequest request) {
-        if (bankConfigurationRepository.findByBankId(request.getBankId()).isPresent()) {
+        if (bankConfigurationRepository.findByBankIdUnfiltered(request.getBankId()).isPresent()) {
              throw new IllegalStateException("Bank already exists: " + request.getBankId());
         }
 
@@ -53,6 +54,9 @@ public class BankConfigurationService extends BaseService {
         config.setClientId(request.getClientId() != null && !request.getClientId().isBlank()
                 ? request.getClientId() : getSystemClientId());
         config.setClientSecret(request.getClientSecret());
+        config.setStatus(request.getStatus() != null ? BankStatus.valueOf(request.getStatus()) : BankStatus.ACTIVE);
+        config.setAdminName(request.getAdminName());
+        config.setAdminEmail(request.getAdminEmail());
 
         if (request.getCurrencyCode() != null) {
             config.setCurrencyCode(request.getCurrencyCode());
@@ -70,6 +74,29 @@ public class BankConfigurationService extends BaseService {
         bankConfigurationRepository.save(config);
         createBankAdminRole(request.getBankId());
 
+        return mapToResponse(config);
+    }
+
+    @Transactional
+    @SystemAdminBypass
+    public BankConfigurationResponse submitOnboarding(BankConfigurationRequest request) {
+        if (bankConfigurationRepository.findByBankIdUnfiltered(request.getBankId()).isPresent()) {
+            throw new IllegalStateException("Bank ID already in use: " + request.getBankId());
+        }
+
+        BankConfiguration config = BankConfiguration.builder()
+                .bankId(request.getBankId())
+                .issuerUrl(request.getIssuerUrl())
+                .clientId(request.getClientId())
+                .currencyCode(request.getCurrencyCode())
+                .adminName(request.getAdminName())
+                .adminEmail(request.getAdminEmail())
+                .status(BankStatus.REQUEST)
+                .allowProductInMultipleBundles(true)
+                .build();
+
+        bankConfigurationRepository.save(config);
+        createBankAdminRole(request.getBankId());
         return mapToResponse(config);
     }
 
@@ -100,6 +127,18 @@ public class BankConfigurationService extends BaseService {
 
         if (request.getAllowProductInMultipleBundles() != null) {
             config.setAllowProductInMultipleBundles(request.getAllowProductInMultipleBundles());
+        }
+
+        if (request.getStatus() != null) {
+            config.setStatus(BankStatus.valueOf(request.getStatus()));
+        }
+
+        if (request.getAdminName() != null) {
+            config.setAdminName(request.getAdminName());
+        }
+
+        if (request.getAdminEmail() != null) {
+            config.setAdminEmail(request.getAdminEmail());
         }
 
         if (request.getCategoryConflictRules() != null) {
@@ -191,6 +230,9 @@ public class BankConfigurationService extends BaseService {
                         .map(r -> new BankConfigurationRequest.CategoryConflictDto(r.getCategoryA(), r.getCategoryB()))
                         .collect(Collectors.toList()))
                 .currencyCode(config.getCurrencyCode())
+                .status(config.getStatus().name())
+                .adminName(config.getAdminName())
+                .adminEmail(config.getAdminEmail())
                 .build();
     }
 }

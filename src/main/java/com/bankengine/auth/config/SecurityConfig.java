@@ -68,7 +68,13 @@ public class SecurityConfig {
         if (csrfEnabled) {
             http.csrf(csrf -> csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                    .ignoringRequestMatchers("/api/v1/public/catalog/**", "/api/v1/auth/login", "/h2-console/**", "/api/v1/pricing/calculate**")
+                    .ignoringRequestMatchers(
+                            "/api/v1/public/catalog/**",
+                            "/api/v1/public/onboarding/**",
+                            "/api/v1/auth/login",
+                            "/h2-console/**",
+                            "/api/v1/pricing/calculate**"
+                    )
             );
         } else {
             http.csrf(csrf -> csrf.disable());
@@ -93,6 +99,7 @@ public class SecurityConfig {
                                 "/error",
                                 "/actuator/health",
                                 "/api/v1/public/catalog/**",
+                                "/api/v1/public/onboarding/**",
                                 "/api/v1/auth/login"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products").authenticated()

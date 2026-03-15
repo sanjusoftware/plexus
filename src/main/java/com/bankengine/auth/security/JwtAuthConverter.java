@@ -2,6 +2,7 @@ package com.bankengine.auth.security;
 
 import com.bankengine.auth.service.PermissionMappingService;
 import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
@@ -71,6 +72,11 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
             if (!normalizedJwtIss.equalsIgnoreCase(normalizedDbIss)) {
                 log.error("[AUTH-SECURITY] Issuer mismatch for bank {}. Token: {}, DB: {}", bankId, normalizedJwtIss, normalizedDbIss);
                 throw new OAuth2AuthenticationException(new OAuth2Error("access_denied"), "Security Violation: Issuer mismatch");
+            }
+
+            if (bankConfig.getStatus() != BankStatus.ACTIVE) {
+                log.warn("[AUTH-FAIL] Bank {} is not ACTIVE. Current status: {}", bankId, bankConfig.getStatus());
+                throw new OAuth2AuthenticationException(new OAuth2Error("access_denied"), "Bank account is not active. Please contact support.");
             }
         } finally {
             TenantContextHolder.setSystemMode(false);
