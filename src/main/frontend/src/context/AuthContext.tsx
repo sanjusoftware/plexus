@@ -35,7 +35,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     initAuth();
 
-    return () => axios.interceptors.request.eject(interceptor);
+    const responseInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status >= 500) {
+          const { status, data } = error.response;
+          window.location.href = `/error?status=${status}&message=${encodeURIComponent(data.message || 'Server Error')}&timestamp=${encodeURIComponent(data.timestamp || new Date().toISOString())}`;
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.request.eject(interceptor);
+      axios.interceptors.response.eject(responseInterceptor);
+    };
   }, []);
 
   const login = async (bankId: string) => {
