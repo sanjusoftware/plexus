@@ -41,6 +41,20 @@ public class BankConfigurationController {
         return ResponseEntity.ok(bankConfigurationService.updateBank(request));
     }
 
+    @PostMapping("/{bankId}/activate")
+    @PreAuthorize("hasAuthority('system:bank:write')")
+    @Operation(summary = "Activate a bank configuration")
+    public ResponseEntity<BankConfigurationResponse> activateBank(@PathVariable String bankId) {
+        return ResponseEntity.ok(bankConfigurationService.activateBank(bankId));
+    }
+
+    @PostMapping("/{bankId}/deactivate")
+    @PreAuthorize("hasAuthority('system:bank:write')")
+    @Operation(summary = "Deactivate a bank configuration")
+    public ResponseEntity<BankConfigurationResponse> deactivateBank(@PathVariable String bankId) {
+        return ResponseEntity.ok(bankConfigurationService.deactivateBank(bankId));
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('system:bank:read')")
     @Operation(summary = "List all bank configurations", description = "Retrieves all banks in the system. Restricted to System Admin.")

@@ -1,7 +1,7 @@
 package com.bankengine.common.model;
 
 public enum BankStatus {
-    REQUEST,
+    DRAFT,
     ACTIVE,
     REJECTED,
     INACTIVE

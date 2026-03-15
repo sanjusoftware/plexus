@@ -53,7 +53,7 @@ class JwtAuthConverterTest {
         config.setBankId(bankId);
         config.setIssuerUrl(issuer);
         config.setClientId(clientId);
-        config.setStatus(com.bankengine.common.model.BankStatus.REQUEST); // NOT ACTIVE
+        config.setStatus(com.bankengine.common.model.BankStatus.DRAFT); // NOT ACTIVE
 
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
                 .thenReturn(Optional.of(config));

@@ -59,11 +59,14 @@ public class BankConfiguration extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     @Builder.Default
-    private BankStatus status = BankStatus.REQUEST;
+    private BankStatus status = BankStatus.DRAFT;
 
     @Column(name = "admin_name")
     private String adminName;
 
     @Column(name = "admin_email")
     private String adminEmail;
+
+    @Column(name = "name")
+    private String name;
 }

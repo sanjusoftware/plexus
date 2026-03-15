@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdmin = new URLSearchParams(location.search).get('admin') === 'true';
+
   const [formData, setFormData] = useState({
     bankId: '',
+    name: '',
     issuerUrl: '',
     clientId: '',
     adminName: '',
@@ -63,15 +67,20 @@ const OnboardingPage = () => {
     setStatus('idle');
     try {
       const submissionData = {
-        ...formData,
-        currencyCode: isCustomCurrency ? customCurrency.toUpperCase() : formData.currencyCode
+        bankDetails: {
+          ...formData,
+          currencyCode: isCustomCurrency ? customCurrency.toUpperCase() : formData.currencyCode
+        },
+        captchaId: captcha.id,
+        captchaAnswer: formData.captchaAnswer
       };
-      await axios.post('/api/v1/public/onboarding/submit', submissionData);
+      await axios.post('/api/v1/public/onboarding', submissionData);
       setStatus('success');
-      setMessage('Your onboarding request has been submitted successfully! A system administrator will review your request shortly.');
+      setMessage(isAdmin ? 'New bank has been added successfully!' : 'Your onboarding request has been submitted successfully! A system administrator will review your request shortly.');
     } catch (err: any) {
       setStatus('error');
-      setMessage(err.response?.data?.message || 'Failed to submit request. Please check your inputs and captcha.');
+      const errorDetail = err.response?.data?.message || err.response?.data || 'Failed to submit request. Please check your inputs and captcha.';
+      setMessage(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
       fetchCaptcha(); // Refresh captcha on error
     } finally {
       setLoading(false);
@@ -152,8 +161,12 @@ const OnboardingPage = () => {
             Back to Home
           </button>
 
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Get Started</h2>
-          <p className="text-gray-500 mb-10">Fill out the form below to submit an onboarding request for your institution.</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            {isAdmin ? 'Add New Bank' : 'Get Started'}
+          </h2>
+          <p className="text-gray-500 mb-10">
+            {isAdmin ? 'Fill out the form below to register a new bank in the system.' : 'Fill out the form below to submit an onboarding request for your institution.'}
+          </p>
 
           {status === 'error' && (
             <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center text-red-700">
@@ -163,16 +176,32 @@ const OnboardingPage = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Bank Name</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Global Bank"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  value={formData.name}
+                  onChange={e => {
+                    const name = e.target.value;
+                    const bankId = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                    setFormData({ ...formData, name, bankId });
+                  }}
+                />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Bank ID</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Bank ID (Generated)</label>
                 <input
                   required
                   type="text"
                   placeholder="e.g. GLOBAL-BANK-001"
                   className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                   value={formData.bankId}
-                  onChange={e => setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '-') })}
+                  onChange={e => setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '_') })}
                 />
               </div>
               <div>

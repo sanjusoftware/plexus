@@ -13,6 +13,7 @@ import java.util.List;
 @Builder
 public class BankConfigurationRequest {
     private String bankId;
+    private String name;
     private Boolean allowProductInMultipleBundles;
     private List<CategoryConflictDto> categoryConflictRules;
     private String issuerUrl;
