@@ -13,12 +13,12 @@ import java.util.List;
     name = "bank_configuration",
     uniqueConstraints = {
         @UniqueConstraint(
-            name = "uk_bank_issuer_combination",
-            columnNames = {"bank_id", "issuer_url"}
+            name = "uk_bank_id",
+            columnNames = {"bank_id"}
         ),
         @UniqueConstraint(
-            name = "uk_bank_issuer_url",
-            columnNames = {"issuer_url"}
+            name = "uk_issuer_client_combination",
+            columnNames = {"issuer_url", "client_id"}
         )
     }
 )

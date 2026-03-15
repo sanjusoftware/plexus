@@ -13,6 +13,9 @@ public interface BankConfigurationRepository extends TenantRepository<BankConfig
     @Query(value = "SELECT * FROM bank_configuration WHERE bank_id = :bankId", nativeQuery = true)
     Optional<BankConfiguration> findByBankIdUnfiltered(@Param("bankId") String bankId);
 
+    @Query(value = "SELECT * FROM bank_configuration WHERE issuer_url = :issuerUrl AND client_id = :clientId", nativeQuery = true)
+    Optional<BankConfiguration> findByIssuerUrlAndClientIdUnfiltered(@Param("issuerUrl") String issuerUrl, @Param("clientId") String clientId);
+
     // FOR BUSINESS LOGIC: Let the filter do the work
     // Since only ONE config exists per bank, and the filter limits to ONE bank...
     default Optional<BankConfiguration> findCurrent() {

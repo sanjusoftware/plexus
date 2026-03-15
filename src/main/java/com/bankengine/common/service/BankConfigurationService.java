@@ -50,7 +50,7 @@ public class BankConfigurationService extends BaseService {
 
         BankConfiguration config = new BankConfiguration();
         config.setBankId(request.getBankId());
-        config.setIssuerUrl(request.getIssuerUrl());
+        config.setIssuerUrl(request.getIssuerUrl() != null ? request.getIssuerUrl().replaceAll("/$", "") : null);
         config.setClientId(request.getClientId() != null && !request.getClientId().isBlank()
                 ? request.getClientId() : getSystemClientId());
         config.setClientSecret(request.getClientSecret());
@@ -86,7 +86,7 @@ public class BankConfigurationService extends BaseService {
 
         BankConfiguration config = BankConfiguration.builder()
                 .bankId(request.getBankId())
-                .issuerUrl(request.getIssuerUrl())
+                .issuerUrl(request.getIssuerUrl() != null ? request.getIssuerUrl().replaceAll("/$", "") : null)
                 .clientId(request.getClientId())
                 .currencyCode(request.getCurrencyCode())
                 .adminName(request.getAdminName())
@@ -110,7 +110,7 @@ public class BankConfigurationService extends BaseService {
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
         if (request.getIssuerUrl() != null) {
-            config.setIssuerUrl(request.getIssuerUrl());
+            config.setIssuerUrl(request.getIssuerUrl().replaceAll("/$", ""));
         }
 
         if (request.getClientId() != null) {
