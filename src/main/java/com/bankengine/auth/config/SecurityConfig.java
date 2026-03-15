@@ -4,11 +4,13 @@ import com.bankengine.auth.security.*;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManagerResolver;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,7 +23,9 @@ import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.text.ParseException;
 
@@ -67,10 +71,6 @@ public class SecurityConfig {
                 .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
-        // Configure Authorization Request Resolver to keep bankId in session for callback matching
-        // Alternatively, use a custom AuthorizationCodeTokenResponseClient or similar if needed.
-        // For now, we will use a common callback and ensure registration matching.
-
         if (csrfEnabled) {
             http.csrf(csrf -> csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
@@ -88,6 +88,13 @@ public class SecurityConfig {
         }
 
         http
+                .exceptionHandling(exceptions -> exceptions
+                        // For API requests, return 401 instead of redirecting to login page
+                        .defaultAuthenticationEntryPointFor(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                                new AntPathRequestMatcher("/api/**")
+                        )
+                )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/",
@@ -126,16 +133,19 @@ public class SecurityConfig {
                         .defaultSuccessUrl("/dashboard", true)
                         .failureUrl("/login-view?error=auth_failed")
                 )
-                // Use the Dynamic Resolver instead of a static JWT Decoder
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(tenantAuthenticationManagerResolver())
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .logout(logout -> logout
-                        .logoutSuccessUrl("/")
+                        .logoutUrl("/logout")
+                        // Return 200 OK for AJAX logouts so React can handle the redirect
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(HttpServletResponse.SC_OK);
+                        })
                         .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
+                        .deleteCookies("JSESSIONID", "XSRF-TOKEN")
                 )
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
@@ -151,7 +161,6 @@ public class SecurityConfig {
 
             try {
                 TenantContextHolder.setSystemMode(true);
-                // SECURITY REQUIREMENT: Only trust issuers stored in our DB during onboarding
                 if (!bankConfigurationRepository.existsByIssuerUrl(issuer)) {
                     log.warn("Access denied: No bank found with Issuer {} in system.", issuer);
                     throw new OAuth2AuthenticationException(new OAuth2Error("access_denied"), "Untrusted issuer: " + issuer);
@@ -160,7 +169,6 @@ public class SecurityConfig {
                 TenantContextHolder.setSystemMode(false);
             }
 
-            // Dynamically create a provider that fetches keys from the specific tenant's OIDC metadata
             var provider = new JwtAuthenticationProvider(JwtDecoders.fromIssuerLocation(issuer));
             provider.setJwtAuthenticationConverter(jwtAuthConverter);
             return provider::authenticate;
@@ -171,7 +179,6 @@ public class SecurityConfig {
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
             try {
-                // Parse the JWT without validating signature yet to find who issued it
                 return SignedJWT.parse(token.substring(7)).getJWTClaimsSet().getIssuer();
             } catch (ParseException | IllegalArgumentException e) {
                 throw new OAuth2AuthenticationException(

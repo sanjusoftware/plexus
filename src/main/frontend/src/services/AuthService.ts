@@ -40,21 +40,18 @@ export class AuthService {
   }
 
   public async logout() {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/logout';
-
-    const csrfToken = this.getCsrfToken();
-    if (csrfToken) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = '_csrf';
-        input.value = csrfToken;
-        form.appendChild(input);
+    try {
+      const csrfToken = this.getCsrfToken();
+      await axios.post('/logout', null, {
+        headers: {
+          'X-XSRF-TOKEN': csrfToken || ''
+        }
+      });
+    } catch (err) {
+      console.error("Logout request failed", err);
+      // Fallback: If the API fails, we still want to clear the session cookie
+      document.cookie = "JSESSIONID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     }
-
-    document.body.appendChild(form);
-    form.submit();
   }
 
   public getCsrfToken(): string | null {

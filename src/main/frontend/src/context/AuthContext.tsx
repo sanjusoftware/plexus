@@ -20,7 +20,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     axios.defaults.withCredentials = true;
 
-    const interceptor = axios.interceptors.request.use((config) => {
+    // Interceptor to attach CSRF token to every request
+    const requestInterceptor = axios.interceptors.request.use((config) => {
       const token = authService.getCsrfToken();
       if (token) {
         config.headers['X-XSRF-TOKEN'] = token;
@@ -29,22 +30,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const initAuth = async () => {
-      // Initialize CSRF token first
       try {
+        // 1. Initialize CSRF token
         await axios.get('/api/v1/auth/csrf');
-      } catch (err) {
-        console.error('Failed to initialize CSRF token');
-      }
 
-      const currentUser = await authService.getUser();
-      setUser(currentUser);
-      setLoading(false);
+        // 2. Fetch User Profile
+        const currentUser = await authService.getUser();
+        setUser(currentUser);
+      } catch (err) {
+        // If unauthenticated (401), currentUser will be null via authService.getUser()
+        // We only log actual connection errors here
+        console.log('Auth initialization: User is not logged in.');
+      } finally {
+        setLoading(false);
+      }
     };
+
     initAuth();
 
+    // Response interceptor to handle Global Errors
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
+        // If we get a 401, clear user state
+        if (error.response && error.response.status === 401) {
+          setUser(null);
+        }
+
+        // Handle 500+ Errors
         if (error.response && error.response.status >= 500) {
           const { status, data } = error.response;
           window.location.href = `/error?status=${status}&message=${encodeURIComponent(data.message || 'Server Error')}&timestamp=${encodeURIComponent(data.timestamp || new Date().toISOString())}`;
@@ -54,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     return () => {
-      axios.interceptors.request.eject(interceptor);
+      axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
   }, []);
@@ -66,6 +79,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     await authService.logout();
     setUser(null);
+    // Force redirect to login page after state is cleared
+    window.location.href = '/login-view';
   };
 
   return (
@@ -84,8 +99,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
