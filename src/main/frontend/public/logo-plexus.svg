@@ -1,0 +1,12 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left Pillar -->
+  <rect x="46" y="20" width="3" height="60" fill="#2563EB"/>
+  <!-- Right Pillar -->
+  <rect x="51" y="20" width="3" height="60" fill="#2563EB"/>
+
+  <!-- Left Block -->
+  <path d="M25 30H42V45H46V55H42V70H25V30ZM28 33V48H39V33H28ZM28 52V67H39V52H28Z" fill="#2563EB" fill-rule="evenodd"/>
+
+  <!-- Right Block -->
+  <path d="M75 30H58V45H54V55H58V70H75V30ZM72 33V48H61V33H72ZM72 52V67H61V52H72Z" fill="#2563EB" fill-rule="evenodd"/>
+</svg>
