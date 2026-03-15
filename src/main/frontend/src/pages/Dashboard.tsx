@@ -17,6 +17,13 @@ const Dashboard = () => {
 
   const authorities = (user?.roles as string[]) || [];
   const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
+  const isBankAdmin = authorities.includes('BANK_ADMIN');
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login-view');
+      return;
+    }
 
   const fetchData = async () => {
     if (!user) return;

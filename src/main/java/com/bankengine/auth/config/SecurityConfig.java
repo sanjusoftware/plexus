@@ -96,7 +96,8 @@ public class SecurityConfig {
                                 "/*.png",
                                 "/*.json",
                                 "/*.ico",
-                                "/login",
+                                "/login-view",
+                                "/api/v1/auth/check-bank",
                                 "/dashboard",
                                 "/auth/**",
                                 "/v3/api-docs/**",
@@ -123,13 +124,18 @@ public class SecurityConfig {
                         )
                         .loginProcessingUrl("/login/oauth2/code/callback")
                         .defaultSuccessUrl("/dashboard", true)
-                        .failureUrl("/login?error=auth_failed")
+                        .failureUrl("/login-view?error=auth_failed")
                 )
                 // Use the Dynamic Resolver instead of a static JWT Decoder
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(tenantAuthenticationManagerResolver())
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
+                )
+                .logout(logout -> logout
+                        .logoutSuccessUrl("/")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                 )
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)

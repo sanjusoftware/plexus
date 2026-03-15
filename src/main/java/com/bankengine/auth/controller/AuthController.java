@@ -1,9 +1,10 @@
 package com.bankengine.auth.controller;
 
 import com.bankengine.auth.dto.UserResponse;
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
-import com.bankengine.auth.security.TenantContextHolder;
+import com.bankengine.web.dto.ApiError;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,9 +12,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -40,8 +45,9 @@ public class AuthController {
             }
 
             if (bankConfigOpt.get().getStatus() != BankStatus.ACTIVE) {
-                log.warn("[AUTH] Login denied: Bank {} is in {} status", bankId, bankConfigOpt.get().getStatus());
-                response.sendError(HttpStatus.FORBIDDEN.value(), "Bank account is not active");
+                String message = String.format("Bank %s is in %s status", bankId, bankConfigOpt.get().getStatus());
+                log.warn("[AUTH] Login denied: {}", message);
+                response.sendError(HttpStatus.FORBIDDEN.value(), message);
                 return;
             }
         } finally {
@@ -50,6 +56,41 @@ public class AuthController {
 
         // Redirect to Spring Security's OAuth2 login endpoint for this registrationId
         response.sendRedirect("/oauth2/authorization/" + bankId);
+    }
+
+    @GetMapping("/check-bank")
+    public ResponseEntity<ApiError> checkBank(@RequestParam("bankId") String bankId) {
+        log.info("[AUTH] Check bank requested for bank: {}", bankId);
+
+        try {
+            TenantContextHolder.setSystemMode(true);
+            var bankConfigOpt = bankConfigurationRepository.findByBankIdUnfiltered(bankId);
+
+            if (bankConfigOpt.isEmpty()) {
+                log.warn("[AUTH] Invalid bankId: {}", bankId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiError.builder()
+                        .timestamp(LocalDateTime.now())
+                        .status(HttpStatus.BAD_REQUEST.value())
+                        .error("Bad Request")
+                        .message("Invalid Bank ID")
+                        .build());
+            }
+
+            if (bankConfigOpt.get().getStatus() != BankStatus.ACTIVE) {
+                String message = String.format("Bank %s is in %s status", bankId, bankConfigOpt.get().getStatus());
+                log.warn("[AUTH] Check bank denied: {}", message);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.builder()
+                        .timestamp(LocalDateTime.now())
+                        .status(HttpStatus.FORBIDDEN.value())
+                        .error("Forbidden")
+                        .message(message)
+                        .build());
+            }
+        } finally {
+            TenantContextHolder.setSystemMode(false);
+        }
+
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/user")

@@ -19,6 +19,13 @@ const ErrorPage = () => {
   const timestamp = queryParams.get('timestamp') || state?.timestamp || new Date().toISOString();
 
   const is404 = status === 404;
+  const isAuthError = status === 401 || status === 403 || (status === 400 && message.toLowerCase().includes('bank'));
+
+  const getHeading = () => {
+    if (is404) return "Oops! Page Not Found";
+    if (isAuthError) return status === 403 ? "Access Denied" : "Authentication Error";
+    return "Internal Server Error";
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -54,7 +61,7 @@ const ErrorPage = () => {
           {status}
         </h1>
         <h2 className="text-2xl font-bold text-gray-800 mb-2">
-          {is404 ? "Oops! Page Not Found" : "Internal Server Error"}
+          {getHeading()}
         </h2>
         <p className="text-gray-600 max-w-md mb-8">
           {message}
@@ -72,7 +79,9 @@ const ErrorPage = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-xs font-mono text-gray-400">Status Type:</span>
-              <span className="text-xs font-mono text-gray-600">{is404 ? 'Not Found' : 'Server Error'}</span>
+              <span className="text-xs font-mono text-gray-600">
+                {is404 ? 'Not Found' : (isAuthError ? 'Authentication/Authorization' : 'Server Error')}
+              </span>
             </div>
           </div>
         </div>

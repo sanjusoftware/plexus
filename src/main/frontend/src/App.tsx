@@ -44,6 +44,9 @@ function App() {
         <div className="min-h-screen bg-gray-50">
           <Routes>
             <Route path="/" element={<PublicHome />} />
+            <Route path="/login-view" element={<LoginPage />} />
+            <Route path="/onboarding" element={<OnboardingWrapper />} />
+            <Route path="/" element={<PublicHome />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/onboarding" element={
                <OnboardingWrapper />
