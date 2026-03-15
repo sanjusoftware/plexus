@@ -16,5 +16,7 @@ public class UserResponse {
     private String email;
     private List<String> roles;
     private String bank_id;
+    private String bankName;
     private String sub;
+    private String picture;
 }

@@ -5,7 +5,9 @@ export interface UserProfile {
   email: string;
   roles: string[];
   bank_id: string;
+  bankName: string;
   sub: string;
+  picture?: string;
 }
 
 export class AuthService {

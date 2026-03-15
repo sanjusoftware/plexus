@@ -11,7 +11,8 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TenantContextFilterTest {
 
