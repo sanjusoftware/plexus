@@ -73,6 +73,17 @@ public class AuthController {
 
         String bankId = principal.getAttribute("bank_id") != null ? principal.getAttribute("bank_id") : "UNKNOWN";
         String sub = principal.getAttribute("sub") != null ? principal.getAttribute("sub") : "unknown-sub";
+        String picture = principal.getAttribute("picture") != null ? principal.getAttribute("picture") : null;
+
+        String bankName = "Unknown Bank";
+        try {
+            TenantContextHolder.setSystemMode(true);
+            bankName = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                    .map(config -> config.getName() != null ? config.getName() : bankId)
+                    .orElse(bankId);
+        } finally {
+            TenantContextHolder.setSystemMode(false);
+        }
 
         // Return profile information from the principal
         return ResponseEntity.ok(UserResponse.builder()
@@ -80,7 +91,9 @@ public class AuthController {
                 .email(email)
                 .roles(roles)
                 .bank_id(bankId)
+                .bankName(bankName)
                 .sub(sub)
+                .picture(picture)
                 .build());
     }
 
