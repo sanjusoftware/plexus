@@ -161,9 +161,8 @@ To ensure consistency and performance, the application discovers all available a
 
 # Identity Provider (IDP) Integration
 
-Plexus works with any OIDC-compatible IDP (EntraID, Keycloak, Auth0, etc.). The application requires two custom claims in the JWT:
-1.  **`bank_id`**: A string identifying the tenant (e.g., `SYSTEM` or `MY-BANK-001`).
-2.  **`roles`**: An array of strings representing the user's roles (e.g., `["BANK_ADMIN"]`).
+Plexus works with any OIDC-compatible IDP (EntraID, Keycloak, Auth0, etc.). The application requires one custom claim in the JWT:
+1.  **`roles`**: An array of strings representing the user's roles (e.g., `["BANK_ADMIN"]`).
 
 ### 1. Microsoft EntraID (Azure AD) Setup
 To add custom claims at the organization level without modifying individual user records:

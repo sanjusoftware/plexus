@@ -1,277 +1,67 @@
 package com.bankengine.auth.service;
 
 import com.bankengine.auth.security.TenantContextHolder;
-import com.bankengine.common.model.BankConfiguration;
-import com.bankengine.common.model.BankStatus;
-import com.bankengine.common.repository.BankConfigurationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AuthorityMappingServiceTest {
 
-    @Mock private PermissionMappingService permissionMappingService;
-    @Mock private BankConfigurationRepository bankConfigurationRepository;
+    @Mock
+    private PermissionMappingService permissionMappingService;
+
     private AuthorityMappingService authorityMappingService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        authorityMappingService = new AuthorityMappingService(permissionMappingService, bankConfigurationRepository);
+        authorityMappingService = new AuthorityMappingService(permissionMappingService);
         TenantContextHolder.clear();
     }
 
     @Test
-    void mapAuthorities_ShouldSucceed_UsingAzpClaim() {
-        String issuer = "https://idp.com";
-        String clientId = "client-123";
-        String bankId = "BANK-HDFC";
+    void mapAuthorities_ShouldSucceed_WhenRolesExist() {
+        String bankId = "HDFC_BANK_LTD";
         Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "azp", clientId,
-                "roles", List.of("USER"),
-                "bank_id", "MALICIOUS_BANK" // Should be ignored
+                "sub", "user-123",
+                "roles", List.of("BANK_ADMIN")
         );
 
-        BankConfiguration config = BankConfiguration.builder()
-                .bankId(bankId)
-                .issuerUrl(issuer)
-                .clientId(clientId)
-                .status(BankStatus.ACTIVE)
-                .build();
-
-        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
-                .thenReturn(Optional.of(config));
-        when(permissionMappingService.getPermissionsForRoles(List.of("USER")))
-                .thenReturn(Set.of("ROLE_USER"));
-
-        var authorities = authorityMappingService.mapAuthorities(claims, issuer);
-
+        when(permissionMappingService.getPermissionsForRoles(List.of("BANK_ADMIN")))
+                .thenReturn(Set.of("system:bank:read", "system:bank:write"));
+        var authorities = authorityMappingService.mapAuthorities(claims, bankId);
         assertNotNull(authorities);
-        assertEquals(1, authorities.size());
+        assertEquals(2, authorities.size());
         assertEquals(bankId, TenantContextHolder.getBankId());
-        verify(bankConfigurationRepository).findByIssuerUrlAndClientIdUnfiltered(issuer, clientId);
+        assertTrue(authorities.stream().anyMatch(a -> a.getAuthority().equals("system:bank:read")));
     }
 
     @Test
-    void mapAuthorities_ShouldSucceed_UsingAudClaimString() {
-        String issuer = "https://idp.com";
-        String clientId = "client-456";
-        String bankId = "BANK-ICICI";
-        Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "aud", clientId,
-                "roles", List.of("ADMIN")
-        );
-
-        BankConfiguration config = BankConfiguration.builder()
-                .bankId(bankId)
-                .issuerUrl(issuer)
-                .clientId(clientId)
-                .status(BankStatus.ACTIVE)
-                .build();
-
-        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
-                .thenReturn(Optional.of(config));
-        when(permissionMappingService.getPermissionsForRoles(List.of("ADMIN")))
-                .thenReturn(Set.of("ROLE_ADMIN"));
-
-        var authorities = authorityMappingService.mapAuthorities(claims, issuer);
-
-        assertNotNull(authorities);
-        assertEquals(bankId, TenantContextHolder.getBankId());
-    }
-
-    @Test
-    void mapAuthorities_ShouldSucceed_UsingAudClaimList() {
-        String issuer = "https://idp.com";
-        String clientId = "client-789";
-        String bankId = "BANK-AXIS";
-        Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "aud", List.of(clientId, "other-aud"),
-                "roles", List.of("MANAGER")
-        );
-
-        BankConfiguration config = BankConfiguration.builder()
-                .bankId(bankId)
-                .issuerUrl(issuer)
-                .clientId(clientId)
-                .status(BankStatus.ACTIVE)
-                .build();
-
-        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
-                .thenReturn(Optional.of(config));
-        when(permissionMappingService.getPermissionsForRoles(List.of("MANAGER")))
-                .thenReturn(Set.of("ROLE_MANAGER"));
-
-        var authorities = authorityMappingService.mapAuthorities(claims, issuer);
-
-        assertNotNull(authorities);
-        assertEquals(bankId, TenantContextHolder.getBankId());
-    }
-
-    @Test
-    void mapAuthorities_ShouldThrowException_WhenBankNotFound() {
-        String issuer = "https://unknown.com";
-        String clientId = "unknown-client";
-        Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "azp", clientId
-        );
-
-        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
-                .thenReturn(Optional.empty());
-
-        assertThrows(OAuth2AuthenticationException.class, () ->
-            authorityMappingService.mapAuthorities(claims, issuer)
-        );
-    }
-
-    @Test
-    void mapAuthorities_ShouldThrowException_WhenBankNotActive() {
-        String issuer = "https://idp.com";
-        String clientId = "client-inactive";
-        Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "azp", clientId
-        );
-
-        BankConfiguration config = BankConfiguration.builder()
-                .bankId("INACTIVE-BANK")
-                .issuerUrl(issuer)
-                .clientId(clientId)
-                .status(BankStatus.DRAFT)
-                .build();
-
-        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
-                .thenReturn(Optional.of(config));
-
-        assertThrows(OAuth2AuthenticationException.class, () ->
-            authorityMappingService.mapAuthorities(claims, issuer)
-        );
-    }
-
-    @Test
-    void mapAuthorities_ShouldNormalizeIssuerWithTrailingSlash() {
-        String issuerWithSlash = "https://idp.com/";
-        String normalizedIssuer = "https://idp.com";
-        String clientId = "client-123";
-        Map<String, Object> claims = Map.of(
-                "iss", issuerWithSlash,
-                "azp", clientId
-        );
-
-        BankConfiguration config = BankConfiguration.builder()
-                .bankId("BANK-1")
-                .issuerUrl(normalizedIssuer)
-                .clientId(clientId)
-                .status(BankStatus.ACTIVE)
-                .build();
-
-        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(normalizedIssuer, clientId))
-                .thenReturn(Optional.of(config));
-
-        authorityMappingService.mapAuthorities(claims, issuerWithSlash);
-
-        verify(bankConfigurationRepository).findByIssuerUrlAndClientIdUnfiltered(normalizedIssuer, clientId);
-    }
-
-    @Test
-    void resolveBankId_ShouldThrowException_WhenIssuerIsNull() {
-        assertThrows(OAuth2AuthenticationException.class, () ->
-            authorityMappingService.resolveBankId(null, "client-id")
-        );
-    }
-
-    @Test
-    void resolveBankId_ShouldThrowException_WhenClientIdIsNull() {
-        assertThrows(OAuth2AuthenticationException.class, () ->
-            authorityMappingService.resolveBankId("https://idp.com", null)
-        );
-    }
-
-    @Test
-    void mapAuthorities_ShouldHandleMissingRolesClaim() {
-        String issuer = "https://idp.com";
-        String clientId = "client-123";
-        Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "azp", clientId
-        );
-
-        BankConfiguration config = BankConfiguration.builder()
-                .bankId("BANK-1")
-                .issuerUrl(issuer)
-                .clientId(clientId)
-                .status(BankStatus.ACTIVE)
-                .build();
-
-        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId))
-                .thenReturn(Optional.of(config));
-
-        var authorities = authorityMappingService.mapAuthorities(claims, issuer);
+    void mapAuthorities_ShouldReturnEmpty_WhenNoRolesInClaims() {
+        String bankId = "ICICI_BANK";
+        Map<String, Object> claims = Map.of("sub", "user-456"); // No roles claim
+        var authorities = authorityMappingService.mapAuthorities(claims, bankId);
         assertTrue(authorities.isEmpty());
-    }
-
-    @Test
-    void mapAuthorities_ShouldHandleAudListWithNonStringElements() {
-        String issuer = "https://idp.com";
-        Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "aud", List.of(123, 456)
-        );
-
-        assertThrows(OAuth2AuthenticationException.class, () ->
-            authorityMappingService.mapAuthorities(claims, issuer)
-        );
-    }
-
-    @Test
-    void mapAuthorities_ShouldHandleAzpBlank() {
-        String issuer = "https://idp.com";
-        String bankId = "BANK-1";
-        Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "azp", " ",
-                "aud", "client-123"
-        );
-
-        BankConfiguration config = BankConfiguration.builder()
-                .bankId(bankId)
-                .issuerUrl(issuer)
-                .clientId("client-123")
-                .status(BankStatus.ACTIVE)
-                .build();
-
-        when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, "client-123"))
-                .thenReturn(Optional.of(config));
-
-        authorityMappingService.mapAuthorities(claims, issuer);
         assertEquals(bankId, TenantContextHolder.getBankId());
     }
 
     @Test
-    void mapAuthorities_ShouldHandleAudBlank() {
-        String issuer = "https://idp.com";
+    void mapAuthorities_ShouldHandleEmptyRoleList() {
+        String bankId = "AXIS_BANK";
         Map<String, Object> claims = Map.of(
-                "iss", issuer,
-                "aud", " "
+                "sub", "user-789",
+                "roles", Collections.emptyList()
         );
-
-        assertThrows(OAuth2AuthenticationException.class, () ->
-            authorityMappingService.mapAuthorities(claims, issuer)
-        );
+        var authorities = authorityMappingService.mapAuthorities(claims, bankId);
+        assertTrue(authorities.isEmpty());
     }
 }
