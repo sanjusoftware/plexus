@@ -33,7 +33,11 @@ export class AuthService {
   public async getUser(): Promise<UserProfile | null> {
     try {
       const response = await axios.get('/api/v1/auth/user');
-      return response.data;
+      // Ensure we got a JSON response and not an HTML redirect page
+      if (response.data && typeof response.data === 'object' && 'sub' in response.data) {
+        return response.data;
+      }
+      return null;
     } catch (err) {
       return null;
     }
