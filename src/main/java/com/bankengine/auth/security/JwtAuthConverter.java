@@ -18,21 +18,12 @@ import java.util.Collection;
 @RequiredArgsConstructor
 public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
-    private static final String PRINCIPAL_CLAIM_NAME = "sub";
-
     private final AuthorityMappingService authorityMappingService;
 
     @Override
     public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
         String issuer = jwt.getIssuer() != null ? jwt.getIssuer().toString() : null;
         Collection<GrantedAuthority> authorities = authorityMappingService.mapAuthorities(jwt.getClaims(), issuer);
-
-        log.info("[AUTH-SUCCESS] User authorized with {} permissions via JWT", authorities.size());
-
-        return new JwtAuthenticationToken(jwt, authorities, getPrincipalClaimName(jwt));
-    }
-
-    private String getPrincipalClaimName(Jwt jwt) {
-        return jwt.getClaimAsString(PRINCIPAL_CLAIM_NAME);
+        return new JwtAuthenticationToken(jwt, authorities, jwt.getClaimAsString("sub"));
     }
 }

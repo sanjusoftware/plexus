@@ -134,15 +134,14 @@ Plexus enforces security via an internally managed Role-Based Access Control (RB
 * **Permission Mapping:** It uses the `PermissionMappingService` to fetch the complete set of unique, aggregated **Authorities** (`<domain>:<resource>:<action>`, e.g., `catalog:product:read`) from the internal database based on the roles present in the token.
 
 #### Sample Required JWT Payload
-For a token to be accepted and successfully authorize a user (e.g., a `BANK_ADMIN`), the payload must include all configured claims:
+For a token to be accepted and successfully authorize a user (e.g., a `BANK_ADMIN`), the payload must include all configured claims. Note that `bank_id` is automatically resolved from the `iss` (issuer) and `azp`/`aud` (client ID) claims:
 
 ```json
 {
   "sub": "dev_user_identifier",
-  "bank_id": "GLOBAL-BANK-001",
   "roles": ["BANK_ADMIN", "ANALYST"],
-  "iss": "http://localhost:8080",
-  "aud": "bank-engine-api",
+  "iss": "http://identity-provider:9090/default",
+  "azp": "bank-engine-api",
   "iat": 1732540800,
   "exp": 1795697637
 }
@@ -161,29 +160,23 @@ To ensure consistency and performance, the application discovers all available a
 
 # Identity Provider (IDP) Integration
 
-Plexus works with any OIDC-compatible IDP (EntraID, Keycloak, Auth0, etc.). The application requires one custom claim in the JWT:
+Plexus works with any OIDC-compatible IDP (EntraID, Keycloak, Auth0, etc.). The application identifies the tenant (bank) based on the OIDC **Issuer URL** and **Client ID** registered during onboarding.
+
+The application requires one custom claim in the JWT:
 1.  **`roles`**: An array of strings representing the user's roles (e.g., `["BANK_ADMIN"]`).
 
 ### 1. Microsoft EntraID (Azure AD) Setup
-To add custom claims at the organization level without modifying individual user records:
+To add the custom `roles` claim:
 1.  **App Registration**: Register Plexus in EntraID.
-2.  **Token Configuration**:
-    - Go to **Token configuration** > **Add optional claim**.
-    - Choose **ID** or **Access** token.
-3.  **Custom Claim (Claims Transformation)**:
-    - Go to **Enterprise Applications** > Select your app > **Single sign-on** > **Attributes & Claims**.
+2.  **Enterprise Applications**: Navigate to your app > **Single sign-on** > **Attributes & Claims**.
+3.  **Custom Claim**:
     - Click **Add new claim**.
-    - **Name**: `bank_id`.
-    - **Source**: `Attribute` or `Transformation`.
-    - **Value**: For a fixed-value tenant, enter the bank ID as a constant string (e.g., `"GLOBAL-BANK-001"`).
-    - Repeat for `roles`, mapping it to the user's security groups or a constant value.
+    - **Name**: `roles`.
+    - **Source**: Map this to the user's security groups or a directory attribute.
 
 ### 2. Keycloak Setup
 1.  **Client Scopes**: Create a new Client Scope (e.g., `plexus-scope`).
-2.  **Mappers**: Add a "User Attribute" or "Hardcoded Claim" mapper.
-    - **Mapper Type**: `Hardcoded claim`.
-    - **Token Claim Name**: `bank_id`.
-    - **Claim Value**: `MY-BANK-001`.
+2.  **Mappers**: Add a "User Client Role" or "Hardcoded Claim" mapper for the `roles` claim.
 3.  **Assign**: Assign this scope to your Plexus client.
 
 ***
@@ -401,11 +394,13 @@ Before any bank can be onboarded, the system itself must be initialized.
    - `APP_SECURITY_SYSTEM_BANK_CURRENCY_CODE`: The default currency code for the system bank.
 3. **Authorize**: If running locally, using `docker compose up`, you can login as system admin first by using the Authorize button on SwaggerUI.
 Visit http://localhost:8080/swagger-ui/index.html to open the swagger UI.
-Click Authorize Button on SwaggerUI which will open take you to mock server: http://identity-provider:9090/ to enter 2 required claims expected by the application:
-Enter name of the user say, 'System Admin' and claims as below to authorize: 
+Click Authorize Button on SwaggerUI which will open take you to mock server: http://identity-provider:9090/ to enter the required claims.
+
+**Important:** The system identifies the bank via the Issuer URL and Client ID. Ensure the mock server is configured as the issuer for the `SYSTEM` bank.
+
+Enter name of the user say, 'System Admin' and the roles claim:
 ```json
 {
-  "bank_id": "SYSTEM",
   "roles": ["SYSTEM_ADMIN"]
 }
 ```
@@ -451,8 +446,8 @@ The `status` of a bank cannot be set directly during creation or update. Instead
 > **Note on Isolation**: Even though the `SYSTEM_ADMIN` creates the bank, they cannot see the bank's products or pricing data. Their authorities are restricted to `system:*` and `auth:*`.
 
 ## Step 2: Bank Admin - Handover & Configuration
-Once the bank is created, the IDP admin for bank `GLOBAL-BANK-001` must configure their users to have the `bank_id: GLOBAL-BANK-001` and `roles: ["BANK_ADMIN"]` claims. 
-The bank admin can then login using their own IDP provider (provider as issuerUrl while on-boarding to SYSTEM_ADMIN) and update their bank's configuration.
+Once the bank is created, the IDP admin for bank `GLOBAL-BANK-001` must configure their users to have the `roles: ["BANK_ADMIN"]` claim.
+The bank admin can then login using their own IDP provider (registered as `issuerUrl` during onboarding) and update their bank's configuration.
 Note that a `BANK_ADMIN` role is automatically created at the time of on-boarding with all bank-level permissions (excluding `system:*` authorities).
 
 **Request:** `PUT /api/v1/banks/GLOBAL-BANK-001`

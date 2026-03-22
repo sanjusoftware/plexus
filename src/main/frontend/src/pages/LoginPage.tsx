@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Cpu, ArrowLeft, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Cpu, ArrowLeft, Loader2, ShieldAlert } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
@@ -8,13 +8,22 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isAuthenticated, loading: authLoading } = useAuth();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!authLoading && isAuthenticated) {
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const errorParam = params.get('error');
+    if (errorParam === 'auth_failed') {
+      setError('Access Denied: Your account has no permissions assigned for this bank. Please contact your administrator.');
+    }
+  }, [location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +75,12 @@ const LoginPage = () => {
                   placeholder="MY-BANK-ID"
                 />
               </div>
-              {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+              {error && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
+                  <ShieldAlert className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
             </div>
 
             <div>
