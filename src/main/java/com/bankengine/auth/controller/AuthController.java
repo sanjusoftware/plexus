@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -54,7 +55,6 @@ public class AuthController {
             TenantContextHolder.setSystemMode(false);
         }
 
-        // Redirect to Spring Security's OAuth2 login endpoint for this registrationId
         response.sendRedirect("/oauth2/authorization/" + bankId);
     }
 
@@ -99,24 +99,27 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
+        // 1. Extract Identity from Principal (Injected by CustomOidcUserService)
         String name = principal.getAttribute("name") != null ? principal.getAttribute("name") : "unknown user";
+        String sub = principal.getAttribute("sub") != null ? principal.getAttribute("sub") : "unknown-sub";
+        String picture = principal.getAttribute("picture");
 
-        String email = "unknown@email";
-        if (principal.getAttribute("preferred_username") != null) {
-            email = principal.getAttribute("preferred_username");
-        } else if (principal.getAttribute("email") != null) {
-            email = principal.getAttribute("email");
-        }
+        // 2. Extract Email with fallbacks
+        String email = principal.getAttribute("preferred_username") != null
+                ? principal.getAttribute("preferred_username")
+                : principal.getAttribute("email") != null ? principal.getAttribute("email") : "unknown@email";
 
+        // 3. Roles: Still coming from the IDP token claims
         List<String> roles = principal.getAttribute("roles") instanceof List<?> list
                 ? list.stream().map(Object::toString).toList()
                 : Collections.emptyList();
 
-        String bankId = principal.getAttribute("bank_id") != null ? principal.getAttribute("bank_id") : "UNKNOWN";
-        String sub = principal.getAttribute("sub") != null ? principal.getAttribute("sub") : "unknown-sub";
-        String picture = principal.getAttribute("picture") != null ? principal.getAttribute("picture") : null;
+        // 4. Bank ID: Now guaranteed to be injected by our Service from the DB
+       final String bankId = principal.getAttribute("bank_id") != null
+                ? principal.getAttribute("bank_id") : "UNKNOWN";
 
-        String bankName = "Unknown Bank";
+        // 5. Lookup Bank Name for the UI
+        String bankName;
         try {
             TenantContextHolder.setSystemMode(true);
             bankName = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
@@ -126,7 +129,6 @@ public class AuthController {
             TenantContextHolder.setSystemMode(false);
         }
 
-        // Return profile information from the principal
         return ResponseEntity.ok(UserResponse.builder()
                 .name(name)
                 .email(email)
@@ -141,7 +143,7 @@ public class AuthController {
     @GetMapping("/csrf")
     public ResponseEntity<Void> getCsrf(jakarta.servlet.http.HttpServletRequest request) {
         // Explicitly access the CSRF token to ensure the deferred token is generated and sent as a cookie
-        org.springframework.security.web.csrf.CsrfToken csrfToken = (org.springframework.security.web.csrf.CsrfToken) request.getAttribute(org.springframework.security.web.csrf.CsrfToken.class.getName());
+        CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
         if (csrfToken != null) {
             log.debug("[AUTH] CSRF token accessed: {}", csrfToken.getHeaderName());
         }
