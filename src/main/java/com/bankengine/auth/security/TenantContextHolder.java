@@ -39,7 +39,8 @@ public class TenantContextHolder {
     }
 
     public static boolean isSystemMode() {
-        return SYSTEM_MODE.get();
+        Boolean mode = SYSTEM_MODE.get();
+        return mode != null && mode;
     }
 
     public static void clear() {
