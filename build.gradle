@@ -60,6 +60,10 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     runtimeOnly 'org.postgresql:postgresql'
 
+    // Redis Session Management
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.session:spring-session-data-redis'
+
     // Actuator for Health Checks
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 

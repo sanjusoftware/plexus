@@ -19,11 +19,10 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WithMockRole(roles = {"ADMIN"}, bankId = AbstractIntegrationTest.TEST_BANK_ID)
+@WithMockRole(roles = {"ADMIN"})
 public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
