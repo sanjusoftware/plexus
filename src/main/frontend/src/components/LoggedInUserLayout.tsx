@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon
+  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield
 } from 'lucide-react';
 
 interface LoggedInUserLayoutProps {
@@ -32,10 +32,40 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
       show: isSystemAdmin
     },
     {
+      label: 'Product Types',
+      icon: List,
+      path: '/product-types',
+      show: isBankAdmin
+    },
+    {
+      label: 'Pricing Metadata',
+      icon: Database,
+      path: '/pricing-metadata',
+      show: isBankAdmin
+    },
+    {
+      label: 'Pricing Components',
+      icon: Tag,
+      path: '/pricing-components',
+      show: isBankAdmin
+    },
+    {
+      label: 'Pricing Tiers',
+      icon: Layers,
+      path: '/pricing-tiers',
+      show: isBankAdmin
+    },
+    {
       label: 'Product Catalog',
       icon: Package,
-      path: '#',
+      path: '/products',
       show: isBankAdmin || !isSystemAdmin
+    },
+    {
+      label: 'Roles & Permissions',
+      icon: Shield,
+      path: '/roles',
+      show: isBankAdmin
     }
   ];
 
