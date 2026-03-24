@@ -5,6 +5,12 @@ import LoginPage from './pages/LoginPage';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import OnboardingPage from './pages/OnboardingPage';
+import ProductTypesPage from './pages/admin/ProductTypesPage';
+import PricingMetadataPage from './pages/admin/PricingMetadataPage';
+import PricingComponentsPage from './pages/admin/PricingComponentsPage';
+import PricingTiersPage from './pages/admin/PricingTiersPage';
+import ProductManagementPage from './pages/admin/ProductManagementPage';
+import RoleManagementPage from './pages/admin/RoleManagementPage';
 import ErrorPage from './pages/ErrorPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoggedInUserLayout from './components/LoggedInUserLayout';
@@ -51,6 +57,36 @@ function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/product-types" element={
+              <ProtectedRoute>
+                <ProductTypesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/pricing-metadata" element={
+              <ProtectedRoute>
+                <PricingMetadataPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/pricing-components" element={
+              <ProtectedRoute>
+                <PricingComponentsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/pricing-tiers" element={
+              <ProtectedRoute>
+                <PricingTiersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/products" element={
+              <ProtectedRoute>
+                <ProductManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/roles" element={
+              <ProtectedRoute>
+                <RoleManagementPage />
               </ProtectedRoute>
             } />
             <Route path="/error" element={<ErrorPage />} />
