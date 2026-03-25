@@ -17,6 +17,7 @@ const PricingMetadataPage = () => {
   const [formData, setFormData] = useState({ attributeKey: '', displayName: '', dataType: 'STRING' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [modalError, setModalError] = useState('');
 
   const dataTypes = ['STRING', 'DECIMAL', 'INTEGER', 'BOOLEAN', 'DATE'];
 
@@ -39,6 +40,7 @@ const PricingMetadataPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setModalError('');
     setSuccess('');
     try {
       if (editingMetadata) {
@@ -53,7 +55,9 @@ const PricingMetadataPage = () => {
       setFormData({ attributeKey: '', displayName: '', dataType: 'STRING' });
       fetchMetadata();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred.');
+      const msg = err.response?.data?.message || 'An error occurred.';
+      setError(msg);
+      setModalError(msg);
     }
   };
 
@@ -105,8 +109,28 @@ const PricingMetadataPage = () => {
         </p>
       </div>
 
-      {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl text-red-700 text-sm font-bold flex items-center"><AlertCircle className="w-4 h-4 mr-3" />{error}</div>}
-      {success && <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl text-green-700 text-sm font-bold flex items-center"><CheckCircle2 className="w-4 h-4 mr-3" />{success}</div>}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl text-red-700 text-sm font-bold flex items-center justify-between">
+          <div className="flex items-center">
+            <AlertCircle className="w-4 h-4 mr-3 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button onClick={() => setError('')} className="ml-4 hover:bg-red-100 p-1 rounded-full transition text-red-500" title="Dismiss">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl text-green-700 text-sm font-bold flex items-center justify-between">
+          <div className="flex items-center">
+            <CheckCircle2 className="w-4 h-4 mr-3 flex-shrink-0" />
+            <span>{success}</span>
+          </div>
+          <button onClick={() => setSuccess('')} className="ml-4 hover:bg-green-100 p-1 rounded-full transition text-green-500" title="Dismiss">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center p-24 bg-white rounded-3xl border border-gray-100 shadow-sm"><Loader2 className="w-12 h-12 animate-spin text-blue-600" /></div>
@@ -151,6 +175,19 @@ const PricingMetadataPage = () => {
               <h2 className="text-2xl font-black text-gray-900 tracking-tight">{editingMetadata ? 'Edit Attribute' : 'Register Attribute'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition p-2.5 hover:bg-gray-100 rounded-full"><X className="w-7 h-7" /></button>
             </div>
+
+            {modalError && (
+              <div className="mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl text-red-700 text-sm font-bold flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-3 flex-shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+                <button onClick={() => setModalError('')} className="ml-4 hover:bg-red-100 p-1 rounded-full transition text-red-500" title="Dismiss">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-8">
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Internal Attribute Key</label>
