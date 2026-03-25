@@ -46,7 +46,11 @@ services:
 
   # 4. Spring Boot Application
   app:
-    build: .
+    build:
+      context: .
+      args:
+        - HTTP_PROXY
+        - HTTPS_PROXY
     container_name: bankengine-app
     ports:
       - "8080:8080"

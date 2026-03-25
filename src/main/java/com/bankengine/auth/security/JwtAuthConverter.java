@@ -23,7 +23,18 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
     @Override
     public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
         String issuer = jwt.getIssuer() != null ? jwt.getIssuer().toString() : null;
-        Collection<GrantedAuthority> authorities = authorityMappingService.mapAuthorities(jwt.getClaims(), issuer);
+
+        // 1. Use the new mapping method to ensure Bank Status and Issuer Normalization are applied
+        AuthorityMappingService.MappingResult mappingResult =
+                authorityMappingService.mapAuthoritiesWithContext(jwt.getClaims(), issuer);
+
+        Collection<GrantedAuthority> authorities = mappingResult.authorities();
+
+        // Note: For stateless JWT Bearer tokens, we don't usually store the bankConfig
+        // in a session, but we can log it here for audit purposes.
+        log.debug("[JWT-AUTH] Authenticated user '{}' for tenant '{}'",
+                jwt.getClaimAsString("sub"), mappingResult.bankConfig().getBankId());
+
         return new JwtAuthenticationToken(jwt, authorities, jwt.getClaimAsString("sub"));
     }
 }

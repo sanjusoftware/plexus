@@ -1,6 +1,7 @@
 package com.bankengine.auth.security;
 
 import com.bankengine.auth.service.AuthorityMappingService;
+import com.bankengine.common.model.BankConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -10,9 +11,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -21,7 +20,10 @@ class JwtAuthConverterTest {
     @Test
     void convert_WithNullIssuer_ShouldWork() {
         AuthorityMappingService mappingService = mock(AuthorityMappingService.class);
-        when(mappingService.mapAuthorities(anyMap(), isNull())).thenReturn(Collections.emptyList());
+        BankConfiguration config = BankConfiguration.builder().bankId("SYSTEM").build();
+
+        when(mappingService.mapAuthoritiesWithContext(anyMap(), isNull()))
+                .thenReturn(new AuthorityMappingService.MappingResult(Collections.emptyList(), config));
 
         JwtAuthConverter converter = new JwtAuthConverter(mappingService);
 
@@ -38,7 +40,11 @@ class JwtAuthConverterTest {
     @Test
     void convert_WithIssuer_ShouldWork() {
         AuthorityMappingService mappingService = mock(AuthorityMappingService.class);
-        when(mappingService.mapAuthorities(anyMap(), anyString())).thenReturn(Collections.emptyList());
+        BankConfiguration config = BankConfiguration.builder().bankId("BANK1").build();
+
+        // Mock the new result DTO for specific issuer
+        when(mappingService.mapAuthoritiesWithContext(anyMap(), eq("http://issuer")))
+                .thenReturn(new AuthorityMappingService.MappingResult(Collections.emptyList(), config));
 
         JwtAuthConverter converter = new JwtAuthConverter(mappingService);
 
@@ -48,5 +54,7 @@ class JwtAuthConverterTest {
         var result = converter.convert(jwt);
 
         assertNotNull(result);
+        assertTrue(result instanceof JwtAuthenticationToken);
+        assertEquals("user123", result.getName());
     }
 }

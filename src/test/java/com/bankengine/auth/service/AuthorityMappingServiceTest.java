@@ -38,9 +38,10 @@ class AuthorityMappingServiceTest {
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, clientId)).thenReturn(Optional.of(config));
         when(permissionMappingService.getPermissionsForRoles(any())).thenReturn(Set.of("perm-1"));
 
-        var authorities = authorityMappingService.mapAuthorities(claims, issuer);
-        assertFalse(authorities.isEmpty());
-        // Context is cleared in finally block
+        var result = authorityMappingService.mapAuthoritiesWithContext(claims, issuer);
+
+        assertFalse(result.authorities().isEmpty());
+        assertEquals("BANK-1", result.bankConfig().getBankId());
         assertNull(TenantContextHolder.getBankId());
     }
 
@@ -55,33 +56,34 @@ class AuthorityMappingServiceTest {
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(normalizedIssuer, clientId)).thenReturn(Optional.of(config));
         when(permissionMappingService.getPermissionsForRoles(any())).thenReturn(Set.of("perm-1"));
 
-        var authorities = authorityMappingService.mapAuthorities(claims, issuer);
-        assertNotNull(authorities);
+        var result = authorityMappingService.mapAuthoritiesWithContext(claims, issuer);
+        assertNotNull(result);
+        assertEquals("BANK-1", result.bankConfig().getBankId());
     }
 
     @Test
     void mapAuthorities_ShouldThrow_WhenIssuerMissing() {
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(Map.of(), null));
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(Map.of(), ""));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(Map.of(), null));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(Map.of(), ""));
     }
 
     @Test
     void mapAuthorities_ShouldThrow_WhenClientIdMissing() {
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(Map.of(), "https://idp.com"));
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(null, "https://idp.com"));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(Map.of(), "https://idp.com"));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(null, "https://idp.com"));
     }
 
     @Test
     void mapAuthorities_ShouldThrow_WhenBankNotFound() {
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(anyString(), anyString())).thenReturn(Optional.empty());
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(Map.of("azp", "c"), "https://i.com"));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(Map.of("azp", "c"), "https://i.com"));
     }
 
     @Test
     void mapAuthorities_ShouldThrow_WhenBankNotActive() {
         BankConfiguration config = BankConfiguration.builder().bankId("B").status(BankStatus.DRAFT).build();
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(anyString(), anyString())).thenReturn(Optional.of(config));
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(Map.of("azp", "c"), "https://i.com"));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(Map.of("azp", "c"), "https://i.com"));
     }
 
     @Test
@@ -89,7 +91,7 @@ class AuthorityMappingServiceTest {
         BankConfiguration config = BankConfiguration.builder().bankId("B").status(BankStatus.ACTIVE).build();
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(anyString(), anyString())).thenReturn(Optional.of(config));
         when(permissionMappingService.getPermissionsForRoles(any())).thenReturn(Collections.emptySet());
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(Map.of("azp", "c"), "https://i.com"));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(Map.of("azp", "c"), "https://i.com"));
     }
 
     @Test
@@ -101,25 +103,25 @@ class AuthorityMappingServiceTest {
         // azp takes precedence
         Map<String, Object> c1 = Map.of("azp", "client-azp", "aud", "client-aud");
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, "client-azp")).thenReturn(Optional.of(config));
-        assertNotNull(authorityMappingService.mapAuthorities(c1, issuer));
+        assertNotNull(authorityMappingService.mapAuthoritiesWithContext(c1, issuer));
 
         // aud as string
         Map<String, Object> c2 = Map.of("aud", "client-aud");
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, "client-aud")).thenReturn(Optional.of(config));
-        assertNotNull(authorityMappingService.mapAuthorities(c2, issuer));
+        assertNotNull(authorityMappingService.mapAuthoritiesWithContext(c2, issuer));
 
         // aud as list
         Map<String, Object> c3 = Map.of("aud", List.of("client-list-0", "other"));
         when(bankConfigurationRepository.findByIssuerUrlAndClientIdUnfiltered(issuer, "client-list-0")).thenReturn(Optional.of(config));
-        assertNotNull(authorityMappingService.mapAuthorities(c3, issuer));
+        assertNotNull(authorityMappingService.mapAuthoritiesWithContext(c3, issuer));
 
         // aud as empty list
         Map<String, Object> c4 = Map.of("aud", List.of());
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(c4, issuer));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(c4, issuer));
 
         // aud as other type
         Map<String, Object> c5 = Map.of("aud", 123);
-        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthorities(c5, issuer));
+        assertThrows(OAuth2AuthenticationException.class, () -> authorityMappingService.mapAuthoritiesWithContext(c5, issuer));
     }
 
     @Test
@@ -134,11 +136,17 @@ class AuthorityMappingServiceTest {
         rolesList.add(null);
         Map<String, Object> c1 = Map.of("azp", "c", "roles", rolesList);
         when(permissionMappingService.getPermissionsForRoles(List.of("ROLE1"))).thenReturn(Set.of("p"));
-        assertNotNull(authorityMappingService.mapAuthorities(c1, issuer));
+
+        var result1 = authorityMappingService.mapAuthoritiesWithContext(c1, issuer);
+        assertNotNull(result1);
+        assertEquals(1, result1.authorities().size());
 
         // roles as single string
         Map<String, Object> c2 = Map.of("azp", "c", "roles", "ROLE2");
         when(permissionMappingService.getPermissionsForRoles(List.of("ROLE2"))).thenReturn(Set.of("p"));
-        assertNotNull(authorityMappingService.mapAuthorities(c2, issuer));
+
+        var result2 = authorityMappingService.mapAuthoritiesWithContext(c2, issuer);
+        assertNotNull(result2);
+        assertEquals(1, result2.authorities().size());
     }
 }

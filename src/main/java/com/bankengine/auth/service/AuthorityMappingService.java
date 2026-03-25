@@ -23,7 +23,7 @@ public class AuthorityMappingService {
     private final PermissionMappingService permissionMappingService;
     private final BankConfigurationRepository bankConfigurationRepository;
 
-    public Collection<GrantedAuthority> mapAuthorities(Map<String, Object> claims, String issuer) {
+    public MappingResult mapAuthoritiesWithContext(Map<String, Object> claims, String issuer) {
         if (issuer == null || issuer.isBlank()) {
             throw new OAuth2AuthenticationException("Issuer URL is missing from token.");
         }
@@ -52,9 +52,11 @@ public class AuthorityMappingService {
                 throw new OAuth2AuthenticationException("Access Denied: Your role is not authorized for this bank.");
             }
 
-            return permissions.stream()
+            Collection<GrantedAuthority> authorities = permissions.stream()
                     .map(SimpleGrantedAuthority::new)
                     .collect(Collectors.toSet());
+
+            return new MappingResult(authorities, bankConfig);
         } finally {
             TenantContextHolder.clear();
         }
@@ -65,7 +67,7 @@ public class AuthorityMappingService {
         if (claims.get("azp") != null) return claims.get("azp").toString();
         Object aud = claims.get("aud");
         if (aud instanceof String s) return s;
-        if (aud instanceof List<?> list && !list.isEmpty()) return list.get(0).toString();
+        if (aud instanceof List<?> list && !list.isEmpty()) return list.getFirst().toString();
         return null;
     }
 
@@ -91,4 +93,9 @@ public class AuthorityMappingService {
         }
         return Collections.emptyList();
     }
+
+    /**
+     * DTO to pass resolved metadata back to the OIDC service
+     */
+    public record MappingResult(Collection<GrantedAuthority> authorities, BankConfiguration bankConfig) {}
 }
