@@ -115,7 +115,7 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {"ADMIN"})
     void shouldDiscoverAllSystemAuthorities() throws Exception {
-        mockMvc.perform(get(ROLE_API + "/system-authorities"))
+        mockMvc.perform(get(ROLE_API + "/authorities"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", isA(java.util.List.class)))
                 .andExpect(jsonPath("$", hasItem("pricing:component:read")))

@@ -53,8 +53,10 @@ export class AuthService {
       });
     } catch (err) {
       console.error("Logout request failed", err);
-      // Fallback: If the API fails, we still want to clear the session cookie
+    } finally {
+      // Always try to clear cookies manually as a safety measure
       document.cookie = "JSESSIONID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     }
   }
 

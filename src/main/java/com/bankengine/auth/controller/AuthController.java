@@ -94,10 +94,12 @@ public class AuthController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<UserResponse> getUser(@AuthenticationPrincipal OAuth2User principal) {
-        if (principal == null) {
+    public ResponseEntity<UserResponse> getUser(org.springframework.security.core.Authentication authentication) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+
+        OAuth2User principal = (OAuth2User) authentication.getPrincipal();
 
         // 1. Extract Identity from Principal (Injected by CustomOidcUserService)
         String name = principal.getAttribute("name") != null ? principal.getAttribute("name") : "unknown user";
@@ -115,7 +117,7 @@ public class AuthController {
                 : Collections.emptyList();
 
         // 4. Bank ID: Now guaranteed to be injected by our Service from the DB
-       final String bankId = principal.getAttribute("bank_id") != null
+        final String bankId = principal.getAttribute("bank_id") != null
                 ? principal.getAttribute("bank_id") : "UNKNOWN";
 
         // 5. Lookup Bank Name for the UI
@@ -129,6 +131,11 @@ public class AuthController {
             TenantContextHolder.setSystemMode(false);
         }
 
+        // 6. Permissions: Mapped authorities
+        List<String> permissions = authentication.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .toList();
+
         return ResponseEntity.ok(UserResponse.builder()
                 .name(name)
                 .email(email)
@@ -137,6 +144,7 @@ public class AuthController {
                 .bankName(bankName)
                 .sub(sub)
                 .picture(picture)
+                .permissions(permissions)
                 .build());
     }
 

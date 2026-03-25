@@ -19,4 +19,5 @@ public class UserResponse {
     private String bankName;
     private String sub;
     private String picture;
+    private List<String> permissions;
 }

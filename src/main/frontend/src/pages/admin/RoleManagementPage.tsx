@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Trash2, Loader2, Save, X, Shield, CheckCircle2, AlertCircle, Info, Lock } from 'lucide-react';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 interface RoleMapping {
   roleName: string;
@@ -15,6 +16,8 @@ const RoleManagementPage = () => {
   const [formData, setFormData] = useState<RoleMapping>({ roleName: '', authorities: [] });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -67,7 +70,6 @@ const RoleManagementPage = () => {
   };
 
   const handleDelete = async (roleName: string) => {
-    if (!window.confirm(`Warning: This will strip all permissions from the role "${roleName}". Continue?`)) return;
     try {
       await axios.post('/api/v1/roles/mapping', { roleName, authorities: [] });
       setSuccess('Permissions cleared for role.');
@@ -75,6 +77,11 @@ const RoleManagementPage = () => {
     } catch (err: any) {
       setError('Failed to clear role mapping.');
     }
+  };
+
+  const confirmDelete = (roleName: string) => {
+    setRoleToDelete(roleName);
+    setShowDeleteConfirm(true);
   };
 
   return (
@@ -92,7 +99,7 @@ const RoleManagementPage = () => {
           onClick={() => openModal()}
           className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl flex items-center hover:bg-blue-700 transition font-black shadow-xl shadow-blue-100 uppercase tracking-widest text-[11px] relative"
         >
-          <Plus className="w-5 h-5 mr-3" /> Register OIDC Role
+          <Plus className="w-5 h-5 mr-3" /> Register New Role
         </button>
       </div>
 
@@ -101,7 +108,7 @@ const RoleManagementPage = () => {
         <div>
            <p className="text-sm text-indigo-900 font-black leading-relaxed uppercase tracking-wide mb-2">Internal RBAC Model</p>
            <p className="text-sm text-indigo-800 font-medium leading-relaxed italic max-w-4xl">
-              Permissions are aggregated based on the OIDC roles present in the user's token.
+              Permissions are aggregated based on the roles present in the user's token.
               Only authorities explicitly mapped below will be granted during the session handshake.
               The <strong>SYSTEM_ADMIN</strong> role is managed globally and cannot be modified here.
            </p>
@@ -127,7 +134,7 @@ const RoleManagementPage = () => {
                 </div>
                 <div className="flex space-x-1 opacity-40 group-hover:opacity-100 transition duration-500">
                   <button onClick={() => openModal(mapping)} className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition border border-transparent hover:border-blue-100" title="Modify Permissions"><Plus className="w-5 h-5" /></button>
-                  <button onClick={() => handleDelete(mapping.roleName)} className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition border border-transparent hover:border-red-100" title="Revoke All Access"><Trash2 className="w-5 h-5" /></button>
+                  <button onClick={() => confirmDelete(mapping.roleName)} className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition border border-transparent hover:border-red-100" title="Revoke All Access"><Trash2 className="w-5 h-5" /></button>
                 </div>
               </div>
 
@@ -164,8 +171,14 @@ const RoleManagementPage = () => {
               <button onClick={() => setIsModalOpen(false)} className="hover:bg-blue-800 p-3 rounded-full transition relative border border-white/10 shadow-lg"><X className="w-8 h-8" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-12 space-y-10">
+              {error && (
+                <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
+                  <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+                  <p className="text-sm font-bold">{error}</p>
+                </div>
+              )}
               <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100">
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">OIDC Role Name (Key)</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Role Name (Key)</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
                   <input
@@ -213,6 +226,16 @@ const RoleManagementPage = () => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => { setShowDeleteConfirm(false); setRoleToDelete(null); }}
+        onConfirm={() => roleToDelete && handleDelete(roleToDelete)}
+        title="Confirm Revocation"
+        message={`Warning: This will strip all permissions from the role "${roleToDelete}". Continue?`}
+        confirmText="Confirm & Revoke"
+        variant="danger"
+      />
     </div>
   );
 };

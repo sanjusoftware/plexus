@@ -94,6 +94,12 @@ public class RoleMappingController {
         return ResponseEntity.ok(roleNames);
     }
 
+    @GetMapping("/mapping")
+    @PreAuthorize("hasAuthority('auth:role:read')")
+    public ResponseEntity<List<com.bankengine.auth.model.Role>> getAllRoleMappings() {
+        return ResponseEntity.ok(roleManagementService.getAllRoleMappings());
+    }
+
     // --- UI Utility Endpoints ---
 
     @Operation(
@@ -111,7 +117,7 @@ public class RoleMappingController {
                     @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing token")
             }
     )
-    @GetMapping("/system-authorities")
+    @GetMapping("/authorities")
     @PreAuthorize("hasAuthority('auth:role:read')")
     public ResponseEntity<Set<String>> getSystemAuthorities() {
         Set<String> authorities = authorityDiscoveryService.discoverAllAuthorities();

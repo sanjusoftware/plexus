@@ -25,9 +25,8 @@ class CustomOidcUserServiceTest {
     @Test
     void enrichUser_WithNullIssuer_ShouldWork() {
         AuthorityMappingService mappingService = mock(AuthorityMappingService.class);
-        BankConfigurationRepository bankRepo = mock(BankConfigurationRepository.class);
 
-        CustomOidcUserService service = new CustomOidcUserService(mappingService, bankRepo);
+        CustomOidcUserService service = new CustomOidcUserService(mappingService);
 
         OidcUser oidcUser = mock(OidcUser.class);
         when(oidcUser.getAttributes()).thenReturn(Map.of("sub", "user123"));
@@ -53,9 +52,8 @@ class CustomOidcUserServiceTest {
     @Test
     void enrichUser_WithTrailingSlashIssuer_ShouldWorkViaMappingService() throws Exception {
         AuthorityMappingService mappingService = mock(AuthorityMappingService.class);
-        BankConfigurationRepository bankRepo = mock(BankConfigurationRepository.class);
 
-        CustomOidcUserService service = new CustomOidcUserService(mappingService, bankRepo);
+        CustomOidcUserService service = new CustomOidcUserService(mappingService);
 
         OidcUser oidcUser = mock(OidcUser.class);
         when(oidcUser.getAttributes()).thenReturn(Map.of("sub", "user123"));
