@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, ChevronDown, Loader2, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
+import StyledSelect from '../components/StyledSelect';
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -170,9 +171,8 @@ const OnboardingPage = () => {
             <label className="block text-sm font-bold text-gray-700 mb-2">Currency</label>
             <div className="relative">
               {!isCustomCurrency ? (
-                <>
-                  <select
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition appearance-none"
+                  <StyledSelect
+                    className="border-gray-300 rounded-xl px-4 py-3 border focus:ring-2 focus:ring-blue-500"
                     value={formData.currencyCode}
                     onChange={e => {
                       if (e.target.value === 'OTHER') {
@@ -187,9 +187,7 @@ const OnboardingPage = () => {
                     <option value="GBP">GBP - British Pound</option>
                     <option value="JPY">JPY - Japanese Yen</option>
                     <option value="OTHER">Other (Enter code...)</option>
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                </>
+                  </StyledSelect>
               ) : (
                 <div className="flex space-x-2">
                   <input

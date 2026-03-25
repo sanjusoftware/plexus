@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Save, X, Package, ShieldCheck, Tag, Layers, ChevronRight, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import StyledSelect from '../../components/StyledSelect';
 
 interface FeatureComponent {
   id: number;
@@ -303,19 +304,19 @@ const ProductManagementPage = () => {
                 </div>
                 <div className="lg:col-span-1">
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Product Classification</label>
-                  <select required className="w-full border-2 border-gray-100 rounded-2xl p-4 bg-gray-50 font-black text-xs uppercase tracking-widest transition focus:border-blue-500 shadow-sm" value={formData.productTypeCode} onChange={(e) => setFormData({...formData, productTypeCode: e.target.value})}>
+                  <StyledSelect required className="bg-gray-50 font-black text-xs uppercase tracking-widest shadow-sm" value={formData.productTypeCode} onChange={(e) => setFormData({...formData, productTypeCode: e.target.value})}>
                     <option value="">Select Category...</option>
                     {productTypes.map(t => <option key={t.id} value={t.code}>{t.name}</option>)}
-                  </select>
+                  </StyledSelect>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Target Market Segment</label>
-                  <select required className="w-full border-2 border-gray-100 rounded-2xl p-4 bg-gray-50 font-black text-xs uppercase tracking-widest transition focus:border-blue-500 shadow-sm" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})}>
+                  <StyledSelect required className="bg-gray-50 font-black text-xs uppercase tracking-widest shadow-sm" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})}>
                     <option value="RETAIL">RETAIL CONSUMER</option>
                     <option value="WEALTH">WEALTH MANAGEMENT</option>
                     <option value="CORPORATE">CORPORATE BANKING</option>
                     <option value="INVESTMENT">INVESTMENT BANKING</option>
-                  </select>
+                  </StyledSelect>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Short Marketing Tagline</label>
@@ -344,14 +345,14 @@ const ProductManagementPage = () => {
                       <div className="space-y-6">
                         <div>
                           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Feature Definition</label>
-                          <select className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition" value={link.featureComponentCode} onChange={(e) => {
+                          <StyledSelect className="border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500" value={link.featureComponentCode} onChange={(e) => {
                             const newF = [...formData.features];
                             newF[idx].featureComponentCode = e.target.value;
                             setFormData({...formData, features: newF});
                           }}>
                             <option value="">Select Global Component...</option>
                             {featureComponents.map(fc => <option key={fc.id} value={fc.code}>{fc.name} ({fc.dataType})</option>)}
-                          </select>
+                          </StyledSelect>
                         </div>
                         <div>
                           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Concrete Value</label>
@@ -389,14 +390,14 @@ const ProductManagementPage = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                         <div>
                           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Pricing Aggregate Component</label>
-                          <select className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-purple-500 transition" value={link.pricingComponentCode} onChange={(e) => {
+                          <StyledSelect className="border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-purple-500" value={link.pricingComponentCode} onChange={(e) => {
                              const newP = [...formData.pricing];
                              newP[idx].pricingComponentCode = e.target.value;
                              setFormData({...formData, pricing: newP});
                           }}>
                             <option value="">Select Global Pricing...</option>
                             {pricingComponents.map(pc => <option key={pc.id} value={pc.code}>{pc.name} ({pc.type})</option>)}
-                          </select>
+                          </StyledSelect>
                         </div>
                         <div className="flex items-end">
                           <label className="flex items-center cursor-pointer p-4 bg-white rounded-xl border-2 border-gray-100 hover:border-blue-200 transition w-full shadow-sm">
@@ -425,7 +426,7 @@ const ProductManagementPage = () => {
                           </div>
                           <div>
                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Amount Type</label>
-                            <select className="w-full border-2 border-gray-50 rounded-xl p-3.5 font-black text-[10px] uppercase tracking-widest bg-gray-50/30 transition focus:border-purple-500" value={link.fixedValueType} onChange={(e) => {
+                            <StyledSelect className="border-gray-50 rounded-xl p-3.5 font-black text-[10px] uppercase tracking-widest bg-gray-50/30 focus:border-purple-500" value={link.fixedValueType} onChange={(e) => {
                                const newP = [...formData.pricing];
                                newP[idx].fixedValueType = e.target.value;
                                setFormData({...formData, pricing: newP});
@@ -433,7 +434,7 @@ const ProductManagementPage = () => {
                               <option value="FEE_ABSOLUTE">FEE (ABSOLUTE)</option>
                               <option value="FEE_PERCENTAGE">FEE (PERCENTAGE)</option>
                               <option value="RATE_ABSOLUTE">RATE (ABSOLUTE)</option>
-                            </select>
+                            </StyledSelect>
                           </div>
                         </div>
                       )}

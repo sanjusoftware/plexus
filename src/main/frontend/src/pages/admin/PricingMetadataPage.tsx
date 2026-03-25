@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Save, X, Database, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import StyledSelect from '../../components/StyledSelect';
 
 interface PricingMetadata {
   id: number;
@@ -178,16 +179,15 @@ const PricingMetadataPage = () => {
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Attribute Data Type</label>
-                <select
+                <StyledSelect
                   required
-                  className="block w-full border-2 border-gray-100 rounded-2xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-white font-bold transition"
                   value={formData.dataType}
                   onChange={(e) => setFormData({ ...formData, dataType: e.target.value })}
                 >
                   {dataTypes.map(type => (
                     <option key={type} value={type}>{type}</option>
                   ))}
-                </select>
+                </StyledSelect>
                 <p className="mt-3 text-[11px] text-gray-400 font-medium italic">Affects how the rule engine processes and validates values.</p>
               </div>
               <div className="pt-6 flex space-x-4">
