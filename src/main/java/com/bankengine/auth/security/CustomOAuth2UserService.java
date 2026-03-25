@@ -46,15 +46,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 oauth2User.getName(), bankConfig.getBankId(), authorities.size());
 
         // 2. Enrich attributes for the session
-        Map<String, Object> enrichedAttributes = new HashMap<>(oauth2User.getAttributes());
-        enrichedAttributes.put("bank_id", bankConfig.getBankId());
-        enrichedAttributes.put("bankName", bankConfig.getName());
-        enrichedAttributes.put("permissions", authorities.stream().map(GrantedAuthority::getAuthority).toList());
+        Map<String, Object> claims = new HashMap<>(oauth2User.getAttributes());
+        claims.put("bank_id", bankConfig.getBankId());
+        claims.put("bankName", bankConfig.getName());
+        claims.put("permissions", authorities.stream().map(GrantedAuthority::getAuthority).toList());
 
         String userNameAttributeName = userRequest.getClientRegistration()
                 .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
         if (userNameAttributeName == null) userNameAttributeName = "sub";
 
-        return new DefaultOAuth2User(authorities, enrichedAttributes, userNameAttributeName);
+        return new DefaultOAuth2User(authorities, claims, userNameAttributeName);
     }
 }
