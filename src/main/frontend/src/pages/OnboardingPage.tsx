@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, ChevronDown, Loader2 } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, ChevronDown, Loader2, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
 const OnboardingPage = () => {
@@ -13,6 +13,7 @@ const OnboardingPage = () => {
     name: '',
     issuerUrl: '',
     clientId: '',
+    clientSecret: '',
     adminName: '',
     adminEmail: '',
     currencyCode: 'USD',
@@ -25,6 +26,7 @@ const OnboardingPage = () => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [showSecret, setShowSecret] = useState(false);
 
   useEffect(() => {
     fetchCaptcha();
@@ -49,8 +51,12 @@ const OnboardingPage = () => {
       setMessage('Please enter a valid OIDC Issuer URL (starting with http:// or https://).');
       return false;
     }
+    if (!formData.clientId) {
+      setMessage('Client ID is required.');
+      return false;
+    }
     const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (formData.clientId && !guidPattern.test(formData.clientId)) {
+    if (!guidPattern.test(formData.clientId)) {
       setMessage('Client ID must be a valid GUID (e.g., 12345678-1234-1234-1234-1234567890ab).');
       return false;
     }
@@ -223,19 +229,43 @@ const OnboardingPage = () => {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1">Client ID (optional)</label>
-          <p className="text-xs text-gray-500 mb-2">
-            The Application (client) ID registered in your IDP.
-            <br />Example (Entra ID): Found in the "Overview" section of your App Registration.
-          </p>
-          <input
-            type="text"
-            placeholder="e.g. 12345678-1234-1234-1234-1234567890ab"
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
-            value={formData.clientId}
-            onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Client ID</label>
+            <p className="text-xs text-gray-500 mb-2">
+              The Application (client) ID registered in your IDP.
+            </p>
+            <input
+              required
+              type="text"
+              placeholder="e.g. 12345678-...90ab"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              value={formData.clientId}
+              onChange={e => setFormData({ ...formData, clientId: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Client Secret (Optional)</label>
+            <p className="text-xs text-gray-500 mb-2">
+              The Application Secret if your IDP requires it.
+            </p>
+            <div className="relative">
+              <input
+                type={showSecret ? "text" : "password"}
+                placeholder="••••••••••••"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition pr-12"
+                value={formData.clientSecret}
+                onChange={e => setFormData({ ...formData, clientSecret: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowSecret(!showSecret)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg text-gray-400"
+              >
+                {showSecret ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">

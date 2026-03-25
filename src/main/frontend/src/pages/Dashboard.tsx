@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, Package, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign
+  Building2, Package, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Dashboard = () => {
   const { user, bankId, loading: authLoading } = useAuth();
@@ -14,6 +15,8 @@ const Dashboard = () => {
   const [selectedBank, setSelectedBank] = useState<any>(null);
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
   const [bankToDeactivate, setBankToDeactivate] = useState<string | null>(null);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   const authorities = (user?.roles as string[]) || [];
   const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
@@ -52,6 +55,8 @@ const Dashboard = () => {
   }, [user, authLoading, isSystemAdmin]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'REJECTED') => {
+    setError('');
+    setSuccess('');
     try {
       if (action === 'REJECTED') {
         await axios.put(`/api/v1/banks/${targetBankId}`, { status: 'REJECTED' });
@@ -60,12 +65,13 @@ const Dashboard = () => {
       }
 
       await fetchData();
+      setSuccess(`Bank ${targetBankId} has been successfully ${action === 'REJECTED' ? 'rejected' : action + 'd'}.`);
       setSelectedBank(null);
       setShowDeactivateConfirm(false);
       setBankToDeactivate(null);
     } catch (err: any) {
       console.error(`Failed to ${action} bank:`, err);
-      alert(err.response?.data?.message || `Failed to ${action} bank. Make sure you have SYSTEM_ADMIN permissions.`);
+      setError(err.response?.data?.message || `Failed to ${action} bank. Make sure you have SYSTEM_ADMIN permissions.`);
     }
   };
 
@@ -94,6 +100,26 @@ const Dashboard = () => {
 
   return (
     <>
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700 animate-in fade-in slide-in-from-top-1">
+          <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0" />
+          <p className="text-sm font-bold">{error}</p>
+          <button onClick={() => setError('')} className="ml-auto p-1 hover:bg-red-100 rounded-full transition">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {success && (
+        <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-xl flex items-center text-green-700 animate-in fade-in slide-in-from-top-1">
+          <CheckCircle2 className="h-5 w-5 mr-3 flex-shrink-0" />
+          <p className="text-sm font-bold">{success}</p>
+          <button onClick={() => setSuccess('')} className="ml-auto p-1 hover:bg-green-100 rounded-full transition">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Welcome Card */}
       <div className="bg-white rounded-2xl shadow-sm border p-8 mb-8 flex justify-between items-center">
         <div>
@@ -306,43 +332,17 @@ const Dashboard = () => {
       )}
 
       {/* Deactivation Confirmation Modal */}
-      {showDeactivateConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-            <div className="flex items-center space-x-3 text-amber-600 mb-4">
-              <AlertCircle className="h-8 w-8" />
-              <h3 className="text-xl font-bold">Confirm Deactivation</h3>
-            </div>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              Are you sure you want to deactivate <strong>{bankToDeactivate}</strong>? This will prevent any users from this bank from logging into the platform.
-            </p>
-            <div className="flex space-x-4">
-              <button
-                onClick={() => { setShowDeactivateConfirm(false); setBankToDeactivate(null); }}
-                className="flex-1 px-4 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleStatusUpdate(bankToDeactivate!, 'deactivate')}
-                className="flex-1 px-4 py-3 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition"
-              >
-                Confirm & Deactivate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={showDeactivateConfirm}
+        onClose={() => { setShowDeactivateConfirm(false); setBankToDeactivate(null); }}
+        onConfirm={() => handleStatusUpdate(bankToDeactivate!, 'deactivate')}
+        title="Confirm Deactivation"
+        message={`Are you sure you want to deactivate ${bankToDeactivate}? This will prevent any users from this bank from logging into the platform.`}
+        confirmText="Confirm & Deactivate"
+        variant="danger"
+      />
     </>
   );
 };
-
-const AlertCircle = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="12" />
-    <line x1="12" y1="16" x2="12.01" y2="16" />
-  </svg>
-);
 
 export default Dashboard;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Save, X, List, CheckCircle2, Archive, AlertCircle } from 'lucide-react';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 interface ProductType {
   id: number;
@@ -17,6 +18,8 @@ const ProductTypesPage = () => {
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [typeToDelete, setTypeToDelete] = useState<number | null>(null);
 
   const fetchProductTypes = async () => {
     setLoading(true);
@@ -66,7 +69,6 @@ const ProductTypesPage = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to permanently delete this product type? This action cannot be undone.')) return;
     try {
       await axios.delete(`/api/v1/product-types/${id}`);
       setSuccess('Product type deleted successfully.');
@@ -74,6 +76,11 @@ const ProductTypesPage = () => {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete product type.');
     }
+  };
+
+  const confirmDelete = (id: number) => {
+    setTypeToDelete(id);
+    setShowDeleteConfirm(true);
   };
 
   const openModal = (type?: ProductType) => {
@@ -143,20 +150,23 @@ const ProductTypesPage = () => {
                     <td className="px-8 py-5 whitespace-nowrap">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         type.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                        type.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'
+                        type.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
+                        type.status === 'ARCHIVED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                       }`}>
                         {type.status}
                       </span>
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium space-x-2">
                       {type.status === 'DRAFT' && (
-                        <button onClick={() => handleAction(type.id, 'activate')} className="text-green-600 hover:bg-green-50 p-2 rounded-lg transition" title="Activate"><CheckCircle2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleAction(type.id, 'activate')} className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center inline-flex" title="Approve">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approve
+                        </button>
                       )}
                       {type.status === 'ACTIVE' && (
                         <button onClick={() => handleAction(type.id, 'archive')} className="text-gray-400 hover:bg-gray-100 p-2 rounded-lg transition" title="Archive"><Archive className="w-4 h-4" /></button>
                       )}
                       <button onClick={() => openModal(type)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(type.id)} className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => confirmDelete(type.id)} className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title="Delete"><Trash2 className="w-4 h-4" /></button>
                     </td>
                   </tr>
                 ))
@@ -174,18 +184,12 @@ const ProductTypesPage = () => {
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition p-2 hover:bg-gray-100 rounded-full"><X className="w-6 h-6" /></button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Unique Code</label>
-                <input
-                  type="text"
-                  required
-                  className="block w-full border border-gray-200 rounded-xl shadow-sm p-3.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono transition"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g. SAVINGS"
-                />
-                <p className="mt-2 text-[10px] text-gray-400 leading-relaxed italic">The immutable identifier used for API calls and system logic.</p>
-              </div>
+              {error && (
+                <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
+                  <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+                  <p className="text-xs font-bold">{error}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Display Name</label>
                 <input
@@ -193,10 +197,29 @@ const ProductTypesPage = () => {
                   required
                   className="block w-full border border-gray-200 rounded-xl shadow-sm p-3.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    let code = formData.code;
+                    if (!editingType && !code) {
+                        code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                    }
+                    setFormData({ ...formData, name, code });
+                  }}
                   placeholder="e.g. Savings Accounts"
                 />
                 <p className="mt-2 text-[10px] text-gray-400 leading-relaxed italic">The user-friendly name displayed in reports and customer interfaces.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Unique Code</label>
+                <input
+                  type="text"
+                  required
+                  className="block w-full border border-gray-200 rounded-xl shadow-sm p-3.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono transition"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') })}
+                  placeholder="e.g. SAVINGS"
+                />
+                <p className="mt-2 text-[10px] text-gray-400 leading-relaxed italic">The immutable identifier used for API calls and system logic.</p>
               </div>
               <div className="pt-4 flex space-x-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-3.5 border border-gray-200 rounded-2xl font-bold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
@@ -208,6 +231,16 @@ const ProductTypesPage = () => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => { setShowDeleteConfirm(false); setTypeToDelete(null); }}
+        onConfirm={() => typeToDelete && handleDelete(typeToDelete)}
+        title="Confirm Deletion"
+        message="Are you sure you want to permanently delete this product type? This action cannot be undone."
+        confirmText="Confirm & Delete"
+        variant="danger"
+      />
     </div>
   );
 };

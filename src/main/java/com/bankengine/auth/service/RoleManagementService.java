@@ -52,4 +52,9 @@ public class RoleManagementService extends BaseService {
                 .map(Role::getName)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<Role> getAllRoleMappings() {
+        return roleRepository.findAll();
+    }
 }
