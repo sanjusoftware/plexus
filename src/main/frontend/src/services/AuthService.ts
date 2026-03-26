@@ -8,6 +8,7 @@ export interface UserProfile {
   bankName: string;
   sub: string;
   picture?: string;
+  permissions: string[];
 }
 
 export class AuthService {

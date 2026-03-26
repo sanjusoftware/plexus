@@ -69,7 +69,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     private CoreMetadataSeeder coreMetadataSeeder;
     @Autowired
     private TestTransactionHelper txHelper;
-    @Autowired
+    @Autowired(required = false)
     private CacheManager cacheManager;
     @Autowired
     private MockMvc mockMvc;
@@ -91,7 +91,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setup() {
-        if (cacheManager.getCache("productPricingLinks") != null) {
+        if (cacheManager != null && cacheManager.getCache("productPricingLinks") != null) {
             Objects.requireNonNull(cacheManager.getCache("productPricingLinks")).clear();
         }
         TenantContextHolder.setBankId(TEST_BANK_ID);
@@ -285,7 +285,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         });
 
         // CRITICAL: Clear cache again because we added a new link inside the test body
-        if (cacheManager.getCache("productPricingLinks") != null) {
+        if (cacheManager != null && cacheManager.getCache("productPricingLinks") != null) {
             cacheManager.getCache("productPricingLinks").clear();
         }
 

@@ -15,7 +15,7 @@ import org.springframework.security.jackson2.SecurityJackson2Modules;
 
 @Configuration
 @EnableCaching
-@ConditionalOnProperty(name = "spring.session.store-type", havingValue = "redis") // Only load if Redis is selected
+@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis") // Only load if Redis is selected
 public class RedisSessionConfig {
 
     /**

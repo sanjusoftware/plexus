@@ -259,6 +259,7 @@ public class BankConfigurationService extends BaseService {
         // Add bank-specific configuration permissions
         bankAuthorities.add("bank:config:read");
         bankAuthorities.add("bank:config:write");
+        bankAuthorities.add("bank:stats:read");
 
         Role superAdmin = new Role();
         superAdmin.setName("BANK_ADMIN");
