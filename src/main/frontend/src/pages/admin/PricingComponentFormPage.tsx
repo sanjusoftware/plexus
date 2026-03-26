@@ -11,6 +11,7 @@ const PricingComponentFormPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [metadata, setMetadata] = useState<any[]>([]);
+  const [isCodeEdited, setIsCodeEdited] = useState(false);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState<any>({
@@ -42,6 +43,7 @@ const PricingComponentFormPage = () => {
               description: comp.description,
               pricingTiers: comp.pricingTiers || []
             });
+            setIsCodeEdited(true);
           } else {
             setError('Pricing component not found.');
           }
@@ -159,11 +161,35 @@ const PricingComponentFormPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Immutable Component Code</label>
-              <input type="text" required className="w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})} placeholder="e.g. MAINTENANCE_FEE" />
+              <input
+                type="text"
+                required
+                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm"
+                value={formData.code}
+                onChange={(e) => {
+                  setIsCodeEdited(true);
+                  setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
+                }}
+                placeholder="e.g. MAINTENANCE_FEE"
+              />
             </div>
             <div>
               <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Product-Facing Name</label>
-              <input type="text" required className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold transition focus:border-blue-500 shadow-sm" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g. Monthly Maintenance Fee" />
+              <input
+                type="text"
+                required
+                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold transition focus:border-blue-500 shadow-sm"
+                value={formData.name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  let code = formData.code;
+                  if (!isEditing && !isCodeEdited) {
+                    code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                  }
+                  setFormData({ ...formData, name, code });
+                }}
+                placeholder="e.g. Monthly Maintenance Fee"
+              />
             </div>
             <div>
               <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Financial Type</label>

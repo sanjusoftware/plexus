@@ -16,6 +16,7 @@ const ProductTypesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingType, setEditingType] = useState<ProductType | null>(null);
   const [formData, setFormData] = useState({ name: '', code: '' });
+  const [isCodeEdited, setIsCodeEdited] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -97,9 +98,11 @@ const ProductTypesPage = () => {
     if (type) {
       setEditingType(type);
       setFormData({ name: type.name, code: type.code });
+      setIsCodeEdited(true);
     } else {
       setEditingType(null);
       setFormData({ name: '', code: '' });
+      setIsCodeEdited(false);
     }
     setIsModalOpen(true);
   };
@@ -214,8 +217,8 @@ const ProductTypesPage = () => {
                   onChange={(e) => {
                     const name = e.target.value;
                     let code = formData.code;
-                    if (!editingType && !code) {
-                        code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                    if (!editingType && !isCodeEdited) {
+                      code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
                     }
                     setFormData({ ...formData, name, code });
                   }}
@@ -230,7 +233,10 @@ const ProductTypesPage = () => {
                   required
                   className="block w-full border border-gray-200 rounded-xl shadow-sm p-3.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono transition"
                   value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') })}
+                  onChange={(e) => {
+                    setIsCodeEdited(true);
+                    setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
+                  }}
                   placeholder="e.g. SAVINGS"
                 />
                 <p className="mt-2 text-[10px] text-gray-400 leading-relaxed italic">The immutable identifier used for API calls and system logic.</p>

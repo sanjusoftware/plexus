@@ -16,6 +16,7 @@ const PricingMetadataPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMetadata, setEditingMetadata] = useState<PricingMetadata | null>(null);
   const [formData, setFormData] = useState({ attributeKey: '', displayName: '', dataType: 'STRING' });
+  const [isKeyEdited, setIsKeyEdited] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [modalError, setModalError] = useState('');
@@ -77,9 +78,11 @@ const PricingMetadataPage = () => {
     if (meta) {
       setEditingMetadata(meta);
       setFormData({ attributeKey: meta.attributeKey, displayName: meta.displayName, dataType: meta.dataType });
+      setIsKeyEdited(true);
     } else {
       setEditingMetadata(null);
       setFormData({ attributeKey: '', displayName: '', dataType: 'STRING' });
+      setIsKeyEdited(false);
     }
     setIsModalOpen(true);
   };
@@ -197,7 +200,10 @@ const PricingMetadataPage = () => {
                   required
                   className="block w-full border-2 border-gray-100 rounded-2xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-mono font-bold text-blue-700 transition"
                   value={formData.attributeKey}
-                  onChange={(e) => setFormData({ ...formData, attributeKey: e.target.value })}
+                  onChange={(e) => {
+                    setIsKeyEdited(true);
+                    setFormData({ ...formData, attributeKey: e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_-]/g, '') });
+                  }}
                   placeholder="e.g. current_balance"
                 />
                 <p className="mt-3 text-[11px] text-gray-400 font-medium italic">Used by developers in rule definitions. Must be unique.</p>
@@ -209,7 +215,14 @@ const PricingMetadataPage = () => {
                   required
                   className="block w-full border-2 border-gray-100 rounded-2xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition"
                   value={formData.displayName}
-                  onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    let key = formData.attributeKey;
+                    if (!editingMetadata && !isKeyEdited) {
+                      key = name.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '');
+                    }
+                    setFormData({ ...formData, displayName: name, attributeKey: key });
+                  }}
                   placeholder="e.g. Account Balance"
                 />
                 <p className="mt-3 text-[11px] text-gray-400 font-medium italic">What the business user sees in the pricing dashboard.</p>

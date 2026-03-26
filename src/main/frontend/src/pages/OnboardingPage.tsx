@@ -31,6 +31,7 @@ const OnboardingPage = () => {
 
   const [customCurrency, setCustomCurrency] = useState('');
   const [isCustomCurrency, setIsCustomCurrency] = useState(false);
+  const [isBankIdEdited, setIsBankIdEdited] = useState(false);
   const [captcha, setCaptcha] = useState({ question: '', id: '' });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -63,6 +64,7 @@ const OnboardingPage = () => {
         currencyCode: data.currencyCode,
         captchaAnswer: ''
       });
+      setIsBankIdEdited(true);
       if (!['USD', 'EUR', 'GBP', 'JPY'].includes(data.currencyCode)) {
         setIsCustomCurrency(true);
         setCustomCurrency(data.currencyCode);
@@ -209,7 +211,10 @@ const OnboardingPage = () => {
               value={formData.name}
               onChange={e => {
                 const name = e.target.value;
-                const bankId = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                let bankId = formData.bankId;
+                if (!isEditing && !isBankIdEdited) {
+                  bankId = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                }
                 setFormData({ ...formData, name, bankId });
               }}
             />
@@ -225,7 +230,10 @@ const OnboardingPage = () => {
               placeholder="e.g. GLOBAL-BANK-001"
               className={`w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${isEditing ? 'bg-gray-50 text-gray-500' : ''}`}
               value={formData.bankId}
-              onChange={e => setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '_') })}
+              onChange={e => {
+                setIsBankIdEdited(true);
+                setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '_') });
+              }}
             />
           </div>
           <div>
