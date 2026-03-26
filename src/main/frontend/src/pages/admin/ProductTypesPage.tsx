@@ -192,9 +192,6 @@ const ProductTypesPage = () => {
                           <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
                         </button>
                       )}
-                      {type.status === 'ACTIVE' && (
-                        <button onClick={() => triggerConfirmAction(type)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-lg transition" title="Archive"><Archive className="w-4 h-4" /></button>
-                      )}
                       {type.status !== 'ARCHIVED' && (
                         <>
                           <button onClick={() => openModal(type)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
