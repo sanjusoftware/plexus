@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await authService.logout();
     setUser(null);
     // Force redirect to login page after state is cleared
-    window.location.href = '/login-view';
+    window.location.href = '/login';
   };
 
   return (
