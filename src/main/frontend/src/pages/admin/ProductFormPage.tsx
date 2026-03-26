@@ -40,6 +40,7 @@ const ProductFormPage = () => {
   const [featureComponents, setFeatureComponents] = useState<FeatureComponent[]>([]);
   const [pricingComponents, setPricingComponents] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
+  const [isCodeEdited, setIsCodeEdited] = useState(false);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState<any>({
@@ -80,6 +81,7 @@ const ProductFormPage = () => {
             features: prod.features || [],
             pricing: prod.pricing || []
           });
+          setIsCodeEdited(true);
         }
       } catch (err: any) {
         setError('Failed to fetch required data.');
@@ -160,11 +162,35 @@ const ProductFormPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Product Title</label>
-              <input type="text" required className="w-full border-2 border-gray-100 rounded-2xl p-4 font-black text-gray-900 transition focus:border-blue-500 shadow-sm" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g. Ultra Savings" />
+              <input
+                type="text"
+                required
+                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-black text-gray-900 transition focus:border-blue-500 shadow-sm"
+                value={formData.name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  let code = formData.code;
+                  if (!isEditing && !isCodeEdited) {
+                    code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                  }
+                  setFormData({ ...formData, name, code });
+                }}
+                placeholder="e.g. Ultra Savings"
+              />
             </div>
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Business Code (ID)</label>
-              <input type="text" required className="w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-black text-blue-700 transition focus:border-blue-500 shadow-sm" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})} placeholder="e.g. SAV-PREM" />
+              <input
+                type="text"
+                required
+                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-black text-blue-700 transition focus:border-blue-500 shadow-sm"
+                value={formData.code}
+                onChange={(e) => {
+                  setIsCodeEdited(true);
+                  setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
+                }}
+                placeholder="e.g. SAV-PREM"
+              />
             </div>
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Product Classification</label>
