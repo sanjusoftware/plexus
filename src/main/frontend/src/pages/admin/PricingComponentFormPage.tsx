@@ -133,23 +133,26 @@ const PricingComponentFormPage = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto pb-20">
-      <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-200">
-        <div className="px-10 py-8 bg-blue-900 text-white flex justify-between items-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-full bg-blue-800 -skew-x-12 translate-x-32 opacity-20"></div>
-          <div className="relative">
-            <h2 className="text-3xl font-black tracking-tight">
-              {isEditing ? 'Sync Pricing Aggregate' : 'New Pricing Structure'}
-            </h2>
-            <p className="text-blue-200 font-medium mt-1">
-              Configure the core identity and tiered logic in one atomic operation.
-            </p>
-          </div>
-          <button onClick={() => navigate('/pricing-components')} className="hover:bg-blue-800 p-3 rounded-full transition relative">
-            <X className="w-8 h-8" />
-          </button>
+    <div className="max-w-5xl mx-auto space-y-8 pb-20">
+      <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100 flex justify-between items-center relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-full bg-blue-50 -skew-x-12 translate-x-32 opacity-30"></div>
+        <div className="relative">
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight uppercase">
+            {isEditing ? 'Update Pricing' : 'New Pricing'}
+          </h1>
+          <p className="text-gray-500 font-bold mt-1 uppercase tracking-widest text-[10px]">
+            Configure the core identity and tiered logic in one atomic operation.
+          </p>
         </div>
+        <button
+          onClick={() => navigate('/pricing-components')}
+          className="bg-gray-50 text-gray-400 p-3 rounded-2xl hover:bg-gray-100 transition relative border border-gray-100 shadow-sm"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      </div>
 
+      <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
         <form onSubmit={handleSubmit} className="p-10 space-y-10">
           {error && (
             <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
