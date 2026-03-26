@@ -28,7 +28,7 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
     {
       label: 'Bank Management',
       icon: Building2,
-      path: '#',
+      path: '/banks',
       show: isSystemAdmin
     },
     {
@@ -81,7 +81,7 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
           {navItems.filter(item => item.show).map((item) => (
             <button
               key={item.label}
-              onClick={() => item.path !== '#' && navigate(item.path)}
+              onClick={() => navigate(item.path)}
               className={`flex items-center space-x-3 w-full p-3 rounded-lg transition ${
                 location.pathname === item.path ? 'bg-blue-800' : 'hover:bg-blue-800'
               }`}
