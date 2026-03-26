@@ -10,7 +10,10 @@ import PricingMetadataPage from './pages/admin/PricingMetadataPage';
 import PricingComponentsPage from './pages/admin/PricingComponentsPage';
 import PricingTiersPage from './pages/admin/PricingTiersPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
+import ProductFormPage from './pages/admin/ProductFormPage';
 import RoleManagementPage from './pages/admin/RoleManagementPage';
+import RoleFormPage from './pages/admin/RoleFormPage';
+import PricingComponentFormPage from './pages/admin/PricingComponentFormPage';
 import ErrorPage from './pages/ErrorPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoggedInUserLayout from './components/LoggedInUserLayout';
@@ -74,6 +77,16 @@ function App() {
                 <PricingComponentsPage />
               </ProtectedRoute>
             } />
+            <Route path="/pricing-components/create" element={
+              <ProtectedRoute>
+                <PricingComponentFormPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/pricing-components/edit/:id" element={
+              <ProtectedRoute>
+                <PricingComponentFormPage />
+              </ProtectedRoute>
+            } />
             <Route path="/pricing-tiers" element={
               <ProtectedRoute>
                 <PricingTiersPage />
@@ -84,9 +97,29 @@ function App() {
                 <ProductManagementPage />
               </ProtectedRoute>
             } />
+            <Route path="/products/create" element={
+              <ProtectedRoute>
+                <ProductFormPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/products/edit/:id" element={
+              <ProtectedRoute>
+                <ProductFormPage />
+              </ProtectedRoute>
+            } />
             <Route path="/roles" element={
               <ProtectedRoute>
                 <RoleManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/roles/register" element={
+              <ProtectedRoute>
+                <RoleFormPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/roles/edit/:roleName" element={
+              <ProtectedRoute>
+                <RoleFormPage />
               </ProtectedRoute>
             } />
             <Route path="/error" element={<ErrorPage />} />

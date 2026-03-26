@@ -23,4 +23,8 @@ public class ProductTypeDto {
     @Size(min = 2, max = 50, message = "Code must be between 2 and 50 characters.")
     @Schema(description = "The unique code of the product type", example = "CASA")
     private String code;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY, description = "The status of the product type", example = "DRAFT")
+    private String status;
 }
