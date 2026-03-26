@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Trash2, Loader2, Shield, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { Plus, Trash2, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 interface RoleMapping {
-  roleName: string;
+  name: string;
   authorities: string[];
 }
 
@@ -18,12 +18,41 @@ const RoleManagementPage = () => {
   const [success, setSuccess] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
+  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (roleName: string) => {
+    const newExpanded = new Set(expandedRoles);
+    if (newExpanded.has(roleName)) {
+      newExpanded.delete(roleName);
+    } else {
+      newExpanded.add(roleName);
+    }
+    setExpandedRoles(newExpanded);
+  };
+
+  const groupAuthorities = (authorities: string[]) => {
+    const groups: { [key: string]: string[] } = {};
+    authorities.forEach(auth => {
+      const parts = auth.split(':');
+      const category = parts.length > 1 ? parts[0] : 'other';
+      if (!groups[category]) groups[category] = [];
+      groups[category].push(auth);
+    });
+    return groups;
+  };
+
+  const formatCategory = (category: string) => {
+    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase() + " Management Permissions";
+  };
 
   const fetchInitialData = async () => {
     setLoading(true);
     try {
       const m = await axios.get('/api/v1/roles/mapping');
-      setMappings(m.data || []);
+      setMappings(m.data.map((r: any) => ({
+        name: r.name,
+        authorities: r.authorities || []
+      })) || []);
     } catch (err: any) {
       setError('Failed to fetch role mappings. Ensure you are a Bank Admin.');
     } finally {
@@ -91,38 +120,85 @@ const RoleManagementPage = () => {
       {loading ? (
         <div className="flex justify-center p-32 bg-white rounded-[3rem] border border-gray-100"><Loader2 className="w-16 h-16 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {mappings.map((mapping) => (
-            <div key={mapping.roleName} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 flex flex-col hover:shadow-2xl transition duration-500 group">
-              <div className="flex justify-between items-start mb-8 border-b border-gray-50 pb-6 group-hover:border-blue-100 transition duration-500">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-blue-50 rounded-2xl group-hover:bg-blue-600 transition duration-500 shadow-sm shadow-blue-50"><Shield className="w-6 h-6 text-blue-600 group-hover:text-white transition duration-500" /></div>
-                  <div>
-                    <h3 className="text-xl font-black text-gray-900 leading-tight uppercase group-hover:text-blue-900 transition">{mapping.roleName}</h3>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-blue-400 transition">{mapping.authorities.length} Active Permissions</p>
-                  </div>
-                </div>
-                <div className="flex space-x-1 opacity-40 group-hover:opacity-100 transition duration-500">
-                  <button onClick={() => navigate(`/roles/edit/${mapping.roleName}`)} className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition border border-transparent hover:border-blue-100" title="Modify Permissions"><Plus className="w-5 h-5" /></button>
-                  <button onClick={() => confirmDelete(mapping.roleName)} className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition border border-transparent hover:border-red-100" title="Revoke All Access"><Trash2 className="w-5 h-5" /></button>
-                </div>
-              </div>
+        <div className="space-y-6">
+          {mappings.map((mapping) => {
+            const grouped = groupAuthorities(mapping.authorities);
+            const isExpanded = expandedRoles.has(mapping.name);
 
-              <div className="flex-1 space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                {mapping.authorities.map((auth, idx) => (
-                  <div key={idx} className="flex items-center text-[11px] text-gray-600 bg-gray-50/50 px-3 py-2.5 rounded-xl border border-gray-100 font-mono font-bold group-hover:bg-white group-hover:border-blue-50 transition duration-300">
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-3 text-green-500 flex-shrink-0" />
-                    <span className="truncate">{auth}</span>
+            return (
+              <div key={mapping.name} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition duration-300 group">
+                {/* Collapsed Row / Header */}
+                <div
+                  className="p-6 flex items-center justify-between cursor-pointer"
+                  onClick={() => toggleExpand(mapping.name)}
+                >
+                  <div className="flex items-center space-x-6">
+                    <div className="p-3 bg-blue-50 rounded-2xl group-hover:bg-blue-600 transition duration-300">
+                      <Shield className="w-6 h-6 text-blue-600 group-hover:text-white transition duration-300" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-gray-900 uppercase">{mapping.name}</h3>
+                      <div className="flex items-center space-x-4 mt-1">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{mapping.authorities.length} Total Permissions</span>
+                        <div className="flex space-x-2">
+                          {Object.keys(grouped).map(cat => (
+                            <span key={cat} className="text-[9px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full font-bold border border-gray-100">
+                              {cat.toUpperCase()}: {grouped[cat].length}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ))}
-                {mapping.authorities.length === 0 && (
-                   <div className="flex items-center text-[10px] text-amber-600 p-4 bg-amber-50 rounded-2xl border border-amber-100 italic font-bold">
-                      <AlertCircle className="w-4 h-4 mr-3" /> Warning: Empty role provides no system access.
-                   </div>
+
+                  <div className="flex items-center space-x-4">
+                    <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition duration-300">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate(`/roles/edit/${mapping.name}`); }}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition border border-transparent hover:border-blue-100 font-bold text-xs uppercase flex items-center"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); confirmDelete(mapping.name); }}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition border border-transparent hover:border-red-100"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                    {isExpanded ? <ChevronUp className="w-6 h-6 text-gray-400" /> : <ChevronDown className="w-6 h-6 text-gray-400" />}
+                  </div>
+                </div>
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div className="px-8 pb-8 pt-2 border-t border-gray-50 bg-gray-50/30 animate-in slide-in-from-top-2 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                      {Object.keys(grouped).length > 0 ? Object.keys(grouped).map(category => (
+                        <div key={category} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                          <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4 border-b border-blue-50 pb-2">
+                            {formatCategory(category)}
+                          </h4>
+                          <div className="space-y-2">
+                            {grouped[category].map((auth, idx) => (
+                              <div key={idx} className="flex items-center text-[11px] text-gray-600 font-mono font-bold">
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500 flex-shrink-0" />
+                                <span className="truncate">{auth}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="col-span-full py-8 text-center text-amber-600 bg-amber-50 rounded-2xl border border-amber-100 italic font-bold text-sm">
+                          <AlertCircle className="w-4 h-4 inline mr-2" /> Warning: Empty role provides no system access.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           {mappings.length === 0 && (
              <div className="col-span-full py-24 text-center text-gray-400 bg-white border-4 border-dashed rounded-[3rem] font-black uppercase tracking-widest text-xs">No role mappings defined for this bank.</div>
           )}
