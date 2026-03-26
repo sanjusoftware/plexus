@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import OnboardingPage from './pages/OnboardingPage';
+import BankManagementPage from './pages/admin/BankManagementPage';
 import ProductTypesPage from './pages/admin/ProductTypesPage';
 import PricingMetadataPage from './pages/admin/PricingMetadataPage';
 import PricingComponentsPage from './pages/admin/PricingComponentsPage';
@@ -60,6 +61,16 @@ function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/banks" element={
+              <ProtectedRoute>
+                <BankManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/banks/edit/:id" element={
+              <ProtectedRoute>
+                <OnboardingPage />
               </ProtectedRoute>
             } />
             <Route path="/product-types" element={

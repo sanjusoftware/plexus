@@ -126,6 +126,10 @@ public class BankConfigurationService extends BaseService {
         BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
+        if (config.getStatus() != BankStatus.DRAFT) {
+            throw new IllegalStateException("Only banks in DRAFT status can be edited.");
+        }
+
         if (request.getName() != null) {
             config.setName(request.getName());
         }
@@ -138,8 +142,8 @@ public class BankConfigurationService extends BaseService {
             config.setClientId(request.getClientId().isBlank() ? getSystemClientId() : request.getClientId());
         }
 
-        if (request.getClientSecret() != null) {
-            config.setClientSecret(request.getClientSecret().isBlank() ? null : request.getClientSecret());
+        if (request.getClientSecret() != null && !request.getClientSecret().isBlank()) {
+            config.setClientSecret(request.getClientSecret());
         }
 
         if (request.getCurrencyCode() != null) {

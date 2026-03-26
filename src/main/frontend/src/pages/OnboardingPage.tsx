@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Eye, EyeOff, Save } from 'lucide-react';
 import axios from 'axios';
 import StyledSelect from '../components/StyledSelect';
+import { useAuth } from '../context/AuthContext';
 
 const OnboardingPage = () => {
+  const { user } = useAuth();
+  const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const isAdmin = new URLSearchParams(location.search).get('admin') === 'true';
+
+  const authorities = (user?.roles as string[]) || [];
+  const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
+
+  const isAdmin = (new URLSearchParams(location.search).get('admin') === 'true' || !!id) && isSystemAdmin;
+  const isEditing = !!id && isSystemAdmin;
 
   const [formData, setFormData] = useState({
     bankId: '',
@@ -30,8 +38,43 @@ const OnboardingPage = () => {
   const [showSecret, setShowSecret] = useState(false);
 
   useEffect(() => {
-    fetchCaptcha();
-  }, []);
+    if (!isAdmin) {
+      fetchCaptcha();
+    }
+
+    if (isEditing) {
+      fetchBankData();
+    }
+  }, [id]);
+
+  const fetchBankData = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`/api/v1/banks/${id}`);
+      const data = response.data;
+      setFormData({
+        bankId: data.bankId,
+        name: data.name,
+        issuerUrl: data.issuerUrl,
+        clientId: data.clientId,
+        clientSecret: '', // Leave empty. Backend will only update if not blank.
+        adminName: data.adminName,
+        adminEmail: data.adminEmail,
+        currencyCode: data.currencyCode,
+        captchaAnswer: ''
+      });
+      if (!['USD', 'EUR', 'GBP', 'JPY'].includes(data.currencyCode)) {
+        setIsCustomCurrency(true);
+        setCustomCurrency(data.currencyCode);
+      }
+    } catch (err) {
+      console.error('Failed to fetch bank data', err);
+      setStatus('error');
+      setMessage('Failed to load bank configuration for editing.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCaptcha = async () => {
     try {
@@ -73,17 +116,30 @@ const OnboardingPage = () => {
     setLoading(true);
     setStatus('idle');
     try {
-      const submissionData = {
-        bankDetails: {
-          ...formData,
-          currencyCode: isCustomCurrency ? customCurrency.toUpperCase() : formData.currencyCode
-        },
-        captchaId: captcha.id,
-        captchaAnswer: formData.captchaAnswer
+      const bankDetails = {
+        ...formData,
+        currencyCode: isCustomCurrency ? customCurrency.toUpperCase() : formData.currencyCode
       };
-      await axios.post('/api/v1/public/onboarding', submissionData);
+
+      if (isEditing) {
+        await axios.put(`/api/v1/banks/${id}`, bankDetails);
+      } else if (isAdmin) {
+        await axios.post('/api/v1/banks', bankDetails);
+      } else {
+        const submissionData = {
+          bankDetails,
+          captchaId: captcha.id,
+          captchaAnswer: formData.captchaAnswer
+        };
+        await axios.post('/api/v1/public/onboarding', submissionData);
+      }
+
       setStatus('success');
-      setMessage(isAdmin ? 'New bank has been added successfully!' : 'Your onboarding request has been submitted successfully! A system administrator will review your request shortly.');
+      setMessage(
+        isEditing ? 'Bank configuration has been updated successfully!' :
+        isAdmin ? 'New bank has been added successfully!' :
+        'Your onboarding request has been submitted successfully! A system administrator will review your request shortly.'
+      );
     } catch (err: any) {
       setStatus('error');
       const errorDetail = err.response?.data?.message || err.response?.data || 'Failed to submit request. Please check your inputs and captcha.';
@@ -99,13 +155,15 @@ const OnboardingPage = () => {
       <div className={`${isAdmin ? '' : 'min-h-screen bg-gray-50'} flex items-center justify-center p-4`}>
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center">
           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto mb-6" />
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Request Submitted!</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            {isEditing ? 'Update Successful!' : isAdmin ? 'Bank Created!' : 'Request Submitted!'}
+          </h2>
           <p className="text-gray-600 mb-8">{message}</p>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(isAdmin ? '/banks' : '/dashboard')}
             className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
           >
-            {isAdmin ? 'Back to Dashboard' : 'Return to Home'}
+            {isAdmin ? 'Back to Bank Management' : 'Return to Home'}
           </button>
         </div>
       </div>
@@ -125,10 +183,12 @@ const OnboardingPage = () => {
       )}
 
       <h2 className="text-3xl font-bold text-gray-900 mb-2">
-        {isAdmin ? 'Add New Bank' : 'Get Started'}
+        {isEditing ? 'Edit Bank Configuration' : isAdmin ? 'Add New Bank' : 'Get Started'}
       </h2>
       <p className="text-gray-500 mb-10">
-        {isAdmin ? 'Fill out the form below to register a new bank in the system.' : 'Fill out the form below to submit an onboarding request for your institution.'}
+        {isEditing ? `Updating configuration for ${formData.name || id}` :
+         isAdmin ? 'Fill out the form below to register a new bank in the system.' :
+         'Fill out the form below to submit an onboarding request for your institution.'}
       </p>
 
       {status === 'error' && (
@@ -157,12 +217,13 @@ const OnboardingPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Bank ID (Generated)</label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Bank ID {isEditing ? '(Read Only)' : '(Generated)'}</label>
             <input
               required
+              disabled={isEditing}
               type="text"
               placeholder="e.g. GLOBAL-BANK-001"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              className={`w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${isEditing ? 'bg-gray-50 text-gray-500' : ''}`}
               value={formData.bankId}
               onChange={e => setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '_') })}
             />
@@ -291,28 +352,42 @@ const OnboardingPage = () => {
           </div>
         </div>
 
-        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-bold text-blue-900 mb-1">Security Check</p>
-            <p className="text-blue-700 text-lg font-mono">{captcha.question}</p>
+        {!isAdmin && (
+          <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-blue-900 mb-1">Security Check</p>
+              <p className="text-blue-700 text-lg font-mono">{captcha.question}</p>
+            </div>
+            <input
+              required
+              type="text"
+              placeholder="?"
+              className="w-20 px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold"
+              value={formData.captchaAnswer}
+              onChange={e => setFormData({ ...formData, captchaAnswer: e.target.value })}
+            />
           </div>
-          <input
-            required
-            type="text"
-            placeholder="?"
-            className="w-20 px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold"
-            value={formData.captchaAnswer}
-            onChange={e => setFormData({ ...formData, captchaAnswer: e.target.value })}
-          />
-        </div>
+        )}
 
-        <button
-          disabled={loading}
-          type="submit"
-          className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg disabled:opacity-50 flex items-center justify-center"
-        >
-          {loading ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Submitting...</> : 'Submit Request'}
-        </button>
+        <div className="flex space-x-4">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => navigate('/banks')}
+              className="flex-1 px-8 py-4 border-2 border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 transition uppercase tracking-widest text-sm"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            disabled={loading}
+            type="submit"
+            className="flex-[2] bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg disabled:opacity-50 flex items-center justify-center"
+          >
+            {loading ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> {isEditing ? 'Updating...' : 'Submitting...'}</> :
+             isEditing ? <><Save className="h-5 w-5 mr-2" /> Update Bank</> : 'Submit Request'}
+          </button>
+        </div>
       </form>
     </div>
   );
