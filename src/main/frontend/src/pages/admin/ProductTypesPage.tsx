@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Save, X, List, CheckCircle2, Archive, AlertCircle } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface ProductType {
   id: number;
@@ -93,6 +94,22 @@ const ProductTypesPage = () => {
     setTypeToActOn(type);
     setShowConfirmModal(true);
   };
+
+  const handleCloseModal = () => {
+    let isDirty = false;
+    if (editingType) {
+      isDirty = formData.name !== editingType.name || formData.code !== editingType.code;
+    } else {
+      isDirty = formData.name !== '' || formData.code !== '';
+    }
+
+    if (isDirty && !window.confirm('You will lose unsaved changes. Are you sure?')) {
+      return;
+    }
+    setIsModalOpen(false);
+  };
+
+  useEscapeKey(handleCloseModal, isModalOpen);
 
   const openModal = (type?: ProductType) => {
     if (type) {
@@ -198,7 +215,7 @@ const ProductTypesPage = () => {
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6 border-b pb-4">
               <h2 className="text-xl font-bold text-gray-900">{editingType ? 'Edit' : 'New'} Product Type</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition p-2 hover:bg-gray-100 rounded-full"><X className="w-6 h-6" /></button>
+              <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 transition p-2 hover:bg-gray-100 rounded-full"><X className="w-6 h-6" /></button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
@@ -242,7 +259,7 @@ const ProductTypesPage = () => {
                 <p className="mt-2 text-[10px] text-gray-400 leading-relaxed italic">The immutable identifier used for API calls and system logic.</p>
               </div>
               <div className="pt-4 flex space-x-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-3.5 border border-gray-200 rounded-2xl font-bold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+                <button type="button" onClick={handleCloseModal} className="flex-1 px-4 py-3.5 border border-gray-200 rounded-2xl font-bold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
                 <button type="submit" className="flex-1 px-4 py-3.5 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition flex items-center justify-center shadow-lg shadow-blue-100">
                   <Save className="w-5 h-5 mr-2" /> Save Type
                 </button>

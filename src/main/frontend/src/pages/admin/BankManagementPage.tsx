@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const BankManagementPage = () => {
   const { user, loading: authLoading } = useAuth();
@@ -80,6 +81,8 @@ const BankManagementPage = () => {
       console.error('Failed to fetch bank details:', err);
     }
   };
+
+  useEscapeKey(() => setSelectedBank(null), !!selectedBank);
 
   if (authLoading || (user && loading && banks.length === 0)) {
     return (

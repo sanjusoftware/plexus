@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Save, X, Database, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import StyledSelect from '../../components/StyledSelect';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface PricingMetadata {
   id: number;
@@ -73,6 +74,24 @@ const PricingMetadataPage = () => {
       setError(err.response?.data?.message || 'Failed to delete.');
     }
   };
+
+  const handleCloseModal = () => {
+    let isDirty = false;
+    if (editingMetadata) {
+      isDirty = formData.attributeKey !== editingMetadata.attributeKey ||
+                formData.displayName !== editingMetadata.displayName ||
+                formData.dataType !== editingMetadata.dataType;
+    } else {
+      isDirty = formData.attributeKey !== '' || formData.displayName !== '' || formData.dataType !== 'STRING';
+    }
+
+    if (isDirty && !window.confirm('You will lose unsaved changes. Are you sure?')) {
+      return;
+    }
+    setIsModalOpen(false);
+  };
+
+  useEscapeKey(handleCloseModal, isModalOpen);
 
   const openModal = (meta?: PricingMetadata) => {
     if (meta) {
@@ -177,7 +196,7 @@ const PricingMetadataPage = () => {
           <div className="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
               <h2 className="text-2xl font-black text-gray-900 tracking-tight">{editingMetadata ? 'Edit Attribute' : 'Register Attribute'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition p-2.5 hover:bg-gray-100 rounded-full"><X className="w-7 h-7" /></button>
+              <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 transition p-2.5 hover:bg-gray-100 rounded-full"><X className="w-7 h-7" /></button>
             </div>
 
             {modalError && (
@@ -241,7 +260,7 @@ const PricingMetadataPage = () => {
                 <p className="mt-3 text-[11px] text-gray-400 font-medium italic">Affects how the rule engine processes and validates values.</p>
               </div>
               <div className="pt-6 flex space-x-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-4 border-2 border-gray-100 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition uppercase tracking-widest text-xs">Cancel</button>
+                <button type="button" onClick={handleCloseModal} className="flex-1 px-4 py-4 border-2 border-gray-100 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition uppercase tracking-widest text-xs">Cancel</button>
                 <button type="submit" className="flex-1 px-4 py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition flex items-center justify-center shadow-2xl shadow-blue-200 uppercase tracking-widest text-xs">
                   <Save className="w-5 h-5 mr-2" /> Save Metadata
                 </button>
