@@ -43,6 +43,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     public static final String ROLE_PREFIX = "PTIT_";
     private static final String CREATOR_ROLE = ROLE_PREFIX + "PRODUCT_TYPE_CREATOR";
     private static final String READER_ROLE = ROLE_PREFIX + "PRODUCT_TYPE_READER";
+    private static final String ADMIN_ROLE = ROLE_PREFIX + "PRODUCT_TYPE_ADMIN";
     private static final String UNAUTHORIZED_ROLE = ROLE_PREFIX + "UNAUTHORIZED";
 
     @BeforeAll
@@ -50,6 +51,14 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         seedBaseRoles(txHelperStatic, Map.of(
             CREATOR_ROLE, Set.of("catalog:product-type:create", "catalog:product-type:read"),
             READER_ROLE, Set.of("catalog:product-type:read"),
+            ADMIN_ROLE, Set.of(
+                "catalog:product-type:create",
+                "catalog:product-type:read",
+                "catalog:product-type:update",
+                "catalog:product-type:activate",
+                "catalog:product-type:archive",
+                "catalog:product-type:delete"
+            ),
             UNAUTHORIZED_ROLE, Set.of("some:other:permission")
         ));
     }
@@ -124,7 +133,35 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name", is("Fixed Deposit")))
                 .andExpect(jsonPath("$.code", is("FD")))
+                .andExpect(jsonPath("$.status", is("DRAFT")))
                 .andExpect(jsonPath("$.id").isNumber());
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldActivateProductType() throws Exception {
+        ProductType pt = createAndSaveProductType("Inactive Type", "INACT");
+
+        mockMvc.perform(postWithCsrf(API_URL + "/" + pt.getId() + "/activate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("ACTIVE")));
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldArchiveProductType() throws Exception {
+        ProductType pt = createAndSaveProductType("Active Type", "ACT");
+        // Manually set to ACTIVE first
+        txHelper.doInTransaction(() -> {
+            ProductType entity = productTypeRepository.findById(pt.getId()).get();
+            entity.setStatus(com.bankengine.common.model.VersionableEntity.EntityStatus.ACTIVE);
+            productTypeRepository.save(entity);
+            return null;
+        });
+
+        mockMvc.perform(postWithCsrf(API_URL + "/" + pt.getId() + "/archive"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("ARCHIVED")));
     }
 
     @Test

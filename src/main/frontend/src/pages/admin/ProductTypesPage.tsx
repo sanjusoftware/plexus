@@ -18,8 +18,8 @@ const ProductTypesPage = () => {
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [typeToDelete, setTypeToDelete] = useState<number | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [typeToActOn, setTypeToActOn] = useState<ProductType | null>(null);
 
   const fetchProductTypes = async () => {
     setLoading(true);
@@ -68,19 +68,29 @@ const ProductTypesPage = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleConfirmAction = async () => {
+    if (!typeToActOn) return;
+
     try {
-      await axios.delete(`/api/v1/product-types/${id}`);
-      setSuccess('Product type deleted successfully.');
+      if (typeToActOn.status === 'DRAFT') {
+        await axios.delete(`/api/v1/product-types/${typeToActOn.id}`);
+        setSuccess('Product type deleted successfully.');
+      } else if (typeToActOn.status === 'ACTIVE') {
+        await axios.post(`/api/v1/product-types/${typeToActOn.id}/archive`);
+        setSuccess('Product type archived successfully.');
+      }
       fetchProductTypes();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to delete product type.');
+      setError(err.response?.data?.message || `Failed to ${typeToActOn.status === 'DRAFT' ? 'delete' : 'archive'} product type.`);
+    } finally {
+      setShowConfirmModal(false);
+      setTypeToActOn(null);
     }
   };
 
-  const confirmDelete = (id: number) => {
-    setTypeToDelete(id);
-    setShowDeleteConfirm(true);
+  const triggerConfirmAction = (type: ProductType) => {
+    setTypeToActOn(type);
+    setShowConfirmModal(true);
   };
 
   const openModal = (type?: ProductType) => {
@@ -158,15 +168,19 @@ const ProductTypesPage = () => {
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium space-x-2">
                       {type.status === 'DRAFT' && (
-                        <button onClick={() => handleAction(type.id, 'activate')} className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center inline-flex" title="Approve">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approve
+                        <button onClick={() => handleAction(type.id, 'activate')} className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center inline-flex" title="Activate">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
                         </button>
                       )}
                       {type.status === 'ACTIVE' && (
-                        <button onClick={() => handleAction(type.id, 'archive')} className="text-gray-400 hover:bg-gray-100 p-2 rounded-lg transition" title="Archive"><Archive className="w-4 h-4" /></button>
+                        <button onClick={() => triggerConfirmAction(type)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-lg transition" title="Archive"><Archive className="w-4 h-4" /></button>
                       )}
-                      <button onClick={() => openModal(type)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => confirmDelete(type.id)} className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      {type.status !== 'ARCHIVED' && (
+                        <>
+                          <button onClick={() => openModal(type)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => triggerConfirmAction(type)} className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="w-4 h-4" /></button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -233,12 +247,14 @@ const ProductTypesPage = () => {
       )}
 
       <ConfirmationModal
-        isOpen={showDeleteConfirm}
-        onClose={() => { setShowDeleteConfirm(false); setTypeToDelete(null); }}
-        onConfirm={() => typeToDelete && handleDelete(typeToDelete)}
-        title="Confirm Deletion"
-        message="Are you sure you want to permanently delete this product type? This action cannot be undone."
-        confirmText="Confirm & Delete"
+        isOpen={showConfirmModal}
+        onClose={() => { setShowConfirmModal(false); setTypeToActOn(null); }}
+        onConfirm={handleConfirmAction}
+        title={typeToActOn?.status === 'DRAFT' ? "Confirm Deletion" : "Confirm Archival"}
+        message={typeToActOn?.status === 'DRAFT'
+          ? "Are you sure you want to permanently delete this product type? This action cannot be undone."
+          : "Are you sure you want to archive this product type? This will prevent it from being used for new products."}
+        confirmText={typeToActOn?.status === 'DRAFT' ? "Confirm & Delete" : "Confirm & Archive"}
         variant="danger"
       />
     </div>
