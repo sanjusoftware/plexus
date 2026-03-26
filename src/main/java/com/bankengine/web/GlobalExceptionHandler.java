@@ -72,7 +72,11 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiError> handleIllegalStateException(IllegalStateException ex) {
-        return buildResponseEntity(HttpStatus.CONFLICT, "Illegal State", ex.getMessage());
+        String message = ex.getMessage();
+        if (message != null && (message.startsWith("Bank already exists: ") || message.startsWith("Bank ID already in use: "))) {
+            message = "Bank ID should be unique";
+        }
+        return buildResponseEntity(HttpStatus.CONFLICT, "Illegal State", message);
     }
 
     /**
@@ -91,7 +95,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
         String rootMsg = ex.getRootCause() != null ? ex.getRootCause().getMessage().toLowerCase() : "";
-        return buildResponseEntity(HttpStatus.CONFLICT, "Conflict", rootMsg);
+        String message = rootMsg;
+
+        if (rootMsg.contains("uk_issuer_client_combination")) {
+            message = "A bank with this Issuer URL and Client ID combination already exists.";
+        } else if (rootMsg.contains("uk_bank_id")) {
+            message = "Bank ID should be unique";
+        }
+
+        return buildResponseEntity(HttpStatus.CONFLICT, "Conflict", message);
     }
 
     /**
