@@ -155,11 +155,14 @@ const ProductManagementPage = () => {
                     {prod.status === 'DRAFT' && (
                       <button onClick={() => handleStatusAction(prod.id, 'activate')} className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100">Activate</button>
                     )}
-                    {prod.status === 'ACTIVE' && (
-                      <button onClick={() => handleStatusAction(prod.id, 'archive')} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 transition">Archive</button>
-                    )}
                     <button onClick={() => navigate(`/products/edit/${prod.id}`)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition shadow-sm border border-blue-50" title="Modify Product"><Edit2 className="w-5 h-5" /></button>
-                    <button onClick={() => handleDelete(prod.id)} className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition shadow-sm border border-red-50" title="Delete Product"><Trash2 className="w-5 h-5" /></button>
+                    <button
+                      onClick={() => prod.status === 'ACTIVE' ? handleStatusAction(prod.id, 'archive') : handleDelete(prod.id)}
+                      className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition shadow-sm border border-red-50"
+                      title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
                 <div className="p-10 grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white">
