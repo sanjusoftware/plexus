@@ -29,7 +29,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/login-view');
+      navigate('/login');
     }
   }, [user, authLoading, navigate]);
 

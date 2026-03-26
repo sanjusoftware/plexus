@@ -107,7 +107,6 @@ public class SecurityConfig {
                                 "/*.png",
                                 "/*.json",
                                 "/*.ico",
-                                "/login-view",
                                 "/login",
                                 "/api/v1/auth/check-bank",
                                 "/api/v1/auth/csrf",
@@ -144,7 +143,7 @@ public class SecurityConfig {
                         )
                         .loginProcessingUrl("/login/oauth2/code/callback")
                         .defaultSuccessUrl("/dashboard", true)
-                        .failureUrl("/login-view?error=auth_failed")
+                        .failureUrl("/login?error=auth_failed")
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(tenantAuthenticationManagerResolver())
