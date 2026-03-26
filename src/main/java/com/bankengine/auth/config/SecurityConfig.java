@@ -125,6 +125,7 @@ public class SecurityConfig {
                                 "/h2-console/**",
                                 "/error",
                                 "/onboarding",
+                                "/dashboard",
                                 "/*.svg",
                                 "/actuator/health",
                                 "/api/v1/public/catalog/**",

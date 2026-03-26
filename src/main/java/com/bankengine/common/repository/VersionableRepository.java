@@ -13,4 +13,6 @@ public interface VersionableRepository<T extends VersionableEntity> extends Tena
     Optional<T> findByBankIdAndCodeAndVersion(String bankId, String code, Integer version);
     Optional<T> findFirstByBankIdAndCodeAndStatusOrderByVersionDesc(String bankId, String code, VersionableEntity.EntityStatus status);
     Optional<T> findFirstByBankIdAndCodeOrderByVersionDesc(String bankId, String code);
+
+    long countByStatus(VersionableEntity.EntityStatus status);
 }

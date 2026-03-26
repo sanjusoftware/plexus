@@ -117,7 +117,9 @@ public class SystemAdminSeeder implements CommandLineRunner {
                     "system:bank:write",
                     "system:bank:read",
                     "auth:role:write",
-                    "auth:role:read"
+                    "auth:role:read",
+                    "system:stats:read",
+                    "bank:stats:read"
                 ));
                 roleRepository.save(admin);
                 System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);

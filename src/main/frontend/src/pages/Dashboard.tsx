@@ -2,24 +2,30 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, Package, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, AlertCircle
+  Building2, Package, Loader2, Plus, ShieldCheck, Info, Users, Tag, Layers, Database, X
 } from 'lucide-react';
 import axios from 'axios';
-import ConfirmationModal from '../components/ConfirmationModal';
+
+interface StatsSet {
+  products: Record<string, number>;
+  productTypes: Record<string, number>;
+  roles: Record<string, number>;
+  pricingComponents: Record<string, number>;
+  pricingTiers: Record<string, number>;
+  totalBanks?: number;
+}
 
 const Dashboard = () => {
-  const { user, bankId, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [data, setData] = useState<any[]>([]);
+  const [localStats, setLocalStats] = useState<StatsSet | null>(null);
+  const [globalStats, setGlobalStats] = useState<StatsSet | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedBank, setSelectedBank] = useState<any>(null);
-  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
-  const [bankToDeactivate, setBankToDeactivate] = useState<string | null>(null);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
+  const [showWelcome, setShowWelcome] = useState(false);
 
-  const authorities = (user?.roles as string[]) || [];
-  const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
+  const authorities = (user?.permissions as string[]) || [];
+  const canReadBankStats = authorities.includes('bank:stats:read');
+  const canReadSystemStats = authorities.includes('system:stats:read');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -27,21 +33,31 @@ const Dashboard = () => {
     }
   }, [user, authLoading, navigate]);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    // Check if welcome message was already shown in this session
+    const welcomeShown = sessionStorage.getItem('welcomeShown');
+    if (!welcomeShown && user) {
+      setShowWelcome(true);
+      sessionStorage.setItem('welcomeShown', 'true');
+      const timer = setTimeout(() => setShowWelcome(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  const fetchStats = async () => {
     if (!user) return;
     setLoading(true);
     try {
-      if (isSystemAdmin) {
-        // System Admin sees all banks
-        const response = await axios.get('/api/v1/banks');
-        setData(response.data || []);
-      } else {
-        // Bank Admin sees their products
-        const response = await axios.get('/api/v1/products');
-        setData(response.data.content || []);
+      const requests = [];
+      if (canReadBankStats) {
+        requests.push(axios.get('/api/v1/dashboard/stats/local').then(res => setLocalStats(res.data)));
       }
+      if (canReadSystemStats) {
+        requests.push(axios.get('/api/v1/dashboard/stats/global').then(res => setGlobalStats(res.data)));
+      }
+      await Promise.all(requests);
     } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
+      console.error('Failed to fetch dashboard stats:', err);
     } finally {
       setLoading(false);
     }
@@ -49,48 +65,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
-      fetchData();
+      fetchStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, isSystemAdmin]);
+  }, [user, authLoading, canReadBankStats, canReadSystemStats]);
 
-  const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'REJECTED') => {
-    setError('');
-    setSuccess('');
-    try {
-      if (action === 'REJECTED') {
-        await axios.put(`/api/v1/banks/${targetBankId}`, { status: 'REJECTED' });
-      } else {
-        await axios.post(`/api/v1/banks/${targetBankId}/${action}`);
-      }
-
-      await fetchData();
-      setSuccess(`Bank ${targetBankId} has been successfully ${action === 'REJECTED' ? 'rejected' : action + 'd'}.`);
-      setSelectedBank(null);
-      setShowDeactivateConfirm(false);
-      setBankToDeactivate(null);
-    } catch (err: any) {
-      console.error(`Failed to ${action} bank:`, err);
-      setError(err.response?.data?.message || `Failed to ${action} bank. Make sure you have SYSTEM_ADMIN permissions.`);
-    }
-  };
-
-  const confirmDeactivate = (targetBankId: string) => {
-    setBankToDeactivate(targetBankId);
-    setShowDeactivateConfirm(true);
-  };
-
-  const openBankDetails = async (bank: any) => {
-    if (!isSystemAdmin) return;
-    try {
-      const response = await axios.get(`/api/v1/banks/${bank.bankId}`);
-      setSelectedBank(response.data);
-    } catch (err) {
-      console.error('Failed to fetch bank details:', err);
-    }
-  };
-
-  if (authLoading || (user && loading && data.length === 0)) {
+  if (authLoading || (user && loading)) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
@@ -98,251 +78,169 @@ const Dashboard = () => {
     );
   }
 
-  return (
-    <>
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700 animate-in fade-in slide-in-from-top-1">
-          <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-          <p className="text-sm font-bold">{error}</p>
-          <button onClick={() => setError('')} className="ml-auto p-1 hover:bg-red-100 rounded-full transition">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+  const StatCard = ({ title, icon: Icon, stats, colorClass }: { title: string, icon: any, stats: Record<string, number>, colorClass: string }) => {
+    const total = Object.values(stats).reduce((a, b) => a + b, 0);
 
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-xl flex items-center text-green-700 animate-in fade-in slide-in-from-top-1">
-          <CheckCircle2 className="h-5 w-5 mr-3 flex-shrink-0" />
-          <p className="text-sm font-bold">{success}</p>
-          <button onClick={() => setSuccess('')} className="ml-auto p-1 hover:bg-green-100 rounded-full transition">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Welcome Card */}
-      <div className="bg-white rounded-2xl shadow-sm border p-8 mb-8 flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-blue-900 mb-2">Welcome back!</h2>
-          <p className="text-gray-600">
-            {isSystemAdmin
-              ? "Manage your global banking infrastructure and onboard new tenants."
-              : `Manage products and pricing rules for ${user?.bankName || bankId}.`}
-          </p>
-        </div>
-        <div className="hidden md:block">
-           <ShieldCheck className="h-20 w-20 text-blue-100" />
-        </div>
-      </div>
-
-      {/* Data List */}
-      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-          <h3 className="font-bold text-gray-900">
-            {isSystemAdmin ? 'Managed Banks' : 'Available Products'}
-          </h3>
-          <button
-            onClick={() => isSystemAdmin ? navigate('/onboarding?admin=true') : null}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition flex items-center"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {isSystemAdmin ? 'Add Bank' : 'New Product'}
-          </button>
-        </div>
-        <div className="divide-y">
-          {data.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
-              No {isSystemAdmin ? 'banks' : 'products'} found. Get started by creating your first entry.
-            </div>
-          ) : (
-            data.map((item, idx) => (
-              <div
-                key={idx}
-                onClick={() => openBankDetails(item)}
-                className="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition cursor-pointer"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    {isSystemAdmin ? <Building2 className="h-5 w-5 text-blue-600" /> : <Package className="h-5 w-5 text-blue-600" />}
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <p className="font-semibold text-gray-900">
-                        {isSystemAdmin ? (item.name || item.bankId) : item.name}
-                        {isSystemAdmin && item.name && <span className="text-xs text-gray-400 font-normal ml-2">({item.bankId})</span>}
-                      </p>
-                      {isSystemAdmin && (
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                          item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                           item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
-                           item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {item.status}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-500">{isSystemAdmin ? item.issuerUrl : item.code}</p>
-                    {isSystemAdmin && item.adminName && (
-                      <p className="text-xs text-gray-400">Admin: {item.adminName} ({item.adminEmail})</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  {isSystemAdmin && item.status === 'DRAFT' && (
-                    <>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                        className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center"
-                      >
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'REJECTED'); }}
-                        className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold hover:bg-red-200 transition flex items-center"
-                      >
-                        <XCircle className="h-3 w-3 mr-1" /> Reject
-                      </button>
-                    </>
-                  )}
-                  {isSystemAdmin && item.status === 'ACTIVE' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
-                      className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition flex items-center"
-                    >
-                      <Clock className="h-3 w-3 mr-1" /> Deactivate
-                    </button>
-                  )}
-                  {isSystemAdmin && item.status === 'INACTIVE' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                      className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center"
-                    >
-                      <CheckCircle2 className="h-3 w-3 mr-1" /> Re-activate
-                    </button>
-                  )}
-                  <ArrowRight className="h-5 w-5 text-gray-300" />
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-        <div className="px-6 py-4 bg-gray-50 border-t flex justify-center">
-           <a href="/swagger-ui/index.html" target="_blank" className="flex items-center text-sm text-gray-500 hover:text-blue-600">
-             Explore full API in Swagger <ExternalLink className="h-3 w-3 ml-1" />
-           </a>
-        </div>
-      </div>
-
-      {/* Bank Details Modal */}
-      {selectedBank && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden">
-            <div className="px-8 py-6 bg-blue-900 text-white flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold">{selectedBank.name}</h2>
-                <p className="text-blue-200 text-sm">Bank ID: {selectedBank.bankId}</p>
-              </div>
-              <button onClick={() => setSelectedBank(null)} className="p-2 hover:bg-blue-800 rounded-full transition">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="flex items-start space-x-3">
-                  <Globe className="h-5 w-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="text-xs text-gray-400 font-bold uppercase">Issuer URL</p>
-                    <p className="text-sm font-medium break-all">{selectedBank.issuerUrl}</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <ShieldCheck className="h-5 w-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="text-xs text-gray-400 font-bold uppercase">Client ID</p>
-                    <p className="text-sm font-medium break-all">{selectedBank.clientId || 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Mail className="h-5 w-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="text-xs text-gray-400 font-bold uppercase">Admin Contact</p>
-                    <p className="text-sm font-medium">{selectedBank.adminName}</p>
-                    <p className="text-xs text-gray-500">{selectedBank.adminEmail}</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <DollarSign className="h-5 w-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="text-xs text-gray-400 font-bold uppercase">Currency</p>
-                    <p className="text-sm font-medium">{selectedBank.currencyCode}</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Info className="h-5 w-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="text-xs text-gray-400 font-bold uppercase">Status</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
-                          selectedBank.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                           selectedBank.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
-                           selectedBank.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                      {selectedBank.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-6 border-t flex space-x-4">
-                {selectedBank.status === 'DRAFT' && (
-                  <>
-                    <button
-                      onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
-                      className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition"
-                    >
-                      Approve Bank
-                    </button>
-                    <button
-                      onClick={() => handleStatusUpdate(selectedBank.bankId, 'REJECTED')}
-                      className="flex-1 bg-red-100 text-red-700 py-3 rounded-xl font-bold hover:bg-red-200 transition"
-                    >
-                      Reject Request
-                    </button>
-                  </>
-                )}
-                {selectedBank.status === 'ACTIVE' && (
-                  <button
-                    onClick={() => confirmDeactivate(selectedBank.bankId)}
-                    className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition"
-                  >
-                    Deactivate Bank
-                  </button>
-                )}
-                {selectedBank.status === 'INACTIVE' && (
-                  <button
-                    onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
-                    className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition"
-                  >
-                    Re-activate Bank
-                  </button>
-                )}
-              </div>
-            </div>
+    return (
+      <div className="bg-white rounded-2xl border shadow-sm p-6 hover:shadow-md transition">
+        <div className="flex items-center justify-between mb-4">
+          <div className={`p-3 rounded-xl ${colorClass}`}>
+            <Icon className="h-6 w-6" />
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500 font-medium">{title}</p>
+            <p className="text-2xl font-bold text-gray-900">{total}</p>
           </div>
         </div>
+
+        <div className="space-y-3">
+          {/* Simple distribution bar with zero guard */}
+          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden flex">
+            {total > 0 && (
+              <>
+                {stats.ACTIVE > 0 && <div className="bg-green-500 h-full" style={{ width: `${(stats.ACTIVE / total) * 100}%` }} />}
+                {stats.DRAFT > 0 && <div className="bg-yellow-400 h-full" style={{ width: `${(stats.DRAFT / total) * 100}%` }} />}
+                {stats.ARCHIVED > 0 && <div className="bg-red-400 h-full" style={{ width: `${(stats.ARCHIVED / total) * 100}%` }} />}
+                {stats.INACTIVE > 0 && <div className="bg-gray-400 h-full" style={{ width: `${(stats.INACTIVE / total) * 100}%` }} />}
+              </>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(stats).map(([status, count]) => (
+              <div key={status} className="flex items-center text-xs">
+                <span className={`w-2 h-2 rounded-full mr-2 ${
+                  status === 'ACTIVE' ? 'bg-green-500' :
+                  status === 'DRAFT' ? 'bg-yellow-400' :
+                  status === 'ARCHIVED' ? 'bg-red-400' : 'bg-gray-400'
+                }`} />
+                <span className="text-gray-600 capitalize">{status.toLowerCase()}:</span>
+                <span className="ml-auto font-bold text-gray-900">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const SummarySection = ({ title, stats, icon: Icon, showBanksCount }: { title: string, stats: StatsSet, icon: any, showBanksCount?: boolean }) => (
+    <div className="mb-10">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center">
+          <Icon className="h-6 w-6 mr-2 text-blue-600" /> {title}
+        </h2>
+        {showBanksCount && (
+          <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold border border-blue-100">
+            Total Banks Managed: {stats.totalBanks}
+          </div>
+        )}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard title="Products" icon={Package} stats={stats.products} colorClass="bg-blue-50 text-blue-600" />
+        <StatCard title="Product Types" icon={Layers} stats={stats.productTypes} colorClass="bg-purple-50 text-purple-600" />
+        <StatCard title="Pricing Components" icon={Tag} stats={stats.pricingComponents} colorClass="bg-emerald-50 text-emerald-600" />
+        <StatCard title="Roles" icon={Users} stats={stats.roles} colorClass="bg-orange-50 text-orange-600" />
+        <StatCard title="Pricing Tiers" icon={Database} stats={stats.pricingTiers} colorClass="bg-indigo-50 text-indigo-600" />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      {/* Temporary Welcome Banner */}
+      {showWelcome && (
+        <div className="mb-6 p-4 bg-blue-900 text-white rounded-2xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center space-x-4">
+            <div className="p-2 bg-blue-800 rounded-lg">
+              <ShieldCheck className="h-6 w-6 text-blue-200" />
+            </div>
+            <div>
+              <h3 className="font-bold">Welcome back, {user?.name}!</h3>
+              <p className="text-sm text-blue-200">You are logged into {user?.bankName}.</p>
+            </div>
+          </div>
+          <button onClick={() => setShowWelcome(false)} className="p-2 hover:bg-blue-800 rounded-full transition">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
       )}
 
-      {/* Deactivation Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showDeactivateConfirm}
-        onClose={() => { setShowDeactivateConfirm(false); setBankToDeactivate(null); }}
-        onConfirm={() => handleStatusUpdate(bankToDeactivate!, 'deactivate')}
-        title="Confirm Deactivation"
-        message={`Are you sure you want to deactivate ${bankToDeactivate}? This will prevent any users from this bank from logging into the platform.`}
-        confirmText="Confirm & Deactivate"
-        variant="danger"
-      />
-    </>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h1>
+          <p className="text-gray-500 mt-1">Real-time metrics and platform health.</p>
+        </div>
+        <div className="flex space-x-3">
+          {authorities.includes('system:bank:write') && (
+            <button
+              onClick={() => navigate('/onboarding?admin=true')}
+              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-sm hover:shadow flex items-center"
+            >
+              <Plus className="h-5 w-5 mr-2" /> Add New Bank
+            </button>
+          )}
+          {authorities.includes('catalog:product:create') && (
+            <button
+              onClick={() => navigate('/products/new')}
+              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-sm hover:shadow flex items-center"
+            >
+              <Plus className="h-5 w-5 mr-2" /> New Product
+            </button>
+          )}
+        </div>
+      </div>
+
+      {globalStats && (
+        <SummarySection title="Platform-wide Statistics" stats={globalStats} icon={Globe} showBanksCount={true} />
+      )}
+
+      {localStats && (
+        <SummarySection
+          title={canReadSystemStats ? 'System Bank Statistics' : `${user?.bankName || 'Bank'} Statistics`}
+          stats={localStats}
+          icon={Building2}
+        />
+      )}
+
+      {/* Quick Action Info */}
+      <div className="mt-12 p-6 bg-gray-50 rounded-3xl border border-dashed border-gray-300 flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="p-3 bg-white rounded-2xl shadow-sm">
+            <Info className="h-6 w-6 text-gray-400" />
+          </div>
+          <div>
+            <p className="font-bold text-gray-900">Need more details?</p>
+            <p className="text-sm text-gray-500">Navigate to specific management pages using the sidebar to view, edit or delete records.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/products')}
+          className="px-6 py-2 bg-white border rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
+        >
+          Manage Products
+        </button>
+      </div>
+    </div>
   );
 };
+
+// Internal Globe icon for platform stats
+const Globe = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+  </svg>
+);
 
 export default Dashboard;
