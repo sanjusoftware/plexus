@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield
+  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Shield
 } from 'lucide-react';
 
 interface LoggedInUserLayoutProps {
@@ -48,12 +48,6 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
       icon: Tag,
       path: '/pricing-components',
       show: hasPermission({ action: 'GET', path: '/api/v1/pricing-components' })
-    },
-    {
-      label: 'Pricing Tiers',
-      icon: Layers,
-      path: '/pricing-tiers',
-      show: hasPermission({ action: 'GET', path: '/api/v1/pricing-tiers' })
     },
     {
       label: 'Product Catalog',

@@ -9,7 +9,6 @@ import BankManagementPage from './pages/admin/BankManagementPage';
 import ProductTypesPage from './pages/admin/ProductTypesPage';
 import PricingMetadataPage from './pages/admin/PricingMetadataPage';
 import PricingComponentsPage from './pages/admin/PricingComponentsPage';
-import PricingTiersPage from './pages/admin/PricingTiersPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import ProductFormPage from './pages/admin/ProductFormPage';
 import RoleManagementPage from './pages/admin/RoleManagementPage';
@@ -99,11 +98,6 @@ function App() {
               <Route path="/pricing-components/edit/:id" element={
                 <PermissionElement action="PUT" path="/api/v1/pricing-components">
                   <PricingComponentFormPage />
-                </PermissionElement>
-              } />
-              <Route path="/pricing-tiers" element={
-                <PermissionElement action="GET" path="/api/v1/pricing-tiers">
-                  <PricingTiersPage />
                 </PermissionElement>
               } />
               <Route path="/products" element={

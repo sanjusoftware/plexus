@@ -114,7 +114,6 @@ public class SecurityConfig {
                                 "/product-types",
                                 "/pricing-metadata",
                                 "/pricing-components/**",
-                                "/pricing-tiers",
                                 "/products/**",
                                 "/roles/**",
                                 "/auth/**",

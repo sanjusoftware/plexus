@@ -39,8 +39,13 @@ export const useHasPermission = () => {
       });
 
       if (matchingEntries.length === 0) {
-        // If no permissions are mapped to this endpoint, we assume it's public
-        // or requires just authentication.
+        // If the path starts with /api/ and is not in our map, we default to hidden
+        // to prevent UI elements showing up for endpoints we don't know about or
+        // that have been removed from the backend.
+        if (path.startsWith('/api/')) {
+          return false;
+        }
+        // Otherwise assume it's a public UI route or non-API path.
         return true;
       }
 
