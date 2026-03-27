@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Save, X, Database, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import StyledSelect from '../../components/StyledSelect';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { HasPermission } from '../../components/HasPermission';
 
 interface PricingMetadata {
   id: number;
@@ -116,12 +117,14 @@ const PricingMetadataPage = () => {
             <p className="text-gray-500 font-medium mt-1">Register attributes used in dynamic pricing calculation rules.</p>
           </div>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="bg-blue-600 text-white px-6 py-3 rounded-2xl flex items-center hover:bg-blue-700 transition font-bold shadow-xl shadow-blue-100"
-        >
-          <Plus className="w-5 h-5 mr-2" /> New Attribute
-        </button>
+        <HasPermission action="POST" path="/api/v1/pricing-metadata">
+          <button
+            onClick={() => openModal()}
+            className="bg-blue-600 text-white px-6 py-3 rounded-2xl flex items-center hover:bg-blue-700 transition font-bold shadow-xl shadow-blue-100"
+          >
+            <Plus className="w-5 h-5 mr-2" /> New Attribute
+          </button>
+        </HasPermission>
       </div>
 
       <div className="bg-amber-50 border-l-4 border-amber-400 p-6 rounded-r-2xl shadow-sm flex items-start space-x-4">
@@ -180,8 +183,12 @@ const PricingMetadataPage = () => {
                       <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-black text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
                     </td>
                     <td className="px-8 py-6 whitespace-nowrap text-right text-sm font-medium space-x-1">
-                      <button onClick={() => openModal(meta)} className="text-blue-600 hover:bg-blue-50 p-2.5 rounded-xl transition shadow-sm border border-blue-50" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(meta.id)} className="text-red-600 hover:bg-red-50 p-2.5 rounded-xl transition shadow-sm border border-red-50" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      <HasPermission action="PUT" path="/api/v1/pricing-metadata/*">
+                        <button onClick={() => openModal(meta)} className="text-blue-600 hover:bg-blue-50 p-2.5 rounded-xl transition shadow-sm border border-blue-50" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                      </HasPermission>
+                      <HasPermission action="DELETE" path="/api/v1/pricing-metadata/*">
+                        <button onClick={() => handleDelete(meta.id)} className="text-red-600 hover:bg-red-50 p-2.5 rounded-xl transition shadow-sm border border-red-50" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      </HasPermission>
                     </td>
                   </tr>
                 ))

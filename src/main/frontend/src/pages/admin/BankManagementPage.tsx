@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Building2, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, AlertCircle, Edit
 } from 'lucide-react';
+import { HasPermission } from '../../components/HasPermission';
 import axios from 'axios';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -19,15 +20,6 @@ const BankManagementPage = () => {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
-  const authorities = (user?.roles as string[]) || [];
-  const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
-
-  useEffect(() => {
-    if (!authLoading && (!user || !isSystemAdmin)) {
-      navigate('/dashboard');
-    }
-  }, [user, authLoading, isSystemAdmin, navigate]);
-
   const fetchBanks = async () => {
     setLoading(true);
     try {
@@ -42,10 +34,10 @@ const BankManagementPage = () => {
   };
 
   useEffect(() => {
-    if (!authLoading && user && isSystemAdmin) {
+    if (!authLoading && user) {
       fetchBanks();
     }
-  }, [user, authLoading, isSystemAdmin]);
+  }, [user, authLoading]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'REJECTED') => {
     setError('');
@@ -99,12 +91,14 @@ const BankManagementPage = () => {
           <h2 className="text-3xl font-black text-blue-900 tracking-tight uppercase italic">Bank Management</h2>
           <p className="text-gray-500 font-bold">Global banking infrastructure and tenant onboarding.</p>
         </div>
-        <button
-          onClick={() => navigate('/onboarding?admin=true')}
-          className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-blue-700 transition flex items-center shadow-lg shadow-blue-100 uppercase tracking-widest"
-        >
-          <Plus className="h-5 w-5 mr-2" /> Add Bank
-        </button>
+        <HasPermission action="POST" path="/api/v1/banks">
+          <button
+            onClick={() => navigate('/onboarding?admin=true')}
+            className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-blue-700 transition flex items-center shadow-lg shadow-blue-100 uppercase tracking-widest"
+          >
+            <Plus className="h-5 w-5 mr-2" /> Add Bank
+          </button>
+        </HasPermission>
       </div>
 
       {error && (
@@ -170,41 +164,51 @@ const BankManagementPage = () => {
                 <div className="flex items-center space-x-3">
                   {item.status === 'DRAFT' && (
                     <>
+                      <HasPermission action="PUT" path="/api/v1/banks">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
+                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition flex items-center"
+                        >
+                          <Edit className="h-3 w-3 mr-1.5" /> Edit
+                        </button>
+                      </HasPermission>
+                      <HasPermission action="POST" path="/api/v1/banks/*/activate">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
+                          className="px-4 py-2 bg-green-50 text-green-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-100 transition flex items-center"
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1.5" /> Approve
+                        </button>
+                      </HasPermission>
+                      <HasPermission action="PUT" path="/api/v1/banks">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'REJECTED'); }}
+                          className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition flex items-center"
+                        >
+                          <XCircle className="h-3 w-3 mr-1.5" /> Reject
+                        </button>
+                      </HasPermission>
+                    </>
+                  )}
+                  {item.status === 'ACTIVE' && (
+                    <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
                       <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
-                        className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition flex items-center"
+                        onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
+                        className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition flex items-center"
                       >
-                        <Edit className="h-3 w-3 mr-1.5" /> Edit
+                        <Clock className="h-3 w-3 mr-1.5" /> Deactivate
                       </button>
+                    </HasPermission>
+                  )}
+                  {item.status === 'INACTIVE' && (
+                    <HasPermission action="POST" path="/api/v1/banks/*/activate">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
                         className="px-4 py-2 bg-green-50 text-green-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-100 transition flex items-center"
                       >
-                        <CheckCircle2 className="h-3 w-3 mr-1.5" /> Approve
+                        <CheckCircle2 className="h-3 w-3 mr-1.5" /> Re-activate
                       </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'REJECTED'); }}
-                        className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition flex items-center"
-                      >
-                        <XCircle className="h-3 w-3 mr-1.5" /> Reject
-                      </button>
-                    </>
-                  )}
-                  {item.status === 'ACTIVE' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
-                      className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition flex items-center"
-                    >
-                      <Clock className="h-3 w-3 mr-1.5" /> Deactivate
-                    </button>
-                  )}
-                  {item.status === 'INACTIVE' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                      className="px-4 py-2 bg-green-50 text-green-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-100 transition flex items-center"
-                    >
-                      <CheckCircle2 className="h-3 w-3 mr-1.5" /> Re-activate
-                    </button>
+                    </HasPermission>
                   )}
                   <div className="h-10 w-10 flex items-center justify-center rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
                     <ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-white" />
@@ -284,41 +288,51 @@ const BankManagementPage = () => {
               <div className="pt-8 border-t flex space-x-4">
                 {selectedBank.status === 'DRAFT' && (
                   <>
+                    <HasPermission action="PUT" path="/api/v1/banks">
+                      <button
+                        onClick={() => navigate(`/banks/edit/${selectedBank.bankId}`)}
+                        className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center"
+                      >
+                        <Edit className="h-4 w-4 mr-2" /> Edit Configuration
+                      </button>
+                    </HasPermission>
+                    <HasPermission action="POST" path="/api/v1/banks/*/activate">
+                      <button
+                        onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
+                        className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100"
+                      >
+                        Approve Bank
+                      </button>
+                    </HasPermission>
+                    <HasPermission action="PUT" path="/api/v1/banks">
+                      <button
+                        onClick={() => handleStatusUpdate(selectedBank.bankId, 'REJECTED')}
+                        className="flex-1 bg-red-100 text-red-700 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-200 transition"
+                      >
+                        Reject Request
+                      </button>
+                    </HasPermission>
+                  </>
+                )}
+                {selectedBank.status === 'ACTIVE' && (
+                  <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
                     <button
-                      onClick={() => navigate(`/banks/edit/${selectedBank.bankId}`)}
-                      className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center"
+                      onClick={() => confirmDeactivate(selectedBank.bankId)}
+                      className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition"
                     >
-                      <Edit className="h-4 w-4 mr-2" /> Edit Configuration
+                      Deactivate Bank
                     </button>
+                  </HasPermission>
+                )}
+                {selectedBank.status === 'INACTIVE' && (
+                  <HasPermission action="POST" path="/api/v1/banks/*/activate">
                     <button
                       onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
                       className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100"
                     >
-                      Approve Bank
+                      Re-activate Bank
                     </button>
-                    <button
-                      onClick={() => handleStatusUpdate(selectedBank.bankId, 'REJECTED')}
-                      className="flex-1 bg-red-100 text-red-700 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-200 transition"
-                    >
-                      Reject Request
-                    </button>
-                  </>
-                )}
-                {selectedBank.status === 'ACTIVE' && (
-                  <button
-                    onClick={() => confirmDeactivate(selectedBank.bankId)}
-                    className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition"
-                  >
-                    Deactivate Bank
-                  </button>
-                )}
-                {selectedBank.status === 'INACTIVE' && (
-                  <button
-                    onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
-                    className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100"
-                  >
-                    Re-activate Bank
-                  </button>
+                  </HasPermission>
                 )}
               </div>
             </div>

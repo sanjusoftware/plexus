@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { HasPermission } from '../../components/HasPermission';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -91,12 +92,14 @@ const ProductManagementPage = () => {
             <p className="text-gray-500 font-bold mt-1 uppercase tracking-widest text-[10px]">Configure Bank Offerings, Feature Sets & Pricing Bindings</p>
           </div>
         </div>
-        <button
-          onClick={() => navigate('/products/create')}
-          className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl flex items-center hover:bg-blue-700 transition font-black shadow-xl shadow-blue-100 uppercase tracking-widest text-xs"
-        >
-          <Plus className="w-5 h-5 mr-3" /> Create New Product
-        </button>
+        <HasPermission action="POST" path="/api/v1/products">
+          <button
+            onClick={() => navigate('/products/create')}
+            className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl flex items-center hover:bg-blue-700 transition font-black shadow-xl shadow-blue-100 uppercase tracking-widest text-xs"
+          >
+            <Plus className="w-5 h-5 mr-3" /> Create New Product
+          </button>
+        </HasPermission>
       </div>
 
       <div className="bg-indigo-50 border-l-4 border-indigo-400 p-8 rounded-r-3xl shadow-sm flex items-start space-x-6">
@@ -139,16 +142,22 @@ const ProductManagementPage = () => {
                   </div>
                   <div className="flex space-x-3 mt-6 md:mt-0">
                     {prod.status === 'DRAFT' && (
-                      <button onClick={() => handleStatusAction(prod.id, 'activate')} className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100">Activate</button>
+                      <HasPermission action="POST" path="/api/v1/products/*/activate">
+                        <button onClick={() => handleStatusAction(prod.id, 'activate')} className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100">Activate</button>
+                      </HasPermission>
                     )}
-                    <button onClick={() => navigate(`/products/edit/${prod.id}`)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition shadow-sm border border-blue-50" title="Modify Product"><Edit2 className="w-5 h-5" /></button>
-                    <button
-                      onClick={() => prod.status === 'ACTIVE' ? handleStatusAction(prod.id, 'archive') : handleDelete(prod.id)}
-                      className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition shadow-sm border border-red-50"
-                      title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <HasPermission action="PUT" path="/api/v1/products">
+                      <button onClick={() => navigate(`/products/edit/${prod.id}`)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition shadow-sm border border-blue-50" title="Modify Product"><Edit2 className="w-5 h-5" /></button>
+                    </HasPermission>
+                    <HasPermission action="DELETE" path="/api/v1/products/*">
+                      <button
+                        onClick={() => prod.status === 'ACTIVE' ? handleStatusAction(prod.id, 'archive') : handleDelete(prod.id)}
+                        className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition shadow-sm border border-red-50"
+                        title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </HasPermission>
                   </div>
                 </div>
                 <div className="p-10 grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white">

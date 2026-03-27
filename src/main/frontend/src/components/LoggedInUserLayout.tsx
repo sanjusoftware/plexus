@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useHasPermission } from '../hooks/useHasPermission';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield
@@ -11,12 +12,11 @@ interface LoggedInUserLayoutProps {
 
 const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => {
   const { user, logout, bankId } = useAuth();
+  const { hasPermission } = useHasPermission();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const authorities = (user?.roles as string[]) || [];
-  const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
-  const isBankAdmin = authorities.includes('BANK_ADMIN');
+  const roles = (user?.roles as string[]) || [];
 
   const navItems = [
     {
@@ -29,43 +29,43 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
       label: 'Bank Management',
       icon: Building2,
       path: '/banks',
-      show: isSystemAdmin
+      show: hasPermission({ action: 'GET', path: '/api/v1/banks' })
     },
     {
       label: 'Product Types',
       icon: List,
       path: '/product-types',
-      show: isBankAdmin
+      show: hasPermission({ action: 'GET', path: '/api/v1/product-types' })
     },
     {
       label: 'Pricing Metadata',
       icon: Database,
       path: '/pricing-metadata',
-      show: isBankAdmin
+      show: hasPermission({ action: 'GET', path: '/api/v1/pricing-metadata' })
     },
     {
       label: 'Pricing Components',
       icon: Tag,
       path: '/pricing-components',
-      show: isBankAdmin
+      show: hasPermission({ action: 'GET', path: '/api/v1/pricing-components' })
     },
     {
       label: 'Pricing Tiers',
       icon: Layers,
       path: '/pricing-tiers',
-      show: isBankAdmin
+      show: hasPermission({ action: 'GET', path: '/api/v1/pricing-tiers' })
     },
     {
       label: 'Product Catalog',
       icon: Package,
       path: '/products',
-      show: isBankAdmin || !isSystemAdmin
+      show: hasPermission({ action: 'GET', path: '/api/v1/products' })
     },
     {
       label: 'Roles & Permissions',
       icon: Shield,
       path: '/roles',
-      show: isBankAdmin
+      show: hasPermission({ action: 'GET', path: '/api/v1/roles' })
     }
   ];
 
@@ -113,7 +113,7 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
             <div className="text-right">
               <p className="text-sm font-semibold text-gray-900">{user?.name || user?.sub}</p>
               <p className="text-xs text-gray-500 mb-0.5">{user?.email}</p>
-              <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">{authorities.join(', ')}</p>
+              <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">{roles.join(', ')}</p>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
               {user?.picture ? (

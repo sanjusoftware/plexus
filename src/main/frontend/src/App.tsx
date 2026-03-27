@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import AuthCallback from './pages/AuthCallback';
@@ -18,9 +18,10 @@ import PricingComponentFormPage from './pages/admin/PricingComponentFormPage';
 import ErrorPage from './pages/ErrorPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoggedInUserLayout from './components/LoggedInUserLayout';
+import PermissionElement from './components/PermissionElement';
 import { Loader2 } from 'lucide-react';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedLayout = () => {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -35,7 +36,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
-  return <LoggedInUserLayout>{children}</LoggedInUserLayout>;
+  return (
+    <LoggedInUserLayout>
+      <Outlet />
+    </LoggedInUserLayout>
+  );
 };
 
 const PublicHome = () => {
@@ -55,84 +60,84 @@ function App() {
           <Routes>
             <Route path="/" element={<PublicHome />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/onboarding" element={<OnboardingWrapper />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/banks" element={
-              <ProtectedRoute>
-                <BankManagementPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/banks/edit/:id" element={
-              <ProtectedRoute>
-                <OnboardingPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/product-types" element={
-              <ProtectedRoute>
-                <ProductTypesPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/pricing-metadata" element={
-              <ProtectedRoute>
-                <PricingMetadataPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/pricing-components" element={
-              <ProtectedRoute>
-                <PricingComponentsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/pricing-components/create" element={
-              <ProtectedRoute>
-                <PricingComponentFormPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/pricing-components/edit/:id" element={
-              <ProtectedRoute>
-                <PricingComponentFormPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/pricing-tiers" element={
-              <ProtectedRoute>
-                <PricingTiersPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/products" element={
-              <ProtectedRoute>
-                <ProductManagementPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/products/create" element={
-              <ProtectedRoute>
-                <ProductFormPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/products/edit/:id" element={
-              <ProtectedRoute>
-                <ProductFormPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/roles" element={
-              <ProtectedRoute>
-                <RoleManagementPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/roles/register" element={
-              <ProtectedRoute>
-                <RoleFormPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/roles/edit/:roleName" element={
-              <ProtectedRoute>
-                <RoleFormPage />
-              </ProtectedRoute>
-            } />
             <Route path="/error" element={<ErrorPage />} />
+
+            <Route element={<ProtectedLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/banks" element={
+                <PermissionElement action="GET" path="/api/v1/banks">
+                  <BankManagementPage />
+                </PermissionElement>
+              } />
+              <Route path="/banks/edit/:id" element={
+                <PermissionElement action="PUT" path="/api/v1/banks">
+                  <OnboardingPage />
+                </PermissionElement>
+              } />
+              <Route path="/product-types" element={
+                <PermissionElement action="GET" path="/api/v1/product-types">
+                  <ProductTypesPage />
+                </PermissionElement>
+              } />
+              <Route path="/pricing-metadata" element={
+                <PermissionElement action="GET" path="/api/v1/pricing-metadata">
+                  <PricingMetadataPage />
+                </PermissionElement>
+              } />
+              <Route path="/pricing-components" element={
+                <PermissionElement action="GET" path="/api/v1/pricing-components">
+                  <PricingComponentsPage />
+                </PermissionElement>
+              } />
+              <Route path="/pricing-components/create" element={
+                <PermissionElement action="POST" path="/api/v1/pricing-components">
+                  <PricingComponentFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/pricing-components/edit/:id" element={
+                <PermissionElement action="PUT" path="/api/v1/pricing-components">
+                  <PricingComponentFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/pricing-tiers" element={
+                <PermissionElement action="GET" path="/api/v1/pricing-tiers">
+                  <PricingTiersPage />
+                </PermissionElement>
+              } />
+              <Route path="/products" element={
+                <PermissionElement action="GET" path="/api/v1/products">
+                  <ProductManagementPage />
+                </PermissionElement>
+              } />
+              <Route path="/products/create" element={
+                <PermissionElement action="POST" path="/api/v1/products">
+                  <ProductFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/products/edit/:id" element={
+                <PermissionElement action="PUT" path="/api/v1/products">
+                  <ProductFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/roles" element={
+                <PermissionElement action="GET" path="/api/v1/roles">
+                  <RoleManagementPage />
+                </PermissionElement>
+              } />
+              <Route path="/roles/register" element={
+                <PermissionElement action="POST" path="/api/v1/roles/mapping">
+                  <RoleFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/roles/edit/:roleName" element={
+                <PermissionElement action="POST" path="/api/v1/roles/mapping">
+                  <RoleFormPage />
+                </PermissionElement>
+              } />
+            </Route>
+
             {/* Fallback for client-side routing */}
             <Route path="*" element={<ErrorPage />} />
           </Routes>
@@ -141,20 +146,5 @@ function App() {
     </AuthProvider>
   );
 }
-
-const OnboardingWrapper = () => {
-  const { isAuthenticated } = useAuth();
-  const isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
-
-  if (isAdmin && isAuthenticated) {
-    return (
-      <LoggedInUserLayout>
-        <OnboardingPage />
-      </LoggedInUserLayout>
-    );
-  }
-
-  return <OnboardingPage />;
-};
 
 export default App;

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Save, X, List, CheckCircle2, AlertCircle } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { HasPermission } from '../../components/HasPermission';
 
 interface ProductType {
   id: number;
@@ -133,12 +134,14 @@ const ProductTypesPage = () => {
           </h1>
           <p className="text-gray-500 text-sm mt-1">Define broad categories for your bank's products (e.g., SAVINGS, LOANS).</p>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center hover:bg-blue-700 transition font-bold shadow-lg shadow-blue-100"
-        >
-          <Plus className="w-5 h-5 mr-2" /> Add New Type
-        </button>
+        <HasPermission action="POST" path="/api/v1/product-types">
+          <button
+            onClick={() => openModal()}
+            className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center hover:bg-blue-700 transition font-bold shadow-lg shadow-blue-100"
+          >
+            <Plus className="w-5 h-5 mr-2" /> Add New Type
+          </button>
+        </HasPermission>
       </div>
 
       {error && (
@@ -188,14 +191,20 @@ const ProductTypesPage = () => {
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium space-x-2">
                       {type.status === 'DRAFT' && (
-                        <button onClick={() => handleAction(type.id, 'activate')} className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center inline-flex" title="Activate">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
-                        </button>
+                        <HasPermission action="POST" path="/api/v1/product-types/*/activate">
+                          <button onClick={() => handleAction(type.id, 'activate')} className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center inline-flex" title="Activate">
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
+                          </button>
+                        </HasPermission>
                       )}
                       {type.status !== 'ARCHIVED' && (
                         <>
-                          <button onClick={() => openModal(type)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => triggerConfirmAction(type)} className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="w-4 h-4" /></button>
+                          <HasPermission action="PUT" path="/api/v1/product-types/*">
+                            <button onClick={() => openModal(type)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                          </HasPermission>
+                          <HasPermission action="DELETE" path="/api/v1/product-types/*">
+                            <button onClick={() => triggerConfirmAction(type)} className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="w-4 h-4" /></button>
+                          </HasPermission>
                         </>
                       )}
                     </td>

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Trash2, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { HasPermission } from '../../components/HasPermission';
 
 interface RoleMapping {
   name: string;
@@ -94,12 +95,14 @@ const RoleManagementPage = () => {
             <p className="text-gray-500 font-bold mt-1 uppercase tracking-widest text-[10px]">Map Identity Provider roles to granular system authorities</p>
           </div>
         </div>
-        <button
-          onClick={() => navigate('/roles/register')}
-          className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl flex items-center hover:bg-blue-700 transition font-black shadow-xl shadow-blue-100 uppercase tracking-widest text-[11px] relative"
-        >
-          <Plus className="w-5 h-5 mr-3" /> Register New Role
-        </button>
+        <HasPermission action="POST" path="/api/v1/roles/mapping">
+          <button
+            onClick={() => navigate('/roles/register')}
+            className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl flex items-center hover:bg-blue-700 transition font-black shadow-xl shadow-blue-100 uppercase tracking-widest text-[11px] relative"
+          >
+            <Plus className="w-5 h-5 mr-3" /> Register New Role
+          </button>
+        </HasPermission>
       </div>
 
       <div className="bg-indigo-50 border-l-4 border-indigo-400 p-8 rounded-r-3xl shadow-sm flex items-start space-x-6">
@@ -153,18 +156,22 @@ const RoleManagementPage = () => {
 
                   <div className="flex items-center space-x-4">
                     <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition duration-300">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/roles/edit/${mapping.name}`); }}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition border border-transparent hover:border-blue-100 font-bold text-xs uppercase flex items-center"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); confirmDelete(mapping.name); }}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition border border-transparent hover:border-red-100"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      <HasPermission action="POST" path="/api/v1/roles/mapping">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/roles/edit/${mapping.name}`); }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition border border-transparent hover:border-blue-100 font-bold text-xs uppercase flex items-center"
+                        >
+                          Edit
+                        </button>
+                      </HasPermission>
+                      <HasPermission action="POST" path="/api/v1/roles/mapping">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); confirmDelete(mapping.name); }}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition border border-transparent hover:border-red-100"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </HasPermission>
                     </div>
                     {isExpanded ? <ChevronUp className="w-6 h-6 text-gray-400" /> : <ChevronDown className="w-6 h-6 text-gray-400" />}
                   </div>

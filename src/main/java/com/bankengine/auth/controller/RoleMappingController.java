@@ -17,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -122,5 +123,19 @@ public class RoleMappingController {
     public ResponseEntity<Set<String>> getSystemAuthorities() {
         Set<String> authorities = authorityDiscoveryService.discoverAllAuthorities();
         return ResponseEntity.ok(authorities);
+    }
+
+    @Operation(
+            summary = "Get Endpoint to Permission Mapping",
+            description = "Retrieves a mapping of API endpoints to their required permissions. Used by the frontend for dynamic RBAC.",
+            tags = {"UI Utility"},
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Successfully retrieved permissions map."),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing token")
+            }
+    )
+    @GetMapping("/permissions-map")
+    public ResponseEntity<Map<String, Set<String>>> getPermissionsMap() {
+        return ResponseEntity.ok(authorityDiscoveryService.discoverEndpointPermissions());
     }
 }
