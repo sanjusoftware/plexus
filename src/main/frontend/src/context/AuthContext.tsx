@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { authService, UserProfile } from '../services/AuthService';
 import axios from 'axios';
 import { ShieldAlert, X } from 'lucide-react';
@@ -18,6 +18,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+
+  // Use a ref to keep track of the current user state for the interceptor
+  // without re-running the initialization effect when the user changes.
+  const userRef = useRef<UserProfile | null>(user);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     axios.defaults.withCredentials = true;
@@ -61,8 +69,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
         }
 
-        // Handle 403 Access Denied for Logged in Users
-        if (status === 403 && user) {
+        // Handle 403 Access Denied
+        // The toast should appear for both unauthenticated (if they get 403)
+        // and authenticated users lacking permissions.
+        if (status === 403) {
           setToast({
             message: 'Access Denied: You do not have permission to perform this action.',
             type: 'error'
@@ -72,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Handle 500+ Errors
         if (status >= 500) {
           const { data } = error.response;
-          window.location.href = `/error?status=${status}&message=${encodeURIComponent(data.message || 'Server Error')}&timestamp=${encodeURIComponent(data.timestamp || new Date().toISOString())}`;
+          window.location.href = `/error?status=${status}&message=${encodeURIComponent(data?.message || 'Server Error')}&timestamp=${encodeURIComponent(data?.timestamp || new Date().toISOString())}`;
         }
         return Promise.reject(error);
       }
@@ -82,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, [user]);
+  }, []);
 
   const login = async (bankId: string) => {
     await authService.login(bankId);
