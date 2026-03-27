@@ -73,20 +73,20 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-blue-900 text-white flex-shrink-0 relative transition-all duration-300`}>
-        <div className="p-6 flex items-center justify-between border-b border-blue-800">
-          <div className="flex items-center space-x-2 cursor-pointer overflow-hidden" onClick={() => navigate('/dashboard')}>
+      <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-blue-900 text-white flex-shrink-0 relative transition-all duration-300 flex flex-col`}>
+        <div className={`p-6 flex ${isCollapsed ? 'flex-col space-y-4 px-0' : 'flex-row justify-between items-center'} border-b border-blue-800`}>
+          <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'space-x-2'} cursor-pointer overflow-hidden`} onClick={() => navigate('/dashboard')}>
             <Cpu className="h-8 w-8 text-blue-400 flex-shrink-0" />
             {!isCollapsed && <span className="text-xl font-bold tracking-tight whitespace-nowrap">Plexus</span>}
           </div>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 hover:bg-blue-800 rounded-lg transition-colors"
+            className={`p-1 hover:bg-blue-800 rounded-lg transition-colors ${isCollapsed ? 'mx-auto' : ''}`}
           >
             {isCollapsed ? <ChevronRight className="h-5 w-5 text-blue-300" /> : <ChevronLeft className="h-5 w-5 text-blue-300" />}
           </button>
         </div>
-        <nav className="mt-6 px-4 space-y-2">
+        <nav className="mt-6 px-4 space-y-2 flex-1">
           {navItems.filter(item => item.show).map((item) => (
             <button
               key={item.label}

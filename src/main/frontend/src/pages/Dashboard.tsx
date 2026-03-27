@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, Package, Loader2, Plus, ShieldCheck, Info, Users, Tag, Layers, Database, X
+  Building2, Package, Loader2, Plus, ShieldCheck, Users, Tag, Layers, X
 } from 'lucide-react';
 import axios from 'axios';
 import { HasPermission } from '../components/HasPermission';
+import { useHasPermission } from '../hooks/useHasPermission';
 
 interface StatsSet {
   products: Record<string, number>;
@@ -19,6 +20,7 @@ interface StatsSet {
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { hasPermission } = useHasPermission();
   const [localStats, setLocalStats] = useState<StatsSet | null>(null);
   const [globalStats, setGlobalStats] = useState<StatsSet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,11 +81,17 @@ const Dashboard = () => {
     );
   }
 
-  const StatCard = ({ title, icon: Icon, stats, colorClass }: { title: string, icon: any, stats: Record<string, number>, colorClass: string }) => {
+  const StatCard = ({ title, icon: Icon, stats, colorClass, onClick }: { title: string, icon: any, stats: Record<string, number>, colorClass: string, onClick?: () => void }) => {
     const total = Object.values(stats).reduce((a, b) => a + b, 0);
+    const isClickable = !!onClick;
 
     return (
-      <div className="bg-white rounded-2xl border shadow-sm p-6 hover:shadow-md transition">
+      <div
+        onClick={onClick}
+        className={`bg-white rounded-2xl border shadow-sm p-6 transition ${
+          isClickable ? 'hover:shadow-md hover:border-blue-300 cursor-pointer' : ''
+        }`}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className={`p-3 rounded-xl ${colorClass}`}>
             <Icon className="h-6 w-6" />
@@ -125,27 +133,41 @@ const Dashboard = () => {
     );
   };
 
-  const SummarySection = ({ title, stats, icon: Icon, showBanksCount }: { title: string, stats: StatsSet, icon: any, showBanksCount?: boolean }) => (
-    <div className="mb-10">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center">
-          <Icon className="h-6 w-6 mr-2 text-blue-600" /> {title}
-        </h2>
-        {showBanksCount && (
-          <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold border border-blue-100">
-            Total Banks Managed: {stats.totalBanks}
-          </div>
-        )}
+  const SummarySection = ({ title, stats, icon: Icon, showBanksCount }: { title: string, stats: StatsSet, icon: any, showBanksCount?: boolean }) => {
+    const navMapping = [
+      { title: 'Products', icon: Package, stats: stats.products, colorClass: 'bg-blue-50 text-blue-600', path: '/products', api: '/api/v1/products' },
+      { title: 'Product Types', icon: Layers, stats: stats.productTypes, colorClass: 'bg-purple-50 text-purple-600', path: '/product-types', api: '/api/v1/product-types' },
+      { title: 'Pricing Components', icon: Tag, stats: stats.pricingComponents, colorClass: 'bg-emerald-50 text-emerald-600', path: '/pricing-components', api: '/api/v1/pricing-components' },
+      { title: 'Roles', icon: Users, stats: stats.roles, colorClass: 'bg-orange-50 text-orange-600', path: '/roles', api: '/api/v1/roles' },
+    ];
+
+    return (
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center">
+            <Icon className="h-6 w-6 mr-2 text-blue-600" /> {title}
+          </h2>
+          {showBanksCount && (
+            <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold border border-blue-100">
+              Total Banks Managed: {stats.totalBanks}
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {navMapping.map((item) => (
+            <StatCard
+              key={item.title}
+              title={item.title}
+              icon={item.icon}
+              stats={item.stats}
+              colorClass={item.colorClass}
+              onClick={hasPermission({ action: 'GET', path: item.api }) ? () => navigate(item.path) : undefined}
+            />
+          ))}
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Products" icon={Package} stats={stats.products} colorClass="bg-blue-50 text-blue-600" />
-        <StatCard title="Product Types" icon={Layers} stats={stats.productTypes} colorClass="bg-purple-50 text-purple-600" />
-        <StatCard title="Pricing Components" icon={Tag} stats={stats.pricingComponents} colorClass="bg-emerald-50 text-emerald-600" />
-        <StatCard title="Roles" icon={Users} stats={stats.roles} colorClass="bg-orange-50 text-orange-600" />
-        <StatCard title="Pricing Tiers" icon={Database} stats={stats.pricingTiers} colorClass="bg-indigo-50 text-indigo-600" />
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -173,14 +195,6 @@ const Dashboard = () => {
           <p className="text-gray-500 mt-1">Real-time metrics and platform health.</p>
         </div>
         <div className="flex space-x-3">
-          <HasPermission action="POST" path="/api/v1/banks">
-            <button
-              onClick={() => navigate('/onboarding?admin=true')}
-              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-sm hover:shadow flex items-center"
-            >
-              <Plus className="h-5 w-5 mr-2" /> Add New Bank
-            </button>
-          </HasPermission>
           <HasPermission action="POST" path="/api/v1/products">
             <button
               onClick={() => navigate('/products/create')}
@@ -203,25 +217,6 @@ const Dashboard = () => {
           icon={Building2}
         />
       )}
-
-      {/* Quick Action Info */}
-      <div className="mt-12 p-6 bg-gray-50 rounded-3xl border border-dashed border-gray-300 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-white rounded-2xl shadow-sm">
-            <Info className="h-6 w-6 text-gray-400" />
-          </div>
-          <div>
-            <p className="font-bold text-gray-900">Need more details?</p>
-            <p className="text-sm text-gray-500">Navigate to specific management pages using the sidebar to view, edit or delete records.</p>
-          </div>
-        </div>
-        <button
-          onClick={() => navigate('/products')}
-          className="px-6 py-2 bg-white border rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
-        >
-          Manage Products
-        </button>
-      </div>
     </div>
   );
 };
