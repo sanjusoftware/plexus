@@ -84,4 +84,45 @@ class CustomOAuth2UserServiceTest {
 
         verify(authorityMappingService).mapAuthoritiesWithContext(anyMap(), eq(issuerUri));
     }
+
+    @Test
+    void enrichUser_ShouldHandleNullUserNameAttributeName() {
+        // Arrange
+        String issuerUri = "http://issuer";
+        String clientId = "client";
+
+        // Create a ClientRegistration with a null userInfoEndpoint.userNameAttributeName
+        ClientRegistration registration = ClientRegistration.withRegistrationId("test")
+                .clientId(clientId)
+                .tokenUri("http://token")
+                .authorizationUri("http://auth")
+                .issuerUri(issuerUri)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("http://redirect")
+                // We don't set userNameAttributeName here, or we'd have to use reflection to null it if the builder prevents it
+                .build();
+
+        OAuth2AccessToken token = new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER, "val", Instant.now(), Instant.now().plusSeconds(60));
+        OAuth2UserRequest request = new OAuth2UserRequest(registration, token);
+
+        OAuth2User rawBaseUser = new DefaultOAuth2User(
+                Collections.emptyList(),
+                Map.of("sub", "user123", "name", "Test User", "azp", clientId),
+                "sub"
+        );
+
+        BankConfiguration config = BankConfiguration.builder()
+                .bankId("B1")
+                .name("Bank One")
+                .build();
+
+        when(authorityMappingService.mapAuthoritiesWithContext(anyMap(), eq(issuerUri)))
+                .thenReturn(new AuthorityMappingService.MappingResult(Collections.emptyList(), config));
+
+        OAuth2User result = customOAuth2UserService.enrichUser(request, rawBaseUser);
+
+        assertNotNull(result);
+        assertEquals("user123", result.getName());
+    }
 }

@@ -130,6 +130,18 @@ class SecurityContextImplTest {
     }
 
     @Test
+    void getCurrentBankId_ShouldThrow_WhenOAuth2UserAudienceListIsEmpty() {
+        OAuth2User user = mock(OAuth2User.class);
+        when(user.getAttribute("bank_id")).thenReturn(null);
+        when(user.getAttribute("aud")).thenReturn(List.of());
+        setupMockAuthentication(user);
+
+        assertThatThrownBy(securityContext::getCurrentBankId)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("OAuth2User does not contain bank_id or audience attribute");
+    }
+
+    @Test
     void getCurrentBankId_ShouldReturnBankId_FromOAuth2UserAudienceString() {
         OAuth2User user = mock(OAuth2User.class);
         when(user.getAttribute("bank_id")).thenReturn(null);
@@ -171,6 +183,26 @@ class SecurityContextImplTest {
         String bankId = securityContext.getCurrentBankId();
 
         assertThat(bankId).isEqualTo("ISSUER_BANK");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getCurrentBankId_ShouldFallbackToIssuer_WithTrailingSlash_WhenClaimsMissing() throws Exception {
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaimAsString("bank_id")).thenReturn(null);
+        when(jwt.getAudience()).thenReturn(List.of());
+        when(jwt.getIssuer()).thenReturn(new URL("https://idp.example.com"));
+        setupMockAuthentication(jwt);
+
+        BankConfiguration config = BankConfiguration.builder()
+                .bankId("ISSUER_BANK_SLASH")
+                .issuerUrl("https://idp.example.com/")
+                .build();
+        when(bankConfigurationRepository.findAll()).thenReturn(List.of(config));
+
+        String bankId = securityContext.getCurrentBankId();
+
+        assertThat(bankId).isEqualTo("ISSUER_BANK_SLASH");
     }
 
     @Test

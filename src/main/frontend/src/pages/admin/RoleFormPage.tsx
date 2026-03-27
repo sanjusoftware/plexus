@@ -16,7 +16,6 @@ const RoleFormPage = () => {
   const [availableAuthorities, setAvailableAuthorities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<RoleMapping>({ name: roleName || '', authorities: [] });
-  const [isRoleNameEdited, setIsRoleNameEdited] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -36,7 +35,6 @@ const RoleFormPage = () => {
           const mapping = mappings.find(m => m.name === roleName);
           if (mapping) {
             setFormData({ name: mapping.name, authorities: [...mapping.authorities] });
-            setIsRoleNameEdited(true);
           } else {
             setError(`Role "${roleName}" not found.`);
           }
@@ -154,7 +152,6 @@ const RoleFormPage = () => {
                   className={`w-full border-2 border-white rounded-[1.5rem] p-6 pl-16 font-mono font-black text-2xl text-blue-700 transition focus:border-blue-500 shadow-sm uppercase placeholder:text-blue-100 ${isEditing ? 'bg-blue-100/30 cursor-not-allowed border-transparent' : 'bg-white'}`}
                   value={formData.name}
                   onChange={(e) => {
-                    setIsRoleNameEdited(true);
                     setFormData({...formData, name: e.target.value.toUpperCase()});
                   }}
                   placeholder="e.g. CUSTOMER_SUPPORT"

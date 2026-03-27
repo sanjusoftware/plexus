@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Save, X, Tag, Layers, ChevronDown, ChevronRight, CheckCircle2, AlertCircle, Info } from 'lucide-react';
-import StyledSelect from '../../components/StyledSelect';
+import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 interface TierCondition {
   attributeName: string;
