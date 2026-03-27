@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Save, X, Shield, CheckCircle2, AlertCircle, Loader2, Lock, CheckSquare, Square, MinusSquare } from 'lucide-react';
+import { Save, X, Shield, CheckCircle2, AlertCircle, Loader2, Lock, CheckSquare, Square, MinusSquare, Circle } from 'lucide-react';
 
 interface RoleMapping {
   name: string;
@@ -57,12 +57,19 @@ const RoleFormPage = () => {
   };
 
   const groupAuthorities = (authorities: string[]) => {
-    const groups: { [key: string]: string[] } = {};
+    const groups: { [category: string]: { [subCategory: string]: string[] } } = {};
     authorities.forEach(auth => {
       const parts = auth.split(':');
       const category = parts.length > 1 ? parts[0] : 'other';
-      if (!groups[category]) groups[category] = [];
-      groups[category].push(auth);
+
+      let subCategory = '';
+      if (parts.length > 2) {
+        subCategory = parts.slice(1, -1).join(':');
+      }
+
+      if (!groups[category]) groups[category] = {};
+      if (!groups[category][subCategory]) groups[category][subCategory] = [];
+      groups[category][subCategory].push(auth);
     });
     return groups;
   };
@@ -78,8 +85,28 @@ const RoleFormPage = () => {
     setFormData({ ...formData, authorities: Array.from(newAuths) });
   };
 
+  const toggleSubCategory = (auths: string[]) => {
+    const newAuths = new Set(formData.authorities);
+    const allSelected = auths.every(a => newAuths.has(a));
+    if (allSelected) {
+      auths.forEach(a => newAuths.delete(a));
+    } else {
+      auths.forEach(a => newAuths.add(a));
+    }
+    setFormData({ ...formData, authorities: Array.from(newAuths) });
+  };
+
   const formatCategory = (category: string) => {
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase() + " Management Permissions";
+  };
+
+  const formatSubCategory = (subCategory: string) => {
+    return subCategory.split(':').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
+  };
+
+  const formatAction = (auth: string) => {
+    const parts = auth.split(':');
+    return parts[parts.length - 1].toUpperCase();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,9 +191,10 @@ const RoleFormPage = () => {
           <div>
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-8 px-4">Select Authorized Operations</label>
             <div className="space-y-10">
-              {Object.entries(groupAuthorities(availableAuthorities)).map(([category, auths]) => {
-                const selectedInCat = auths.filter(a => formData.authorities.includes(a));
-                const isAllSelected = selectedInCat.length === auths.length;
+              {Object.entries(groupAuthorities(availableAuthorities)).map(([category, subGroups]) => {
+                const allAuthsInCategory = Object.values(subGroups).flat();
+                const selectedInCat = allAuthsInCategory.filter(a => formData.authorities.includes(a));
+                const isAllSelected = selectedInCat.length === allAuthsInCategory.length;
                 const isSomeSelected = selectedInCat.length > 0 && !isAllSelected;
 
                 return (
@@ -176,12 +204,12 @@ const RoleFormPage = () => {
                         <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
                         {formatCategory(category)}
                         <span className="ml-4 text-[10px] text-gray-400 bg-white px-3 py-1 rounded-full border border-gray-200">
-                          {selectedInCat.length} / {auths.length} Selected
+                          {selectedInCat.length} / {allAuthsInCategory.length} Selected
                         </span>
                       </h3>
                       <button
                         type="button"
-                        onClick={() => toggleCategory(category, auths)}
+                        onClick={() => toggleCategory(category, allAuthsInCategory)}
                         className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition px-4 py-2 bg-white rounded-xl border border-gray-100 shadow-sm"
                       >
                         {isAllSelected ? <CheckSquare className="w-4 h-4" /> : isSomeSelected ? <MinusSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
@@ -189,21 +217,82 @@ const RoleFormPage = () => {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {auths.map((auth) => (
-                        <label key={auth} className={`flex items-center p-4 rounded-2xl border-2 transition cursor-pointer hover:shadow-md ${formData.authorities.includes(auth) ? 'bg-white border-blue-500 shadow-blue-100' : 'bg-white/50 border-white hover:border-blue-200'}`}>
-                          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition ${formData.authorities.includes(auth) ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-200'}`}>
-                            {formData.authorities.includes(auth) && <CheckCircle2 className="w-4 h-4 text-white" />}
+                    <div className="space-y-6">
+                      {/* Sub-groups */}
+                      {Object.entries(subGroups)
+                        .sort(([a], [b]) => {
+                          if (a === '') return -1;
+                          if (b === '') return 1;
+                          return a.localeCompare(b);
+                        })
+                        .map(([subCategory, auths]) => {
+                        if (subCategory === '') {
+                          // Render 2-part permissions (no subcategory) in a grid
+                          return (
+                            <div key="no-sub" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {auths.map((auth) => (
+                                <label key={auth} className={`flex items-center p-4 rounded-2xl border-2 transition cursor-pointer hover:shadow-md ${formData.authorities.includes(auth) ? 'bg-white border-blue-500 shadow-blue-100' : 'bg-white/50 border-white hover:border-blue-200'}`}>
+                                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition ${formData.authorities.includes(auth) ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-200'}`}>
+                                    {formData.authorities.includes(auth) && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                  </div>
+                                  <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={formData.authorities.includes(auth)}
+                                    onChange={() => toggleAuthority(auth)}
+                                  />
+                                  <span className="ml-4 text-[10px] font-black font-mono text-gray-700 tracking-tighter uppercase truncate" title={auth}>{auth}</span>
+                                </label>
+                              ))}
+                            </div>
+                          );
+                        }
+
+                        const selectedInSub = auths.filter(a => formData.authorities.includes(a));
+                        const isAllSubSelected = selectedInSub.length === auths.length;
+                        const isSomeSubSelected = selectedInSub.length > 0 && !isAllSubSelected;
+
+                        return (
+                          <div key={subCategory} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="flex items-center">
+                              <div className="p-3 bg-blue-50 rounded-xl mr-4">
+                                <Circle className="w-4 h-4 text-blue-500 fill-blue-500" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-black text-gray-900 uppercase tracking-tight">{formatSubCategory(subCategory)}</h4>
+                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{selectedInSub.length} / {auths.length} Selected</p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3">
+                              {auths.map((auth) => (
+                                <button
+                                  key={auth}
+                                  type="button"
+                                  onClick={() => toggleAuthority(auth)}
+                                  className={`flex items-center px-4 py-2 rounded-xl border-2 transition text-[10px] font-black uppercase tracking-tight ${formData.authorities.includes(auth) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-gray-50 border-transparent text-gray-400 hover:border-gray-200'}`}
+                                >
+                                  <div className={`w-4 h-4 rounded-md border flex items-center justify-center mr-2 transition ${formData.authorities.includes(auth) ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'}`}>
+                                    {formData.authorities.includes(auth) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                                  </div>
+                                  {formatAction(auth)}
+                                </button>
+                              ))}
+
+                              <div className="h-6 w-px bg-gray-100 mx-2 hidden md:block"></div>
+
+                              <button
+                                type="button"
+                                onClick={() => toggleSubCategory(auths)}
+                                className="flex items-center space-x-1.5 text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition"
+                              >
+                                {isAllSubSelected ? <CheckSquare className="w-3.5 h-3.5" /> : isSomeSubSelected ? <MinusSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+                                <span>{isAllSubSelected ? 'Deselect' : 'Select All'}</span>
+                              </button>
+                            </div>
                           </div>
-                          <input
-                            type="checkbox"
-                            className="hidden"
-                            checked={formData.authorities.includes(auth)}
-                            onChange={() => toggleAuthority(auth)}
-                          />
-                          <span className="ml-4 text-[10px] font-black font-mono text-gray-700 tracking-tighter uppercase truncate" title={auth}>{auth}</span>
-                        </label>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
