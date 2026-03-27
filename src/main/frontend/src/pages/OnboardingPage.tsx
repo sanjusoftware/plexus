@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Eye, EyeOff, Save } from 'lucide-react';
 import axios from 'axios';
@@ -38,17 +38,7 @@ const OnboardingPage = () => {
   const [message, setMessage] = useState('');
   const [showSecret, setShowSecret] = useState(false);
 
-  useEffect(() => {
-    if (!isAdmin) {
-      fetchCaptcha();
-    }
-
-    if (isEditing) {
-      fetchBankData();
-    }
-  }, [id]);
-
-  const fetchBankData = async () => {
+  const fetchBankData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get(`/api/v1/banks/${id}`);
@@ -76,7 +66,17 @@ const OnboardingPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      fetchCaptcha();
+    }
+
+    if (isEditing) {
+      fetchBankData();
+    }
+  }, [id, isAdmin, isEditing, fetchBankData]);
 
   const fetchCaptcha = async () => {
     try {

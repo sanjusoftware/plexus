@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Trash2, Loader2, Save, X, ShieldCheck, Tag, AlertCircle } from 'lucide-react';
+import { Trash2, Loader2, Save, X, ShieldCheck, Tag, AlertCircle } from 'lucide-react';
 
 interface FeatureComponent {
   id: number;
@@ -14,20 +14,6 @@ interface ProductType {
   id: number;
   code: string;
   name: string;
-}
-
-interface Product {
-  id: number;
-  code: string;
-  name: string;
-  productTypeCode: string;
-  category: string;
-  status: string;
-  activationDate: string;
-  tagline: string;
-  features: any[];
-  pricing: any[];
-  fullDescription: string;
 }
 
 const ProductFormPage = () => {

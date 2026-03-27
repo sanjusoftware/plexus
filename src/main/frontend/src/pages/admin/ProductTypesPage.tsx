@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Save, X, List, CheckCircle2, Archive, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Save, X, List, CheckCircle2, AlertCircle } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
