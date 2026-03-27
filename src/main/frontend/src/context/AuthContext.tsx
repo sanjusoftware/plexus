@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { authService, UserProfile } from '../services/AuthService';
 import axios from 'axios';
-import { ShieldAlert, X } from 'lucide-react';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -11,6 +10,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   bankId: string | null;
   permissionsMap: Record<string, string[]>;
+  toast: { message: string; type: 'error' | 'success' } | null;
+  setToast: (toast: { message: string; type: 'error' | 'success' } | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -121,32 +122,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout,
       isAuthenticated: !!user,
       bankId: user?.bank_id || null,
-      permissionsMap
+      permissionsMap,
+      toast,
+      setToast
     }}>
       {children}
-
-      {/* Global Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-          <div className={`flex items-center space-x-3 p-4 rounded-xl shadow-2xl border ${
-            toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'
-          }`}>
-            <div className={`p-2 rounded-lg ${toast.type === 'error' ? 'bg-red-100' : 'bg-green-100'}`}>
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-            <div className="flex-1 pr-4">
-              <p className="text-sm font-bold">Access Denied</p>
-              <p className="text-xs opacity-90">{toast.message}</p>
-            </div>
-            <button
-              onClick={() => setToast(null)}
-              className="p-1 hover:bg-black/5 rounded-full transition"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
     </AuthContext.Provider>
   );
 };
