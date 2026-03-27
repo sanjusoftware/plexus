@@ -32,18 +32,29 @@ const RoleManagementPage = () => {
   };
 
   const groupAuthorities = (authorities: string[]) => {
-    const groups: { [key: string]: string[] } = {};
+    const groups: { [category: string]: { [subCategory: string]: string[] } } = {};
     authorities.forEach(auth => {
       const parts = auth.split(':');
       const category = parts.length > 1 ? parts[0] : 'other';
-      if (!groups[category]) groups[category] = [];
-      groups[category].push(auth);
+
+      let subCategory = '';
+      if (parts.length > 2) {
+        subCategory = parts.slice(1, -1).join(':');
+      }
+
+      if (!groups[category]) groups[category] = {};
+      if (!groups[category][subCategory]) groups[category][subCategory] = [];
+      groups[category][subCategory].push(auth);
     });
     return groups;
   };
 
   const formatCategory = (category: string) => {
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase() + " Management Permissions";
+  };
+
+  const formatSubCategory = (subCategory: string) => {
+    return subCategory.split(':').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
   };
 
   const fetchInitialData = async () => {
@@ -181,16 +192,25 @@ const RoleManagementPage = () => {
                 {isExpanded && (
                   <div className="px-8 pb-8 pt-2 border-t border-gray-50 bg-gray-50/30 animate-in slide-in-from-top-2 duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                      {Object.keys(grouped).length > 0 ? Object.keys(grouped).map(category => (
+                      {Object.keys(grouped).length > 0 ? Object.entries(grouped).map(([category, subGroups]) => (
                         <div key={category} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
                           <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4 border-b border-blue-50 pb-2">
                             {formatCategory(category)}
                           </h4>
-                          <div className="space-y-2">
-                            {grouped[category].map((auth, idx) => (
-                              <div key={idx} className="flex items-center text-[11px] text-gray-600 font-mono font-bold">
-                                <CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500 flex-shrink-0" />
-                                <span className="truncate">{auth}</span>
+                          <div className="space-y-4">
+                            {Object.entries(subGroups).map(([subCategory, auths]) => (
+                              <div key={subCategory}>
+                                {subCategory !== '' && (
+                                  <div className="text-[9px] font-black text-gray-400 uppercase mb-2 ml-1">{formatSubCategory(subCategory)}</div>
+                                )}
+                                <div className="space-y-1.5">
+                                  {auths.map((auth, idx) => (
+                                    <div key={idx} className="flex items-center text-[11px] text-gray-600 font-mono font-bold pl-1">
+                                      <CheckCircle2 className="w-3 h-3 mr-2 text-green-500 flex-shrink-0" />
+                                      <span className="truncate">{auth}</span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             ))}
                           </div>
