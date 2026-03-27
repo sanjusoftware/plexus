@@ -71,11 +71,11 @@ const RoleManagementPage = () => {
 
   const handleDelete = async (roleName: string) => {
     try {
-      await axios.post('/api/v1/roles/mapping', { roleName, authorities: [] });
-      setSuccess('Permissions cleared for role.');
+      await axios.delete(`/api/v1/roles/${roleName}`);
+      setSuccess('Role deleted successfully.');
       fetchInitialData();
     } catch (err: any) {
-      setError('Failed to clear role mapping.');
+      setError('Failed to delete role mapping.');
     }
   };
 
@@ -217,9 +217,9 @@ const RoleManagementPage = () => {
         isOpen={showDeleteConfirm}
         onClose={() => { setShowDeleteConfirm(false); setRoleToDelete(null); }}
         onConfirm={() => roleToDelete && handleDelete(roleToDelete)}
-        title="Confirm Revocation"
-        message={`Warning: This will strip all permissions from the role "${roleToDelete}". Continue?`}
-        confirmText="Confirm & Revoke"
+        title="Confirm Deletion"
+        message={`Warning: This will permanently delete the role "${roleToDelete}" and all its associated permission mappings. This action cannot be undone. Continue?`}
+        confirmText="Confirm & Delete"
         variant="danger"
       />
     </div>

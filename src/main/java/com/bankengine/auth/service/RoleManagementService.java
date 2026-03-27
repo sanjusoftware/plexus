@@ -38,6 +38,19 @@ public class RoleManagementService extends BaseService {
         permissionMappingService.evictAllRolePermissionsCache();
     }
 
+    @Transactional
+    public void deleteRole(String roleName) {
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new NotFoundException("Role not found with name: " + roleName));
+
+        if ("SYSTEM_ADMIN".equals(role.getName())) {
+            throw new AccessDeniedException("SYSTEM_ADMIN role cannot be deleted.");
+        }
+
+        roleRepository.delete(role);
+        permissionMappingService.evictAllRolePermissionsCache();
+    }
+
     @Transactional(readOnly = true)
     public Set<String> getAuthoritiesByRoleName(String roleName) {
         Role role = roleRepository.findByName(roleName)

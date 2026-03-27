@@ -18,7 +18,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -122,5 +122,47 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$", isA(java.util.List.class)))
                 .andExpect(jsonPath("$", hasItem("pricing:component:read")))
                 .andExpect(jsonPath("$", hasItem(READ_AUTH)));
+    }
+
+    @Test
+    @WithMockRole(roles = {"ADMIN"})
+    void shouldCreateRoleWithEmptyAuthorities() throws Exception {
+        String roleName = "EMPTY_ROLE";
+        RoleAuthorityMappingDto dto = getMappingDto(roleName, Set.of());
+
+        mockMvc.perform(postWithCsrf(ROLE_API + "/mapping")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get(ROLE_API + "/{roleName}", roleName))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @WithMockRole(roles = {"ADMIN"})
+    void shouldDeleteRoleMapping() throws Exception {
+        String roleName = "TO_BE_DELETED";
+        txHelper.doInTransaction(() -> {
+            txHelper.getOrCreateRoleInDb(roleName, Set.of("some:permission"));
+        });
+
+        mockMvc.perform(deleteWithCsrf(ROLE_API + "/{roleName}", roleName))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(ROLE_API + "/{roleName}", roleName))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockRole(roles = {"ADMIN"})
+    void shouldNotDeleteSystemAdminRole() throws Exception {
+        txHelper.doInTransaction(() -> {
+            txHelper.getOrCreateRoleInDb("SYSTEM_ADMIN", Set.of("system:all"));
+        });
+
+        mockMvc.perform(deleteWithCsrf(ROLE_API + "/{roleName}", "SYSTEM_ADMIN"))
+                .andExpect(status().isForbidden());
     }
 }
