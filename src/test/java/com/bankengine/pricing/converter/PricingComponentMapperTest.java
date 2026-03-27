@@ -21,8 +21,10 @@ class PricingComponentMapperTest {
     void testComponentMapper() {
         PricingComponent component = new PricingComponent();
         component.setName("Test Comp");
+        component.setDescription("Test Description");
         PricingComponentResponse response = mapper.toResponseDto(component);
         assertEquals("Test Comp", response.getName());
+        assertEquals("Test Description", response.getDescription());
     }
 
     @Test
