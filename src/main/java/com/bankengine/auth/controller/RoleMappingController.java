@@ -50,6 +50,26 @@ public class RoleMappingController {
     }
 
     @Operation(
+            summary = "Delete Role Mapping",
+            description = "Deletes the specified role and all its associated authority mappings. Requires 'auth:role:write' authority.",
+            tags = {"Role Management"},
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Role mapping deleted successfully."),
+                    @ApiResponse(responseCode = "404", description = "Role not found."),
+                    @ApiResponse(responseCode = "403", description = "Forbidden. Missing 'auth:role:write' authority or attempting to delete SYSTEM_ADMIN.")
+            }
+    )
+    @DeleteMapping("/{roleName}")
+    @PreAuthorize("hasAuthority('auth:role:write')")
+    public ResponseEntity<Void> deleteRoleMapping(
+            @Parameter(description = "The unique name of the role to delete")
+            @PathVariable String roleName
+    ) {
+        roleManagementService.deleteRole(roleName);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
             summary = "Retrieve Authorities by Role Name",
             description = "Fetches the complete set of authorities (permissions) currently mapped to the given role. Requires 'auth:role:read' authority.",
             tags = {"Role Management"},

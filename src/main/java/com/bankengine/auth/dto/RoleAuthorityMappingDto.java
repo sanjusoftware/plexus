@@ -13,7 +13,6 @@ public class RoleAuthorityMappingDto {
     @NotBlank(message = "Role name cannot be empty.")
     private String roleName;
 
-    @NotEmpty(message = "Authorities set cannot be empty.")
     @ValidAuthorities
     private Set<String> authorities;
 
