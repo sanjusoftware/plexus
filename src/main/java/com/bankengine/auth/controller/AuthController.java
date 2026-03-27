@@ -102,9 +102,19 @@ public class AuthController {
         OAuth2User principal = (OAuth2User) authentication.getPrincipal();
 
         // 1. Extract Identity from Principal (Injected by CustomOidcUserService)
-        String name = principal.getAttribute("name") != null ? principal.getAttribute("name") : "unknown user";
         String sub = principal.getAttribute("sub") != null ? principal.getAttribute("sub") : "unknown-sub";
+        String name = principal.getAttribute("name") != null ? (String) principal.getAttribute("name") : null;
         String picture = principal.getAttribute("picture");
+
+        // Use 'sub' as 'name' if name is null, blank, or 'unknown user'
+        if ((name == null || name.trim().isEmpty() || "unknown user".equalsIgnoreCase(name.trim()))
+                && !"unknown-sub".equals(sub)) {
+            name = sub;
+        }
+
+        if (name == null || name.trim().isEmpty()) {
+            name = "unknown user";
+        }
 
         // 2. Extract Email with fallbacks
         String email = principal.getAttribute("preferred_username") != null
