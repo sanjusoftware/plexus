@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { HasPermission } from '../../components/HasPermission';
 
 interface TierCondition {
   attributeName: string;
@@ -104,12 +105,14 @@ const PricingComponentsPage = () => {
             <p className="text-gray-500 font-medium mt-1">Manage reusable pricing structures with multi-tier logic.</p>
           </div>
         </div>
-        <button
-          onClick={() => navigate('/pricing-components/create')}
-          className="bg-blue-600 text-white px-7 py-3 rounded-2xl flex items-center hover:bg-blue-700 transition font-black shadow-xl shadow-blue-100 uppercase tracking-widest text-xs"
-        >
-          <Plus className="w-5 h-5 mr-2" /> New Component
-        </button>
+        <HasPermission action="POST" path="/api/v1/pricing-components">
+          <button
+            onClick={() => navigate('/pricing-components/create')}
+            className="bg-blue-600 text-white px-7 py-3 rounded-2xl flex items-center hover:bg-blue-700 transition font-black shadow-xl shadow-blue-100 uppercase tracking-widest text-xs"
+          >
+            <Plus className="w-5 h-5 mr-2" /> New Component
+          </button>
+        </HasPermission>
       </div>
 
       <div className="bg-blue-50/50 border-l-4 border-blue-400 p-6 rounded-r-2xl shadow-sm flex items-start space-x-4">
@@ -164,10 +167,16 @@ const PricingComponentsPage = () => {
                     </td>
                     <td className="px-6 py-6 whitespace-nowrap text-right text-sm font-medium space-x-1">
                       {comp.status === 'DRAFT' && (
-                        <button onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} className="text-green-600 hover:bg-green-50 p-2.5 rounded-xl transition border border-transparent hover:border-green-100" title="Activate Production Mode"><CheckCircle2 className="w-4 h-4" /></button>
+                        <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
+                          <button onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} className="text-green-600 hover:bg-green-50 p-2.5 rounded-xl transition border border-transparent hover:border-green-100" title="Activate Production Mode"><CheckCircle2 className="w-4 h-4" /></button>
+                        </HasPermission>
                       )}
-                      <button onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} className="text-blue-600 hover:bg-blue-50 p-2.5 rounded-xl transition border border-transparent hover:border-blue-100" title="Edit Structure"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} className="text-red-600 hover:bg-red-50 p-2.5 rounded-xl transition border border-transparent hover:border-red-100" title="Permanently Delete"><Trash2 className="w-4 h-4" /></button>
+                      <HasPermission action="PUT" path="/api/v1/pricing-components/*">
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} className="text-blue-600 hover:bg-blue-50 p-2.5 rounded-xl transition border border-transparent hover:border-blue-100" title="Edit Structure"><Edit2 className="w-4 h-4" /></button>
+                      </HasPermission>
+                      <HasPermission action="DELETE" path="/api/v1/pricing-components/*">
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} className="text-red-600 hover:bg-red-50 p-2.5 rounded-xl transition border border-transparent hover:border-red-100" title="Permanently Delete"><Trash2 className="w-4 h-4" /></button>
+                      </HasPermission>
                     </td>
                   </tr>
                   {expandedRows.has(comp.id) && (

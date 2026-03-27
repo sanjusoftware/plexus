@@ -5,6 +5,7 @@ import {
   Building2, Package, Loader2, Plus, ShieldCheck, Info, Users, Tag, Layers, Database, X
 } from 'lucide-react';
 import axios from 'axios';
+import { HasPermission } from '../components/HasPermission';
 
 interface StatsSet {
   products: Record<string, number>;
@@ -172,22 +173,22 @@ const Dashboard = () => {
           <p className="text-gray-500 mt-1">Real-time metrics and platform health.</p>
         </div>
         <div className="flex space-x-3">
-          {authorities.includes('system:bank:write') && (
+          <HasPermission action="POST" path="/api/v1/banks">
             <button
               onClick={() => navigate('/onboarding?admin=true')}
               className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-sm hover:shadow flex items-center"
             >
               <Plus className="h-5 w-5 mr-2" /> Add New Bank
             </button>
-          )}
-          {authorities.includes('catalog:product:create') && (
+          </HasPermission>
+          <HasPermission action="POST" path="/api/v1/products">
             <button
-              onClick={() => navigate('/products/new')}
+              onClick={() => navigate('/products/create')}
               className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-sm hover:shadow flex items-center"
             >
               <Plus className="h-5 w-5 mr-2" /> New Product
             </button>
-          )}
+          </HasPermission>
         </div>
       </div>
 

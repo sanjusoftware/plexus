@@ -10,12 +10,14 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   bankId: string | null;
+  permissionsMap: Record<string, string[]>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [permissionsMap, setPermissionsMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
 
@@ -47,6 +49,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // 2. Fetch User Profile
         const currentUser = await authService.getUser();
         setUser(currentUser);
+
+        // 3. Fetch Permissions Map if authenticated
+        if (currentUser) {
+          const map = await authService.getPermissionsMap();
+          setPermissionsMap(map);
+        }
       } catch (err) {
         // If unauthenticated (401), currentUser will be null via authService.getUser()
         // We only log actual connection errors here
@@ -112,7 +120,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       isAuthenticated: !!user,
-      bankId: user?.bank_id || null
+      bankId: user?.bank_id || null,
+      permissionsMap
     }}>
       {children}
 

@@ -44,6 +44,16 @@ export class AuthService {
     }
   }
 
+  public async getPermissionsMap(): Promise<Record<string, string[]>> {
+    try {
+      const response = await axios.get('/api/v1/roles/permissions-map');
+      return response.data || {};
+    } catch (err) {
+      console.error('Failed to fetch permissions map', err);
+      return {};
+    }
+  }
+
   public async logout() {
     try {
       const csrfToken = this.getCsrfToken();
