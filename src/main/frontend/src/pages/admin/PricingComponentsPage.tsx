@@ -38,14 +38,16 @@ interface PricingComponent {
   pricingTiers: PricingTier[];
 }
 
+import { useAuth } from '../../context/AuthContext';
+
 const PricingComponentsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setToast } = useAuth();
   const [components, setComponents] = useState<PricingComponent[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const fetchComponents = async () => {
     setLoading(true);
@@ -61,11 +63,7 @@ const PricingComponentsPage = () => {
 
   useEffect(() => {
     fetchComponents();
-    if (location.state?.success) {
-      setSuccess(location.state.success);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location]);
+  }, []);
 
   const toggleExpand = (id: number) => {
     const newExpanded = new Set(expandedRows);
@@ -77,7 +75,7 @@ const PricingComponentsPage = () => {
   const handleActivate = async (id: number) => {
     try {
       await axios.post(`/api/v1/pricing-components/${id}/activate`);
-      setSuccess('Component activated and is now ready for production use.');
+      setToast({ message: 'Component activated and is now ready for production use.', type: 'success' });
       fetchComponents();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Activation failed.');
@@ -88,7 +86,7 @@ const PricingComponentsPage = () => {
     if (!window.confirm('Are you sure? Components cannot be deleted if they are linked to active products.')) return;
     try {
       await axios.delete(`/api/v1/pricing-components/${id}`);
-      setSuccess('Component deleted.');
+      setToast({ message: 'Component deleted successfully.', type: 'success' });
       fetchComponents();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Deletion failed.');
@@ -124,7 +122,6 @@ const PricingComponentsPage = () => {
       </div>
 
       {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl text-red-700 text-sm font-bold flex items-center shadow-sm"><AlertCircle className="w-4 h-4 mr-3" />{error}</div>}
-      {success && <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl text-green-700 text-sm font-bold flex items-center shadow-sm"><CheckCircle2 className="w-4 h-4 mr-3" />{success}</div>}
 
       {loading ? (
         <div className="flex justify-center p-24 bg-white rounded-3xl border border-gray-100"><Loader2 className="w-12 h-12 animate-spin text-blue-600" /></div>
