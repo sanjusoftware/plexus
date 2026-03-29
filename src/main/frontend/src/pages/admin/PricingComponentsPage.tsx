@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
+import { useAuth } from '../../context/AuthContext';
 
 interface TierCondition {
   attributeName: string;
@@ -37,8 +38,6 @@ interface PricingComponent {
   status: string;
   pricingTiers: PricingTier[];
 }
-
-import { useAuth } from '../../context/AuthContext';
 
 const PricingComponentsPage = () => {
   const navigate = useNavigate();
