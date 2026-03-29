@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Loader2, Save, X, AlertCircle } from 'lucide-react';
 import StyledSelect from '../../components/StyledSelect';
+import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 const PricingMetadataFormPage = () => {
   const { attributeKey } = useParams<{ attributeKey?: string }>();
   const navigate = useNavigate();
+  const { setEntityName } = useBreadcrumb();
   const isEditing = !!attributeKey;
 
   const [loading, setLoading] = useState(isEditing);
@@ -24,6 +26,7 @@ const PricingMetadataFormPage = () => {
           const response = await axios.get('/api/v1/pricing-metadata');
           const meta = response.data.find((m: any) => m.attributeKey === attributeKey);
           setFormData({ attributeKey: meta.attributeKey, displayName: meta.displayName, dataType: meta.dataType });
+          setEntityName(meta.displayName);
           setIsKeyEdited(true);
         } catch (err: any) {
           setError('Failed to fetch pricing metadata.');
@@ -33,7 +36,7 @@ const PricingMetadataFormPage = () => {
       };
       fetchMetadata();
     }
-  }, [attributeKey, isEditing]);
+  }, [attributeKey, isEditing, setEntityName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

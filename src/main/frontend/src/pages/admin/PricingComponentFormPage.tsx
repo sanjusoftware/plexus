@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Trash2, Loader2, Save, X, Layers, AlertCircle } from 'lucide-react';
+import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 const PricingComponentFormPage = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const { setEntityName } = useBreadcrumb();
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(true);
@@ -43,6 +45,7 @@ const PricingComponentFormPage = () => {
               description: comp.description,
               pricingTiers: comp.pricingTiers || []
             });
+            setEntityName(comp.name);
             setIsCodeEdited(true);
           } else {
             setError('Pricing component not found.');
@@ -56,7 +59,7 @@ const PricingComponentFormPage = () => {
     };
 
     fetchData();
-  }, [id, isEditing]);
+  }, [id, isEditing, setEntityName]);
 
   const handleTierChange = (index: number, field: string, value: any) => {
     const newTiers = [...formData.pricingTiers];

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Loader2, Save, X, AlertCircle } from 'lucide-react';
+import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 const ProductTypeFormPage = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const { setEntityName } = useBreadcrumb();
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(isEditing);
@@ -22,6 +24,7 @@ const ProductTypeFormPage = () => {
           const type = response.data.find((t: any) => t.id.toString() === id);
           if (type) {
             setFormData({ name: type.name, code: type.code });
+            setEntityName(type.name);
             setIsCodeEdited(true);
           } else {
             setError('Product type not found.');
@@ -34,7 +37,7 @@ const ProductTypeFormPage = () => {
       };
       fetchType();
     }
-  }, [id, isEditing]);
+  }, [id, isEditing, setEntityName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

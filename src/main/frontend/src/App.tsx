@@ -18,6 +18,7 @@ import RoleFormPage from './pages/admin/RoleFormPage';
 import PricingComponentFormPage from './pages/admin/PricingComponentFormPage';
 import ErrorPage from './pages/ErrorPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { BreadcrumbProvider } from './context/BreadcrumbContext';
 import LoggedInUserLayout from './components/LoggedInUserLayout';
 import PermissionElement from './components/PermissionElement';
 import { Loader2 } from 'lucide-react';
@@ -38,9 +39,11 @@ const ProtectedLayout = () => {
   }
 
   return (
-    <LoggedInUserLayout>
-      <Outlet />
-    </LoggedInUserLayout>
+    <BreadcrumbProvider>
+      <LoggedInUserLayout>
+        <Outlet />
+      </LoggedInUserLayout>
+    </BreadcrumbProvider>
   );
 };
 

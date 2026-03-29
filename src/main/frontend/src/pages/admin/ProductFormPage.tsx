@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Trash2, Loader2, Save, X, ShieldCheck, Tag, AlertCircle } from 'lucide-react';
+import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 interface FeatureComponent {
   id: number;
@@ -19,6 +20,7 @@ interface ProductType {
 const ProductFormPage = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const { setEntityName } = useBreadcrumb();
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,7 @@ const ProductFormPage = () => {
 
         if (isEditing && p.data) {
           const prod = p.data;
+          setEntityName(prod.name);
           setFormData({
             code: prod.code,
             name: prod.name,
@@ -77,7 +80,7 @@ const ProductFormPage = () => {
     };
 
     fetchData();
-  }, [id, isEditing]);
+  }, [id, isEditing, setEntityName]);
 
   const addFeatureLink = () => {
     setFormData({

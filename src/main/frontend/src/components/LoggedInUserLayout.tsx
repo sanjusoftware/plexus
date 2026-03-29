@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Breadcrumbs from './Breadcrumbs';
 import {
   Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield, ChevronLeft, ChevronRight, ShieldAlert, X
 } from 'lucide-react';
@@ -158,6 +159,7 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
 
         {/* Content Area */}
         <section className="flex-1 overflow-y-auto p-8">
+          <Breadcrumbs />
           {children}
         </section>
       </main>

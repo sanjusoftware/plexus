@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Save, X, Shield, CheckCircle2, AlertCircle, Loader2, Lock, CheckSquare, Square, MinusSquare, Circle } from 'lucide-react';
+import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 interface RoleMapping {
   name: string;
@@ -11,6 +12,7 @@ interface RoleMapping {
 const RoleFormPage = () => {
   const { roleName } = useParams<{ roleName?: string }>();
   const navigate = useNavigate();
+  const { setEntityName } = useBreadcrumb();
   const isEditing = !!roleName;
 
   const [availableAuthorities, setAvailableAuthorities] = useState<string[]>([]);
@@ -35,6 +37,7 @@ const RoleFormPage = () => {
           const mapping = mappings.find(m => m.name === roleName);
           if (mapping) {
             setFormData({ name: mapping.name, authorities: [...mapping.authorities] });
+            setEntityName(mapping.name);
           } else {
             setError(`Role "${roleName}" not found.`);
           }
@@ -47,7 +50,7 @@ const RoleFormPage = () => {
     };
 
     fetchData();
-  }, [roleName, isEditing]);
+  }, [roleName, isEditing, setEntityName]);
 
   const toggleAuthority = (auth: string) => {
     const newAuths = new Set(formData.authorities);
