@@ -111,6 +111,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/check-bank",
                                 "/api/v1/auth/csrf",
                                 "/dashboard",
+                                "/banks",
+                                "/banks/**",
                                 "/product-types",
                                 "/product-types/**",
                                 "/pricing-metadata",
