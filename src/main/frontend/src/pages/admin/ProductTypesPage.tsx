@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Save, X, List, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, List, CheckCircle2, AlertCircle } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { HasPermission } from '../../components/HasPermission';
 
 interface ProductType {
@@ -13,12 +13,9 @@ interface ProductType {
 }
 
 const ProductTypesPage = () => {
+  const navigate = useNavigate();
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingType, setEditingType] = useState<ProductType | null>(null);
-  const [formData, setFormData] = useState({ name: '', code: '' });
-  const [isCodeEdited, setIsCodeEdited] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -39,27 +36,6 @@ const ProductTypesPage = () => {
   useEffect(() => {
     fetchProductTypes();
   }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    try {
-      if (editingType) {
-        await axios.put(`/api/v1/product-types/${editingType.id}`, formData);
-        setSuccess('Product type updated successfully.');
-      } else {
-        await axios.post('/api/v1/product-types', formData);
-        setSuccess('Product type created successfully.');
-      }
-      setIsModalOpen(false);
-      setEditingType(null);
-      setFormData({ name: '', code: '' });
-      fetchProductTypes();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred while saving.');
-    }
-  };
 
   const handleAction = async (id: number, action: string) => {
     try {
@@ -96,35 +72,6 @@ const ProductTypesPage = () => {
     setShowConfirmModal(true);
   };
 
-  const handleCloseModal = () => {
-    let isDirty = false;
-    if (editingType) {
-      isDirty = formData.name !== editingType.name || formData.code !== editingType.code;
-    } else {
-      isDirty = formData.name !== '' || formData.code !== '';
-    }
-
-    if (isDirty && !window.confirm('You will lose unsaved changes. Are you sure?')) {
-      return;
-    }
-    setIsModalOpen(false);
-  };
-
-  useEscapeKey(handleCloseModal, isModalOpen);
-
-  const openModal = (type?: ProductType) => {
-    if (type) {
-      setEditingType(type);
-      setFormData({ name: type.name, code: type.code });
-      setIsCodeEdited(true);
-    } else {
-      setEditingType(null);
-      setFormData({ name: '', code: '' });
-      setIsCodeEdited(false);
-    }
-    setIsModalOpen(true);
-  };
-
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border">
@@ -136,7 +83,7 @@ const ProductTypesPage = () => {
         </div>
         <HasPermission action="POST" path="/api/v1/product-types">
           <button
-            onClick={() => openModal()}
+            onClick={() => navigate('/product-types/create')}
             className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center hover:bg-blue-700 transition font-bold shadow-lg shadow-blue-100"
           >
             <Plus className="w-5 h-5 mr-2" /> Add New Type
@@ -200,7 +147,7 @@ const ProductTypesPage = () => {
                       {type.status !== 'ARCHIVED' && (
                         <>
                           <HasPermission action="PUT" path="/api/v1/product-types/*">
-                            <button onClick={() => openModal(type)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => navigate(`/product-types/edit/${type.id}`)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/product-types/*">
                             <button onClick={() => triggerConfirmAction(type)} className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="w-4 h-4" /></button>
@@ -213,65 +160,6 @@ const ProductTypesPage = () => {
               )}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-6 border-b pb-4">
-              <h2 className="text-xl font-bold text-gray-900">{editingType ? 'Edit' : 'New'} Product Type</h2>
-              <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 transition p-2 hover:bg-gray-100 rounded-full"><X className="w-6 h-6" /></button>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
-                <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
-                  <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-                  <p className="text-xs font-bold">{error}</p>
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Display Name</label>
-                <input
-                  type="text"
-                  required
-                  className="block w-full border border-gray-200 rounded-xl shadow-sm p-3.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  value={formData.name}
-                  onChange={(e) => {
-                    const name = e.target.value;
-                    let code = formData.code;
-                    if (!editingType && !isCodeEdited) {
-                      code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
-                    }
-                    setFormData({ ...formData, name, code });
-                  }}
-                  placeholder="e.g. Savings Accounts"
-                />
-                <p className="mt-2 text-[10px] text-gray-400 leading-relaxed italic">The user-friendly name displayed in reports and customer interfaces.</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Unique Code</label>
-                <input
-                  type="text"
-                  required
-                  className="block w-full border border-gray-200 rounded-xl shadow-sm p-3.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono transition"
-                  value={formData.code}
-                  onChange={(e) => {
-                    setIsCodeEdited(true);
-                    setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
-                  }}
-                  placeholder="e.g. SAVINGS"
-                />
-                <p className="mt-2 text-[10px] text-gray-400 leading-relaxed italic">The immutable identifier used for API calls and system logic.</p>
-              </div>
-              <div className="pt-4 flex space-x-3">
-                <button type="button" onClick={handleCloseModal} className="flex-1 px-4 py-3.5 border border-gray-200 rounded-2xl font-bold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-3.5 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition flex items-center justify-center shadow-lg shadow-blue-100">
-                  <Save className="w-5 h-5 mr-2" /> Save Type
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
 

@@ -8,9 +8,11 @@ import OnboardingPage from './pages/OnboardingPage';
 import BankManagementPage from './pages/admin/BankManagementPage';
 import ProductTypesPage from './pages/admin/ProductTypesPage';
 import PricingMetadataPage from './pages/admin/PricingMetadataPage';
+import PricingMetadataFormPage from './pages/admin/PricingMetadataFormPage';
 import PricingComponentsPage from './pages/admin/PricingComponentsPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import ProductFormPage from './pages/admin/ProductFormPage';
+import ProductTypeFormPage from './pages/admin/ProductTypeFormPage';
 import RoleManagementPage from './pages/admin/RoleManagementPage';
 import RoleFormPage from './pages/admin/RoleFormPage';
 import PricingComponentFormPage from './pages/admin/PricingComponentFormPage';
@@ -80,9 +82,29 @@ function App() {
                   <ProductTypesPage />
                 </PermissionElement>
               } />
+              <Route path="/product-types/create" element={
+                <PermissionElement action="POST" path="/api/v1/product-types">
+                  <ProductTypeFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/product-types/edit/:id" element={
+                <PermissionElement action="PUT" path="/api/v1/product-types">
+                  <ProductTypeFormPage />
+                </PermissionElement>
+              } />
               <Route path="/pricing-metadata" element={
                 <PermissionElement action="GET" path="/api/v1/pricing-metadata">
                   <PricingMetadataPage />
+                </PermissionElement>
+              } />
+              <Route path="/pricing-metadata/create" element={
+                <PermissionElement action="POST" path="/api/v1/pricing-metadata">
+                  <PricingMetadataFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/pricing-metadata/edit/:attributeKey" element={
+                <PermissionElement action="PUT" path="/api/v1/pricing-metadata">
+                  <PricingMetadataFormPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-components" element={

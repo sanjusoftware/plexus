@@ -227,7 +227,7 @@ const BankManagementPage = () => {
 
       {/* Bank Details Modal */}
       {selectedBank && (
-        <div className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 bg-blue-900/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[3rem] shadow-2xl max-w-2xl w-full overflow-hidden border border-white/20">
             <div className="px-10 py-8 bg-blue-900 text-white flex justify-between items-center relative">
               <div className="absolute top-0 right-0 w-64 h-full bg-blue-800 -skew-x-12 translate-x-20 opacity-50"></div>
