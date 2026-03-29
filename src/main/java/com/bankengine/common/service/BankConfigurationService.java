@@ -76,7 +76,6 @@ public class BankConfigurationService extends BaseService {
         }
 
         bankConfigurationRepository.save(config);
-        createBankAdminRole(bankId);
 
         return mapToResponse(config);
     }
@@ -113,7 +112,6 @@ public class BankConfigurationService extends BaseService {
                 .build();
 
         bankConfigurationRepository.save(config);
-        createBankAdminRole(bankId);
         return mapToResponse(config);
     }
 
@@ -180,6 +178,29 @@ public class BankConfigurationService extends BaseService {
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
         config.setStatus(BankStatus.ACTIVE);
         bankConfigurationRepository.save(config);
+
+        if (roleRepository.findByNameAndBankId("BANK_ADMIN", bankId).isEmpty()) {
+            createBankAdminRole(bankId);
+        }
+
+        return mapToResponse(config);
+    }
+
+    @Transactional
+    @SystemAdminBypass
+    public BankConfigurationResponse rejectBank(String bankId) {
+        BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+
+        if (config.getStatus() != BankStatus.DRAFT) {
+            throw new IllegalStateException("Only banks in DRAFT status can be rejected.");
+        }
+
+        config.setStatus(BankStatus.REJECTED);
+        bankConfigurationRepository.save(config);
+
+        roleRepository.findByNameAndBankId("BANK_ADMIN", bankId).ifPresent(roleRepository::delete);
+
         return mapToResponse(config);
     }
 

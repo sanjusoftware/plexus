@@ -48,6 +48,13 @@ public class BankConfigurationController {
         return ResponseEntity.ok(bankConfigurationService.activateBank(bankId));
     }
 
+    @PostMapping("/{bankId}/reject")
+    @PreAuthorize("hasAuthority('system:bank:write')")
+    @Operation(summary = "Reject a bank configuration (DRAFT only)")
+    public ResponseEntity<BankConfigurationResponse> rejectBank(@PathVariable String bankId) {
+        return ResponseEntity.ok(bankConfigurationService.rejectBank(bankId));
+    }
+
     @PostMapping("/{bankId}/deactivate")
     @PreAuthorize("hasAuthority('system:bank:write')")
     @Operation(summary = "Deactivate a bank configuration")
