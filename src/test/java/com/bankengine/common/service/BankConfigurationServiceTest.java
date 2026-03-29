@@ -59,12 +59,11 @@ class BankConfigurationServiceTest extends BaseServiceTest {
     }
 
     @Test
-    @DisplayName("CreateBank should save config and create super admin role with correct authorities")
-    void createBank_ShouldSaveConfigAndCreateSuperAdmin() {
+    @DisplayName("CreateBank should save config but NOT create super admin role yet")
+    void createBank_ShouldSaveConfigButNotCreateRole() {
         // Arrange
         TenantContextHolder.setBankId("SYSTEM");
         standardRequest.setClientSecret("secret123");
-        when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of("catalog:read", "system:admin"));
         when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.empty());
         when(bankConfigurationRepository.findByBankIdUnfiltered("SYSTEM")).thenReturn(Optional.empty());
 
@@ -81,6 +80,29 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         verify(bankConfigurationRepository).save(configCaptor.capture());
         assertEquals("secret123", configCaptor.getValue().getClientSecret());
 
+        // Should NOT create role yet
+        verify(roleRepository, never()).save(any());
+        verify(permissionMappingService, never()).evictAllRolePermissionsCache();
+    }
+
+    @Test
+    @DisplayName("ActivateBank should set status to ACTIVE and create BANK_ADMIN role")
+    void activateBank_ShouldSetStatusAndCreateRole() {
+        // Arrange
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId(TEST_BANK_ID);
+        config.setCategoryConflictRules(new ArrayList<>());
+        when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.of(config));
+        when(roleRepository.findByNameAndBankId("BANK_ADMIN", TEST_BANK_ID)).thenReturn(Optional.empty());
+        when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of("catalog:read", "system:admin"));
+
+        // Act
+        BankConfigurationResponse response = bankConfigurationService.activateBank(TEST_BANK_ID);
+
+        // Assert
+        assertEquals("ACTIVE", response.getStatus());
+        verify(bankConfigurationRepository).save(config);
+
         ArgumentCaptor<Role> roleCaptor = ArgumentCaptor.forClass(Role.class);
         verify(roleRepository).save(roleCaptor.capture());
 
@@ -93,6 +115,30 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         assertTrue(savedRole.getAuthorities().contains("bank:config:write"));
 
         verify(permissionMappingService).evictAllRolePermissionsCache();
+    }
+
+    @Test
+    @DisplayName("RejectBank should set status to REJECTED and delete BANK_ADMIN role if it exists")
+    void rejectBank_ShouldSetStatusAndRemoveRole() {
+        // Arrange
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId(TEST_BANK_ID);
+        config.setStatus(com.bankengine.common.model.BankStatus.DRAFT);
+        config.setCategoryConflictRules(new ArrayList<>());
+        when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.of(config));
+
+        Role existingRole = new Role();
+        existingRole.setName("BANK_ADMIN");
+        existingRole.setBankId(TEST_BANK_ID);
+        when(roleRepository.findByNameAndBankId("BANK_ADMIN", TEST_BANK_ID)).thenReturn(Optional.of(existingRole));
+
+        // Act
+        BankConfigurationResponse response = bankConfigurationService.rejectBank(TEST_BANK_ID);
+
+        // Assert
+        assertEquals("REJECTED", response.getStatus());
+        verify(bankConfigurationRepository).save(config);
+        verify(roleRepository).delete(existingRole);
     }
 
     @Test
@@ -153,7 +199,6 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         standardRequest.setCategoryConflictRules(null);
         when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.empty());
         when(bankConfigurationRepository.findByBankIdUnfiltered("SYSTEM")).thenReturn(Optional.empty());
-        when(authorityDiscoveryService.discoverAllAuthorities()).thenReturn(Set.of());
         assertDoesNotThrow(() -> bankConfigurationService.createBank(standardRequest));
         verify(bankConfigurationRepository).save(argThat(config ->
             config.getCategoryConflictRules() == null || config.getCategoryConflictRules().isEmpty()

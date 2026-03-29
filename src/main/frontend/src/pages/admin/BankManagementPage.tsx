@@ -16,7 +16,9 @@ const BankManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedBank, setSelectedBank] = useState<any>(null);
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const [bankToDeactivate, setBankToDeactivate] = useState<string | null>(null);
+  const [bankToReject, setBankToReject] = useState<string | null>(null);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
@@ -39,21 +41,19 @@ const BankManagementPage = () => {
     }
   }, [user, authLoading]);
 
-  const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'REJECTED') => {
+  const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'reject') => {
     setError('');
     setSuccess('');
     try {
-      if (action === 'REJECTED') {
-        await axios.put(`/api/v1/banks/${targetBankId}`, { status: 'REJECTED' });
-      } else {
-        await axios.post(`/api/v1/banks/${targetBankId}/${action}`);
-      }
+      await axios.post(`/api/v1/banks/${targetBankId}/${action}`);
 
       await fetchBanks();
-      setSuccess(`Bank ${targetBankId} has been successfully ${action === 'REJECTED' ? 'rejected' : action + 'd'}.`);
+      setSuccess(`Bank ${targetBankId} has been successfully ${action === 'reject' ? 'rejected' : action + 'd'}.`);
       setSelectedBank(null);
       setShowDeactivateConfirm(false);
       setBankToDeactivate(null);
+      setShowRejectConfirm(false);
+      setBankToReject(null);
     } catch (err: any) {
       console.error(`Failed to ${action} bank:`, err);
       setError(err.response?.data?.message || `Failed to ${action} bank.`);
@@ -63,6 +63,11 @@ const BankManagementPage = () => {
   const confirmDeactivate = (targetBankId: string) => {
     setBankToDeactivate(targetBankId);
     setShowDeactivateConfirm(true);
+  };
+
+  const confirmReject = (targetBankId: string) => {
+    setBankToReject(targetBankId);
+    setShowRejectConfirm(true);
   };
 
   const openBankDetails = async (bank: any) => {
@@ -180,9 +185,9 @@ const BankManagementPage = () => {
                           <CheckCircle2 className="h-3 w-3 mr-1.5" /> Approve
                         </button>
                       </HasPermission>
-                      <HasPermission action="PUT" path="/api/v1/banks">
+                      <HasPermission action="POST" path="/api/v1/banks/*/reject">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'REJECTED'); }}
+                          onClick={(e) => { e.stopPropagation(); confirmReject(item.bankId); }}
                           className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition flex items-center"
                         >
                           <XCircle className="h-3 w-3 mr-1.5" /> Reject
@@ -304,9 +309,9 @@ const BankManagementPage = () => {
                         Approve Bank
                       </button>
                     </HasPermission>
-                    <HasPermission action="PUT" path="/api/v1/banks">
+                    <HasPermission action="POST" path="/api/v1/banks/*/reject">
                       <button
-                        onClick={() => handleStatusUpdate(selectedBank.bankId, 'REJECTED')}
+                        onClick={() => confirmReject(selectedBank.bankId)}
                         className="flex-1 bg-red-100 text-red-700 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-200 transition"
                       >
                         Reject Request
@@ -348,6 +353,16 @@ const BankManagementPage = () => {
         title="Confirm Deactivation"
         message={`Are you sure you want to deactivate ${bankToDeactivate}? This will prevent any users from this bank from logging into the platform.`}
         confirmText="Confirm & Deactivate"
+        variant="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={showRejectConfirm}
+        onClose={() => { setShowRejectConfirm(false); setBankToReject(null); }}
+        onConfirm={() => handleStatusUpdate(bankToReject!, 'reject')}
+        title="Confirm Rejection"
+        message={`Are you sure you want to reject ${bankToReject}? This action will change the bank status to REJECTED.`}
+        confirmText="Confirm & Reject"
         variant="danger"
       />
     </>
