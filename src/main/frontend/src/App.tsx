@@ -73,7 +73,7 @@ function App() {
                 </PermissionElement>
               } />
               <Route path="/banks/edit/:id" element={
-                <PermissionElement action="PUT" path="/api/v1/banks">
+                <PermissionElement action="PUT" path="/api/v1/banks/*">
                   <OnboardingPage />
                 </PermissionElement>
               } />
@@ -88,7 +88,7 @@ function App() {
                 </PermissionElement>
               } />
               <Route path="/product-types/edit/:id" element={
-                <PermissionElement action="PUT" path="/api/v1/product-types">
+                <PermissionElement action="PUT" path="/api/v1/product-types/*">
                   <ProductTypeFormPage />
                 </PermissionElement>
               } />
@@ -103,7 +103,7 @@ function App() {
                 </PermissionElement>
               } />
               <Route path="/pricing-metadata/edit/:attributeKey" element={
-                <PermissionElement action="PUT" path="/api/v1/pricing-metadata">
+                <PermissionElement action="PUT" path="/api/v1/pricing-metadata/*">
                   <PricingMetadataFormPage />
                 </PermissionElement>
               } />
@@ -118,7 +118,7 @@ function App() {
                 </PermissionElement>
               } />
               <Route path="/pricing-components/edit/:id" element={
-                <PermissionElement action="PUT" path="/api/v1/pricing-components">
+                <PermissionElement action="PATCH" path="/api/v1/pricing-components/*">
                   <PricingComponentFormPage />
                 </PermissionElement>
               } />
@@ -133,7 +133,7 @@ function App() {
                 </PermissionElement>
               } />
               <Route path="/products/edit/:id" element={
-                <PermissionElement action="PUT" path="/api/v1/products">
+                <PermissionElement action="PATCH" path="/api/v1/products/*">
                   <ProductFormPage />
                 </PermissionElement>
               } />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Eye, EyeOff, Save } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
 import axios from 'axios';
 import StyledSelect from '../components/StyledSelect';
 import { useAuth } from '../context/AuthContext';
@@ -184,9 +184,19 @@ const OnboardingPage = () => {
         </button>
       )}
 
-      <h2 className="text-3xl font-bold text-gray-900 mb-2">
-        {isEditing ? 'Edit Bank Configuration' : isAdmin ? 'Add New Bank' : 'Get Started'}
-      </h2>
+      <div className="flex justify-between items-start mb-2">
+        <h2 className="text-3xl font-bold text-gray-900">
+          {isEditing ? 'Edit Bank Configuration' : isAdmin ? 'Add New Bank' : 'Get Started'}
+        </h2>
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/banks')}
+            className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-gray-100 transition border border-gray-100 shadow-sm"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
       <p className="text-gray-500 mb-10">
         {isEditing ? `Updating configuration for ${formData.name || id}` :
          isAdmin ? 'Fill out the form below to register a new bank in the system.' :

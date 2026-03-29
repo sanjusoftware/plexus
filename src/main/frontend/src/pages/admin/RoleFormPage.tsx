@@ -151,7 +151,7 @@ const RoleFormPage = () => {
         </div>
         <button
           onClick={() => navigate('/roles')}
-          className="bg-gray-100 text-gray-500 p-4 rounded-2xl hover:bg-gray-200 transition"
+          className="bg-gray-100 text-gray-500 p-4 rounded-2xl hover:bg-gray-200 transition relative z-10"
         >
           <X className="w-6 h-6" />
         </button>
