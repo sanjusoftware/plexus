@@ -4,12 +4,14 @@ import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader
 import axios from 'axios';
 import StyledSelect from '../components/StyledSelect';
 import { useAuth } from '../context/AuthContext';
+import { useBreadcrumb } from '../context/BreadcrumbContext';
 
 const OnboardingPage = () => {
   const { user } = useAuth();
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { setEntityName } = useBreadcrumb();
 
   const authorities = (user?.roles as string[]) || [];
   const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
@@ -54,6 +56,7 @@ const OnboardingPage = () => {
         currencyCode: data.currencyCode,
         captchaAnswer: ''
       });
+      setEntityName(data.name);
       setIsBankIdEdited(true);
       if (!['USD', 'EUR', 'GBP', 'JPY'].includes(data.currencyCode)) {
         setIsCustomCurrency(true);
@@ -66,7 +69,7 @@ const OnboardingPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, setEntityName]);
 
   useEffect(() => {
     if (!isAdmin) {
