@@ -167,20 +167,6 @@ const PricingComponentFormPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Immutable Component Code</label>
-              <input
-                type="text"
-                required
-                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm"
-                value={formData.code}
-                onChange={(e) => {
-                  setIsCodeEdited(true);
-                  setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
-                }}
-                placeholder="e.g. MAINTENANCE_FEE"
-              />
-            </div>
-            <div>
               <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Product-Facing Name</label>
               <input
                 type="text"
@@ -196,6 +182,20 @@ const PricingComponentFormPage = () => {
                   setFormData({ ...formData, name, code });
                 }}
                 placeholder="e.g. Monthly Maintenance Fee"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Immutable Component Code</label>
+              <input
+                type="text"
+                required
+                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm"
+                value={formData.code}
+                onChange={(e) => {
+                  setIsCodeEdited(true);
+                  setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
+                }}
+                placeholder="e.g. MAINTENANCE_FEE"
               />
             </div>
             <div>
