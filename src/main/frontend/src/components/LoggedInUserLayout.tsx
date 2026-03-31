@@ -4,7 +4,7 @@ import { useHasPermission } from '../hooks/useHasPermission';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumbs from './Breadcrumbs';
 import {
-  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield, ChevronLeft, ChevronRight, ShieldAlert, X, ShieldCheck
+  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield, ChevronLeft, ChevronRight, ShieldAlert, X, ShieldCheck, ExternalLink
 } from 'lucide-react';
 
 interface LoggedInUserLayoutProps {
@@ -108,6 +108,21 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
             </button>
           ))}
         </nav>
+
+        {/* Bottom Menu Item with Divider */}
+        <div className="mt-auto px-4 pb-6 space-y-2">
+          <div className="border-t border-blue-800 my-4" />
+          <a
+            href="/swagger-ui/index.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            title={isCollapsed ? 'Swagger API' : undefined}
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} w-full p-3 rounded-lg transition hover:bg-blue-800 text-blue-300`}
+          >
+            <ExternalLink className="h-5 w-5 flex-shrink-0" />
+            {!isCollapsed && <span className="text-white whitespace-nowrap">Swagger API</span>}
+          </a>
+        </div>
       </aside>
 
       {/* Main Content */}
