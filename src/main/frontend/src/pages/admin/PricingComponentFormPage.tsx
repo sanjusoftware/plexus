@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Trash2, Loader2, Save, X, Layers, AlertCircle } from 'lucide-react';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
+import PlexusSelect from '../../components/PlexusSelect';
 
 const PricingComponentFormPage = () => {
   const { id } = useParams<{ id?: string }>();
@@ -247,24 +248,41 @@ const PricingComponentFormPage = () => {
                       {tier.conditions?.map((cond: any, cidx: number) => (
                         <div key={cidx} className="flex items-center space-x-3 animate-in slide-in-from-left-2 duration-200">
                           <div className="flex-1 grid grid-cols-12 gap-2">
-                            <select className="col-span-5 border-2 border-white rounded-xl p-3 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition" value={cond.attributeName} onChange={(e) => handleConditionChange(idx, cidx, 'attributeName', e.target.value)}>
-                              <option value="">Attribute...</option>
-                              {metadata.map(m => <option key={m.id} value={m.attributeKey}>{m.displayName}</option>)}
-                            </select>
-                            <select className="col-span-2 border-2 border-white rounded-xl p-3 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition text-center" value={cond.operator} onChange={(e) => handleConditionChange(idx, cidx, 'operator', e.target.value)}>
-                              <option value="EQ">=</option>
-                              <option value="GT">&gt;</option>
-                              <option value="LT">&lt;</option>
-                              <option value="GE">&gt;=</option>
-                              <option value="LE">&lt;=</option>
-                            </select>
-                            <input type="text" className="col-span-3 border-2 border-white rounded-xl p-3 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition" placeholder="Value..." value={cond.attributeValue} onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)} />
+                            <div className="col-span-5">
+                              <PlexusSelect
+                                placeholder="Attribute..."
+                                options={metadata.map(m => ({ value: m.attributeKey, label: m.displayName }))}
+                                value={metadata.find(m => m.attributeKey === cond.attributeName) ? { value: cond.attributeName, label: metadata.find(m => m.attributeKey === cond.attributeName).displayName } : null}
+                                onChange={(opt) => handleConditionChange(idx, cidx, 'attributeName', opt ? opt.value : '')}
+                                menuPlacement="auto"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <PlexusSelect
+                                options={[
+                                  { value: 'EQ', label: '=' },
+                                  { value: 'GT', label: '>' },
+                                  { value: 'LT', label: '<' },
+                                  { value: 'GE', label: '>=' },
+                                  { value: 'LE', label: '<=' }
+                                ]}
+                                value={{ EQ: '=', GT: '>', LT: '<', GE: '>=', LE: '<=' }[cond.operator as string] ? { value: cond.operator, label: ({ EQ: '=', GT: '>', LT: '<', GE: '>=', LE: '<=' } as any)[cond.operator] } : null}
+                                onChange={(opt) => handleConditionChange(idx, cidx, 'operator', opt ? opt.value : 'EQ')}
+                                menuPlacement="auto"
+                              />
+                            </div>
+                            <input type="text" className="col-span-3 border-2 border-gray-100 rounded-2xl p-4 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition h-[60px]" placeholder="Value..." value={cond.attributeValue} onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)} />
                             <div className="col-span-2">
                               {cidx < tier.conditions.length - 1 ? (
-                                <select className="w-full border-2 border-white rounded-xl p-3 text-xs bg-blue-50 font-black shadow-sm text-blue-600 appearance-none text-center" value={cond.connector} onChange={(e) => handleConditionChange(idx, cidx, 'connector', e.target.value)}>
-                                  <option value="AND">AND</option>
-                                  <option value="OR">OR</option>
-                                </select>
+                                <PlexusSelect
+                                  options={[
+                                    { value: 'AND', label: 'AND' },
+                                    { value: 'OR', label: 'OR' }
+                                  ]}
+                                  value={{ AND: 'AND', OR: 'OR' }[cond.connector as string] ? { value: cond.connector, label: cond.connector } : null}
+                                  onChange={(opt) => handleConditionChange(idx, cidx, 'connector', opt ? opt.value : 'AND')}
+                                  menuPlacement="auto"
+                                />
                               ) : <div className="w-full p-3"></div>}
                             </div>
                           </div>
@@ -291,16 +309,28 @@ const PricingComponentFormPage = () => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Financial Value Type</label>
-                      <select className="w-full border-2 border-gray-50 rounded-xl p-4 font-black text-xs uppercase tracking-widest bg-gray-50 transition focus:border-blue-500 focus:ring-0 shadow-sm" value={tier.priceValue.valueType} onChange={(e) => {
-                        const newTiers = [...formData.pricingTiers];
-                        newTiers[idx].priceValue = { ...newTiers[idx].priceValue, valueType: e.target.value };
-                        setFormData({...formData, pricingTiers: newTiers});
-                      }}>
-                        <option value="ABSOLUTE">ABSOLUTE VALUE</option>
-                        <option value="PERCENTAGE">PERCENTAGE RATE</option>
-                        <option value="DISCOUNT_ABSOLUTE">CASH DISCOUNT</option>
-                        <option value="DISCOUNT_PERCENTAGE">PERCENTAGE DISCOUNT</option>
-                      </select>
+                      <PlexusSelect
+                        options={[
+                          { value: 'ABSOLUTE', label: 'ABSOLUTE VALUE' },
+                          { value: 'PERCENTAGE', label: 'PERCENTAGE RATE' },
+                          { value: 'DISCOUNT_ABSOLUTE', label: 'CASH DISCOUNT' },
+                          { value: 'DISCOUNT_PERCENTAGE', label: 'PERCENTAGE DISCOUNT' }
+                        ]}
+                        value={{
+                          ABSOLUTE: 'ABSOLUTE VALUE',
+                          PERCENTAGE: 'PERCENTAGE RATE',
+                          DISCOUNT_ABSOLUTE: 'CASH DISCOUNT',
+                          DISCOUNT_PERCENTAGE: 'PERCENTAGE DISCOUNT'
+                        }[tier.priceValue.valueType as string] ? {
+                          value: tier.priceValue.valueType,
+                          label: ({ ABSOLUTE: 'ABSOLUTE VALUE', PERCENTAGE: 'PERCENTAGE RATE', DISCOUNT_ABSOLUTE: 'CASH DISCOUNT', DISCOUNT_PERCENTAGE: 'PERCENTAGE DISCOUNT' } as any)[tier.priceValue.valueType]
+                        } : null}
+                        onChange={(opt) => {
+                          const newTiers = [...formData.pricingTiers];
+                          newTiers[idx].priceValue = { ...newTiers[idx].priceValue, valueType: opt ? opt.value : 'ABSOLUTE' };
+                          setFormData({...formData, pricingTiers: newTiers});
+                        }}
+                      />
                     </div>
                   </div>
                 </div>

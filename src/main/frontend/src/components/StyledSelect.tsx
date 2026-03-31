@@ -1,22 +1,62 @@
-import React, { SelectHTMLAttributes } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React from 'react';
+import PlexusSelect, { PlexusOption } from './PlexusSelect';
 
-interface StyledSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+interface StyledSelectProps {
+  className?: string;
   containerClassName?: string;
+  value?: string;
+  onChange?: (e: { target: { value: string } }) => void;
+  children: React.ReactNode;
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
 }
 
-const StyledSelect: React.FC<StyledSelectProps> = ({ className, containerClassName, children, ...props }) => {
+/**
+ * @deprecated Use PlexusSelect directly for better type safety and features.
+ * This wrapper maintains backward compatibility with existing <select> style onChange events.
+ */
+const StyledSelect: React.FC<StyledSelectProps> = ({
+  value,
+  onChange,
+  children,
+  placeholder,
+  containerClassName,
+  ...props
+}) => {
+  // Convert React children (options) to react-select options format
+  const options: PlexusOption[] = React.Children.map(children, (child) => {
+    if (React.isValidElement(child) && child.type === 'option') {
+      const props = child.props as any;
+      return {
+        value: props.value,
+        label: props.children?.toString() || props.value,
+      };
+    }
+    return null;
+  })?.filter((opt): opt is PlexusOption => opt !== null) || [];
+
+  const selectedOption = options.find(opt => opt.value === value) || null;
+
+  const handleChange = (option: PlexusOption | null) => {
+    if (onChange) {
+      onChange({
+        target: {
+          value: option ? option.value : '',
+        },
+      } as React.ChangeEvent<HTMLSelectElement>);
+    }
+  };
+
   return (
-    <div className={`relative ${containerClassName || 'w-full'}`}>
-      <select
+    <div className={containerClassName || 'w-full'}>
+      <PlexusSelect
         {...props}
-        className={`appearance-none w-full border-2 border-gray-100 rounded-2xl p-4 bg-white font-black transition focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 pr-12 ${className || ''}`}
-      >
-        {children}
-      </select>
-      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-        <ChevronDown className="h-5 w-5 text-gray-400" strokeWidth={3} />
-      </div>
+        options={options}
+        value={selectedOption}
+        onChange={handleChange}
+        placeholder={placeholder || 'Select...'}
+      />
     </div>
   );
 };
