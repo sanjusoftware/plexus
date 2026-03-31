@@ -401,7 +401,7 @@ Click Authorize Button on SwaggerUI which will open take you to mock server: htt
 Enter name of the user say, 'System Admin' and the roles claim:
 ```json
 {
-  "roles": ["SYSTEM_ADMIN"]
+  "roles": ["SYSTEM_ADMIN", "BANK_ADMIN"]
 }
 ```
 
