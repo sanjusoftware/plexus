@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
 import axios from 'axios';
-import StyledSelect from '../components/StyledSelect';
+import PlexusSelect from '../components/PlexusSelect';
 import { useAuth } from '../context/AuthContext';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
 
@@ -253,23 +253,26 @@ const OnboardingPage = () => {
             <label className="block text-sm font-bold text-gray-700 mb-2">Currency</label>
             <div className="relative">
               {!isCustomCurrency ? (
-                  <StyledSelect
-                    className="border-gray-300 rounded-xl px-4 py-3 border focus:ring-2 focus:ring-blue-500"
-                    value={formData.currencyCode}
-                    onChange={e => {
-                      if (e.target.value === 'OTHER') {
+                  <PlexusSelect
+                    options={[
+                      { value: 'USD', label: 'USD - US Dollar' },
+                      { value: 'EUR', label: 'EUR - Euro' },
+                      { value: 'GBP', label: 'GBP - British Pound' },
+                      { value: 'JPY', label: 'JPY - Japanese Yen' },
+                      { value: 'OTHER', label: 'Other (Enter code...)' }
+                    ]}
+                    value={['USD', 'EUR', 'GBP', 'JPY'].includes(formData.currencyCode) ? {
+                      value: formData.currencyCode,
+                      label: ({ USD: 'USD - US Dollar', EUR: 'EUR - Euro', GBP: 'GBP - British Pound', JPY: 'JPY - Japanese Yen' } as any)[formData.currencyCode]
+                    } : null}
+                    onChange={opt => {
+                      if (opt?.value === 'OTHER') {
                         setIsCustomCurrency(true);
-                      } else {
-                        setFormData({ ...formData, currencyCode: e.target.value });
+                      } else if (opt) {
+                        setFormData({ ...formData, currencyCode: opt.value });
                       }
                     }}
-                  >
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                    <option value="JPY">JPY - Japanese Yen</option>
-                    <option value="OTHER">Other (Enter code...)</option>
-                  </StyledSelect>
+                  />
               ) : (
                 <div className="flex space-x-2">
                   <input

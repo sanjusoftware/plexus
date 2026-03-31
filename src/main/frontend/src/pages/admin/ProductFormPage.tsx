@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Trash2, Loader2, Save, X, ShieldCheck, Tag, AlertCircle } from 'lucide-react';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
+import PlexusSelect from '../../components/PlexusSelect';
 
 interface FeatureComponent {
   id: number;
@@ -186,19 +187,35 @@ const ProductFormPage = () => {
             </div>
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Product Classification</label>
-              <select required className="w-full border-2 border-gray-100 rounded-2xl p-4 bg-gray-50 font-black text-xs uppercase tracking-widest transition focus:border-blue-500 shadow-sm" value={formData.productTypeCode} onChange={(e) => setFormData({...formData, productTypeCode: e.target.value})}>
-                <option value="">Select Category...</option>
-                {productTypes.map(t => <option key={t.id} value={t.code}>{t.name}</option>)}
-              </select>
+              <PlexusSelect
+                required
+                placeholder="Select Category..."
+                options={productTypes.map(t => ({ value: t.code, label: t.name }))}
+                value={productTypes.find(t => t.code === formData.productTypeCode) ? { value: formData.productTypeCode, label: productTypes.find(t => t.code === formData.productTypeCode)!.name } : null}
+                onChange={(opt) => setFormData({...formData, productTypeCode: opt ? opt.value : ''})}
+              />
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Target Market Segment</label>
-              <select required className="w-full border-2 border-gray-100 rounded-2xl p-4 bg-gray-50 font-black text-xs uppercase tracking-widest transition focus:border-blue-500 shadow-sm" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})}>
-                <option value="RETAIL">RETAIL CONSUMER</option>
-                <option value="WEALTH">WEALTH MANAGEMENT</option>
-                <option value="CORPORATE">CORPORATE BANKING</option>
-                <option value="INVESTMENT">INVESTMENT BANKING</option>
-              </select>
+              <PlexusSelect
+                required
+                options={[
+                  { value: 'RETAIL', label: 'RETAIL CONSUMER' },
+                  { value: 'WEALTH', label: 'WEALTH MANAGEMENT' },
+                  { value: 'CORPORATE', label: 'CORPORATE BANKING' },
+                  { value: 'INVESTMENT', label: 'INVESTMENT BANKING' }
+                ]}
+                value={{
+                  RETAIL: 'RETAIL CONSUMER',
+                  WEALTH: 'WEALTH MANAGEMENT',
+                  CORPORATE: 'CORPORATE BANKING',
+                  INVESTMENT: 'INVESTMENT BANKING'
+                }[formData.category as string] ? {
+                  value: formData.category,
+                  label: ({ RETAIL: 'RETAIL CONSUMER', WEALTH: 'WEALTH MANAGEMENT', CORPORATE: 'CORPORATE BANKING', INVESTMENT: 'INVESTMENT BANKING' } as any)[formData.category]
+                } : null}
+                onChange={(opt) => setFormData({...formData, category: opt ? opt.value : ''})}
+              />
             </div>
             <div className="md:col-span-2">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Short Marketing Tagline</label>
@@ -226,14 +243,19 @@ const ProductFormPage = () => {
                   <div className="space-y-6">
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Feature Definition</label>
-                      <select className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition" value={link.featureComponentCode} onChange={(e) => {
-                        const newF = [...formData.features];
-                        newF[idx].featureComponentCode = e.target.value;
-                        setFormData({...formData, features: newF});
-                      }}>
-                        <option value="">Select Global Component...</option>
-                        {featureComponents.map(fc => <option key={fc.id} value={fc.code}>{fc.name} ({fc.dataType})</option>)}
-                      </select>
+                      <PlexusSelect
+                        placeholder="Select Global Component..."
+                        options={featureComponents.map(fc => ({ value: fc.code, label: `${fc.name} (${fc.dataType})` }))}
+                        value={featureComponents.find(fc => fc.code === link.featureComponentCode) ? {
+                          value: link.featureComponentCode,
+                          label: `${featureComponents.find(fc => fc.code === link.featureComponentCode)!.name} (${featureComponents.find(fc => fc.code === link.featureComponentCode)!.dataType})`
+                        } : null}
+                        onChange={(opt) => {
+                          const newF = [...formData.features];
+                          newF[idx].featureComponentCode = opt ? opt.value : '';
+                          setFormData({...formData, features: newF});
+                        }}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Concrete Value</label>
@@ -270,14 +292,19 @@ const ProductFormPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Pricing Aggregate Component</label>
-                      <select className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-purple-500 transition" value={link.pricingComponentCode} onChange={(e) => {
-                         const newP = [...formData.pricing];
-                         newP[idx].pricingComponentCode = e.target.value;
-                         setFormData({...formData, pricing: newP});
-                      }}>
-                        <option value="">Select Global Pricing...</option>
-                        {pricingComponents.map(pc => <option key={pc.id} value={pc.code}>{pc.name} ({pc.type})</option>)}
-                      </select>
+                      <PlexusSelect
+                        placeholder="Select Global Pricing..."
+                        options={pricingComponents.map(pc => ({ value: pc.code, label: `${pc.name} (${pc.type})` }))}
+                        value={pricingComponents.find(pc => pc.code === link.pricingComponentCode) ? {
+                          value: link.pricingComponentCode,
+                          label: `${pricingComponents.find(pc => pc.code === link.pricingComponentCode)!.name} (${pricingComponents.find(pc => pc.code === link.pricingComponentCode)!.type})`
+                        } : null}
+                        onChange={(opt) => {
+                          const newP = [...formData.pricing];
+                          newP[idx].pricingComponentCode = opt ? opt.value : '';
+                          setFormData({...formData, pricing: newP});
+                        }}
+                      />
                     </div>
                     <div className="flex items-end">
                       <label className="flex items-center cursor-pointer p-4 bg-white rounded-xl border-2 border-gray-100 hover:border-blue-200 transition w-full shadow-sm">
@@ -306,15 +333,26 @@ const ProductFormPage = () => {
                       </div>
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Amount Type</label>
-                        <select className="w-full border-2 border-gray-50 rounded-xl p-3.5 font-black text-[10px] uppercase tracking-widest bg-gray-50/30 transition focus:border-purple-500" value={link.fixedValueType} onChange={(e) => {
-                           const newP = [...formData.pricing];
-                           newP[idx].fixedValueType = e.target.value;
-                           setFormData({...formData, pricing: newP});
-                        }}>
-                          <option value="FEE_ABSOLUTE">FEE (ABSOLUTE)</option>
-                          <option value="FEE_PERCENTAGE">FEE (PERCENTAGE)</option>
-                          <option value="RATE_ABSOLUTE">RATE (ABSOLUTE)</option>
-                        </select>
+                        <PlexusSelect
+                          options={[
+                            { value: 'FEE_ABSOLUTE', label: 'FEE (ABSOLUTE)' },
+                            { value: 'FEE_PERCENTAGE', label: 'FEE (PERCENTAGE)' },
+                            { value: 'RATE_ABSOLUTE', label: 'RATE (ABSOLUTE)' }
+                          ]}
+                          value={({
+                            FEE_ABSOLUTE: 'FEE (ABSOLUTE)',
+                            FEE_PERCENTAGE: 'FEE (PERCENTAGE)',
+                            RATE_ABSOLUTE: 'RATE (ABSOLUTE)'
+                          } as any)[link.fixedValueType] ? {
+                            value: link.fixedValueType,
+                            label: ({ FEE_ABSOLUTE: 'FEE (ABSOLUTE)', FEE_PERCENTAGE: 'FEE (PERCENTAGE)', RATE_ABSOLUTE: 'RATE (ABSOLUTE)' } as any)[link.fixedValueType]
+                          } : null}
+                          onChange={(opt) => {
+                            const newP = [...formData.pricing];
+                            newP[idx].fixedValueType = opt ? opt.value : '';
+                            setFormData({...formData, pricing: newP});
+                          }}
+                        />
                       </div>
                     </div>
                   )}

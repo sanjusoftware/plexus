@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Loader2, Save, X, AlertCircle } from 'lucide-react';
-import StyledSelect from '../../components/StyledSelect';
+import PlexusSelect from '../../components/PlexusSelect';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 const PricingMetadataFormPage = () => {
@@ -140,15 +140,12 @@ const PricingMetadataFormPage = () => {
           </div>
           <div>
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Attribute Data Type</label>
-            <StyledSelect
+            <PlexusSelect
               required
-              value={formData.dataType}
-              onChange={(e) => setFormData({ ...formData, dataType: e.target.value })}
-            >
-              {dataTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </StyledSelect>
+              options={dataTypes.map(type => ({ value: type, label: type }))}
+              value={dataTypes.includes(formData.dataType) ? { value: formData.dataType, label: formData.dataType } : null}
+              onChange={(opt) => setFormData({ ...formData, dataType: opt ? opt.value : 'STRING' })}
+            />
             <p className="mt-3 text-[11px] text-gray-400 font-medium italic">Affects how the rule engine processes and validates values.</p>
           </div>
           <div className="pt-6 flex space-x-4">
