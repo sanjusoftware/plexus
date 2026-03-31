@@ -166,7 +166,7 @@ const PricingComponentsPage = () => {
                           <button onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} className="text-green-600 hover:bg-green-50 p-2.5 rounded-xl transition border border-transparent hover:border-green-100" title="Activate Production Mode"><CheckCircle2 className="w-4 h-4" /></button>
                         </HasPermission>
                       )}
-                      <HasPermission action="PUT" path="/api/v1/pricing-components/*">
+                      <HasPermission action="PATCH" path="/api/v1/pricing-components/*">
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} className="text-blue-600 hover:bg-blue-50 p-2.5 rounded-xl transition border border-transparent hover:border-blue-100" title="Edit Structure"><Edit2 className="w-4 h-4" /></button>
                       </HasPermission>
                       <HasPermission action="DELETE" path="/api/v1/pricing-components/*">

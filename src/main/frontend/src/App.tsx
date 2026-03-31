@@ -71,7 +71,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/banks" element={
-                <PermissionElement action="GET" path="/api/v1/banks">
+                <PermissionElement permission="system:bank:read">
                   <BankManagementPage />
                 </PermissionElement>
               } />
@@ -81,77 +81,77 @@ function App() {
                 </PermissionElement>
               } />
               <Route path="/product-types" element={
-                <PermissionElement action="GET" path="/api/v1/product-types">
+                <PermissionElement permission="catalog:product-type:read">
                   <ProductTypesPage />
                 </PermissionElement>
               } />
               <Route path="/product-types/create" element={
-                <PermissionElement action="POST" path="/api/v1/product-types">
+                <PermissionElement permission="catalog:product-type:create">
                   <ProductTypeFormPage />
                 </PermissionElement>
               } />
               <Route path="/product-types/edit/:id" element={
-                <PermissionElement action="PUT" path="/api/v1/product-types/*">
+                <PermissionElement permission="catalog:product-type:update">
                   <ProductTypeFormPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-metadata" element={
-                <PermissionElement action="GET" path="/api/v1/pricing-metadata">
+                <PermissionElement permission="pricing:metadata:read">
                   <PricingMetadataPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-metadata/create" element={
-                <PermissionElement action="POST" path="/api/v1/pricing-metadata">
+                <PermissionElement permission="pricing:metadata:create">
                   <PricingMetadataFormPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-metadata/edit/:attributeKey" element={
-                <PermissionElement action="PUT" path="/api/v1/pricing-metadata/*">
+                <PermissionElement permission="pricing:metadata:update">
                   <PricingMetadataFormPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-components" element={
-                <PermissionElement action="GET" path="/api/v1/pricing-components">
+                <PermissionElement permission="pricing:component:read">
                   <PricingComponentsPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-components/create" element={
-                <PermissionElement action="POST" path="/api/v1/pricing-components">
+                <PermissionElement permission="pricing:component:create">
                   <PricingComponentFormPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-components/edit/:id" element={
-                <PermissionElement action="PATCH" path="/api/v1/pricing-components/*">
+                <PermissionElement permission="pricing:component:update">
                   <PricingComponentFormPage />
                 </PermissionElement>
               } />
               <Route path="/products" element={
-                <PermissionElement action="GET" path="/api/v1/products">
+                <PermissionElement permission="catalog:product:read">
                   <ProductManagementPage />
                 </PermissionElement>
               } />
               <Route path="/products/create" element={
-                <PermissionElement action="POST" path="/api/v1/products">
+                <PermissionElement permission="catalog:product:create">
                   <ProductFormPage />
                 </PermissionElement>
               } />
               <Route path="/products/edit/:id" element={
-                <PermissionElement action="PATCH" path="/api/v1/products/*">
+                <PermissionElement permission="catalog:product:update">
                   <ProductFormPage />
                 </PermissionElement>
               } />
               <Route path="/roles" element={
-                <PermissionElement action="GET" path="/api/v1/roles">
+                <PermissionElement permission="auth:role:read">
                   <RoleManagementPage />
                 </PermissionElement>
               } />
               <Route path="/roles/register" element={
-                <PermissionElement action="POST" path="/api/v1/roles/mapping">
+                <PermissionElement permission="auth:role:write">
                   <RoleFormPage />
                 </PermissionElement>
               } />
               <Route path="/roles/edit/:roleName" element={
-                <PermissionElement action="POST" path="/api/v1/roles/mapping">
+                <PermissionElement permission="auth:role:write">
                   <RoleFormPage />
                 </PermissionElement>
               } />

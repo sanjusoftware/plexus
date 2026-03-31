@@ -146,7 +146,7 @@ const ProductManagementPage = () => {
                         <button onClick={() => handleStatusAction(prod.id, 'activate')} className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100">Activate</button>
                       </HasPermission>
                     )}
-                    <HasPermission action="PUT" path="/api/v1/products">
+                    <HasPermission action="PATCH" path="/api/v1/products/*">
                       <button onClick={() => navigate(`/products/edit/${prod.id}`)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition shadow-sm border border-blue-50" title="Modify Product"><Edit2 className="w-5 h-5" /></button>
                     </HasPermission>
                     <HasPermission action="DELETE" path="/api/v1/products/*">

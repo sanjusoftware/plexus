@@ -102,7 +102,7 @@ const ProductFormPage = () => {
     setSubmitting(true);
     try {
       if (isEditing) {
-        await axios.put(`/api/v1/products/${id}`, formData);
+        await axios.patch(`/api/v1/products/${id}`, formData);
       } else {
         await axios.post('/api/v1/products', formData);
       }

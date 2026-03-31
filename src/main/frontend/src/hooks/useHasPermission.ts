@@ -49,10 +49,10 @@ export const useHasPermission = () => {
         return true;
       }
 
-      // If multiple endpoints match, the user must have all permissions for ALL matching entries
-      // (This is a strict approach to ensure they can perform the action on the requested path)
+      // If multiple endpoints match, the user must have at least one permission for EACH matching entry.
+      // This supports 'hasAnyAuthority' or 'OR' conditions in @PreAuthorize.
       return matchingEntries.every(([_, requiredPermissions]) =>
-        requiredPermissions.every(p => userPermissions.has(p))
+        requiredPermissions.some(p => userPermissions.has(p))
       );
     }
 
