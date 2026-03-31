@@ -162,10 +162,16 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
               toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'
             }`}>
               <div className={`p-2 rounded-lg ${toast.type === 'error' ? 'bg-red-100' : 'bg-green-100'}`}>
-                <ShieldAlert className="h-5 w-5" />
+                {toast.type === 'error' ? (
+                  <ShieldAlert className="h-5 w-5" />
+                ) : (
+                  <ShieldCheck className="h-5 w-5" />
+                )}
               </div>
               <div className="flex-1 pr-4 whitespace-nowrap">
-                <p className="text-sm font-bold">Access Denied</p>
+                <p className="text-sm font-bold">
+                  {toast.type === 'error' ? 'Error' : 'Success'}
+                </p>
                 <p className="text-xs opacity-90">{toast.message}</p>
               </div>
               <button
