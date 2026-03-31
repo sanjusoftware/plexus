@@ -15,6 +15,7 @@ public interface FeatureLinkMapper {
 
     @Mapping(target = "featureName", source = "link.featureComponent.name")
     @Mapping(target = "featureComponentCode", source = "link.featureComponent.code")
+    @Mapping(target = "dataType", source = "link.featureComponent.dataType")
     ProductFeatureDto toResponse(ProductFeatureLink link);
 
     List<ProductFeatureDto> toResponseList(List<ProductFeatureLink> links);

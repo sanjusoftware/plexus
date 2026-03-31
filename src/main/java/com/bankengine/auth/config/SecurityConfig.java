@@ -115,6 +115,8 @@ public class SecurityConfig {
                                 "/banks/**",
                                 "/product-types",
                                 "/product-types/**",
+                                "/features",
+                                "/features/**",
                                 "/pricing-metadata",
                                 "/pricing-metadata/**",
                                 "/pricing-components/**",

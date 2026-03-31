@@ -240,7 +240,22 @@ public class ProductService extends BaseService {
         product.getProductFeatureLinks().removeIf(link -> !incomingCodes.contains(link.getFeatureComponent().getCode()));
 
         for (ProductFeatureDto dto : incomingDtos) {
-            FeatureComponent component = featureComponentService.getFeatureComponentByCode(dto.getFeatureComponentCode(), null);
+            FeatureComponent component;
+            try {
+                component = featureComponentService.getFeatureComponentByCode(dto.getFeatureComponentCode(), null);
+            } catch (NotFoundException e) {
+                // Fat DTO: Create new feature if it doesn't exist
+                if (dto.getDataType() == null || dto.getFeatureName() == null) {
+                    throw new IllegalArgumentException("Feature component with code '" + dto.getFeatureComponentCode() + "' not found and required data for creation (dataType, featureName) is missing.");
+                }
+                FeatureComponentRequest createRequest = new FeatureComponentRequest();
+                createRequest.setCode(dto.getFeatureComponentCode());
+                createRequest.setName(dto.getFeatureName());
+                createRequest.setDataType(dto.getDataType());
+                FeatureComponentResponse created = featureComponentService.createFeature(createRequest);
+                component = featureComponentService.getFeatureComponentById(created.getId());
+            }
+
             validateDraft(component);
             validateFeatureValue(dto.getFeatureValue(), component.getDataType());
 

@@ -13,6 +13,8 @@ import PricingComponentsPage from './pages/admin/PricingComponentsPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import ProductFormPage from './pages/admin/ProductFormPage';
 import ProductTypeFormPage from './pages/admin/ProductTypeFormPage';
+import FeatureComponentsPage from './pages/admin/FeatureComponentsPage';
+import FeatureComponentFormPage from './pages/admin/FeatureComponentFormPage';
 import RoleManagementPage from './pages/admin/RoleManagementPage';
 import RoleFormPage from './pages/admin/RoleFormPage';
 import PricingComponentFormPage from './pages/admin/PricingComponentFormPage';
@@ -93,6 +95,21 @@ function App() {
               <Route path="/product-types/edit/:id" element={
                 <PermissionElement action="PUT" path="/api/v1/product-types/*">
                   <ProductTypeFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/features" element={
+                <PermissionElement action="GET" path="/api/v1/features">
+                  <FeatureComponentsPage />
+                </PermissionElement>
+              } />
+              <Route path="/features/create" element={
+                <PermissionElement action="POST" path="/api/v1/features">
+                  <FeatureComponentFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/features/edit/:id" element={
+                <PermissionElement action="PUT" path="/api/v1/features/*">
+                  <FeatureComponentFormPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-metadata" element={
