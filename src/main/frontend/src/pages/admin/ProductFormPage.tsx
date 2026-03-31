@@ -101,11 +101,33 @@ const ProductFormPage = () => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
+
+    // Prepare payload for Fat DTO
+    const payload = {
+      ...formData,
+      features: formData.features.map((f: any) => {
+        if (f.featureComponentCode === 'CREATE_NEW') {
+          return {
+            featureComponentCode: f.tempCode,
+            featureName: f.featureName,
+            dataType: f.dataType,
+            featureValue: f.featureValue
+          };
+        }
+        return {
+          featureComponentCode: f.featureComponentCode,
+          featureName: f.featureName,
+          dataType: f.dataType,
+          featureValue: f.featureValue
+        };
+      })
+    };
+
     try {
       if (isEditing) {
-        await axios.patch(`/api/v1/products/${id}`, formData);
+        await axios.patch(`/api/v1/products/${id}`, payload);
       } else {
-        await axios.post('/api/v1/products', formData);
+        await axios.post('/api/v1/products', payload);
       }
       navigate('/products', { state: { success: isEditing ? 'Product successfully synced.' : 'Product created successfully.' } });
     } catch (err: any) {
@@ -243,20 +265,67 @@ const ProductFormPage = () => {
                   <div className="space-y-6">
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Feature Definition</label>
-                      <PlexusSelect
-                        placeholder="Select Global Component..."
-                        options={featureComponents.map(fc => ({ value: fc.code, label: `${fc.name} (${fc.dataType})` }))}
-                        value={featureComponents.find(fc => fc.code === link.featureComponentCode) ? {
-                          value: link.featureComponentCode,
-                          label: `${featureComponents.find(fc => fc.code === link.featureComponentCode)!.name} (${featureComponents.find(fc => fc.code === link.featureComponentCode)!.dataType})`
-                        } : null}
-                        onChange={(opt) => {
-                          const newF = [...formData.features];
-                          newF[idx].featureComponentCode = opt ? opt.value : '';
-                          setFormData({...formData, features: newF});
-                        }}
-                      />
+                      <select className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition" value={link.featureComponentCode} onChange={(e) => {
+                        const newF = [...formData.features];
+                        const val = e.target.value;
+                        newF[idx].featureComponentCode = val;
+                        if (val === 'CREATE_NEW') {
+                          newF[idx].featureName = '';
+                          newF[idx].dataType = 'STRING';
+                        } else {
+                          const fc = featureComponents.find(f => f.code === val);
+                          if (fc) {
+                            newF[idx].featureName = fc.name;
+                            newF[idx].dataType = fc.dataType;
+                          }
+                        }
+                        setFormData({...formData, features: newF});
+                      }}>
+                        <option value="">Select Global Component...</option>
+                        <option value="CREATE_NEW" className="text-blue-600 font-bold">+ CREATE NEW FEATURE...</option>
+                        {featureComponents.map(fc => <option key={fc.id} value={fc.code}>{fc.name} ({fc.dataType})</option>)}
+                      </select>
                     </div>
+
+                    {link.featureComponentCode === 'CREATE_NEW' && (
+                      <div className="p-6 bg-blue-50/50 rounded-2xl border-2 border-blue-100 space-y-6 animate-in fade-in slide-in-from-top-2">
+                         <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">New Feature Name</label>
+                            <input type="text" className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition" placeholder="e.g. Max Overdraft" value={link.featureName || ''} onChange={(e) => {
+                              const newF = [...formData.features];
+                              newF[idx].featureName = e.target.value;
+                              // Auto-gen code from name if it's new
+                              newF[idx].tempCode = e.target.value.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                              setFormData({...formData, features: newF});
+                            }} />
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Internal Code</label>
+                              <input type="text" className="w-full border-2 border-white rounded-xl p-3.5 text-[10px] bg-white font-mono font-black shadow-sm focus:border-blue-500 transition" placeholder="MAX_OVERDRAFT" value={link.tempCode || ''} onChange={(e) => {
+                                const newF = [...formData.features];
+                                newF[idx].tempCode = e.target.value.toUpperCase().replace(/\s/g, '_');
+                                setFormData({...formData, features: newF});
+                              }} />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Data Type</label>
+                              <select className="w-full border-2 border-white rounded-xl p-3.5 text-[10px] bg-white font-black shadow-sm focus:border-blue-500 transition" value={link.dataType} onChange={(e) => {
+                                const newF = [...formData.features];
+                                newF[idx].dataType = e.target.value;
+                                setFormData({...formData, features: newF});
+                              }}>
+                                <option value="STRING">STRING</option>
+                                <option value="INTEGER">INTEGER</option>
+                                <option value="BOOLEAN">BOOLEAN</option>
+                                <option value="DECIMAL">DECIMAL</option>
+                                <option value="DATE">DATE</option>
+                              </select>
+                            </div>
+                         </div>
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Concrete Value</label>
                       <input type="text" className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition" placeholder="e.g. 5.5, YES, 12 months" value={link.featureValue} onChange={(e) => {
