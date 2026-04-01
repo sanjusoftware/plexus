@@ -1,0 +1,454 @@
+> Task :compileJava
+> Task :installFrontend UP-TO-DATE
+> Task :buildFrontend UP-TO-DAT> Task :compileJava
+> Task :installFrontend UP-TO-DATE
+> Task :buildFrontend UP-TO-DATE
+> Task :copyFrontend UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes
+> Task :resolveMainClassName
+
+> Task :bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.1)
+
+2026-03-31T13:14:20.659Z  INFO 3827 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Starting PlexusApplication using Java 21.0.10 with PID 3827 (/app/build/classes/java/main started by jules in /app)
+2026-03-31T13:14:20.663Z DEBUG 3827 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Running with Spring Boot v3.3.1, Spring v6.1.10
+2026-03-31T13:14:20.663Z  INFO 3827 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : The following 1 profile is active: "dev"
+2026-03-31T13:14:21.770Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-31T13:14:21.771Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-31T13:14:22.017Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 239 ms. Found 15 JPA repository interfaces.
+2026-03-31T13:14:22.545Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-31T13:14:22.546Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-03-31T13:14:22.580Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.auth.repository.RoleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.580Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.BundleProductLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.580Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.FeatureComponentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.581Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductBundleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.581Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductFeatureLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.581Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.581Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductTypeRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.582Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.common.repository.BankConfigurationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.582Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.BundlePricingLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.582Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PriceValueRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.585Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingComponentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.585Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingInputMetadataRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.586Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingTierRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.586Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.ProductPricingLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.587Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.TierConditionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-31T13:14:22.587Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 31 ms. Found 0 Redis repository interfaces.
+2026-03-31T13:14:23.829Z  INFO 3827 --- [           main] [                                                 ] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-31T13:14:23.846Z  INFO 3827 --- [           main] [                                                 ] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-31T13:14:23.846Z  INFO 3827 --- [           main] [                                                 ] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.25]
+2026-03-31T13:14:23.924Z  INFO 3827 --- [           main] [                                                 ] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-31T13:14:23.925Z  INFO 3827 --- [           main] [                                                 ] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3210 ms
+2026-03-31T13:14:24.340Z  INFO 3827 --- [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-31T13:14:24.565Z  INFO 3827 --- [           main] [                                                 ] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:plexusdb user=SA
+2026-03-31T13:14:24.567Z  INFO 3827 --- [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-31T13:14:24.582Z  INFO 3827 --- [           main] [                                                 ] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:plexusdb'
+2026-03-31T13:14:24.832Z  INFO 3827 --- [           main] [                                                 ] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-31T13:14:24.894Z  INFO 3827 --- [           main] [                                                 ] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.2.Final
+2026-03-31T13:14:24.932Z  INFO 3827 --- [           main] [                                                 ] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-31T13:14:25.312Z  INFO 3827 --- [           main] [                                                 ] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-31T13:14:25.361Z  WARN 3827 --- [           main] [                                                 ] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-03-31T13:14:27.278Z  INFO 3827 --- [           main] [                                                 ] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: drop table if exists bank_category_conflicts cascade
+Hibernate: drop table if exists bank_configuration cascade
+Hibernate: drop table if exists bundle_pricing_link cascade
+Hibernate: drop table if exists bundle_product_link cascade
+Hibernate: drop table if exists feature_component cascade
+Hibernate: drop table if exists price_value cascade
+Hibernate: drop table if exists pricing_component cascade
+Hibernate: drop table if exists pricing_input_metadata cascade
+Hibernate: drop table if exists pricing_tier cascade
+Hibernate: drop table if exists product cascade
+Hibernate: drop table if exists product_bundle cascade
+Hibernate: drop table if exists product_feature_link cascade
+Hibernate: drop table if exists product_pricing_link cascade
+Hibernate: drop table if exists product_type cascade
+Hibernate: drop table if exists role cascade
+Hibernate: drop table if exists role_authority cascade
+Hibernate: drop table if exists tier_condition cascade
+Hibernate: create table bank_category_conflicts (config_id bigint not null, categorya varchar(255), categoryb varchar(255))
+Hibernate: create table bank_configuration (allow_multi_bundle_product boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, admin_email varchar(255), admin_name varchar(255), client_id varchar(255) not null, client_secret varchar(255), created_by varchar(255), currency_code varchar(255) not null, issuer_url varchar(255) not null, name varchar(255), updated_by varchar(255), status enum ('ACTIVE','DRAFT','INACTIVE','REJECTED') not null, primary key (id), constraint uk_bank_id unique (bank_id), constraint uk_issuer_client_combination unique (issuer_url, client_id))
+Hibernate: create table bundle_pricing_link (effective_date date, expiry_date date, fixed_value numeric(38,2), use_rules_engine boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_component_id bigint not null, product_bundle_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), fixed_value_type enum ('DISCOUNT_ABSOLUTE','DISCOUNT_PERCENTAGE','FEE_ABSOLUTE','FEE_PERCENTAGE','FREE_COUNT'), primary key (id))
+Hibernate: create table bundle_product_link (is_main_account boolean not null, is_mandatory boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, product_bundle_id bigint not null, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id), constraint UK_bundle_product_link_unique unique (product_bundle_id, product_id))
+Hibernate: create table feature_component (activation_date date, expiry_date date, version integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), data_type enum ('BOOLEAN','DATE','DECIMAL','INTEGER','STRING'), status enum ('ACTIVE','ARCHIVED','DRAFT','INACTIVE') not null, primary key (id), unique (bank_id, code, version))
+Hibernate: create table price_value (raw_value numeric(38,2) not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_tier_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), updated_by varchar(255), value_type enum ('DISCOUNT_ABSOLUTE','DISCOUNT_PERCENTAGE','FEE_ABSOLUTE','FEE_PERCENTAGE','FREE_COUNT'), primary key (id))
+Hibernate: create table pricing_component (activation_date date, expiry_date date, pro_rata_applicable boolean not null, version integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, created_by varchar(255), description varchar(255), name varchar(255) not null, updated_by varchar(255), status enum ('ACTIVE','ARCHIVED','DRAFT','INACTIVE') not null, type enum ('BENEFIT','DISCOUNT','FEE','INTEREST_RATE','PACKAGE_FEE','TAX','WAIVER'), primary key (id), unique (bank_id, code, version))
+Hibernate: create table pricing_input_metadata (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, attribute_key varchar(255) not null, created_by varchar(255), data_type varchar(255) not null, display_name varchar(255), updated_by varchar(255), primary key (id), unique (bank_id, attribute_key))
+Hibernate: create table pricing_tier (apply_charge_on_full_breach boolean not null, max_threshold numeric(38,2), min_threshold numeric(38,2), priority integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_component_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), primary key (id))
+Hibernate: create table product (activation_date date, display_order integer, expiry_date date, is_featured boolean, version integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, product_type_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, tagline varchar(100), icon_url varchar(500), full_description varchar(2000), category varchar(255) not null, created_by varchar(255), name varchar(255) not null, target_customer_segments varchar(255), terms_and_conditions TEXT, updated_by varchar(255), status enum ('ACTIVE','ARCHIVED','DRAFT','INACTIVE') not null, primary key (id), unique (bank_id, code, version))
+Hibernate: create table product_bundle (activation_date date, expiry_date date, version integer not null, created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, description varchar(500), created_by varchar(255), name varchar(255) not null, target_customer_segments varchar(255) not null, updated_by varchar(255), status enum ('ACTIVE','ARCHIVED','DRAFT','INACTIVE') not null, primary key (id), unique (bank_id, code, version))
+Hibernate: create table product_feature_link (created_at timestamp(6) not null, feature_component_id bigint not null, id bigint generated by default as identity, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, feature_value varchar(1000) not null, created_by varchar(255), updated_by varchar(255), primary key (id), constraint UK_product_feature_link unique (product_id, feature_component_id))
+Hibernate: create table product_pricing_link (effective_date date, expiry_date date, fixed_value numeric(38,2), use_rules_engine boolean not null, created_at timestamp(6) not null, id bigint generated by default as identity, pricing_component_id bigint not null, product_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, created_by varchar(255), target_component_code varchar(255), updated_by varchar(255), fixed_value_type enum ('DISCOUNT_ABSOLUTE','DISCOUNT_PERCENTAGE','FEE_ABSOLUTE','FEE_PERCENTAGE','FREE_COUNT'), primary key (id))
+Hibernate: create table product_type (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, code varchar(100) not null, created_by varchar(255), name varchar(255) not null, updated_by varchar(255), status varchar(20) default 'DRAFT' not null, primary key (id), unique (bank_id, code))
+Hibernate: create table role (created_at timestamp(6) not null, id bigint generated by default as identity, updated_at timestamp(6), bank_id varchar(50) not null, name varchar(50) not null, created_by varchar(255), updated_by varchar(255), primary key (id), unique (bank_id, name))
+Hibernate: create table role_authority (role_id bigint not null, authority_name varchar(100) not null, primary key (role_id, authority_name))
+Hibernate: create table tier_condition (created_at timestamp(6) not null, id bigint generated by default as identity, pricing_tier_id bigint not null, updated_at timestamp(6), bank_id varchar(50) not null, attribute_name varchar(255) not null, attribute_value varchar(255) not null, created_by varchar(255), updated_by varchar(255), connector enum ('AND','OR'), operator enum ('EQ','GE','GT','IN','LE','LT','NE') not null, primary key (id))
+Hibernate: create index idx_pricing_tier_code on pricing_tier (code)
+Hibernate: alter table if exists bank_category_conflicts add constraint FKr0vrtot93e79suavixq45d7lh foreign key (config_id) references bank_configuration
+Hibernate: alter table if exists bundle_pricing_link add constraint FK7xek441d2oiaw0qry67re3cyh foreign key (pricing_component_id) references pricing_component
+Hibernate: alter table if exists bundle_pricing_link add constraint FKb6uvgka986o2w6tr4tqj26qcm foreign key (product_bundle_id) references product_bundle
+Hibernate: alter table if exists bundle_product_link add constraint FKoaef6c64w9i5ks8w6bnf4jhuy foreign key (product_id) references product
+Hibernate: alter table if exists bundle_product_link add constraint FKb3qfh82701omsauktkjj8qjow foreign key (product_bundle_id) references product_bundle
+Hibernate: alter table if exists price_value add constraint FKqw5h759fdsasyg6uw07fsfl3p foreign key (pricing_tier_id) references pricing_tier
+Hibernate: alter table if exists pricing_tier add constraint FKew0ymctj353jmtgqi12pqyy12 foreign key (pricing_component_id) references pricing_component
+Hibernate: alter table if exists product add constraint FKlabq3c2e90ybbxk58rc48byqo foreign key (product_type_id) references product_type
+Hibernate: alter table if exists product_feature_link add constraint FKijhxky9yjt15afkrnxknw06q5 foreign key (feature_component_id) references feature_component
+Hibernate: alter table if exists product_feature_link add constraint FKoprgvgys5k9qo9gfbo861c5ou foreign key (product_id) references product
+Hibernate: alter table if exists product_pricing_link add constraint FKm4wkb51iswgwhgu20bwtbew7x foreign key (pricing_component_id) references pricing_component
+Hibernate: alter table if exists product_pricing_link add constraint FKbcr1wkacs2jh6j5oismthncsk foreign key (product_id) references product
+Hibernate: alter table if exists role_authority add constraint FK2052966dco7y9f97s1a824bj1 foreign key (role_id) references role
+Hibernate: alter table if exists tier_condition add constraint FKrr97dtiopm88a00d0it7k5v9r foreign key (pricing_tier_id) references pricing_tier
+2026-03-31T13:14:27.404Z  INFO 3827 --- [           main] [                                                 ] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-31T13:14:27.892Z  INFO 3827 --- [           main] [                                                 ] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-03-31T13:14:28.094Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextFilter    : Filter 'tenantContextFilter' configured for use
+2026-03-31T13:14:28.289Z  INFO 3827 --- [           main] [                                                 ] c.b.a.s.TenantSecurityInitializer        : Initializing TenantContextHolder with System Bank ID: SYSTEM
+2026-03-31T13:14:29.502Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-03-31T13:14:29.618Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-31T13:14:29.618Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select distinct pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pt1_0.pricing_component_id,pt1_0.id,pt1_0.apply_charge_on_full_breach,pt1_0.bank_id,pt1_0.code,c1_0.pricing_tier_id,c1_0.id,c1_0.attribute_name,c1_0.attribute_value,c1_0.bank_id,c1_0.connector,c1_0.created_at,c1_0.created_by,c1_0.operator,c1_0.updated_at,c1_0.updated_by,pt1_0.created_at,pt1_0.created_by,pt1_0.max_threshold,pt1_0.min_threshold,pt1_0.name,pv1_0.pricing_tier_id,pv1_0.id,pv1_0.bank_id,pv1_0.created_at,pv1_0.created_by,pv1_0.raw_value,pv1_0.updated_at,pv1_0.updated_by,pv1_0.value_type,pt1_0.priority,pt1_0.updated_at,pt1_0.updated_by,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 left join pricing_tier pt1_0 on pc1_0.id=pt1_0.pricing_component_id left join tier_condition c1_0 on pt1_0.id=c1_0.pricing_tier_id left join price_value pv1_0 on pt1_0.id=pv1_0.pricing_tier_id
+2026-03-31T13:14:29.801Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-31T13:14:29.802Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : GENERATED DRL FOR PACKAGE: pricing
+2026-03-31T13:14:29.802Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-31T13:14:29.802Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : package bankengine.pricing.rules.system;
+
+import com.bankengine.rules.model.PricingInput;
+import com.bankengine.pricing.model.PriceValue;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+global org.slf4j.Logger log;
+
+rule "Placeholder_pricing"
+    when
+        $input : PricingInput ( )
+    then
+        // No rules defined for this tenant
+end
+
+2026-03-31T13:14:29.802Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-31T13:14:29.809Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-31T13:14:29.809Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select distinct pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.type in (?,?)
+2026-03-31T13:14:29.827Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-31T13:14:29.828Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : GENERATED DRL FOR PACKAGE: bundle
+2026-03-31T13:14:29.828Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-31T13:14:29.828Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : package bankengine.bundle.rules.system;
+
+import com.bankengine.rules.model.BundlePricingInput;
+import com.bankengine.pricing.model.PriceValue;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+global org.slf4j.Logger log;
+
+rule "Placeholder_bundle"
+    when
+        $input : BundlePricingInput ( )
+    then
+        // No rules defined for this tenant
+end
+
+2026-03-31T13:14:29.828Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-03-31T13:14:30.089Z  WARN 3827 --- [           main] [                                                 ] o.k.m.i.embedder.MavenSettings           : Environment variable M2_HOME is not set
+2026-03-31T13:14:33.305Z  WARN 3827 --- [           main] [                                                 ] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-03-31T13:14:33.377Z DEBUG 3827 --- [           main] [                                                 ] swordEncoderAuthenticationManagerBuilder : No authenticationProviders and no parentAuthenticationManager defined. Returning null.
+2026-03-31T13:14:33.507Z  INFO 3827 --- [           main] [                                                 ] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-03-31T13:14:34.713Z  INFO 3827 --- [           main] [                                                 ] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-03-31T13:14:34.890Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-03-31T13:14:34.893Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-31T13:14:34.893Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select bc1_0.id,bc1_0.admin_email,bc1_0.admin_name,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.client_id,bc1_0.client_secret,bc1_0.created_at,bc1_0.created_by,bc1_0.currency_code,bc1_0.issuer_url,bc1_0.name,bc1_0.status,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
+2026-03-31T13:14:34.981Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: false
+2026-03-31T13:14:35.003Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-03-31T13:14:35.004Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-31T13:14:35.004Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select bc1_0.id,bc1_0.admin_email,bc1_0.admin_name,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.client_id,bc1_0.client_secret,bc1_0.created_at,bc1_0.created_by,bc1_0.currency_code,bc1_0.issuer_url,bc1_0.name,bc1_0.status,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
+2026-03-31T13:14:35.007Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: false
+2026-03-31T13:14:35.122Z DEBUG 3827 --- [           main] [                                                 ] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, TenantContextFilter, HeaderWriterFilter, CorsFilter, CsrfFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, BearerTokenAuthenticationFilter, CsrfCookieFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-03-31T13:14:36.694Z  INFO 3827 --- [           main] [                                                 ] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-31T13:14:36.716Z  INFO 3827 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Started PlexusApplication in 16.501 seconds (process running for 16.916)
+--- Seeding System Admin: SYSTEM with ISSUER: https://login.microsoftonline.com/5dafae79-1a4c-4aac-b6f4-842a5ba73a33/v2.0 ---
+2026-03-31T13:14:36.886Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-03-31T13:14:36.887Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-31T13:14:36.887Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
+2026-03-31T13:14:36.934Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-31T13:14:36.935Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Created root bank: SYSTEM with client_id: bank-engine-api
+2026-03-31T13:14:37.016Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-31T13:14:37.017Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=? and r1_0.bank_id=?
+2026-03-31T13:14:37.033Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-03-31T13:14:37.034Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+Seeded SYSTEM_ADMIN for SYSTEM
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+--- Seeding Comprehensive Development Data ---
+2026-03-31T13:14:37.053Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+
+--- Seeding Tenant: GLOBAL-BANK-001 ---
+2026-03-31T13:14:37.053Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.053Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
+2026-03-31T13:14:37.055Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.056Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Seeded Bank Configuration for GLOBAL-BANK-001 with Issuer: https://dev-identity.bankengine.com/GLOBAL-BANK-001
+2026-03-31T13:14:37.078Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.078Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
+2026-03-31T13:14:37.082Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.082Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
+Seeded new BANK_ADMIN for GLOBAL-BANK-001 with 44 permissions.
+2026-03-31T13:14:37.085Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.086Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select count(*) from pricing_input_metadata pim1_0
+Seeding Core Pricing Input Metadata for bank: GLOBAL-BANK-001
+2026-03-31T13:14:37.151Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.153Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.175Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.176Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
+2026-03-31T13:14:37.189Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.189Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product_type (bank_id,code,created_at,created_by,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Seeded Product Types for GLOBAL-BANK-001
+2026-03-31T13:14:37.198Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.198Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
+2026-03-31T13:14:37.204Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.205Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select fc1_0.id,fc1_0.activation_date,fc1_0.bank_id,fc1_0.code,fc1_0.created_at,fc1_0.created_by,fc1_0.data_type,fc1_0.expiry_date,fc1_0.name,fc1_0.status,fc1_0.updated_at,fc1_0.updated_by,fc1_0.version from feature_component fc1_0 where fc1_0.bank_id=? and fc1_0.code=? and fc1_0.version=?
+2026-03-31T13:14:37.212Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.212Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into feature_component (activation_date,bank_id,code,created_at,created_by,data_type,expiry_date,name,status,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.272Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.274Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.317Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.317Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product_feature_link (bank_id,created_at,created_by,feature_component_id,feature_value,product_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.324Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.324Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.bank_id=? and pc1_0.code=? and pc1_0.version=?
+2026-03-31T13:14:37.338Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.338Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into pricing_component (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,pro_rata_applicable,status,type,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.351Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.352Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into pricing_tier (apply_charge_on_full_breach,bank_id,code,created_at,created_by,max_threshold,min_threshold,name,pricing_component_id,priority,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.360Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.360Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into tier_condition (attribute_name,attribute_value,bank_id,connector,created_at,created_by,operator,pricing_tier_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.367Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.367Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into price_value (bank_id,created_at,created_by,pricing_tier_id,raw_value,updated_at,updated_by,value_type,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.373Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.373Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-31T13:14:37.383Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.384Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product_pricing_link (bank_id,created_at,created_by,effective_date,expiry_date,fixed_value,fixed_value_type,pricing_component_id,product_id,target_component_code,updated_at,updated_by,use_rules_engine,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.396Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.396Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-31T13:14:37.402Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.402Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-31T13:14:37.409Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-03-31T13:14:37.409Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product_bundle (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,status,target_customer_segments,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
+Seeded Product Bundle for GLOBAL-BANK-001
+Hibernate: insert into bank_category_conflicts (config_id,categorya,categoryb) values (?,?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+2026-03-31T13:14:37.443Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+
+--- Seeding Tenant: LOCAL-BANK-002 ---
+2026-03-31T13:14:37.443Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.443Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
+2026-03-31T13:14:37.446Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.446Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Seeded Bank Configuration for LOCAL-BANK-002 with Issuer: https://dev-identity.bankengine.com/LOCAL-BANK-002
+2026-03-31T13:14:37.461Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.462Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
+Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
+2026-03-31T13:14:37.476Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.477Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Updated BANK_ADMIN for LOCAL-BANK-002 with 44 permissions.
+2026-03-31T13:14:37.479Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.480Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select count(*) from pricing_input_metadata pim1_0
+2026-03-31T13:14:37.486Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.486Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
+2026-03-31T13:14:37.489Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.489Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product_type (bank_id,code,created_at,created_by,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+Seeded Product Types for LOCAL-BANK-002
+2026-03-31T13:14:37.491Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.491Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
+2026-03-31T13:14:37.494Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.494Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select fc1_0.id,fc1_0.activation_date,fc1_0.bank_id,fc1_0.code,fc1_0.created_at,fc1_0.created_by,fc1_0.data_type,fc1_0.expiry_date,fc1_0.name,fc1_0.status,fc1_0.updated_at,fc1_0.updated_by,fc1_0.version from feature_component fc1_0 where fc1_0.bank_id=? and fc1_0.code=? and fc1_0.version=?
+2026-03-31T13:14:37.497Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.497Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into feature_component (activation_date,bank_id,code,created_at,created_by,data_type,expiry_date,name,status,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.499Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.499Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.503Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.503Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product_feature_link (bank_id,created_at,created_by,feature_component_id,feature_value,product_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.504Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.504Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.bank_id=? and pc1_0.code=? and pc1_0.version=?
+2026-03-31T13:14:37.508Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.508Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into pricing_component (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,pro_rata_applicable,status,type,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.511Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.511Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into pricing_tier (apply_charge_on_full_breach,bank_id,code,created_at,created_by,max_threshold,min_threshold,name,pricing_component_id,priority,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.512Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.512Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into tier_condition (attribute_name,attribute_value,bank_id,connector,created_at,created_by,operator,pricing_tier_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.514Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.514Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into price_value (bank_id,created_at,created_by,pricing_tier_id,raw_value,updated_at,updated_by,value_type,id) values (?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.515Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.515Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-31T13:14:37.520Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.520Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product_pricing_link (bank_id,created_at,created_by,effective_date,expiry_date,fixed_value,fixed_value_type,pricing_component_id,product_id,target_component_code,updated_at,updated_by,use_rules_engine,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+2026-03-31T13:14:37.521Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.522Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-31T13:14:37.526Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.526Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
+2026-03-31T13:14:37.532Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-03-31T13:14:37.532Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: insert into product_bundle (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,status,target_customer_segments,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
+Seeded Product Bundle for LOCAL-BANK-002
+Hibernate: update role set name=?,updated_at=?,updated_by=? where id=?
+Hibernate: delete from role_authority where role_id=?
+Hibernate: insert into bank_category_conflicts (config_id,categorya,categoryb) values (?,?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
+
+--- Seeding Complete ---
