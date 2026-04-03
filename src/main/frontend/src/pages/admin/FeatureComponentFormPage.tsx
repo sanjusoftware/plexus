@@ -97,22 +97,6 @@ const FeatureComponentFormPage = () => {
             </div>
           )}
           <div>
-            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Internal Feature Code</label>
-            <input
-              type="text"
-              required
-              disabled={isEditing}
-              className={`block w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm ${isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
-              value={formData.code}
-              onChange={(e) => {
-                setIsCodeEdited(true);
-                setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_').replace(/[^A-Z0-9_-]/g, '') });
-              }}
-              placeholder="e.g. LOUNGE_ACCESS"
-            />
-            {!isEditing && <p className="mt-3 text-[11px] text-gray-400 font-medium italic">Unique business code for the feature.</p>}
-          </div>
-          <div>
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Display Name</label>
             <input
               type="text"
@@ -129,6 +113,22 @@ const FeatureComponentFormPage = () => {
               }}
               placeholder="e.g. Airport Lounge Access"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Internal Feature Code</label>
+            <input
+              type="text"
+              required
+              disabled={isEditing}
+              className={`block w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm ${isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+              value={formData.code}
+              onChange={(e) => {
+                setIsCodeEdited(true);
+                setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_').replace(/[^A-Z0-9_-]/g, '') });
+              }}
+              placeholder="e.g. LOUNGE_ACCESS"
+            />
+            {!isEditing && <p className="mt-3 text-[11px] text-gray-400 font-medium italic">Unique business code for the feature.</p>}
           </div>
           <div>
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Data Type</label>

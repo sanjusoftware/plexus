@@ -104,22 +104,6 @@ const PricingMetadataFormPage = () => {
             </div>
           )}
           <div>
-            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Internal Attribute Key</label>
-            <input
-              type="text"
-              required
-              disabled={isEditing}
-              className={`block w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm ${isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
-              value={formData.attributeKey}
-              onChange={(e) => {
-                setIsKeyEdited(true);
-                setFormData({ ...formData, attributeKey: e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_-]/g, '') });
-              }}
-              placeholder="e.g. current_balance"
-            />
-            {!isEditing && <p className="mt-3 text-[11px] text-gray-400 font-medium italic">Used by developers in rule definitions. Must be unique.</p>}
-          </div>
-          <div>
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Friendly Display Name</label>
             <input
               type="text"
@@ -137,6 +121,22 @@ const PricingMetadataFormPage = () => {
               placeholder="e.g. Account Balance"
             />
             <p className="mt-3 text-[11px] text-gray-400 font-medium italic">What the business user sees in the pricing dashboard.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Internal Attribute Key</label>
+            <input
+              type="text"
+              required
+              disabled={isEditing}
+              className={`block w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm ${isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+              value={formData.attributeKey}
+              onChange={(e) => {
+                setIsKeyEdited(true);
+                setFormData({ ...formData, attributeKey: e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_-]/g, '') });
+              }}
+              placeholder="e.g. current_balance"
+            />
+            {!isEditing && <p className="mt-3 text-[11px] text-gray-400 font-medium italic">Used by developers in rule definitions. Must be unique.</p>}
           </div>
           <div>
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Attribute Data Type</label>
