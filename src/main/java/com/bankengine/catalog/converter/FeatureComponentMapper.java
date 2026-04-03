@@ -24,6 +24,8 @@ public interface FeatureComponentMapper {
     @Mapping(target = "expiryDate", source = "expiryDate")
     FeatureComponent toEntity(FeatureComponentRequest dto);
 
+    @Mapping(target = "version", source = "version")
+    @Mapping(target = "status", source = "status")
     FeatureComponentResponse toResponseDto(FeatureComponent entity);
 
     List<FeatureComponentResponse> toResponseDtoList(List<FeatureComponent> entities);

@@ -23,6 +23,8 @@ public interface ProductMapper {
 
     @Mapping(target = "features", source = "productFeatureLinks")
     @Mapping(target = "pricing", source = "productPricingLinks")
+    @Mapping(target = "version", source = "version")
+    @Mapping(target = "status", source = "status")
     ProductResponse toResponse(Product product);
 
     List<ProductResponse> toResponseList(List<Product> entities);

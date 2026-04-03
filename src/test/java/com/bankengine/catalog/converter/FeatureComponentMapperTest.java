@@ -3,6 +3,7 @@ package com.bankengine.catalog.converter;
 import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.model.FeatureComponent;
+import com.bankengine.common.model.VersionableEntity;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,13 +28,20 @@ class FeatureComponentMapperTest {
 
     @Test
     void testToResponseDto() {
-        FeatureComponent entity = FeatureComponent.builder().name("Test Feature").dataType(FeatureComponent.DataType.STRING).build();
+        FeatureComponent entity = FeatureComponent.builder()
+                .name("Test Feature")
+                .dataType(FeatureComponent.DataType.STRING)
+                .version(2)
+                .status(VersionableEntity.EntityStatus.ACTIVE)
+                .build();
 
         FeatureComponentResponse dto = mapper.toResponseDto(entity);
 
         assertNotNull(dto);
         assertEquals(entity.getId(), dto.getId());
         assertEquals(entity.getName(), dto.getName());
+        assertEquals(2, dto.getVersion());
+        assertEquals("ACTIVE", dto.getStatus());
     }
 
     @Test

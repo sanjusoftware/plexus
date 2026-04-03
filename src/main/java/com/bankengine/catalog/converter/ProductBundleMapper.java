@@ -18,6 +18,8 @@ public interface ProductBundleMapper {
 
     @Mapping(target = "products", source = "containedProducts")
     @Mapping(target = "pricing", source = "bundlePricingLinks")
+    @Mapping(target = "version", source = "version")
+    @Mapping(target = "status", source = "status")
     ProductBundleResponse toResponse(ProductBundle entity);
 
     @ToNewEntity

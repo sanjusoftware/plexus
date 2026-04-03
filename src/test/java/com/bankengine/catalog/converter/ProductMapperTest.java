@@ -88,6 +88,8 @@ class ProductMapperTest {
         entity.setId(1L);
         entity.setName("Test Product");
         entity.setBankId("BANK-001");
+        entity.setVersion(3);
+        entity.setStatus(VersionableEntity.EntityStatus.ACTIVE);
 
         ProductResponse dto = mapper.toResponse(entity);
 
@@ -95,6 +97,8 @@ class ProductMapperTest {
         assertEquals(entity.getId(), dto.getId());
         assertEquals(entity.getName(), dto.getName());
         assertEquals(entity.getBankId(), dto.getBankId());
+        assertEquals(3, dto.getVersion());
+        assertEquals("ACTIVE", dto.getStatus());
     }
 
     @Test

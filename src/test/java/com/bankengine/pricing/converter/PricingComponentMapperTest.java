@@ -1,5 +1,6 @@
 package com.bankengine.pricing.converter;
 
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.dto.PricingComponentResponse;
 import com.bankengine.pricing.model.PricingComponent;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,9 +23,13 @@ class PricingComponentMapperTest {
         PricingComponent component = new PricingComponent();
         component.setName("Test Comp");
         component.setDescription("Test Description");
+        component.setVersion(4);
+        component.setStatus(VersionableEntity.EntityStatus.INACTIVE);
         PricingComponentResponse response = mapper.toResponseDto(component);
         assertEquals("Test Comp", response.getName());
         assertEquals("Test Description", response.getDescription());
+        assertEquals(4, response.getVersion());
+        assertEquals("INACTIVE", response.getStatus());
     }
 
     @Test

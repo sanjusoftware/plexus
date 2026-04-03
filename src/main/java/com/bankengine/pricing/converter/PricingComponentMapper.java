@@ -17,6 +17,8 @@ import java.util.List;
 @Mapper(config = MapStructConfig.class, componentModel = "spring", uses = {PricingTierMapper.class})
 public interface PricingComponentMapper {
 
+    @Mapping(target = "version", source = "version")
+    @Mapping(target = "status", source = "status")
     PricingComponentResponse toResponseDto(PricingComponent entity);
 
     List<PricingComponentResponse> toResponseDtoList(List<PricingComponent> entities);
