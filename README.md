@@ -31,7 +31,7 @@ Plexus includes a built-in React-based administrative thin client for managing b
 ### Accessing the UI
 The UI is integrated and served directly from the Spring Boot application on port **8080**.
 
-**When running via Docker Compose (`docker-compose up`):**
+**When running via Docker Compose (`docker compose up`):**
 - **Landing Page**: `http://localhost:8080/`
 - **Login/Discovery**: `http://localhost:8080/login`
 - **Dashboard**: `http://localhost:8080/dashboard`
@@ -46,15 +46,16 @@ For the best development experience with hot-reloading:
 2. Navigate to `src/main/frontend`.
 3. Run `npm install` and then `npm start`.
 4. Access the dev UI at **`http://localhost:3000`**.
-   - *Note: The dev server is configured to proxy API requests to `localhost:8080` automatically.*
+   - *Note: the checked-in frontend uses relative `/api/...` paths and does not include a committed proxy configuration. For separate-port development, add a local proxy/base URL setup to point API calls at `localhost:8080`, or use the backend-served UI on port `8080`.*
 
 #### 2. Production Build
 The frontend build is fully integrated into the Gradle lifecycle:
 - Running `./gradlew build` or `./gradlew bootJar` will:
   1. Execute `npm install` to fetch dependencies.
   2. Execute `npm run build` to generate optimized production assets.
-  3. Copy the assets into `src/main/resources/static`.
+  3. Copy the assets into Gradle's packaged static resources output (`build/resources/main/static`) before creating the application artifact.
 - These assets are then served by Spring Boot as static resources.
+- Test-only runs such as `./gradlew test --tests ...` do **not** trigger the frontend build.
 
 ***
 
@@ -93,68 +94,111 @@ Plexus utilizes a **Backend-for-Frontend (BFF)** pattern for authentication, pro
 ***
 
 # Product Catalog and Pricing Model
-This system employs a decoupled, highly reusable architecture where Products are assembled by linking to reusable Components. This design prevents data duplication and centralizes maintenance for both feature configurations and complex pricing rules.
+Plexus uses a versioned aggregate model: business definitions (`FeatureComponent`, `PricingComponent`) are reusable masters, while product and bundle links carry context-specific values. This keeps pricing logic centralized and product configuration flexible.
 
 ***
 
-## 1. Core Concept: Decoupling Definitions from Products
-The key to understanding the model is the distinction between a Component (the reusable master definition) and a Link (the product-specific value or context).
+## 1. Core Pattern: Versioned Masters + Contextual Links
 
-| Domain       | Master Component (Definition) | Link Entity (Product-Specific Usage) | Purpose of the Link                                                                                    |
-|:-------------|:------------------------------|:-------------------------------------|:-------------------------------------------------------------------------------------------------------|
-| **Features** | **`FeatureComponent`**        | **`ProductFeatureLink`**             | Holds the specific **VALUE** (e.g., '120') for a feature on a Product.                                 |
-| **Pricing**  | **`PricingComponent`**        | **`ProductPricingLink`**             | Establishes the **BINDING** and **CONTEXT** (e.g., 'CORE\_RATE') for a pricing component on a Product. |
+| Domain | Reusable Master | Link Entity | What the Link Stores |
+|:--|:--|:--|:--|
+| Features | `FeatureComponent` | `ProductFeatureLink` | `featureValue` for that product (string value validated against component `dataType`) |
+| Product Pricing | `PricingComponent` | `ProductPricingLink` | `fixedValue`/`fixedValueType`, `targetComponentCode`, `useRulesEngine`, and optional effective dates |
+| Bundle Pricing | `PricingComponent` | `BundlePricingLink` | bundle-level fixed value or rules-driven adjustment |
 
-***
-
-## 2. Entity Relationship Overview
-The core entities and their roles in defining a complete product offering:
-
-| Entity Name              | Location        | Role in the Model                                                       | Key Data Stored                                             |
-|:-------------------------|:----------------|:------------------------------------------------------------------------|:------------------------------------------------------------|
-| **`Product`**            | Catalog Service | The primary, effective-dated product entity (e.g., "Premier Checking"). | `name`, `bankId`, `effectiveDate`, `status`                 |
-| **`ProductType`**        | Catalog Service | High-level category for a Product (e.g., `CASA`, `Loan`).               | `name`                                                      |
-| **`FeatureComponent`**   | Catalog Service | The global **definition** of a product attribute.                       | `name` (e.g., "Max\_Tenor"), `dataType`                     |
-| **`ProductFeatureLink`** | Catalog Service | **M:N link** between a `Product` and a `FeatureComponent`.              | **`featureValue`** (The concrete value, e.g., `"120"`)      |
-| **`PricingComponent`**   | Pricing Service | The global **definition** of a reusable rate or fee structure.          | `name` (e.g., "Monthly Fee"), `type` (e.g., `FEE`, `RATE`)  |
-| **`PricingTier`**        | Pricing Service | A specific rule or segment **within** a `PricingComponent`.             | `tierName`, `minThreshold`, `conditionValue`                |
-| **`PriceValue`**         | Pricing Service | The actual monetary/rate value associated with a `PricingTier`.         | `priceAmount`, `valueType` (e.g., `ABSOLUTE`, `PERCENTAGE`) |
-| **`ProductPricingLink`** | Pricing Service | **M:N link** between a `Product` and a `PricingComponent`.              | **`context`** (The purpose, e.g., `"CORE_FEE"`)             |
-| **`Role`**               | Auth Service    | Defines a set of permissions (authorities).                             | `name`, linked `authorities` (permissions)                  |
+All versionable masters (`Product`, `ProductBundle`, `FeatureComponent`, `PricingComponent`) carry lifecycle metadata from `VersionableEntity`: `version`, `status`, `activationDate`, and `expiryDate`.
 
 ***
 
-## 3. Security and Authorization Model (RBAC)
+## 2. Current Entity Model (What Actually Exists)
 
-Plexus enforces security via an internally managed Role-Based Access Control (RBAC) layer integrated with Spring Security's OAuth2 Resource Server.
+| Entity | Purpose | Key Fields |
+|:--|:--|:--|
+| `Product` | Versioned product aggregate in catalog | `code`, `name`, `category`, `productType`, `status`, `version`, `activationDate`, `expiryDate` |
+| `ProductBundle` | Versioned bundle of products | `code`, `name`, `targetCustomerSegments`, `status`, `version`, linked products/pricing |
+| `FeatureComponent` | Versioned reusable feature definition | `code`, `name`, `dataType`, `status`, `version` |
+| `PricingComponent` | Versioned reusable pricing definition | `code`, `name`, `type`, `proRataApplicable`, `pricingTiers`, `status`, `version` |
+| `PricingTier` | Rule tier inside a pricing component | `name`, `code`, `priority`, thresholds, conditions |
+| `PriceValue` | Monetary/discount value used in pricing | `rawValue`, `valueType` (`FEE_ABSOLUTE`, `FEE_PERCENTAGE`, `DISCOUNT_PERCENTAGE`, `DISCOUNT_ABSOLUTE`, `FREE_COUNT`) |
+| `ProductFeatureLink` | Product -> FeatureComponent join | `featureValue` |
+| `ProductPricingLink` | Product -> PricingComponent join | fixed/rules flags, target component code, effective window |
+| `BundleProductLink` | ProductBundle -> Product join | `mainAccount`, `mandatory` |
+| `BundlePricingLink` | ProductBundle -> PricingComponent join | fixed/rules flags, effective window |
 
-### A. JWT Structure and Authority Extraction
-* **JWT Validation:** Tokens are validated against configurable claims (`iss`, `aud`, `exp`).
-* **Custom Authority Converter (`JwtAuthConverter`):** This component reads the custom **`roles`** claim (which supports an array of roles) from the JWT.
-* **Permission Mapping:** It uses the `PermissionMappingService` to fetch the complete set of unique, aggregated **Authorities** (`<domain>:<resource>:<action>`, e.g., `catalog:product:read`) from the internal database based on the roles present in the token.
+***
 
-#### Sample Required JWT Payload
-For a token to be accepted and successfully authorize a user (e.g., a `BANK_ADMIN`), the payload must include all configured claims. Note that `bank_id` is automatically resolved from the `iss` (issuer) and `azp`/`aud` (client ID) claims:
+## 3. Lifecycle and Versioning Behavior
 
-```json
-{
-  "sub": "dev_user_identifier",
-  "roles": ["BANK_ADMIN", "ANALYST"],
-  "iss": "http://identity-provider:9090/default",
-  "azp": "bank-engine-api",
-  "iat": 1732540800,
-  "exp": 1795697637
-}
+- Draft-first model: create entities as `DRAFT`, then activate through dedicated endpoints.
+- Direct mutation is restricted to DRAFT in aggregate patch flows.
+- New versions are created via `/create-new-version` endpoints for products, bundles, and pricing components.
+- Deactivation/archival uses dedicated lifecycle endpoints (for example, product deactivate moves to `ARCHIVED`).
+- Responses for versionable aggregates include both `version` and `status`.
+
+***
+
+## 4. Calculation APIs (Current)
+
+Pricing retrieval is request-body driven (not query-string driven):
+
+- **Product calculation:** `POST /api/v1/pricing/calculate/product`
+  - Request includes `productId`, `customerSegment`, optional `transactionAmount`, `effectiveDate`, `enrollmentDate`, and `customAttributes`.
+  - Response: `ProductPricingCalculationResult` with `finalChargeablePrice` and `componentBreakdown`.
+
+- **Bundle calculation:** `POST /api/v1/pricing/calculate/bundle`
+  - Request includes `productBundleId`, line items (`productId` + `transactionAmount`), `customerSegment`, and optional date/attributes.
+  - Response: `BundlePriceResponse` with gross/net totals, bundle adjustments, and per-product pricing results.
+
+***
+
+## 5. End-to-End Flow (Current)
+
+1. Define reusable masters (`FeatureComponent`, `PricingComponent` + tiers/conditions/values).
+2. Create product aggregate and link features/pricing using component codes.
+3. Optionally create bundle aggregate linking products and bundle-level pricing.
+4. Activate product/bundle versions.
+5. Use pricing calculation endpoints to compute product-level and bundle-level outcomes.
+
+### Bundle Pricing Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client as Client System
+    participant BPS as BundlePricingService
+    participant PCS as ProductPricingService
+    participant RE as BundleRulesEngine (Drools)
+
+    Client->>BPS: calculateTotalBundlePrice(request)
+
+    loop For each product in bundle request
+        BPS->>PCS: getProductPricing(singlePricingRequest)
+        PCS-->>BPS: ProductPricingCalculationResult
+    end
+
+    Note over BPS: 1) Build gross total from product results
+    BPS->>BPS: 2) Load BundlePricingLinks
+    BPS->>RE: 3) Apply bundle-level rule adjustments
+    Note over BPS: 4) Compute net total (gross + fixed + rules)
+
+    BPS-->>Client: BundlePriceResponse
 ```
 
-### B. Access Control
-Access is granted using method-level security with **`@PreAuthorize`**.
+## 6. Why This Model Still Works Well
 
-* **Example:** `@PreAuthorize("hasAuthority('catalog:product:read')")`
-* **Role Mapping Endpoint:** The `/api/v1/roles/mapping` endpoint is used to maintain the relationship between role names (e.g., `PRICING_ENGINEER`) and the actual system authorities. **Validation** is enforced to prevent mapping invalid permissions.
+* **Centralized pricing logic:** Changing one pricing tier/value updates behavior everywhere that component is linked.
+* **Safe evolution:** Versioning enables new configurations without breaking live contracts.
+* **Tenant-safe and auditable:** All entities are tenant-scoped and carry audit metadata for governance.
 
-### C. System Permissions Discovery
-To ensure consistency and performance, the application discovers all available authorities by scanning **`@PreAuthorize`** annotations via reflection during startup. This master list is then **cached** in memory using Spring's `@Cacheable` to optimize subsequent authorization lookups and validation checks, avoiding repeated reflection overhead.
+***
+
+## 7. Development & Testing
+Plexus maintains high code quality with a broad suite of integration and unit tests covering multi-tenancy, RBAC, lifecycle flows, and pricing calculation logic.
+
+### Running Tests
+```bash
+./gradlew test
+```
+The test suite utilizes a `TestTransactionHelper` to perform idempotent data seeding, ensuring unique constraints are respected across parallel test executions by using "find-or-create" logic.
 
 ***
 
@@ -162,8 +206,10 @@ To ensure consistency and performance, the application discovers all available a
 
 Plexus works with any OIDC-compatible IDP (EntraID, Keycloak, Auth0, etc.). The application identifies the tenant (bank) based on the OIDC **Issuer URL** and **Client ID** registered during onboarding.
 
-The application requires one custom claim in the JWT:
+For the browser-based login flow, the application requires one custom claim in the token returned by the IDP:
 1.  **`roles`**: An array of strings representing the user's roles (e.g., `["BANK_ADMIN"]`).
+
+The backend enriches the authenticated user with `bank_id`, `bankName`, and mapped permissions after resolving the tenant from the registered bank configuration. For direct bearer-token API access, tenant resolution can come from `bank_id`, `aud`, or the issuer URL.
 
 ### 1. Microsoft EntraID (Azure AD) Setup
 To add the custom `roles` claim:
@@ -206,13 +252,16 @@ Plexus uses a consistent hostname (`identity-provider`) to ensure that OAuth2 to
 Once your hosts file is configured, launch the entire stack:
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
+
+> If your environment still uses the legacy Compose CLI, `docker-compose up --build -d` works as well.
 
 - **App**: `http://localhost:8080`
 - **PostgreSQL**: `localhost:5432` (User: `user`, Pass: `password`, DB: `bankengine`)
 - **Mock OAuth Server**: `http://identity-provider:9090/default`
   - Debugger: `http://identity-provider:9090/default/debugger`
+- **Redis Commander**: `http://localhost:8081`
 
 ### C. Running Locally (IDE/CLI)
 For active development with hot-reloading (via H2 database):
@@ -229,10 +278,16 @@ For active development with hot-reloading (via H2 database):
 The application is configured for deployment to **Azure Web App for Containers** using **GitHub Actions**.
 
 ### A. CI/CD Pipeline
-The workflow in `.github/workflows/deploy-azure.yml` handles:
-1. **Build & Test**: Running `./gradlew build`.
-2. **Dockerize**: Building the image and pushing it to **Azure Container Registry (ACR)**.
-3. **Deploy**: Updating the Azure Web App (Staging/Production).
+The deployment flow is split across two GitHub Actions workflows:
+
+1. **CI Build** (`.github/workflows/ci-build.yml`)
+   - Runs `./gradlew build jacocoTestReport`
+   - Uploads JaCoCo coverage to Codecov
+   - Builds and pushes the Docker image to **Azure Container Registry (ACR)**
+2. **CD - Azure Deployment** (`.github/workflows/cd-deploy-azure.yml`)
+   - Triggers after a successful CI workflow run
+   - Deploys the pushed image to the Azure Web App staging environment
+   - Includes a placeholder production promotion step
 
 ### B. Required GitHub Secrets
 To use the provided pipeline, configure these secrets in your GitHub repository:
@@ -240,19 +295,30 @@ To use the provided pipeline, configure these secrets in your GitHub repository:
 - `ACR_USERNAME`: ACR service principal or admin username.
 - `ACR_PASSWORD`: ACR service principal or admin password.
 - `AZURE_WEBAPP_PUBLISH_PROFILE`: The publish profile XML from your Azure Web App.
+- `CODECOV_TOKEN`: Required if you want the CI workflow's Codecov upload step to succeed.
 
 ## 4. Environment Configuration Reference
 Key properties that can be overridden via environment variables:
 
-| Property | Environment Variable | Default (Dev)                                        |
-| :--- | :--- |:-----------------------------------------------------|
-| `app.security.system-bank-id` | `APP_SECURITY_SYSTEM_BANK_ID` | `SYSTEM`                                             |
-| `app.security.system-issuer` | `APP_SECURITY_SYSTEM_ISSUER` | https://login.microsoftonline.com/...                |
+| Property | Environment Variable | Default (Dev) |
+| :--- | :--- |:---|
+| `app.security.system-bank-id` | `APP_SECURITY_SYSTEM_BANK_ID` | `SYSTEM` |
+| `app.security.system-issuer` | `APP_SECURITY_SYSTEM_ISSUER` | https://login.microsoftonline.com/... |
+| `app.security.system-bank-name` | `APP_SECURITY_SYSTEM_BANK_NAME` | `Plexus System Bank` |
+| `app.security.system-bank-admin-name` | `APP_SECURITY_SYSTEM_BANK_ADMIN_NAME` | `System Admin` |
+| `app.security.system-bank-admin-email` | `APP_SECURITY_SYSTEM_BANK_ADMIN_EMAIL` | `admin@plexus.app` |
+| `app.security.system-bank-admin-currency-code` | `APP_SECURITY_SYSTEM_BANK_CURRENCY_CODE` | `USD` |
 | `spring.security.oauth2.resourceserver.jwt.issuer-uri` | `JWT_ISSUER_URI` | https://login.microsoftonline.com/organizations/v2.0 |
-| `swagger.auth-url` | `SWAGGER_AUTH_URL` | https://login.microsoftonline.com/.../authorize      |
-| `swagger.token-url` | `SWAGGER_TOKEN_URL` | https://login.microsoftonline.com/.../token           |
-| `spring.datasource.url` | `SPRING_DATASOURCE_URL` | `jdbc:h2:mem:testdb`                                 |
-| `spring.profiles.active` | `SPRING_PROFILES_ACTIVE` | `dev`                                                |
+| `swagger.auth-url` | `SWAGGER_AUTH_URL` | https://login.microsoftonline.com/.../authorize |
+| `swagger.token-url` | `SWAGGER_TOKEN_URL` | https://login.microsoftonline.com/.../token |
+| `springdoc.swagger-ui.oauth.client-id` | `CLIENT_ID` | `bank-engine-api` |
+| `spring.session.store-type` | `SPRING_SESSION_STORE_TYPE` | `none` |
+| `spring.data.redis.host` | `REDIS_HOST` | `localhost` |
+| `spring.data.redis.port` | `REDIS_PORT` | `6379` |
+| `spring.datasource.url` | `SPRING_DATASOURCE_URL` | `jdbc:h2:mem:plexusdb` |
+| `spring.datasource.username` | `SPRING_DATASOURCE_USERNAME` | `sa` |
+| `spring.datasource.password` | `SPRING_DATASOURCE_PASSWORD` | *(empty)* |
+| `spring.profiles.active` | `SPRING_PROFILES_ACTIVE` | `dev` |
 
 ## 5. Deployment Models: SaaS vs On-Premise
 
@@ -287,94 +353,6 @@ graph TD
 
 ***
 
-## 4. Real-World Example: "Premier Checking Account"
-Let's trace how the **"Premier Checking Account"** is fully configured using this decoupled model.
-
-### A. Step 1: Defining the Reusable Components (Masters)
-These entities are generic and defined once in their respective services:
-
-| Entity                 | ID      | Name                    | Role/Type                     | Notes                                     |
-|:-----------------------|:--------|:------------------------|:------------------------------|:------------------------------------------|
-| **`FeatureComponent`** | 101     | `MaxFreeATMWithdrawals` | `INTEGER`                     | Defines the attribute: up to what number? |
-| **`PricingComponent`** | 201     | `MonthlyServiceFee`     | `FEE`                         | Defines the concept of a monthly fee.     |
-| **`PricingTier`**      | 201-1   | `Standard`              | Condition: `SEGMENT=STANDARD` | Rule for standard customers.              |
-| **`PriceValue`**       | 201-1-V | `10.00`                 | `ABSOLUTE`, `USD`             | The actual price for the Standard rule.   |
-| **`PricingTier`**      | 201-2   | `Premium`               | Condition: `SEGMENT=PREMIUM`  | Rule for premium customers.               |
-| **`PriceValue`**       | 201-2-V | `0.00`                  | `DISCOUNT_PERCENTAGE`                      | The price for the Premium rule (waived).  |
-
-### B. Step 2: Configuring the Product (Linking)
-The `Product` entity (ID 50) is created and then **linked** to the reusable components to create its unique definition:
-
-| Entity                   | Product ID | Component ID                  | Key Value        | Description                                                                |
-|:-------------------------|:-----------|:------------------------------|:-----------------|:---------------------------------------------------------------------------|
-| **`ProductFeatureLink`** | 50         | 101 (`MaxFreeATMWithdrawals`) | **`"5"`**        | The Premier Account sets the value of the feature to **5**.                |
-| **`ProductPricingLink`** | 50         | 201 (`MonthlyServiceFee`)     | **`"CORE_FEE"`** | The Product links to the Monthly Fee structure, calling it the `CORE_FEE`. |
-
-***
-
-## 5. The Calculation and Retrieval Flow
-The goal is for a consuming application (e.g., a customer onboarding system) to retrieve the correct feature value or calculate the correct price without knowing the internal structure of the components.
-
-### Feature Retrieval
-* **Client Request**: Retrieve `MaxFreeATMWithdrawals` for Product ID `50`.
-* **Action**: The Catalog Service reads `Product` 50, traverses the `ProductFeatureLink` pointing to `FeatureComponent` 101, and returns the stored `featureValue`.
-* **Result**: `"5"` (The service is responsible for validating and casting this String value to an `INTEGER` based on the `FeatureComponent.dataType`).
-
-### Pricing Calculation
-* **Client Request**: What is the `MonthlyServiceFee` for Product ID `50` for a **STANDARD** customer?
-* **Step 1 (Catalog)**: The client system (or a proxy) looks up `Product` 50 and finds the `ProductPricingLink` with `context="CORE_FEE"`. This link points to `PricingComponent` **201** (`MonthlyServiceFee`).
-* **Step 2 (Pricing)**: The client calls the dedicated Pricing Calculation Endpoint with the required parameters: `GET /api/v1/pricing/calculate/{componentId}?segment=STANDARD&amount=0`
-* **Action (Rule Engine)**: The Pricing Service loads `PricingComponent` **201** and all its associated `PricingTier` rules. It executes the rules against the inputs (`segment=STANDARD`).
-    * Rule 201-1 fires (`conditionValue` matches `STANDARD`).
-* **Result**: The Price Service returns the associated `PriceValue`: `$10.00` (with `valueType`: `ABSOLUTE`).
-
-### Bundle Pricing Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    participant Client as Client System
-    participant BPS as BundlePricingService
-    participant PCS as ProductPricingService
-    participant RE as BundleRulesEngine (Drools)
-
-    Client->>BPS: calculateTotalBundlePrice(request)
-    
-    loop For each Product in Bundle
-        BPS->>PCS: getProductPricing(singlePricingRequest)
-        PCS-->>BPS: return ProductPricingCalculationResult
-    end
-
-    Note over BPS: 1. Calculate Gross Total (Sum of individual results)
-    
-    BPS->>BPS: 2. Fetch BundlePricingLinks (Database)
-    Note right of BPS: Filter: !useRulesEngine & fixedValue != null
-
-    BPS->>RE: 3. determineBundleAdjustments(BundlePricingInput)
-    Note over RE: Fire rules based on grossTotal,<br/>segment, and bankId
-    RE-->>BPS: return adjustedFact (Map of Adjustments)
-
-    Note over BPS: 4. Aggregate Net Total<br/>(Gross + Fixed + Rules)
-
-    BPS-->>Client: return BundlePriceResponse
-```
-
-## 6. Benefit of this Architecture
-* **Centralized Pricing Updates**: If the rule for the `STANDARD` segment changes globally from $10.00 to $12.00, only **one** `PriceValue` needs to be updated. All products linked to `PricingComponent` 201 instantly inherit the change.
-* **Product-Specific Overrides**: Product features are isolated. If a product needs a limit of **10** free withdrawals instead of 5, only its specific `ProductFeatureLink` needs updating, leaving the `FeatureComponent` master definition intact.
-* **Auditable Integrity**: Every configuration change and calculation result is automatically tagged with `createdBy` and `updatedAt` metadata via JPA Auditing.
-
-***
-
-## 7. Development & Testing
-Plexus maintains high code quality with a suite of over 142+ integration tests covering multi-tenancy, RBAC, and calculation logic.
-
-### Running Tests
-```bash
-./gradlew test
-```
-The test suite utilizes a `TestTransactionHelper` to perform idempotent data seeding, ensuring unique constraints are respected across parallel test executions by using "find-or-create" logic.
-
-***
 
 # Bank Administration Guide
 
@@ -383,8 +361,9 @@ This guide walks through the end-to-end setup of a new bank and its products.
 ## Step 0: Initial System Onboarding (One-time)
 Before any bank can be onboarded, the system itself must be initialized.
 1. **IDP Setup**: Configure your Identity Provider to issue a token with:
-   - `bank_id`: `SYSTEM`
    - `roles`: `["SYSTEM_ADMIN"]`
+   - `bank_id` is **not** required for the browser login flow; Plexus resolves the tenant from the registered issuer/client configuration and enriches the authenticated user context.
+   - For direct bearer-token usage, ensure the issuer (and where relevant `aud`) matches the registered system bank configuration.
 2. **Startup**: When the app starts, the `SystemAdminSeeder` reads the following from environment variables (or `application.properties`) and creates/updates the root record:
    - `APP_SECURITY_SYSTEM_BANK_ID`: The unique ID for the system bank (default: `SYSTEM`).
    - `APP_SECURITY_SYSTEM_ISSUER`: The OIDC Issuer URI for the system bank.
@@ -394,7 +373,7 @@ Before any bank can be onboarded, the system itself must be initialized.
    - `APP_SECURITY_SYSTEM_BANK_CURRENCY_CODE`: The default currency code for the system bank.
 3. **Authorize**: If running locally, using `docker compose up`, you can login as system admin first by using the Authorize button on SwaggerUI.
 Visit http://localhost:8080/swagger-ui/index.html to open the swagger UI.
-Click Authorize Button on SwaggerUI which will open take you to mock server: http://identity-provider:9090/ to enter the required claims.
+Click the Authorize button on SwaggerUI, which will redirect to the mock provider authorization flow under `http://identity-provider:9090/default/...`.
 
 **Important:** The system identifies the bank via the Issuer URL and Client ID. Ensure the mock server is configured as the issuer for the `SYSTEM` bank.
 
@@ -459,7 +438,7 @@ The `status` of a bank cannot be set directly during creation or update. Instead
 
 **Instructions for Tenant IDP Admins:**
 1. Register a new "Single Page Application" (SPA) in your IDP (e.g., EntraID, Keycloak).
-2. Configure the Redirect URI to: `http://localhost:8080/auth/callback` (or your production domain).
+2. Configure the Redirect URI to: `http://localhost:8080/login/oauth2/code/callback` (or your production domain equivalent).
 3. Enable "Authorization Code Flow with PKCE".
 4. Provide the resulting **Application (Client) ID** to the Plexus System Admin for onboarding.
 
