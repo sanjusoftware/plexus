@@ -5,6 +5,7 @@ import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.dto.VersionRequest;
 import com.bankengine.catalog.service.FeatureComponentService;
+import com.bankengine.common.model.VersionableEntity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -40,7 +41,7 @@ public class FeatureComponentController {
     public ResponseEntity<List<FeatureComponentResponse>> getAllFeatures(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) Integer version,
-            @RequestParam(required = false) com.bankengine.common.model.VersionableEntity.EntityStatus status) {
+            @RequestParam(required = false) VersionableEntity.EntityStatus status) {
         return ResponseEntity.ok(featureComponentService.searchFeatures(code, version, status));
     }
 

@@ -132,7 +132,10 @@ tasks.register('copyFrontend', Copy) {
     into "$buildDir/resources/main/static"
 }
 
-processResources.dependsOn 'copyFrontend'
+// Frontend assets are needed for packaged artifacts, not for test-only runs.
+tasks.named('bootJar') {
+    dependsOn 'copyFrontend'
+}
 
 tasks.named('test') {
     useJUnitPlatform()
@@ -145,7 +148,7 @@ tasks.named('test') {
 }
 
 jacocoTestReport {
-    dependsOn test, compileJava, processResources, 'copyFrontend'
+    dependsOn test, compileJava
     reports {
         xml.required = true
         html.required = true
