@@ -21,7 +21,7 @@ public class RoleManagementService extends BaseService {
     private final PermissionMappingService permissionMappingService;
 
     @Transactional
-    public void saveRoleMapping(String roleName, Set<String> authorities) {
+    public Role saveRoleMapping(String roleName, Set<String> authorities) {
         boolean containsSystemAuth = authorities.stream().anyMatch(a -> a.startsWith("system:"));
         if (containsSystemAuth && !"SYSTEM".equals(getCurrentBankId())) {
             throw new AccessDeniedException("Only SYSTEM bank admins can assign system:* authorities.");
@@ -32,10 +32,12 @@ public class RoleManagementService extends BaseService {
         role.setBankId(getCurrentBankId());
         role.setAuthorities(authorities);
 
-        roleRepository.save(role);
+        Role savedRole = roleRepository.save(role);
 
         // Evict the cache since the role mapping has changed.
         permissionMappingService.evictAllRolePermissionsCache();
+        
+        return savedRole;
     }
 
     @Transactional

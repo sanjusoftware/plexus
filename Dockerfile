@@ -5,9 +5,6 @@ ARG HTTP_PROXY=""
 ARG HTTPS_PROXY=""
 ARG NO_PROXY=""
 
-# --- DRY PROXY CLEANING ---
-# We use a single RUN command to set up the environment.
-# Since ENV doesn't support complex shell logic, we use this trick:
 ENV http_proxy=$HTTP_PROXY
 ENV https_proxy=$HTTPS_PROXY
 ENV no_proxy=$NO_PROXY

@@ -413,13 +413,33 @@ The System Admin (Platform Owner) initializes the bank. This action creates the 
 ```json
 {
   "bankId": "GLOBAL-BANK-001",
+  "name": "Global Bank",
   "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
   "clientId": "bank-engine-api",
   "clientSecret": "optional-secret-only-if-required-by-idp",
   "adminName": "John Doe",
   "adminEmail": "john.doe@globalbank.com",
   "allowProductInMultipleBundles": true,
-  "currencyCode": "NO_CURR",
+  "currencyCode": "USD",
+  "categoryConflictRules": [
+    { "categoryA": "RETAIL", "categoryB": "WEALTH" }
+  ]
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "bankId": "GLOBAL-BANK-001",
+  "name": "Global Bank",
+  "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
+  "clientId": "bank-engine-api",
+  "hasClientSecret": true,
+  "allowProductInMultipleBundles": true,
+  "currencyCode": "USD",
+  "status": "DRAFT",
+  "adminName": "John Doe",
+  "adminEmail": "john.doe@globalbank.com",
   "categoryConflictRules": [
     { "categoryA": "RETAIL", "categoryB": "WEALTH" }
   ]
@@ -461,6 +481,25 @@ Note that a `BANK_ADMIN` role is automatically created at the time of on-boardin
 }
 ```
 
+**Response:** `200 OK`
+```json
+{
+  "bankId": "GLOBAL-BANK-001",
+  "name": "Global Bank",
+  "issuerUrl": "https://login.microsoftonline.com/tenant-id-123/v2.0",
+  "clientId": "bank-engine-api",
+  "hasClientSecret": true,
+  "allowProductInMultipleBundles": false,
+  "currencyCode": "USD",
+  "status": "ACTIVE",
+  "adminName": "John Doe",
+  "adminEmail": "john.doe@globalbank.com",
+  "categoryConflictRules": [
+    { "categoryA": "RETAIL", "categoryB": "INVESTMENT" }
+  ]
+}
+```
+
 ## Step 3: Bank Admin - Configure Roles & Permissions
 The Bank Admin for `GLOBAL-BANK-001` can then define other custom roles and map those roles to permissions they want to provide.
 
@@ -470,6 +509,18 @@ The Bank Admin for `GLOBAL-BANK-001` can then define other custom roles and map 
 {
   "roleName": "PRODUCT_MANAGER",
   "authorities": ["catalog:product:create", "catalog:product:read", "catalog:product:update"]
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": 201,
+  "name": "PRODUCT_MANAGER",
+  "bankId": "GLOBAL-BANK-001",
+  "authorities": ["catalog:product:create", "catalog:product:read", "catalog:product:update"],
+  "createdAt": "2026-03-01T10:00:00Z",
+  "updatedAt": "2026-03-01T10:00:00Z"
 }
 ```
 
@@ -489,17 +540,36 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
   "dataType": "DECIMAL"
 }
 ```
+
+**Response:** `201 Created`
+```json
+{
+  "attributeKey": "income",
+  "displayName": "Annual Income",
+  "dataType": "DECIMAL"
+}
+```
 * **attributeKey**: The internal key used in rules (typically snake_case).
 * **displayName**: User-friendly label for the UI.
 * **dataType**: Used for validation and rule generation. Allowed: `STRING`, `DECIMAL`, `INTEGER`, `BOOLEAN`, `DATE`.
 
 ### A. Create Product Type
 **Request:** `POST /api/v1/product-types`
-**Authority:** `catalog:type:create`
+**Authority:** `catalog:product-type:create`
 ```json
 {
   "name": "Credit Cards",
   "code": "CARD"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": 1,
+  "name": "Credit Cards",
+  "code": "CARD",
+  "status": "DRAFT"
 }
 ```
 *Assuming ID returned is `1`.*
@@ -514,6 +584,20 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
   "dataType": "STRING"
 }
 ```
+
+**Response:** `201 Created`
+```json
+{
+  "id": 10,
+  "code": "LOUNGE-ACCESS",
+  "name": "Free access to all premium airport lounges",
+  "dataType": "STRING",
+  "status": "DRAFT",
+  "bankId": "GLOBAL-BANK-001",
+  "version": 1,
+  "createdAt": "2026-03-01T10:00:00Z"
+}
+```
 *Assuming ID returned is `10`.*
 
 ### C. Create Pricing Component
@@ -525,16 +609,18 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
   "name": "Monthly maintenance fee",
   "type": "FEE",
   "description": "Standard fee with segment waivers",
+  "proRataApplicable": false,
   "pricingTiers": [
     {
       "name": "Premium Waiver",
       "code": "PREMIUM_WAIVER",
+      "priority": 10,
       "minThreshold": 10,
       "maxThreshold": 100,
       "applyChargeOnFullBreach": true,
       "conditions": [
         { "attributeName": "segment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" },
-        { "attributeName": "income", "operator": "GT", "attributeValue": "10000", "connector": "AND" }
+        { "attributeName": "income", "operator": "GT", "attributeValue": "10000" }
       ],
       "priceValue": {
         "priceAmount": 0.00,
@@ -544,8 +630,55 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
     {
       "name": "Standard Retail",
       "code": "STANDARD_RETAIL",
+      "priority": 5,
       "conditions": [
         { "attributeName": "segment", "operator": "EQ", "attributeValue": "RETAIL" }
+      ],
+      "priceValue": {
+        "priceAmount": 15.00,
+        "valueType": "ABSOLUTE"
+      }
+    }
+  ]
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": 100,
+  "code": "MONTHLY_MAIN_FEE",
+  "name": "Monthly maintenance fee",
+  "type": "FEE",
+  "description": "Standard fee with segment waivers",
+  "status": "DRAFT",
+  "bankId": "GLOBAL-BANK-001",
+  "version": 1,
+  "pricingTiers": [
+    {
+      "id": 1001,
+      "name": "Premium Waiver",
+      "code": "PREMIUM_WAIVER",
+      "priority": 10,
+      "minThreshold": 10,
+      "maxThreshold": 100,
+      "applyChargeOnFullBreach": true,
+      "conditions": [
+        { "attributeName": "segment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" },
+        { "attributeName": "income", "operator": "GT", "attributeValue": "10000", "connector": null }
+      ],
+      "priceValue": {
+        "priceAmount": 0.00,
+        "valueType": "DISCOUNT_PERCENTAGE"
+      }
+    },
+    {
+      "id": 1002,
+      "name": "Standard Retail",
+      "code": "STANDARD_RETAIL",
+      "priority": 5,
+      "conditions": [
+        { "attributeName": "segment", "operator": "EQ", "attributeValue": "RETAIL", "connector": null }
       ],
       "priceValue": {
         "priceAmount": 15.00,
@@ -567,20 +700,21 @@ Plexus uses a **FAT DTO** pattern, allowing you to create the product, its featu
 {
   "code": "GLB-SAV-001",
   "name": "Global Savings",
-  "productTypeId": 1,
+  "productTypeCode": "CASA",
   "category": "RETAIL",
   "activationDate": "2026-03-01",
+  "expiryDate": "2030-12-31",
   "tagline": "Grow your wealth faster",
   "fullDescription": "A high-yield savings account with no hidden fees.",
   "features": [
     {
-      "featureComponentId": 10,
+      "featureComponentCode": "LOUNGE-ACCESS",
       "featureValue": "10"
     }
   ],
   "pricing": [
     {
-      "pricingComponentId": 100,
+      "pricingComponentCode": "MONTHLY_MAIN_FEE",
       "fixedValue": 12.00,
       "fixedValueType": "FEE_ABSOLUTE",
       "useRulesEngine": false
@@ -591,20 +725,120 @@ Plexus uses a **FAT DTO** pattern, allowing you to create the product, its featu
   "featured": true
 }
 ```
+
+**Response:** `201 Created`
+```json
+{
+  "id": 500,
+  "code": "GLB-SAV-001",
+  "name": "Global Savings",
+  "version": 1,
+  "bankId": "GLOBAL-BANK-001",
+  "activationDate": "2026-03-01",
+  "expiryDate": "2030-12-31",
+  "status": "DRAFT",
+  "category": "RETAIL",
+  "productType": {
+    "id": 1,
+    "name": "Credit Cards",
+    "code": "CASA",
+    "status": "ACTIVE"
+  },
+  "createdAt": "2026-03-01T10:00:00Z",
+  "updatedAt": "2026-03-01T10:00:00Z",
+  "tagline": "Grow your wealth faster",
+  "fullDescription": "A high-yield savings account with no hidden fees.",
+  "iconUrl": "https://cdn.plexus.com/icons/savings.png",
+  "displayOrder": 1,
+  "featured": true,
+  "features": [
+    {
+      "featureComponentCode": "LOUNGE-ACCESS",
+      "featureName": "Free access to all premium airport lounges",
+      "dataType": "STRING",
+      "featureValue": "10"
+    }
+  ],
+  "pricing": [
+    {
+      "pricingComponentCode": "MONTHLY_MAIN_FEE",
+      "pricingComponentName": "Monthly maintenance fee",
+      "fixedValue": 12.00,
+      "fixedValueType": "FEE_ABSOLUTE",
+      "useRulesEngine": false
+    }
+  ]
+}
+```
 *Assuming ID returned is `500`.*
 
 ### B. Activate Product
 **Request:** `POST /api/v1/products/500/activate`
 **Authority:** `catalog:product:activate`
 
+**Response:** `200 OK`
+```json
+{
+  "id": 500,
+  "code": "GLB-SAV-001",
+  "name": "Global Savings",
+  "version": 1,
+  "bankId": "GLOBAL-BANK-001",
+  "activationDate": "2026-03-01",
+  "expiryDate": "2030-12-31",
+  "status": "ACTIVE",
+  "category": "RETAIL",
+  "productType": {
+    "id": 1,
+    "name": "Credit Cards",
+    "code": "CASA",
+    "status": "ACTIVE"
+  },
+  "createdAt": "2026-03-01T10:00:00Z",
+  "updatedAt": "2026-03-01T10:05:00Z",
+  "tagline": "Grow your wealth faster",
+  "fullDescription": "A high-yield savings account with no hidden fees.",
+  "iconUrl": "https://cdn.plexus.com/icons/savings.png",
+  "displayOrder": 1,
+  "featured": true,
+  "features": [
+    {
+      "featureComponentCode": "LOUNGE-ACCESS",
+      "featureName": "Free access to all premium airport lounges",
+      "dataType": "STRING",
+      "featureValue": "10"
+    }
+  ],
+  "pricing": [
+    {
+      "pricingComponentCode": "MONTHLY_MAIN_FEE",
+      "pricingComponentName": "Monthly maintenance fee",
+      "fixedValue": 12.00,
+      "fixedValueType": "FEE_ABSOLUTE",
+      "useRulesEngine": false
+    }
+  ]
+}
+```
+
+### B.1 Deactivate/Archive Product (Optional)
+**Request:** `POST /api/v1/products/500/deactivate`
+**Authority:** `catalog:product:deactivate`
+
+**Response:** `200 OK`
+Returns the same ProductResponse with status updated to `ARCHIVED`.
+
 ### C. Create New Version (Optional)
-**Request:** `POST /api/v1/products/500/version`
+**Request:** `POST /api/v1/products/500/create-new-version`
 **Authority:** `catalog:product:create`
 ```json
 {
-  "newActivationDate": "2026-04-01"
+  "activationDate": "2026-04-01"
 }
 ```
+
+**Response:** `201 Created`
+Returns a new DRAFT product version with the incremented version number and the specified activation date.
 
 ## Step 6: Bank Admin - Create Product Bundle
 **Request:** `POST /api/v1/bundles`
@@ -614,26 +848,92 @@ Plexus uses a **FAT DTO** pattern, allowing you to create the product, its featu
   "code": "GOLD-ELITE-001",
   "name": "Gold Elite Bundle",
   "description": "Premium savings bundle",
-  "eligibilitySegment": "RETAIL",
+  "targetCustomerSegments": "RETAIL",
+  "activationDate": "2026-03-01",
+  "expiryDate": "2030-12-31",
   "products": [
     {
-      "productId": 500,
+      "productCode": "GLB-SAV-001",
       "mandatory": true,
       "mainAccount": true
     }
   ]
 }
 ```
+
+**Response:** `201 Created`
+```json
+{
+  "id": 300,
+  "code": "GOLD-ELITE-001",
+  "name": "Gold Elite Bundle",
+  "version": 1,
+  "bankId": "GLOBAL-BANK-001",
+  "description": "Premium savings bundle",
+  "targetCustomerSegments": "RETAIL",
+  "activationDate": "2026-03-01",
+  "expiryDate": "2030-12-31",
+  "status": "DRAFT",
+  "createdAt": "2026-03-01T10:00:00Z",
+  "updatedAt": "2026-03-01T10:00:00Z",
+  "products": [
+    {
+      "productCode": "GLB-SAV-001",
+      "productName": "Global Savings",
+      "mandatory": true,
+      "mainAccount": true
+    }
+  ]
+}
+```
+
+### Bundle Activation (Optional)
+**Request:** `POST /api/v1/bundles/300/activate`
+**Authority:** `catalog:bundle:activate`
+
+**Response:** `200 OK`
+Returns the updated ProductBundleResponse with status set to `ACTIVE`.
+
+### Bundle Archival (Optional)
+**Request:** `DELETE /api/v1/bundles/300`
+**Authority:** `catalog:bundle:delete`
+
+**Response:** `204 No Content`
+The bundle is archived and no longer available for new enrollments.
+
 ## Step 7: Bank Admin - Verify via Calculation
 **Request:** `POST /api/v1/pricing/calculate/product`
 **Authority:** `pricing:calculate:read`
 ```json
 {
   "productId": 500,
-  "inputs": {
-    "customer_segment": "RETAIL",
-    "balance": 5000
+  "customerSegment": "RETAIL",
+  "transactionAmount": 5000,
+  "customAttributes": {
+    "atm_count": 3,
+    "spending_total": 1500
   }
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "finalChargeablePrice": 15.00,
+  "componentBreakdown": [
+    {
+      "componentCode": "MONTHLY_MAIN_FEE",
+      "targetComponentCode": "MONTHLY_MAIN_FEE",
+      "rawValue": 15.00,
+      "valueType": "FEE_ABSOLUTE",
+      "proRataApplicable": false,
+      "applyChargeOnFullBreach": true,
+      "calculatedAmount": 15.00,
+      "sourceType": "FIXED_VALUE",
+      "matchedTierCode": "STANDARD_RETAIL",
+      "matchedTierId": 1002
+    }
+  ]
 }
 ```
 

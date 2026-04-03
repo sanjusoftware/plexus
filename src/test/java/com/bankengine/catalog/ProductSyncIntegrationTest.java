@@ -38,7 +38,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -262,7 +261,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
-    void shouldReturn404OnInvalidComponentId() throws Exception {
+    void shouldReturn400OnInvalidComponentId() throws Exception {
         Long productId = createDraftProductInDb("Invalid Ref Product");
         ProductRequest badRequest = ProductRequest.builder()
                 .features(List.of(ProductFeatureDto.builder().featureComponentCode("INVALID_CODE").featureValue("Err").build()))
@@ -271,8 +270,8 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(badRequest)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", containsString("Feature Component not found")));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("Feature component with code 'INVALID_CODE' not found")));
     }
 
     @Test

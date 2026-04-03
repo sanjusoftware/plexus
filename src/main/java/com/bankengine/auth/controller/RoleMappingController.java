@@ -1,6 +1,7 @@
 package com.bankengine.auth.controller;
 
 import com.bankengine.auth.dto.RoleAuthorityMappingDto;
+import com.bankengine.auth.model.Role;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.RoleManagementService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,16 +38,17 @@ public class RoleMappingController {
             description = "Creates a new role or updates an existing one, assigning the specified set of authorities. Requires 'auth:role:write' authority.",
             tags = {"Role Management"},
             responses = {
-                    @ApiResponse(responseCode = "201", description = "Role mapping created/updated successfully."),
+                    @ApiResponse(responseCode = "201", description = "Role mapping created/updated successfully.",
+                            content = @Content(schema = @Schema(implementation = Role.class))),
                     @ApiResponse(responseCode = "400", description = "Invalid input or validation failed."),
                     @ApiResponse(responseCode = "403", description = "Forbidden. Missing 'auth:role:write' authority.")
             }
     )
     @PostMapping("/mapping")
     @PreAuthorize("hasAuthority('auth:role:write')")
-    public ResponseEntity<Void> mapAuthoritiesToRole(@Valid @RequestBody RoleAuthorityMappingDto dto) {
-        roleManagementService.saveRoleMapping(dto.getRoleName(), dto.getAuthorities());
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<Role> mapAuthoritiesToRole(@Valid @RequestBody RoleAuthorityMappingDto dto) {
+        Role savedRole = roleManagementService.saveRoleMapping(dto.getRoleName(), dto.getAuthorities());
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedRole);
     }
 
     @Operation(
