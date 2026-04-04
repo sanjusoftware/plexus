@@ -5,7 +5,9 @@ import com.bankengine.pricing.converter.PricingComponentMapper;
 import com.bankengine.pricing.dto.PricingComponentRequest;
 import com.bankengine.pricing.dto.PricingComponentResponse;
 import com.bankengine.pricing.service.PricingComponentService;
+import com.bankengine.web.dto.ApiError;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -52,10 +54,77 @@ public class PricingComponentController {
         return ResponseEntity.ok(pricingComponentService.getComponentById(id));
     }
 
+    @Operation(summary = "Retrieve a pricing component by code",
+            description = "Fetches a pricing component using its business code. If `version` is provided, that exact version is returned. " +
+                    "If `version` is omitted, the latest available version for that code is returned within the current tenant.")
+    @ApiResponse(responseCode = "200", description = "Pricing component successfully retrieved.",
+            content = @Content(
+                    schema = @Schema(implementation = PricingComponentResponse.class),
+                    examples = @ExampleObject(
+                            name = "Pricing component by code",
+                            value = """
+                                    {
+                                      "id": 100,
+                                      "code": "MONTHLY_MAIN_FEE",
+                                      "name": "Monthly maintenance fee",
+                                      "type": "FEE",
+                                      "description": "Standard monthly fee with segment-based tiers",
+                                      "status": "ACTIVE",
+                                      "version": 2,
+                                      "proRataApplicable": false,
+                                      "pricingTiers": [
+                                        {
+                                          "id": 1001,
+                                          "name": "Premium Segment",
+                                          "code": "PREMIUM_SEGMENT",
+                                          "priority": 10,
+                                          "priceValues": [
+                                            {
+                                              "componentCode": "MONTHLY_MAIN_FEE",
+                                              "rawValue": 5.00,
+                                              "valueType": "FEE_ABSOLUTE",
+                                              "sourceType": "CATALOG"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                    """)))
+    @ApiResponse(responseCode = "400", description = "Invalid request parameter (for example, malformed version value).",
+            content = @Content(
+                    schema = @Schema(implementation = ApiError.class),
+                    examples = @ExampleObject(
+                            name = "Invalid version parameter",
+                            value = """
+                                    {
+                                      "timestamp": "2026-04-04T10:10:00",
+                                      "status": 400,
+                                      "error": "Bad Request",
+                                      "message": "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Integer'",
+                                      "path": "/api/v1/pricing-components/code/MONTHLY_MAIN_FEE"
+                                    }
+                                    """)))
+    @ApiResponse(responseCode = "403", description = "Insufficient permissions to read pricing components.")
+    @ApiResponse(responseCode = "404", description = "No pricing component found for the supplied code/version in the current tenant.",
+            content = @Content(
+                    schema = @Schema(implementation = ApiError.class),
+                    examples = @ExampleObject(
+                            name = "Component code not found",
+                            value = """
+                                    {
+                                      "timestamp": "2026-04-04T10:11:00",
+                                      "status": 404,
+                                      "error": "Not Found",
+                                      "message": "Pricing Component not found with code: MONTHLY_MAIN_FEE and version: 99",
+                                      "path": "/api/v1/pricing-components/code/MONTHLY_MAIN_FEE"
+                                    }
+                                    """)))
     @GetMapping("/code/{code}")
     @PreAuthorize("hasAuthority('pricing:component:read')")
     public ResponseEntity<PricingComponentResponse> getPricingComponentByCode(
+            @Parameter(description = "Business code of the pricing component. Input is normalized to internal code format.", required = true, example = "MONTHLY_MAIN_FEE")
             @PathVariable String code,
+            @Parameter(description = "Optional component version. If omitted, the latest version for this code is returned.", example = "2")
             @RequestParam(required = false) Integer version) {
         return ResponseEntity.ok(pricingComponentMapper.toResponseDto(
                 pricingComponentService.getPricingComponentByCode(code, version)));
@@ -63,6 +132,66 @@ public class PricingComponentController {
 
     @Operation(summary = "Create pricing component (aggregate)",
             description = "Creates a new pricing component in DRAFT status. You may provide a full list of Tiers and Price Values in the initial request to create the aggregate at once.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            description = "Pricing component aggregate to create. `type` must be one of FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, or TAX. " +
+                    "Higher tier `priority` values are evaluated first; if omitted, the tier is assigned the lowest priority. Tiers with the same priority are treated at the same salience level. " +
+                    "For FEE / INTEREST_RATE / PACKAGE_FEE / TAX components use fee value types (`FEE_ABSOLUTE`, `FEE_PERCENTAGE`). " +
+                    "For WAIVER / BENEFIT / DISCOUNT components use discount value types (`DISCOUNT_PERCENTAGE`, `DISCOUNT_ABSOLUTE`, `FREE_COUNT`).",
+            content = @Content(
+                    schema = @Schema(implementation = PricingComponentRequest.class),
+                    examples = @ExampleObject(
+                            name = "Tiered fee component",
+                            value = """
+                                    {
+                                      "code": "MONTHLY_MAIN_FEE",
+                                      "name": "Monthly maintenance fee",
+                                      "type": "FEE",
+                                      "description": "Standard monthly fee with segment-based tiers",
+                                      "proRataApplicable": false,
+                                      "pricingTiers": [
+                                        {
+                                          "name": "Premium Segment",
+                                          "code": "PREMIUM_SEGMENT",
+                                          "priority": 10,
+                                          "minThreshold": 0,
+                                          "maxThreshold": 100000,
+                                          "applyChargeOnFullBreach": false,
+                                          "conditions": [
+                                            {
+                                              "attributeName": "customerSegment",
+                                              "operator": "EQ",
+                                              "attributeValue": "PREMIUM",
+                                              "connector": "AND"
+                                            }
+                                          ],
+                                          "priceValue": {
+                                            "priceAmount": 5.00,
+                                            "valueType": "FEE_ABSOLUTE"
+                                          }
+                                        },
+                                        {
+                                          "name": "Fallback Tier",
+                                          "code": "FALLBACK_TIER",
+                                          "applyChargeOnFullBreach": false,
+                                          "conditions": [
+                                            {
+                                              "attributeName": "customerSegment",
+                                              "operator": "EQ",
+                                              "attributeValue": "RETAIL"
+                                            }
+                                          ],
+                                          "priceValue": {
+                                            "priceAmount": 15.00,
+                                            "valueType": "FEE_ABSOLUTE"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                    """
+                    )
+            )
+    )
     @ApiResponse(responseCode = "201", description = "Pricing Component successfully created.",
             content = @Content(schema = @Schema(implementation = PricingComponentResponse.class)))
     @ApiResponse(responseCode = "400", description = "Validation error or name conflict.")

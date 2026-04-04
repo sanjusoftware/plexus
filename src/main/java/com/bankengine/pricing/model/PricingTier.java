@@ -33,7 +33,7 @@ public class PricingTier extends AuditableEntity {
     private String code;
 
     @Builder.Default
-    private int priority = 0;
+    private int priority = Integer.MIN_VALUE;
 
     private BigDecimal minThreshold;
     private BigDecimal maxThreshold;

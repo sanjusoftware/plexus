@@ -15,6 +15,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Request object for creating or updating a reusable pricing component aggregate, including optional tiers.")
 public class PricingComponentRequest {
 
     @NotBlank(message = "Component code is required.")
@@ -26,13 +27,13 @@ public class PricingComponentRequest {
     private String name;
 
     @NotBlank(message = "Component type is required (e.g., FEE, RATE).")
-    @Schema(example = "FEE", description = "The type of pricing component. Allowed values: FEE, DISCOUNT, WAIVER, BENEFIT, INTEREST_RATE, PACKAGE_FEE, TAX")
+    @Schema(example = "FEE", description = "Pricing component type. Allowed values: FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, TAX")
     private String type;
 
     @Schema(example = "Standard monthly account maintenance fee", description = "Detailed description of what this component represents.")
     private String description;
 
-    @Schema(example = "true", description = "Indicates if the fee should be calculated pro-rata based on the number of days the product was active in a period.")
+    @Schema(example = "true", description = "If true, the resulting fee/rate can be prorated based on dates such as enrollment date and effective period.")
     private boolean proRataApplicable;
 
     @Schema(description = "Optional activation date.")
@@ -42,6 +43,6 @@ public class PricingComponentRequest {
     private LocalDate expiryDate;
 
     @Valid
-    @Schema(description = "List of pricing tiers that define the rules and values for this component.")
+    @Schema(description = "Optional list of pricing tiers. Each tier defines conditions, thresholds, evaluation priority, and the resulting price value.")
     private List<PricingTierRequest> pricingTiers;
 }

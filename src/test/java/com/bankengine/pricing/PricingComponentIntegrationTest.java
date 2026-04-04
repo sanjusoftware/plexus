@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -207,6 +208,32 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         // 3. DELETE TIER
         mockMvc.perform(deleteWithCsrf(BASE_URL + "/{cId}/tiers/{tId}", component.getId(), tierId))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockRole(roles = {READER_ROLE})
+    void shouldExposeRichSwaggerDocsForNestedTierEndpoints() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/api/v1/pricing-components/{componentId}/tiers")))
+                .andExpect(content().string(containsString("Higher `priority` values are evaluated first; if omitted, the tier is assigned the lowest priority.")))
+                .andExpect(content().string(containsString("Use parent read endpoints (`GET /api/v1/pricing-components` or `GET /api/v1/pricing-components/{id}`) to view tiers after creation.")))
+                .andExpect(content().string(containsString("Segment-based fee tier")))
+                .andExpect(content().string(containsString("Update validation failure")))
+                .andExpect(content().string(containsString("Delete blocked by lifecycle")));
+    }
+
+    @Test
+    @WithMockRole(roles = {READER_ROLE})
+    void shouldExposeRichSwaggerDocsForPricingComponentGetByCodeEndpoint() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/api/v1/pricing-components/code/{code}")))
+                .andExpect(content().string(containsString("Retrieve a pricing component by code")))
+                .andExpect(content().string(containsString("If `version` is omitted, the latest available version for that code is returned within the current tenant.")))
+                .andExpect(content().string(containsString("Pricing component by code")))
+                .andExpect(content().string(containsString("Invalid version parameter")))
+                .andExpect(content().string(containsString("Component code not found")));
     }
 
     @Test

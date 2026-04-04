@@ -171,6 +171,71 @@ class PricingComponentServiceTest extends BaseServiceTest {
         verify(tierRepository).save(tier);
     }
 
+    @Test
+    @DisplayName("Create Component - Missing tier priority should default to last priority")
+    void createComponent_ShouldDefaultMissingTierPriorityToLastPriority() {
+        PricingComponentRequest request = newPricingComponentRequest("Priority Default Test");
+
+        PricingTierRequest tierRequest = new PricingTierRequest();
+        tierRequest.setName("Fallback Tier");
+        tierRequest.setCode("FALLBACK_TIER");
+
+        PriceValueRequest priceValueRequest = new PriceValueRequest();
+        priceValueRequest.setPriceAmount(new java.math.BigDecimal("10.00"));
+        priceValueRequest.setValueType("FEE_ABSOLUTE");
+        tierRequest.setPriceValue(priceValueRequest);
+        request.setPricingTiers(List.of(tierRequest));
+
+        PricingComponent entity = new PricingComponent();
+        entity.setBankId(TEST_BANK_ID);
+        entity.setCode(TEST_CODE);
+        entity.setType(PricingComponent.ComponentType.FEE);
+        entity.setPricingTiers(new ArrayList<>());
+
+        PricingTier tierEntity = new PricingTier();
+        PriceValue value = new PriceValue();
+        value.setValueType(PriceValue.ValueType.FEE_ABSOLUTE);
+
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq(TEST_CODE), anyInt())).thenReturn(false);
+        when(pricingComponentMapper.toEntity(request)).thenReturn(entity);
+        when(pricingTierMapper.toEntity(any(PricingTierRequest.class))).thenReturn(tierEntity);
+        when(priceValueMapper.toEntity(any(PriceValueRequest.class))).thenReturn(value);
+        when(componentRepository.save(any(PricingComponent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        componentService.createComponent(request);
+
+        assertEquals(1, entity.getPricingTiers().size());
+        assertEquals(Integer.MIN_VALUE, entity.getPricingTiers().get(0).getPriority());
+    }
+
+    @Test
+    @DisplayName("Add Tier - Missing priority should default to last priority")
+    void addTierAndValue_ShouldDefaultMissingPriorityToLastPriority() {
+        Long cId = 1L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(cId);
+
+        PricingTierRequest tierReq = new PricingTierRequest();
+        PriceValueRequest valueReq = new PriceValueRequest();
+        valueReq.setPriceAmount(new java.math.BigDecimal("5.00"));
+        valueReq.setValueType("FEE_ABSOLUTE");
+
+        PricingTier tier = new PricingTier();
+        PriceValue value = new PriceValue();
+        value.setValueType(PriceValue.ValueType.FEE_ABSOLUTE);
+        tier.setPriceValues(new HashSet<>());
+
+        when(componentRepository.findById(cId)).thenReturn(Optional.of(component));
+        when(pricingTierMapper.toEntity(tierReq)).thenReturn(tier);
+        when(priceValueMapper.toEntity(valueReq)).thenReturn(value);
+        when(tierRepository.save(any())).thenReturn(tier);
+        when(priceValueMapper.toDetailDto(any())).thenReturn(mock(ProductPricingCalculationResult.PriceComponentDetail.class));
+
+        componentService.addTierAndValue(cId, tierReq, valueReq);
+
+        assertEquals(Integer.MIN_VALUE, tier.getPriority());
+    }
+
     // --- CONFLICT & ERROR HANDLING ---
 
     @Test

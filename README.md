@@ -449,10 +449,11 @@ Once the bank is created, the IDP admin for bank `GLOBAL-BANK-001` must configur
 The bank admin can then login using their own IDP provider (registered as `issuerUrl` during onboarding) and update their bank's configuration.
 Note that a `BANK_ADMIN` role is automatically created at the time of on-boarding with all bank-level permissions (excluding `system:*` authorities).
 
-**Request:** `PUT /api/v1/banks/GLOBAL-BANK-001`
+**Request:** `PUT /api/v1/banks`
 **Authority:** `bank:config:write`
 ```json
 {
+  "bankId": "GLOBAL-BANK-001",
   "allowProductInMultipleBundles": false,
   "categoryConflictRules": [
     { "categoryA": "RETAIL", "categoryB": "INVESTMENT" }
@@ -537,8 +538,8 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
 **Authority:** `catalog:product-type:create`
 ```json
 {
-  "name": "Credit Cards",
-  "code": "CARD"
+  "name": "Current Accounts",
+  "code": "CASA"
 }
 ```
 
@@ -546,8 +547,8 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
 ```json
 {
   "id": 1,
-  "name": "Credit Cards",
-  "code": "CARD",
+  "name": "Current Accounts",
+  "code": "CASA",
   "status": "DRAFT"
 }
 ```
@@ -572,9 +573,9 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
   "name": "Free access to all premium airport lounges",
   "dataType": "STRING",
   "status": "DRAFT",
-  "bankId": "GLOBAL-BANK-001",
   "version": 1,
-  "createdAt": "2026-03-01T10:00:00Z"
+  "createdAt": "2026-03-01T10:00:00Z",
+  "updatedAt": "2026-03-01T10:00:00Z"
 }
 ```
 *Assuming ID returned is `10`.*
@@ -587,40 +588,45 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
   "code": "MONTHLY_MAIN_FEE",
   "name": "Monthly maintenance fee",
   "type": "FEE",
-  "description": "Standard fee with segment waivers",
+  "description": "Standard monthly fee with segment-based tiers",
   "proRataApplicable": false,
   "pricingTiers": [
     {
-      "name": "Premium Waiver",
-      "code": "PREMIUM_WAIVER",
+      "name": "Premium Segment",
+      "code": "PREMIUM_SEGMENT",
       "priority": 10,
-      "minThreshold": 10,
-      "maxThreshold": 100,
-      "applyChargeOnFullBreach": true,
+      "minThreshold": 0,
+      "maxThreshold": 100000,
+      "applyChargeOnFullBreach": false,
       "conditions": [
-        { "attributeName": "segment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" },
-        { "attributeName": "income", "operator": "GT", "attributeValue": "10000" }
+        { "attributeName": "customerSegment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" }
       ],
       "priceValue": {
-        "priceAmount": 0.00,
-        "valueType": "DISCOUNT_PERCENTAGE"
+        "priceAmount": 5.00,
+        "valueType": "FEE_ABSOLUTE"
       }
     },
     {
-      "name": "Standard Retail",
-      "code": "STANDARD_RETAIL",
-      "priority": 5,
+      "name": "Fallback Tier",
+      "code": "FALLBACK_TIER",
       "conditions": [
-        { "attributeName": "segment", "operator": "EQ", "attributeValue": "RETAIL" }
+        { "attributeName": "customerSegment", "operator": "EQ", "attributeValue": "RETAIL" }
       ],
       "priceValue": {
         "priceAmount": 15.00,
-        "valueType": "ABSOLUTE"
+        "valueType": "FEE_ABSOLUTE"
       }
     }
   ]
 }
 ```
+
+Notes:
+- `type` allowed values: `FEE`, `INTEREST_RATE`, `WAIVER`, `BENEFIT`, `DISCOUNT`, `PACKAGE_FEE`, `TAX`
+- Higher `priority` values are evaluated first; if omitted, the tier is assigned the lowest priority.
+- Tiers with the same `priority` are treated at the same evaluation level.
+- `proRataApplicable` indicates whether the component may be prorated based on dates.
+- `applyChargeOnFullBreach` controls whether a breached threshold applies the full charge instead of only the exceeded portion.
 
 **Response:** `201 Created`
 ```json
@@ -629,45 +635,133 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
   "code": "MONTHLY_MAIN_FEE",
   "name": "Monthly maintenance fee",
   "type": "FEE",
-  "description": "Standard fee with segment waivers",
+  "description": "Standard monthly fee with segment-based tiers",
   "status": "DRAFT",
-  "bankId": "GLOBAL-BANK-001",
   "version": 1,
+  "proRataApplicable": false,
   "pricingTiers": [
     {
       "id": 1001,
-      "name": "Premium Waiver",
-      "code": "PREMIUM_WAIVER",
+      "name": "Premium Segment",
+      "code": "PREMIUM_SEGMENT",
       "priority": 10,
-      "minThreshold": 10,
-      "maxThreshold": 100,
-      "applyChargeOnFullBreach": true,
+      "minThreshold": 0,
+      "maxThreshold": 100000,
       "conditions": [
-        { "attributeName": "segment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" },
-        { "attributeName": "income", "operator": "GT", "attributeValue": "10000", "connector": null }
+        { "attributeName": "customerSegment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" }
       ],
-      "priceValue": {
-        "priceAmount": 0.00,
-        "valueType": "DISCOUNT_PERCENTAGE"
-      }
+      "priceValues": [
+        {
+          "componentCode": "MONTHLY_MAIN_FEE",
+          "rawValue": 5.00,
+          "valueType": "FEE_ABSOLUTE",
+          "proRataApplicable": false,
+          "applyChargeOnFullBreach": false,
+          "sourceType": "CATALOG",
+          "matchedTierCode": "PREMIUM_SEGMENT",
+          "matchedTierId": 1001
+        }
+      ]
     },
     {
       "id": 1002,
-      "name": "Standard Retail",
-      "code": "STANDARD_RETAIL",
-      "priority": 5,
+      "name": "Fallback Tier",
+      "code": "FALLBACK_TIER",
+      "priority": -2147483648,
       "conditions": [
-        { "attributeName": "segment", "operator": "EQ", "attributeValue": "RETAIL", "connector": null }
+        { "attributeName": "customerSegment", "operator": "EQ", "attributeValue": "RETAIL", "connector": null }
       ],
-      "priceValue": {
-        "priceAmount": 15.00,
-        "valueType": "ABSOLUTE"
-      }
+      "priceValues": [
+        {
+          "componentCode": "MONTHLY_MAIN_FEE",
+          "rawValue": 15.00,
+          "valueType": "FEE_ABSOLUTE",
+          "proRataApplicable": false,
+          "applyChargeOnFullBreach": false,
+          "sourceType": "CATALOG",
+          "matchedTierCode": "FALLBACK_TIER",
+          "matchedTierId": 1002
+        }
+      ]
     }
   ]
 }
 ```
 *Assuming ID returned is `100`.*
+
+### D. Retrieve Pricing Component by Code (Latest or Specific Version)
+Use this endpoint when you want to resolve a pricing component by business code instead of numeric ID.
+
+**Request:** `GET /api/v1/pricing-components/code/{code}`
+**Authority:** `pricing:component:read`
+
+Latest version (when `version` is omitted):
+```http
+GET /api/v1/pricing-components/code/MONTHLY_MAIN_FEE
+```
+
+Specific version:
+```http
+GET /api/v1/pricing-components/code/MONTHLY_MAIN_FEE?version=2
+```
+
+Behavior:
+- If `version` is provided, that exact version is returned.
+- If `version` is omitted, the latest available version for the code is returned.
+
+**Response:** `200 OK`
+```json
+{
+  "id": 100,
+  "code": "MONTHLY_MAIN_FEE",
+  "name": "Monthly maintenance fee",
+  "type": "FEE",
+  "description": "Standard monthly fee with segment-based tiers",
+  "status": "ACTIVE",
+  "version": 2,
+  "proRataApplicable": false,
+  "pricingTiers": [
+    {
+      "id": 1001,
+      "name": "Premium Segment",
+      "code": "PREMIUM_SEGMENT",
+      "priority": 10,
+      "priceValues": [
+        {
+          "componentCode": "MONTHLY_MAIN_FEE",
+          "rawValue": 5.00,
+          "valueType": "FEE_ABSOLUTE",
+          "sourceType": "CATALOG"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Common errors:
+
+**Response:** `400 Bad Request` (invalid query parameter format)
+```json
+{
+  "timestamp": "2026-04-04T10:10:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Integer'",
+  "path": "/api/v1/pricing-components/code/MONTHLY_MAIN_FEE"
+}
+```
+
+**Response:** `404 Not Found` (no matching code/version in current tenant)
+```json
+{
+  "timestamp": "2026-04-04T10:11:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Pricing Component not found with code: MONTHLY_MAIN_FEE and version: 99",
+  "path": "/api/v1/pricing-components/code/MONTHLY_MAIN_FEE"
+}
+```
 
 ## Step 5: Bank Admin - Create and Configure Product
 Plexus uses a **FAT DTO** pattern, allowing you to create the product, its features, and its pricing links in a single atomic request.
@@ -719,7 +813,7 @@ Plexus uses a **FAT DTO** pattern, allowing you to create the product, its featu
   "category": "RETAIL",
   "productType": {
     "id": 1,
-    "name": "Credit Cards",
+    "name": "Current Accounts",
     "code": "CASA",
     "status": "ACTIVE"
   },
@@ -769,7 +863,7 @@ Plexus uses a **FAT DTO** pattern, allowing you to create the product, its featu
   "category": "RETAIL",
   "productType": {
     "id": 1,
-    "name": "Credit Cards",
+    "name": "Current Accounts",
     "code": "CASA",
     "status": "ACTIVE"
   },

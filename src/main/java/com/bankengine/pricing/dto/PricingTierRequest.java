@@ -18,6 +18,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Request payload for creating or updating a pricing tier nested under a pricing component.")
 public class PricingTierRequest {
     @NotBlank(message = "Tier name is required.")
     @Schema(example = "Standard Tier", description = "Display name for the pricing tier.")
@@ -27,13 +28,13 @@ public class PricingTierRequest {
     @Schema(example = "STD_TIER", description = "Unique code for the pricing tier.")
     private String code;
 
-    @Schema(example = "1", description = "Priority of the tier during rule evaluation. Higher numbers represent higher priority. Default is a very low value (last priority).")
+    @Schema(example = "10", description = "Priority used during rule evaluation. Higher numbers are evaluated first. If omitted, the tier is assigned the lowest priority. Tiers with the same priority are treated at the same evaluation level.")
     private Integer priority;
 
-    @Schema(example = "0.00", description = "Minimum threshold for the tier (e.g., minimum balance).")
+    @Schema(example = "0.00", description = "Optional minimum threshold for the tier, for example minimum transaction amount or balance.")
     private BigDecimal minThreshold;
 
-    @Schema(example = "10000.00", description = "Maximum threshold for the tier (e.g., maximum balance).")
+    @Schema(example = "10000.00", description = "Optional maximum threshold for the tier, for example maximum transaction amount or balance.")
     private BigDecimal maxThreshold;
 
     @Builder.Default
@@ -43,15 +44,15 @@ public class PricingTierRequest {
     @Schema(example = "2025-12-31", description = "The date on which this tier expires.")
     private LocalDate expiryDate;
 
-    @Schema(example = "false", description = "If true, the full amount is charged if the limit is breached. If false, only the portion exceeding the limit might be charged (depending on business logic).")
+    @Schema(example = "false", description = "Controls how threshold breaches are applied. If true, the full amount is charged when the tier condition is breached. If false, downstream pricing logic may apply only the breached portion.")
     private boolean applyChargeOnFullBreach;
 
     @Builder.Default
-    @Schema(description = "List of conditions that must be met for this tier to apply.")
+    @Schema(description = "Conditions that must match for this tier to apply, such as customer segment, income band, or channel.")
     private List<TierConditionDto> conditions = new ArrayList<>();
 
     @NotNull(message = "Price value is required for the tier.")
     @Valid
-    @Schema(description = "The actual price or discount value associated with this tier.")
+    @Schema(description = "The actual value produced by this tier. The allowed valueType depends on the parent component type.")
     private PriceValueRequest priceValue;
 }
