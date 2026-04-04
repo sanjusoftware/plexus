@@ -209,12 +209,12 @@ class DroolsExpressionBuilderTest {
     }
 
     @Test
-    @DisplayName("Unknown FQN Type - Should throw IllegalStateException")
+    @DisplayName("Unknown FQN Type - Should throw IllegalArgumentException")
     void testBuildExpression_UnknownFqnType() {
         TierCondition condition = createCondition("mystery", Operator.EQ, "val");
         PricingInputMetadata metadata = createMetadata("MYSTERY_TYPE");
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> builder.buildExpression(condition, metadata, "PricingInput"));
 
         assertTrue(ex.getMessage().contains("Unsupported pricing data type"),

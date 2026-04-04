@@ -169,10 +169,9 @@ class BankConfigurationServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("UpdateBank should trigger lambda branch when bank missing")
     void updateBank_WhenNotExists_ShouldTriggerLambda() {
-        TenantContextHolder.setBankId("SYSTEM");
-        String missingId = "MISSING";
-        standardRequest.setBankId(missingId);
-        when(bankConfigurationRepository.findByBankId(missingId)).thenReturn(Optional.empty());
+        TenantContextHolder.setBankId("MISSING");
+        standardRequest.setBankId("MISSING");
+        when(bankConfigurationRepository.findByBankId("MISSING")).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () ->
                 bankConfigurationService.updateBank(standardRequest)
         );

@@ -126,12 +126,17 @@ public class ProductTypeServiceTest extends BaseServiceTest {
     }
 
     @Test
-    void deleteProductType_NotDraft_ThrowsException() {
+    void deleteProductType_NotDraft_ArchivesInstead() {
         ProductType existing = new ProductType();
+        existing.setId(1L);
         existing.setStatus(VersionableEntity.EntityStatus.ACTIVE);
         existing.setBankId(TEST_BANK_ID);
         when(productTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productTypeRepository.save(any())).thenReturn(existing);
 
-        assertThrows(IllegalStateException.class, () -> productTypeService.deleteProductType(1L));
+        productTypeService.deleteProductType(1L);
+
+        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, existing.getStatus());
+        verify(productTypeRepository).save(existing);
     }
 }
