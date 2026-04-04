@@ -130,13 +130,18 @@ public class AuthController {
         final String bankId = principal.getAttribute("bank_id") != null
                 ? principal.getAttribute("bank_id") : "UNKNOWN";
 
-        // 5. Lookup Bank Name for the UI
+        // 5. Lookup Bank Details for the UI
         String bankName;
+        String currencyCode = "USD";
         try {
             TenantContextHolder.setSystemMode(true);
-            bankName = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+            var bankConfig = bankConfigurationRepository.findByBankIdUnfiltered(bankId);
+            bankName = bankConfig
                     .map(config -> config.getName() != null ? config.getName() : bankId)
                     .orElse(bankId);
+            currencyCode = bankConfig
+                    .map(com.bankengine.common.model.BankConfiguration::getCurrencyCode)
+                    .orElse("USD");
         } finally {
             TenantContextHolder.setSystemMode(false);
         }
@@ -152,6 +157,7 @@ public class AuthController {
                 .roles(roles)
                 .bank_id(bankId)
                 .bankName(bankName)
+                .currencyCode(currencyCode)
                 .sub(sub)
                 .picture(picture)
                 .permissions(permissions)

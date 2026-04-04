@@ -6,6 +6,7 @@ export interface UserProfile {
   roles: string[];
   bank_id: string;
   bankName: string;
+  currencyCode: string;
   sub: string;
   picture?: string;
   permissions: string[];
