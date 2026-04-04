@@ -104,7 +104,7 @@ public class FeatureComponentService extends BaseService {
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public FeatureComponentResponse createFeature(FeatureComponentRequest requestDto) {
         sanitizeRequest(requestDto);
-        validateNewVersionable(componentRepository, requestDto.getName(), requestDto.getCode());
+        validateNewVersionable(componentRepository, requestDto.getCode());
 
         FeatureComponent component = featureComponentMapper.toEntity(requestDto);
         component.setBankId(getCurrentBankId());

@@ -4,6 +4,7 @@ import com.bankengine.common.service.BaseService;
 import com.bankengine.pricing.converter.PricingInputMetadataMapper;
 import com.bankengine.pricing.dto.PricingMetadataRequest;
 import com.bankengine.pricing.dto.PricingMetadataResponse;
+import com.bankengine.pricing.model.PricingDataType;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.TierConditionRepository;
@@ -89,6 +90,8 @@ public class PricingInputMetadataService extends BaseService {
             );
         }
 
+        dto.setDataType(normalizeDataType(dto.getDataType()));
+
         // Map DTO to Entity and save
         PricingInputMetadata entity = mapper.toEntity(dto);
         PricingInputMetadata savedEntity = pricingInputMetadataRepository.save(entity);
@@ -104,12 +107,20 @@ public class PricingInputMetadataService extends BaseService {
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 
         entity.setDisplayName(dto.getDisplayName());
-        entity.setDataType(dto.getDataType());
+        entity.setDataType(normalizeDataType(dto.getDataType()));
 
         PricingInputMetadata updatedEntity = pricingInputMetadataRepository.save(entity);
         reloadService.reloadKieContainer();
 
         return mapper.toResponse(updatedEntity);
+    }
+
+    private String normalizeDataType(String dataType) {
+        try {
+            return PricingDataType.fromString(dataType).name();
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(e.getMessage());
+        }
     }
 
     @Transactional

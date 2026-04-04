@@ -56,7 +56,7 @@ public class ProductBundleService extends BaseService {
     @Transactional
     public ProductBundleResponse createBundle(ProductBundleRequest request) {
         sanitizeRequest(request);
-        validateNewVersionable(productBundleRepository, request.getName(), request.getCode());
+        validateNewVersionable(productBundleRepository, request.getCode());
 
         // Use Mapper to create DRAFT entity
         ProductBundle bundle = bundleMapper.toEntity(request);

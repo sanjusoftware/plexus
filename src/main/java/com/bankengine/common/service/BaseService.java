@@ -67,12 +67,10 @@ public abstract class BaseService {
     }
 
     /**
-     * Creation Validation: Checks Name and Code (Version 1) uniqueness.
-     * Uses the VersionableRepository to handle bankId internally.
+     * Creation validation: checks code uniqueness for version 1 within the current bank.
      */
     protected <T extends VersionableEntity> void validateNewVersionable(
             VersionableRepository<T> repository,
-            String name,
             String code) {
 
         String bankId = getCurrentBankId();

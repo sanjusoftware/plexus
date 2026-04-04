@@ -31,6 +31,10 @@ public class PricingMetadataRequest {
 
     // DataType: Crucial for DRL compilation and condition validation (e.g., STRING, DECIMAL, DATE).
     @NotBlank(message = "Data type is required.")
-    @Schema(example = "DECIMAL", description = "The data type of the attribute. Allowed values: STRING, DECIMAL, INTEGER, BOOLEAN, DATE.")
+    @Pattern(
+            regexp = "(?i)^(STRING|DECIMAL|INTEGER|LONG|BOOLEAN|DATE)$",
+            message = "Data type must be one of: STRING, DECIMAL, INTEGER, LONG, BOOLEAN, DATE."
+    )
+    @Schema(example = "DECIMAL", description = "The data type of the attribute. Allowed values: STRING, DECIMAL, INTEGER, LONG, BOOLEAN, DATE.")
     private String dataType;
 }

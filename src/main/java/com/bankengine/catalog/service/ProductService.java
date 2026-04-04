@@ -78,12 +78,7 @@ public class ProductService extends BaseService {
     @Transactional
     public ProductResponse createProduct(ProductRequest requestDto) {
         sanitizeRequest(requestDto);
-        validateNewVersionable(productRepository, requestDto.getName(), requestDto.getCode());
-
-        // Requirement 19: Check for uniqueness based on code (already done in validateNewVersionable for code+version)
-        // But the prompt says "Product uniqueness should also be checked based on the code not on name."
-        // Our validateNewVersionable check Name and Code. We should perhaps only check Code?
-        // Actually BaseService.validateNewVersionable checks if code/version1 exists.
+        validateNewVersionable(productRepository, requestDto.getCode());
 
         ProductType productType = getProductTypeByCode(requestDto.getProductTypeCode());
         Product product = productMapper.toEntity(requestDto, productType);

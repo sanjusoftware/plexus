@@ -1,6 +1,7 @@
 package com.bankengine.catalog.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -44,10 +45,12 @@ public class ProductRequest {
 
     @Builder.Default
     @Schema(description = "List of features to be linked to this product.")
+    @Valid
     private List<ProductFeatureDto> features = new java.util.ArrayList<>();
 
     @Builder.Default
     @Schema(description = "List of pricing components to be linked to this product.")
+    @Valid
     private List<ProductPricingDto> pricing = new java.util.ArrayList<>();
 
     @Schema(example = "Grow your wealth with us", description = "Short tagline for display.")

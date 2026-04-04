@@ -2,7 +2,6 @@ package com.bankengine.pricing.service;
 
 import com.bankengine.pricing.converter.PricingInputMetadataMapper;
 import com.bankengine.pricing.dto.PricingMetadataRequest;
-import com.bankengine.pricing.dto.PricingMetadataResponse;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.TierConditionRepository;
@@ -57,6 +56,8 @@ class PricingInputMetadataServiceTest {
     void createMetadata_ShouldSaveAndReload_WhenKeyIsUnique() {
         PricingMetadataRequest dto = new PricingMetadataRequest();
         dto.setAttributeKey("new_key");
+        dto.setDisplayName("New Key");
+        dto.setDataType("DECIMAL");
         PricingInputMetadata entity = new PricingInputMetadata();
 
         when(pricingInputMetadataRepository.findByAttributeKey("new_key")).thenReturn(Optional.empty());
@@ -68,6 +69,25 @@ class PricingInputMetadataServiceTest {
         verify(pricingInputMetadataRepository).save(entity);
         verify(reloadService).reloadKieContainer();
         verify(mapper).toResponse(any());
+    }
+
+    @Test
+    void createMetadata_ShouldNormalizeDataTypeCase_WhenLowercaseProvided() {
+        PricingMetadataRequest dto = new PricingMetadataRequest();
+        dto.setAttributeKey("new_key_case");
+        dto.setDisplayName("New Key Case");
+        dto.setDataType("string");
+        PricingInputMetadata entity = new PricingInputMetadata();
+
+        when(pricingInputMetadataRepository.findByAttributeKey("new_key_case")).thenReturn(Optional.empty());
+        when(mapper.toEntity(dto)).thenReturn(entity);
+        when(pricingInputMetadataRepository.save(entity)).thenReturn(entity);
+
+        metadataService.createMetadata(dto);
+
+        assertThat(dto.getDataType()).isEqualTo("STRING");
+        verify(pricingInputMetadataRepository).save(entity);
+        verify(reloadService).reloadKieContainer();
     }
 
     @Test
@@ -88,6 +108,7 @@ class PricingInputMetadataServiceTest {
         String key = "target";
         PricingMetadataRequest dto = new PricingMetadataRequest();
         dto.setDisplayName("New Display");
+        dto.setDataType("boolean");
         PricingInputMetadata existing = new PricingInputMetadata();
 
         when(pricingInputMetadataRepository.findByAttributeKey(key)).thenReturn(Optional.of(existing));
@@ -96,6 +117,7 @@ class PricingInputMetadataServiceTest {
         metadataService.updateMetadata(key, dto);
 
         assertThat(existing.getDisplayName()).isEqualTo("New Display");
+        assertThat(existing.getDataType()).isEqualTo("BOOLEAN");
         verify(reloadService).reloadKieContainer();
     }
 

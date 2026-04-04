@@ -18,18 +18,18 @@ public enum PricingDataType {
 
     public static PricingDataType fromString(String value) {
         if (value == null) {
-            throw new IllegalStateException("Data type cannot be null");
+            throw new IllegalArgumentException("Data type cannot be null");
         }
 
         String lookup = value.toUpperCase().trim();
         if ("INTEGER".equals(lookup)) {
-            value = "LONG";
+            lookup = "LONG";
         }
 
         try {
-            return PricingDataType.valueOf(value.toUpperCase());
+            return PricingDataType.valueOf(lookup);
         } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("Unsupported pricing data type: " + value);
+            throw new IllegalArgumentException("Unsupported pricing data type: " + value);
         }
     }
 }

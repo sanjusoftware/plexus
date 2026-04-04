@@ -68,7 +68,7 @@ public class PricingComponentService extends BaseService {
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public PricingComponentResponse createComponent(PricingComponentRequest requestDto) {
         sanitizeRequest(requestDto);
-        validateNewVersionable(pricingComponentRepository, requestDto.getName(), requestDto.getCode());
+        validateNewVersionable(pricingComponentRepository, requestDto.getCode());
         validateComponentType(requestDto.getType());
         PricingComponent component = pricingComponentMapper.toEntity(requestDto);
         component.setBankId(getCurrentBankId());

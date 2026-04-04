@@ -1,7 +1,6 @@
 package com.bankengine.pricing;
 
 import com.bankengine.pricing.dto.PricingMetadataRequest;
-import com.bankengine.pricing.dto.PricingMetadataResponse;
 import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
@@ -126,13 +125,14 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
         PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
                 .attributeKey("NewAttribute")
                 .displayName("New Attribute Display")
-                .dataType("DECIMAL").build();
+                .dataType("decimal").build();
 
         mockMvc.perform(postWithCsrf(API_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.attributeKey").value("NewAttribute"));
+                .andExpect(jsonPath("$.attributeKey").value("NewAttribute"))
+                .andExpect(jsonPath("$.dataType").value("DECIMAL"));
     }
 
     @Test
@@ -151,7 +151,43 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Cannot create Pricing Input Metadata: An attribute with the key 'ExistingKey' already exists."));
     }
 
+    @Test
+    @WithMockRole(roles = {CREATOR_ROLE})
+    void shouldReturn400WhenCreatingMetadataWithInvalidDataType() throws Exception {
+        PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
+                .attributeKey("InvalidTypeAttribute")
+                .displayName("Invalid Type Attribute")
+                .dataType("FLOAT")
+                .build();
+
+        mockMvc.perform(postWithCsrf(API_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Input validation failed: One or more fields contain invalid data."))
+                .andExpect(jsonPath("$.details.dataType").value("Data type must be one of: STRING, DECIMAL, INTEGER, LONG, BOOLEAN, DATE."));
+    }
+
     // --- UPDATE OPERATIONS ---
+
+    @Test
+    @WithMockRole(roles = {CREATOR_ROLE})
+    void shouldReturn400WhenUpdatingMetadataWithInvalidDataType() throws Exception {
+        createTestMetadata("UpdateInvalidType");
+
+        PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
+                .attributeKey("UpdateInvalidType")
+                .displayName("Invalid Type Update")
+                .dataType("FLOAT")
+                .build();
+
+        mockMvc.perform(putWithCsrf(API_PATH + "/UpdateInvalidType")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Input validation failed: One or more fields contain invalid data."))
+                .andExpect(jsonPath("$.details.dataType").value("Data type must be one of: STRING, DECIMAL, INTEGER, LONG, BOOLEAN, DATE."));
+    }
 
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
