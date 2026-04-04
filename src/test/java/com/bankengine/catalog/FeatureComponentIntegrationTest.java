@@ -12,6 +12,7 @@ import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.VersionableEntity;
+import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
@@ -32,8 +33,9 @@ import java.util.Set;
 
 import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -120,7 +122,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     }
 
     private FeatureComponent createFeatureComponentInDb(String name) {
-        String code = generateValidCode(name);
+        String code = CodeGeneratorUtil.sanitizeAsCode(generateValidCode(name));
         return txHelper.doInTransaction(() -> featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 1)
                 .orElseGet(() -> featureComponentRepository.save(
                         FeatureComponent.builder()
@@ -132,6 +134,20 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                                 .bankId(TEST_BANK_ID)
                                 .build())
                 ));
+    }
+
+    private FeatureComponent createFeatureComponentInDb(String name, String code, int version, VersionableEntity.EntityStatus status) {
+        String sanitizedCode = CodeGeneratorUtil.sanitizeAsCode(code);
+        return txHelper.doInTransaction(() -> featureComponentRepository.save(
+                FeatureComponent.builder()
+                        .name(name)
+                        .code(sanitizedCode)
+                        .version(version)
+                        .dataType(FeatureComponent.DataType.STRING)
+                        .status(status)
+                        .bankId(TEST_BANK_ID)
+                        .build()
+        ));
     }
 
     // --- 1. CREATE TESTS ---
@@ -242,6 +258,24 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldReturn409WhenUpdatingFeatureCodeToCodeUsedByAnotherFeature() throws Exception {
+        FeatureComponent source = createFeatureComponentInDb("SourceFeature");
+        FeatureComponent conflicting = createFeatureComponentInDb("ConflictingFeature");
+
+        FeatureComponentRequest updateDto = new FeatureComponentRequest();
+        updateDto.setName("Renamed Feature");
+        updateDto.setCode(conflicting.getCode());
+        updateDto.setDataType("STRING");
+
+        mockMvc.perform(patchWithCsrf("/api/v1/features/{id}", source.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", is("Feature code '" + conflicting.getCode() + "' is already used by another feature component.")));
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn404OnUpdateNonExistentFeature() throws Exception {
         mockMvc.perform(patchWithCsrf("/api/v1/features/99999")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -324,6 +358,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(postWithCsrf("/api/v1/features/{id}/activate", feature.getId()))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(feature.getId().intValue())))
                 .andExpect(jsonPath("$.status", is("ACTIVE")));
 
         txHelper.doInTransaction(() -> {
@@ -372,8 +407,11 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(postWithCsrf("/api/v1/features/{id}/create-new-version", source.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(vRequest)))
-                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.code", is(code)))
+                .andExpect(jsonPath("$.version", is(2)))
+                .andExpect(jsonPath("$.status", is("ACTIVE")));
 
         txHelper.doInTransaction(() -> {
             FeatureComponent v2 = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 2).orElseThrow();
@@ -382,6 +420,52 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
             FeatureComponent v1 = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 1).orElseThrow();
             assertThat(v1.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ARCHIVED);
         });
+    }
+
+    @Test
+    @WithMockRole(roles = {READER_ROLE})
+    void shouldReturnAllFeaturesByCodeRegardlessOfStatusWhenVersionIsNotProvided() throws Exception {
+        String sharedCode = generateValidCode("SharedFeatureCode");
+        createFeatureComponentInDb("Shared Feature V1", sharedCode, 1, VersionableEntity.EntityStatus.ACTIVE);
+        createFeatureComponentInDb("Shared Feature V2", sharedCode, 2, VersionableEntity.EntityStatus.ARCHIVED);
+
+        mockMvc.perform(get("/api/v1/features/code/{code}", sharedCode))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    @Test
+    @WithMockRole(roles = {READER_ROLE})
+    void shouldFilterFeaturesByCodeEndpointWhenVersionIsProvided() throws Exception {
+        String sharedCode = generateValidCode("VersionedFeatureCode");
+        createFeatureComponentInDb("Versioned Feature V1", sharedCode, 1, VersionableEntity.EntityStatus.ACTIVE);
+        createFeatureComponentInDb("Versioned Feature V2", sharedCode, 2, VersionableEntity.EntityStatus.ARCHIVED);
+
+        mockMvc.perform(get("/api/v1/features/code/{code}", sharedCode)
+                        .param("version", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].version", is(2)))
+                .andExpect(jsonPath("$[0].status", is("ARCHIVED")));
+    }
+
+    @Test
+    @WithMockRole(roles = {READER_ROLE})
+    void shouldSearchFeaturesUsingCodeVersionAndStatusQueryParameters() throws Exception {
+        String searchCode = generateValidCode("SearchableFeature");
+        createFeatureComponentInDb("Searchable Feature V1", searchCode, 1, VersionableEntity.EntityStatus.ACTIVE);
+        createFeatureComponentInDb("Searchable Feature V2", searchCode, 2, VersionableEntity.EntityStatus.ARCHIVED);
+        createFeatureComponentInDb("Other Feature", generateValidCode("OtherFeature"), 1, VersionableEntity.EntityStatus.ACTIVE);
+
+        mockMvc.perform(get("/api/v1/features")
+                        .param("code", searchCode)
+                        .param("version", "2")
+                        .param("status", "ARCHIVED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].code", is(CodeGeneratorUtil.sanitizeAsCode(searchCode))))
+                .andExpect(jsonPath("$[0].version", is(2)))
+                .andExpect(jsonPath("$[0].status", is("ARCHIVED")));
     }
 
     // --- 7. MULTI-LINK DEPENDENCY CHECK ---

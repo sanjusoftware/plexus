@@ -36,9 +36,10 @@ public class FeatureComponentService extends BaseService {
 
     @Transactional(readOnly = true)
     public List<FeatureComponentResponse> searchFeatures(String code, Integer version, VersionableEntity.EntityStatus status) {
+        String sanitizedCode = code != null ? CodeGeneratorUtil.sanitizeAsCode(code) : null;
         Specification<FeatureComponent> spec = Specification.where(null);
-        if (code != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("code"), code));
+        if (sanitizedCode != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("code"), sanitizedCode));
         }
         if (version != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("version"), version));
@@ -62,16 +63,17 @@ public class FeatureComponentService extends BaseService {
     }
 
     public FeatureComponent getFeatureComponentByCode(String code, Integer version) {
-        return getByCodeAndVersionSecurely(componentRepository, code, version, "Feature Component");
+        return getByCodeAndVersionSecurely(componentRepository, CodeGeneratorUtil.sanitizeAsCode(code), version, "Feature Component");
     }
 
     @Transactional(readOnly = true)
     public List<FeatureComponentResponse> getFeaturesByCode(String code, Integer version) {
+        String sanitizedCode = CodeGeneratorUtil.sanitizeAsCode(code);
         List<FeatureComponent> features;
         if (version != null) {
-            features = componentRepository.findAllByBankIdAndCodeAndVersion(getCurrentBankId(), code, version);
+            features = componentRepository.findAllByBankIdAndCodeAndVersion(getCurrentBankId(), sanitizedCode, version);
         } else {
-            features = componentRepository.findAllByBankIdAndCode(getCurrentBankId(), code);
+            features = componentRepository.findAllByBankIdAndCode(getCurrentBankId(), sanitizedCode);
         }
         return features.stream()
                 .map(featureComponentMapper::toResponseDto)
@@ -125,8 +127,12 @@ public class FeatureComponentService extends BaseService {
 
         // Uniqueness check for code if it's being changed
         if (requestDto.getCode() != null && !requestDto.getCode().equals(component.getCode())) {
-            if (componentRepository.existsByBankIdAndCodeAndVersion(getCurrentBankId(), requestDto.getCode(), component.getVersion())) {
-                throw new IllegalArgumentException("Entity code '" + requestDto.getCode() + "' version " + component.getVersion() + " already exists.");
+            boolean codeAlreadyUsedByAnotherFeature = componentRepository.findAllByBankIdAndCode(getCurrentBankId(), requestDto.getCode())
+                    .stream()
+                    .anyMatch(existing -> existing.getId() != null && !existing.getId().equals(component.getId()));
+
+            if (codeAlreadyUsedByAnotherFeature) {
+                throw new IllegalStateException("Feature code '" + requestDto.getCode() + "' is already used by another feature component.");
             }
         }
 

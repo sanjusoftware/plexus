@@ -2,7 +2,6 @@ package com.bankengine.catalog.service;
 
 import com.bankengine.catalog.converter.FeatureComponentMapper;
 import com.bankengine.catalog.dto.FeatureComponentRequest;
-import com.bankengine.catalog.dto.VersionRequest;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.repository.FeatureComponentRepository;
 import com.bankengine.catalog.repository.ProductFeatureLinkRepository;
@@ -19,9 +18,10 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class FeatureComponentServiceTest extends BaseServiceTest {
@@ -52,18 +52,24 @@ public class FeatureComponentServiceTest extends BaseServiceTest {
     @Test
     void testUpdateFeature_Collision() {
         FeatureComponent existing = new FeatureComponent();
+        existing.setId(1L);
         existing.setBankId(TEST_BANK_ID);
         existing.setCode("OLD");
         existing.setVersion(1);
         existing.setStatus(VersionableEntity.EntityStatus.DRAFT);
 
+        FeatureComponent conflicting = new FeatureComponent();
+        conflicting.setId(2L);
+        conflicting.setBankId(TEST_BANK_ID);
+        conflicting.setCode("NEW");
+
         when(componentRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(componentRepository.existsByBankIdAndCodeAndVersion(TEST_BANK_ID, "NEW", 1)).thenReturn(true);
+        when(componentRepository.findAllByBankIdAndCode(TEST_BANK_ID, "NEW")).thenReturn(List.of(conflicting));
 
         FeatureComponentRequest req = new FeatureComponentRequest();
         req.setCode("NEW");
 
-        assertThrows(IllegalArgumentException.class, () -> featureComponentService.updateFeature(1L, req));
+        assertThrows(IllegalStateException.class, () -> featureComponentService.updateFeature(1L, req));
     }
 
     @Test

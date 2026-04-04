@@ -48,13 +48,15 @@ class FeatureComponentMapperTest {
     void testUpdateFromDto() {
         FeatureComponentRequest dto = new FeatureComponentRequest();
         dto.setName("Updated Feature");
+        dto.setCode("UPDATED_FEATURE");
         dto.setDataType("BOOLEAN");
 
-        FeatureComponent entity = FeatureComponent.builder().name("Original Feature").dataType(FeatureComponent.DataType.STRING).build();
+        FeatureComponent entity = FeatureComponent.builder().name("Original Feature").code("ORIGINAL_FEATURE").dataType(FeatureComponent.DataType.STRING).build();
 
         mapper.updateFromDto(dto, entity);
 
         assertEquals(dto.getName(), entity.getName());
+        assertEquals(dto.getCode(), entity.getCode());
         assertEquals(FeatureComponent.DataType.BOOLEAN, entity.getDataType());
     }
 }

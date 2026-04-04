@@ -4,8 +4,8 @@ import com.bankengine.catalog.dto.FeatureComponentRequest;
 import com.bankengine.catalog.dto.FeatureComponentResponse;
 import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.catalog.model.FeatureComponent.DataType;
+import com.bankengine.common.mapping.ToAuditableEntity;
 import com.bankengine.common.mapping.ToNewEntity;
-import com.bankengine.common.mapping.ToVersionableEntity;
 import com.bankengine.config.MapStructConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -30,7 +30,9 @@ public interface FeatureComponentMapper {
 
     List<FeatureComponentResponse> toResponseDtoList(List<FeatureComponent> entities);
 
-    @ToVersionableEntity
+    @ToAuditableEntity
+    @Mapping(target = "code", source = "code")
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "dataType", source = "dataType", qualifiedByName = "mapDataType")
     @Mapping(target = "activationDate", source = "activationDate")
