@@ -17,6 +17,7 @@ public class UserResponse {
     private List<String> roles;
     private String bank_id;
     private String bankName;
+    private String currencyCode;
     private String sub;
     private String picture;
     private List<String> permissions;

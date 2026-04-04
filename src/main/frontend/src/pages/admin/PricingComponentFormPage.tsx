@@ -4,12 +4,37 @@ import axios from 'axios';
 import { Plus, Trash2, Loader2, Save, X, Layers, AlertCircle } from 'lucide-react';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import PlexusSelect from '../../components/PlexusSelect';
+import { useAuth } from '../../context/AuthContext';
 
 const PricingComponentFormPage = () => {
+  const { user } = useAuth();
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
   const isEditing = !!id;
+  const currencyCode = user?.currencyCode || 'USD';
+
+  const getCurrencySymbol = (code: string) => {
+    const symbols: Record<string, string> = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'INR': '₹',
+      'AUD': 'A$',
+      'CAD': 'C$',
+      'CHF': 'CHF',
+      'CNY': '¥',
+      'HKD': 'HK$',
+      'NZD': 'NZ$',
+      'SEK': 'kr',
+      'KRW': '₩',
+      'SGD': 'S$',
+      'NOK': 'kr',
+      'MXN': '$',
+    };
+    return symbols[code] || code;
+  };
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -44,7 +69,7 @@ const PricingComponentFormPage = () => {
               name: comp.name,
               type: comp.type,
               description: comp.description,
-              pricingTiers: comp.pricingTiers || []
+              pricingTiers: (comp.pricingTiers || []).map((t: any) => ({ ...t, isCodeEdited: true }))
             });
             setEntityName(comp.name);
             setIsCodeEdited(true);
@@ -64,7 +89,18 @@ const PricingComponentFormPage = () => {
 
   const handleTierChange = (index: number, field: string, value: any) => {
     const newTiers = [...formData.pricingTiers];
-    newTiers[index] = { ...newTiers[index], [field]: value };
+    let updatedTier = { ...newTiers[index], [field]: value };
+
+    if (field === 'name') {
+      if (!updatedTier.isCodeEdited && !updatedTier.id) {
+        updatedTier.code = value.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+      }
+    } else if (field === 'code') {
+      updatedTier.isCodeEdited = true;
+      updatedTier.code = value.toUpperCase().replace(/\s/g, '_').replace(/[^A-Z0-9_-]/g, '');
+    }
+
+    newTiers[index] = updatedTier;
     setFormData({ ...formData, pricingTiers: newTiers });
   };
 
@@ -74,6 +110,7 @@ const PricingComponentFormPage = () => {
       pricingTiers: [...formData.pricingTiers, {
         code: '',
         name: '',
+        isCodeEdited: false,
         conditions: [],
         priceValue: { priceAmount: 0, valueType: 'ABSOLUTE' }
       }]
@@ -230,12 +267,12 @@ const PricingComponentFormPage = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tier ID Code</label>
-                      <input type="text" required className="w-full border-2 border-white rounded-xl p-3 font-mono font-bold text-xs bg-white shadow-sm focus:border-blue-500 transition" value={tier.code} onChange={(e) => handleTierChange(idx, 'code', e.target.value.toUpperCase())} />
-                    </div>
-                    <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Display Label</label>
                       <input type="text" required className="w-full border-2 border-white rounded-xl p-3 font-bold text-xs bg-white shadow-sm focus:border-blue-500 transition" value={tier.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tier ID Code</label>
+                      <input type="text" required className="w-full border-2 border-white rounded-xl p-3 font-mono font-bold text-xs bg-white shadow-sm focus:border-blue-500 transition" value={tier.code} onChange={(e) => handleTierChange(idx, 'code', e.target.value)} />
                     </div>
                   </div>
 
@@ -297,9 +334,9 @@ const PricingComponentFormPage = () => {
 
                   <div className="bg-white p-6 rounded-3xl border-2 border-blue-50 grid grid-cols-2 gap-8 shadow-sm">
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Calculated Price Amount</label>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Calculated Price Amount ({currencyCode})</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-blue-600">$</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-blue-600">{getCurrencySymbol(currencyCode)}</span>
                         <input type="number" step="0.01" required className="w-full border-2 border-gray-50 rounded-xl p-4 pl-8 font-black text-lg text-blue-900 transition focus:border-blue-500 focus:ring-0 shadow-sm" value={tier.priceValue.priceAmount} onChange={(e) => {
                           const newTiers = [...formData.pricingTiers];
                           newTiers[idx].priceValue = { ...newTiers[idx].priceValue, priceAmount: parseFloat(e.target.value) };
