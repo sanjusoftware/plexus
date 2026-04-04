@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Trash2, Loader2, Save, X, ShieldCheck, Tag, AlertCircle } from 'lucide-react';
+import { Trash2, Loader2, Save, X, ShieldCheck, Tag, AlertCircle, HelpCircle, Zap } from 'lucide-react';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import PlexusSelect from '../../components/PlexusSelect';
+import LivePricePreview from '../../components/LivePricePreview';
+import PriceSimulationTool from '../../components/PriceSimulationTool';
 
 interface FeatureComponent {
   id: number;
@@ -31,6 +33,8 @@ const ProductFormPage = () => {
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [isCodeEdited, setIsCodeEdited] = useState(false);
   const [error, setError] = useState('');
+  const [showPriceSimulation, setShowPriceSimulation] = useState(false);
+  const [showPricingHelp, setShowPricingHelp] = useState(false);
 
   const [formData, setFormData] = useState<any>({
     code: '',
@@ -341,16 +345,55 @@ const ProductFormPage = () => {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-12">
+           <div className="border-t border-gray-100 pt-12">
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center space-x-4">
                  <div className="p-3 bg-purple-50 rounded-2xl"><Tag className="w-6 h-6 text-purple-600" /></div>
                  <h3 className="text-2xl font-black text-gray-900 tracking-tight">Pricing Rule Bindings</h3>
               </div>
-              <button type="button" onClick={addPricingLink} className="bg-purple-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-700 transition shadow-lg shadow-purple-50">+ Add Pricing Link</button>
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPricingHelp(!showPricingHelp)}
+                  className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition border border-blue-200"
+                  title="Pricing Help"
+                >
+                  <HelpCircle className="w-5 h-5" />
+                </button>
+                <button type="button" onClick={addPricingLink} className="bg-purple-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-700 transition shadow-lg shadow-purple-50">+ Add Pricing Link</button>
+              </div>
             </div>
             <div className="space-y-8">
-              {formData.pricing.map((link: any, idx: number) => (
+              {/* Pricing Help Panel */}
+              {showPricingHelp && (
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 space-y-4 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-start space-x-3">
+                    <Zap className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-black text-blue-900 text-sm mb-3">Pricing Configuration Guide</h4>
+                      <div className="space-y-3 text-sm text-blue-800">
+                        <div>
+                          <p className="font-bold mb-1">📌 Static Fixed Values</p>
+                          <p className="text-xs">Use this for simple pricing: Set a fixed amount (absolute) or percentage and apply it directly.</p>
+                        </div>
+                        <div>
+                          <p className="font-bold mb-1">⚡ Dynamic Rules Engine</p>
+                          <p className="text-xs">Use this for complex pricing: Enable Drools rules that match customer segments and transaction amounts to select the right tier.</p>
+                        </div>
+                        <div>
+                          <p className="font-bold mb-1">🎯 Fee Types</p>
+                          <p className="text-xs">FEE_ABSOLUTE (fixed amount), FEE_PERCENTAGE (% of transaction), RATE_ABSOLUTE (interest rate)</p>
+                        </div>
+                        <div>
+                          <p className="font-bold mb-1">💰 Discount Targeting</p>
+                          <p className="text-xs">Leave target component blank for global discounts, or specify a component code to discount specific fees.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* ...existing code... */}
                 <div key={idx} className="bg-gray-50/50 p-8 rounded-3xl border-2 border-gray-100 relative hover:border-purple-200 transition">
                   <button type="button" onClick={() => {
                     const newP = [...formData.pricing];
@@ -431,15 +474,37 @@ const ProductFormPage = () => {
             </div>
           </div>
 
-          <div className="pt-12 border-t border-gray-100 flex space-x-6">
-            <button type="button" onClick={() => navigate('/products')} className="flex-1 px-8 py-5 border-2 border-gray-100 rounded-3xl font-black text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-xs">Discard Changes</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-8 py-5 bg-blue-600 text-white rounded-3xl font-black hover:bg-blue-700 transition shadow-2xl shadow-blue-200 flex items-center justify-center uppercase tracking-widest text-xs disabled:opacity-50">
-              {submitting ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <Save className="w-6 h-6 mr-3" />}
-              Commit Product Aggregate
-            </button>
-          </div>
+           <div className="pt-12 border-t border-gray-100 flex space-x-6">
+             <button type="button" onClick={() => navigate('/products')} className="flex-1 px-8 py-5 border-2 border-gray-100 rounded-3xl font-black text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-xs">Discard Changes</button>
+             {!isEditing && (
+               <button
+                 type="button"
+                 onClick={() => setShowPriceSimulation(true)}
+                 className="flex-1 px-8 py-5 border-2 border-amber-200 text-amber-700 rounded-3xl font-black hover:bg-amber-50 transition uppercase tracking-widest text-xs flex items-center justify-center"
+               >
+                 <Zap className="w-5 h-5 mr-2" />
+                 Test Pricing
+               </button>
+             )}
+             <button type="submit" disabled={submitting} className="flex-1 px-8 py-5 bg-blue-600 text-white rounded-3xl font-black hover:bg-blue-700 transition shadow-2xl shadow-blue-200 flex items-center justify-center uppercase tracking-widest text-xs disabled:opacity-50">
+               {submitting ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <Save className="w-6 h-6 mr-3" />}
+               Commit Product Aggregate
+             </button>
+           </div>
         </form>
       </div>
+
+      {/* Live Price Preview - Only show after product activation with pricing */}
+      {isEditing && formData.pricing && formData.pricing.length > 0 && (
+        <LivePricePreview productId={id ? parseInt(id) : undefined} currentFormData={formData} />
+      )}
+
+      {/* Price Simulation Tool */}
+      <PriceSimulationTool
+        isOpen={showPriceSimulation}
+        onClose={() => setShowPriceSimulation(false)}
+        defaultProductId={id ? parseInt(id) : undefined}
+      />
     </div>
   );
 };

@@ -1,46 +1,300 @@
-# Getting Started with Create React App
+# Plexus Frontend - Banking Product Management System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern React TypeScript application for managing bank product catalogs, features, pricing configurations, and customer onboarding. Built with responsive Tailwind CSS styling and real-time pricing calculations.
 
-## Available Scripts
+## 📋 Table of Contents
 
-In the project directory, you can run:
+- [Project Overview](#project-overview)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Key Features](#key-features)
+- [Component Architecture](#component-architecture)
+- [API Integration](#api-integration)
+- [Development Workflow](#development-workflow)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Project Overview
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+This frontend application provides a comprehensive UI for managing banking products with:
+- **Product Management**: Create, edit, activate, and lifecycle manage products
+- **Feature Components**: Link reusable feature definitions to products
+- **Pricing Configuration**: Set up static pricing or dynamic rules-based pricing tiers
+- **Price Calculation**: Real-time pricing preview and simulation tools
+- **Role-Based Access Control**: Permission-based UI elements and API interactions
+- **Multi-Tenant Support**: Bank-scoped operations with secure context isolation
 
-### `npm test`
+### Technology Stack
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| **Framework** | React | 19.2.4 |
+| **Language** | TypeScript | 4.9.5 |
+| **Routing** | React Router | 7.13.2 |
+| **HTTP Client** | Axios | 1.13.6 |
+| **Styling** | Tailwind CSS | 3.4.19 |
+| **Icons** | Lucide React | 0.577.0 |
+| **Auth** | OIDC Client TS | 3.4.1 |
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Quick Start
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Prerequisites
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- **Node.js** 16+ and npm 8+
+- **Backend API** running on http://localhost:8080
+- **OIDC Provider** credentials for authentication
 
-### `npm run eject`
+### Installation
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+```bash
+cd src/main/frontend
+npm install
+```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Environment Variables
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+Create a `.env` file with:
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```env
+REACT_APP_API_BASE_URL=http://localhost:8080
+REACT_APP_AUTH_AUTHORITY=https://your-auth-provider
+REACT_APP_AUTH_CLIENT_ID=your-client-id
+```
 
-## Learn More
+### Development
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+npm start       # Start dev server (http://localhost:3000)
+npm test        # Run tests
+npm run build   # Production build
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── LivePricePreview.tsx         # Real-time pricing preview
+│   ├── PriceSimulationTool.tsx      # Multi-scenario pricing tester
+│   ├── PricingTierVisualization.tsx # Tier structure visualization
+│   ├── PlexusSelect.tsx             # Custom select component
+│   └── ... (other components)
+├── pages/
+│   ├── admin/
+│   │   ├── ProductFormPage.tsx      # Product creation/editing
+│   │   ├── ProductManagementPage.tsx
+│   │   └── ... (other admin pages)
+│   └── ... (public pages)
+├── services/
+│   └── PricingService.ts            # Pricing API wrapper
+├── context/
+│   ├── AuthContext.tsx
+│   └── BreadcrumbContext.tsx
+└── hooks/
+    └── ... (custom hooks)
+```
+
+---
+
+## Key Features
+
+### 🎯 Live Price Preview
+Real-time pricing calculation during product creation
+- Adjustable transaction amount and customer segment
+- Component breakdown display
+- Pro-rata calculations
+
+### 🧪 Price Simulation Tool
+Multi-scenario pricing tester with:
+- Create multiple test scenarios
+- Component breakdown table
+- Export results as JSON
+
+### 📊 Pricing Tier Visualization
+Visual display of tier structure:
+- Expandable tier details
+- Condition matching logic
+- Rules engine flow diagram
+
+### 📦 Product Management
+Complete lifecycle management:
+- Create products with features and pricing
+- Inline feature component creation
+- Static and dynamic pricing binding
+- Activation and archival workflows
+
+### 🔐 Role-Based Access Control
+Permission-based UI rendering via `HasPermission` component
+
+---
+
+## Component Architecture
+
+### New Components
+
+#### **LivePricePreview**
+```typescript
+<LivePricePreview
+  productId={123}
+  currentFormData={formData}
+/>
+```
+- Real-time price calculation
+- Input controls for testing
+- Component breakdown display
+
+#### **PriceSimulationTool**
+```typescript
+<PriceSimulationTool
+  isOpen={true}
+  onClose={() => {}}
+  defaultProductId={123}
+/>
+```
+- Multi-scenario testing
+- JSON export
+- Scenario comparison
+
+#### **PricingTierVisualization**
+```typescript
+<PricingTierVisualization
+  tiers={pricingTiers}
+  componentCode="MAINT_FEE"
+  isRulesEngine={true}
+/>
+```
+- Visual tier display
+- Condition visualization
+- Flow diagrams
+
+---
+
+## API Integration
+
+### PricingService
+
+Centralized pricing API wrapper:
+
+```typescript
+import { PricingService } from './services/PricingService';
+
+// Calculate price
+const result = await PricingService.calculateProductPrice({
+  productId: 123,
+  transactionAmount: 1000,
+  customerSegment: 'PREMIUM',
+  effectiveDate: '2026-04-04'
+});
+
+// Format utilities
+PricingService.formatCurrency(12.50);      // "$12.50"
+PricingService.getValueTypeLabel('FEE_ABSOLUTE');
+```
+
+### Backend Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/products` | GET/POST | List/create products |
+| `/api/v1/products/{id}` | GET/PATCH | Get/update product |
+| `/api/v1/products/{id}/activate` | POST | Activate product |
+| `/api/v1/pricing-components` | GET/POST | Manage pricing |
+| `/api/v1/pricing/calculate/product` | POST | Calculate price |
+| `/api/v1/features` | GET/POST | Manage features |
+
+---
+
+## Development Workflow
+
+### Adding Features
+
+1. Create component: `touch src/components/NewComponent.tsx`
+2. Define TypeScript interfaces
+3. Implement with React hooks
+4. Integrate into page
+5. Test with backend API
+
+### Code Style
+
+- **Components**: PascalCase (`ProductFormPage.tsx`)
+- **Files**: Consistent naming with feature domain
+- **Types**: Interfaces for all props and state
+- **Imports**: Group by external, icons, internal
+
+### Git Workflow
+
+```bash
+git checkout -b feature/pricing-enhancement
+# ... make changes ...
+git commit -m "feat: add pricing enhancement"
+git push origin feature/pricing-enhancement
+```
+
+---
+
+## Deployment
+
+### Build
+
+```bash
+npm run build    # Creates src/main/frontend/build/
+```
+
+### Docker Example
+
+```dockerfile
+FROM node:16-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm install && npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+EXPOSE 80
+```
+
+### Environment Configuration
+
+- **Dev**: `REACT_APP_API_BASE_URL=http://localhost:8080`
+- **Prod**: `REACT_APP_API_BASE_URL=https://api.example.com`
+
+---
+
+## Troubleshooting
+
+### API Calls Failing
+- Check `REACT_APP_API_BASE_URL` in `.env`
+- Verify backend is running
+- Check network tab in DevTools
+
+### Pricing Calculation Error
+- Ensure product is ACTIVE (not DRAFT)
+- Verify pricing components are linked and ACTIVE
+- Check valid customer segment
+
+### Styling Issues
+- Rebuild Tailwind: `npm run build`
+- Clear browser cache
+- Verify `tailwind.config.js` paths
+
+---
+
+## Resources
+
+- [React Documentation](https://react.dev)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs)
+- [Tailwind CSS](https://tailwindcss.com)
+- [React Router](https://reactrouter.com)
+- [Lucide Icons](https://lucide.dev)
+
+---
+
+## License
+
+Proprietary - All rights reserved
