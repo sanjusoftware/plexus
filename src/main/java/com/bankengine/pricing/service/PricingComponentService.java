@@ -24,6 +24,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.Arrays;
@@ -135,9 +136,18 @@ public class PricingComponentService extends BaseService {
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public PricingComponentResponse activateComponent(Long id) {
+        return activateComponent(id, null);
+    }
+
+    @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
+    public PricingComponentResponse activateComponent(Long id, LocalDate activationDate) {
         PricingComponent component = getPricingComponentById(id);
         validateDraft(component);
         component.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        if (activationDate != null && component.getActivationDate() == null) {
+            component.setActivationDate(activationDate);
+        }
         PricingComponent saved = pricingComponentRepository.save(component);
         reloadService.reloadKieContainer();
         return pricingComponentMapper.toResponseDto(saved);

@@ -161,10 +161,19 @@ public class FeatureComponentService extends BaseService {
     @Transactional
     @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
     public FeatureComponentResponse activateFeature(Long id) {
+        return activateFeature(id, null);
+    }
+
+    @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
+    public FeatureComponentResponse activateFeature(Long id, LocalDate activationDate) {
         FeatureComponent component = getFeatureComponentById(id);
         validateDraft(component);
 
         component.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        if (activationDate != null && component.getActivationDate() == null) {
+            component.setActivationDate(activationDate);
+        }
         return featureComponentMapper.toResponseDto(componentRepository.save(component));
     }
 

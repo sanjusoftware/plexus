@@ -164,22 +164,18 @@ public class ProductService extends BaseService {
             product.setActivationDate(LocalDate.now());
         }
 
-        // Requirement 20: Auto-activate linked DRAFT components
+        // Auto-activate linked DRAFT components, propagating the product's activation date
         product.getProductPricingLinks().forEach(link -> {
             PricingComponent pc = link.getPricingComponent();
             if (pc.isDraft()) {
-                pc.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-                if (pc.getActivationDate() == null) {
-                    pc.setActivationDate(product.getActivationDate());
-                }
-                pricingComponentService.activateComponent(pc.getId()); // Use service to trigger reload/events
+                pricingComponentService.activateComponent(pc.getId(), product.getActivationDate());
             }
         });
 
         product.getProductFeatureLinks().forEach(link -> {
             FeatureComponent fc = link.getFeatureComponent();
             if (fc.isDraft()) {
-                featureComponentService.activateFeature(fc.getId());
+                featureComponentService.activateFeature(fc.getId(), product.getActivationDate());
             }
         });
 

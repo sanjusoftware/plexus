@@ -279,8 +279,59 @@ public class ProductServiceTest extends BaseServiceTest {
         productService.activateProduct(1L, null);
 
         assertEquals(VersionableEntity.EntityStatus.ACTIVE, product.getStatus());
-        verify(pricingComponentService).activateComponent(10L);
-        verify(featureComponentService).activateFeature(20L);
+        verify(pricingComponentService).activateComponent(eq(10L), any());
+        verify(featureComponentService).activateFeature(eq(20L), any());
+    }
+
+    @Test
+    @DisplayName("Activate: Should propagate product activation date to linked DRAFT components")
+    void testActivateProduct_PropagatesActivationDate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        LocalDate activationDate = LocalDate.now().plusDays(5);
+
+        PricingComponent pc = new PricingComponent();
+        pc.setId(10L);
+        pc.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        product.getProductPricingLinks().add(ProductPricingLink.builder().pricingComponent(pc).build());
+
+        FeatureComponent fc = new FeatureComponent();
+        fc.setId(20L);
+        fc.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        product.getProductFeatureLinks().add(ProductFeatureLink.builder().featureComponent(fc).build());
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        productService.activateProduct(1L, activationDate);
+
+        // Both components should receive the product's activation date
+        verify(pricingComponentService).activateComponent(10L, activationDate);
+        verify(featureComponentService).activateFeature(20L, activationDate);
+    }
+
+    @Test
+    @DisplayName("Activate: Should NOT override activation date already set on linked components")
+    void testActivateProduct_DoesNotOverrideExistingComponentActivationDate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        LocalDate productActivationDate = LocalDate.now().plusDays(5);
+        LocalDate existingComponentDate = LocalDate.now().plusDays(1);
+
+        PricingComponent pc = new PricingComponent();
+        pc.setId(10L);
+        pc.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        pc.setActivationDate(existingComponentDate);
+        product.getProductPricingLinks().add(ProductPricingLink.builder().pricingComponent(pc).build());
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+
+        productService.activateProduct(1L, productActivationDate);
+
+        // The service call still happens; the overload is responsible for honouring existing date
+        verify(pricingComponentService).activateComponent(10L, productActivationDate);
     }
 
     @Test
