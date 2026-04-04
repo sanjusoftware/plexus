@@ -196,6 +196,32 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("Invalid data type provided: XYZ")));
     }
 
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldAllowCreatingFeaturesWithSameNameWhenCodeDiffers() throws Exception {
+        FeatureComponentRequest first = new FeatureComponentRequest();
+        first.setName("Airport Lounge Access");
+        first.setCode("AIRPORT_LOUNGE_ACCESS_A");
+        first.setDataType("STRING");
+
+        FeatureComponentRequest second = new FeatureComponentRequest();
+        second.setName("Airport Lounge Access");
+        second.setCode("AIRPORT_LOUNGE_ACCESS_B");
+        second.setDataType("STRING");
+
+        mockMvc.perform(postWithCsrf("/api/v1/features")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(first)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is("AIRPORT_LOUNGE_ACCESS_A")));
+
+        mockMvc.perform(postWithCsrf("/api/v1/features")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(second)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is("AIRPORT_LOUNGE_ACCESS_B")));
+    }
+
     // --- 2. RETRIEVE TESTS ---
 
     @Test

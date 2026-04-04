@@ -37,8 +37,7 @@ public class BankConfigurationController {
     @PreAuthorize("hasAuthority('system:bank:write')")
     @Operation(summary = "Update an existing bank configuration (System Admin only)")
     public ResponseEntity<BankConfigurationResponse> updateBankById(@PathVariable String bankId, @RequestBody BankConfigurationRequest request) {
-        request.setBankId(bankId);
-        return ResponseEntity.ok(bankConfigurationService.updateBank(request));
+        return ResponseEntity.ok(bankConfigurationService.updateBankById(bankId, request));
     }
 
     @PostMapping("/{bankId}/activate")

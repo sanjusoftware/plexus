@@ -195,17 +195,17 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
         createBank("UPDATE_TEST");
         BankConfigurationRequest updateRequest = BankConfigurationRequest.builder()
                 .name("Updated Bank")
-                .bankId("UPDATE_TEST")
                 .allowProductInMultipleBundles(true)
                 .categoryConflictRules(List.of())
                 .issuerUrl(ISSUER_A)
                 .build();
 
-        mockMvc.perform(putWithCsrf("/api/v1/banks")
+        mockMvc.perform(putWithCsrf("/api/v1/banks/UPDATE_TEST")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bankId").value("UPDATE_TEST"))
                 .andExpect(jsonPath("$.allowProductInMultipleBundles").value(true));
     }
 
@@ -214,7 +214,6 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     void bankAdmin_CanUpdateOwnBank() throws Exception {
         createBank("BANK_A");
         BankConfigurationRequest request = BankConfigurationRequest.builder()
-                .bankId("BANK_A")
                 .allowProductInMultipleBundles(true)
                 .categoryConflictRules(List.of())
                 .issuerUrl(ISSUER_A)
@@ -224,7 +223,9 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bankId").value("BANK_A"))
+                .andExpect(jsonPath("$.allowProductInMultipleBundles").value(true));
     }
 
 //    @Test

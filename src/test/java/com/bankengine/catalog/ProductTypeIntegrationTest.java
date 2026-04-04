@@ -23,7 +23,6 @@ import java.util.Set;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -138,6 +137,43 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @WithMockRole(roles = {CREATOR_ROLE})
+    void shouldSanitizeProductTypeCodeOnCreate() throws Exception {
+        ProductTypeDto requestDto = new ProductTypeDto();
+        requestDto.setName("Current Account");
+        requestDto.setCode("CASA Account");
+
+        mockMvc.perform(postWithCsrf(API_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is("CASA_ACCOUNT")));
+    }
+
+    @Test
+    @WithMockRole(roles = {CREATOR_ROLE})
+    void shouldAllowDuplicateProductTypeNameWhenCodeDiffers() throws Exception {
+        ProductTypeDto first = new ProductTypeDto();
+        first.setName("Current Account");
+        first.setCode("CASA_A");
+
+        ProductTypeDto second = new ProductTypeDto();
+        second.setName("Current Account");
+        second.setCode("CASA_B");
+
+        mockMvc.perform(postWithCsrf(API_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(first)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(postWithCsrf(API_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(second)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code", is("CASA_B")));
+    }
+
+    @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldActivateProductType() throws Exception {
         ProductType pt = createAndSaveProductType("Inactive Type", "INACT");
@@ -162,6 +198,46 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(postWithCsrf(API_URL + "/" + pt.getId() + "/archive"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("ARCHIVED")));
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldUpdateDraftProductType() throws Exception {
+        ProductType pt = createAndSaveProductType("Old Name", "OLD_CODE");
+        ProductTypeDto updateDto = new ProductTypeDto();
+        updateDto.setName("Updated Name");
+        updateDto.setCode("NEW CODE");
+
+        mockMvc.perform(putWithCsrf(API_URL + "/" + pt.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("Updated Name")))
+                .andExpect(jsonPath("$.code", is("NEW_CODE")))
+                .andExpect(jsonPath("$.status", is("DRAFT")));
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldArchiveOnDeleteWhenProductTypeIsActive() throws Exception {
+        ProductType pt = createAndSaveProductType("Active Type", "ACTIVE_DEL");
+        txHelper.doInTransaction(() -> {
+            ProductType entity = productTypeRepository.findById(pt.getId()).orElseThrow();
+            entity.setStatus(com.bankengine.common.model.VersionableEntity.EntityStatus.ACTIVE);
+            productTypeRepository.save(entity);
+            return null;
+        });
+
+        mockMvc.perform(deleteWithCsrf(API_URL + "/" + pt.getId()))
+                .andExpect(status().isNoContent());
+
+        txHelper.doInTransaction(() -> {
+            ProductType saved = productTypeRepository.findById(pt.getId()).orElseThrow();
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    com.bankengine.common.model.VersionableEntity.EntityStatus.ARCHIVED,
+                    saved.getStatus());
+            return null;
+        });
     }
 
     @Test

@@ -57,6 +57,13 @@ public class ProductTypeService extends BaseService {
         if (entity.getStatus() != VersionableEntity.EntityStatus.DRAFT) {
             throw new IllegalStateException("Only DRAFT product types can be updated.");
         }
+        if (dto.getCode() != null && !dto.getCode().equals(entity.getCode())) {
+            productTypeRepository.findByBankIdAndCode(getCurrentBankId(), dto.getCode())
+                    .filter(existing -> !existing.getId().equals(entity.getId()))
+                    .ifPresent(existing -> {
+                        throw new IllegalStateException("Product Type code '" + dto.getCode() + "' already exists.");
+                    });
+        }
         productTypeMapper.updateFromDto(dto, entity);
         return productTypeRepository.save(entity);
     }
@@ -81,10 +88,13 @@ public class ProductTypeService extends BaseService {
     @Transactional
     public void deleteProductType(Long id) {
         ProductType entity = getProductTypeById(id);
-        if (entity.getStatus() != VersionableEntity.EntityStatus.DRAFT) {
-            throw new IllegalStateException("Only DRAFT product types can be deleted.");
+        if (entity.getStatus() == VersionableEntity.EntityStatus.DRAFT) {
+            productTypeRepository.delete(entity);
+            return;
         }
-        productTypeRepository.delete(entity);
+
+        entity.setStatus(VersionableEntity.EntityStatus.ARCHIVED);
+        productTypeRepository.save(entity);
     }
 
     private ProductType getProductTypeById(Long id) {
