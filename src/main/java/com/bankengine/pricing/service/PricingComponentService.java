@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 @Service
@@ -348,7 +349,7 @@ public class PricingComponentService extends BaseService {
         try {
             PriceValue.ValueType.valueOf(type.toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid value for price value type. Valid values are FEE_ABSOLUTE, FEE_PERCENTAGE, DISCOUNT_PERCENTAGE, DISCOUNT_ABSOLUTE, FREE_COUNT");
+            throw new IllegalArgumentException("Invalid value for price value type. Valid values are " + enumValues(PriceValue.ValueType.values()));
         }
     }
 
@@ -357,8 +358,12 @@ public class PricingComponentService extends BaseService {
         try {
             PricingComponent.ComponentType.valueOf(type.toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid value for pricing component type. Valid values are FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, TAX");
+            throw new IllegalArgumentException("Invalid value for pricing component type. Valid values are " + enumValues(PricingComponent.ComponentType.values()));
         }
+    }
+
+    private String enumValues(Enum<?>[] values) {
+        return Arrays.stream(values).map(Enum::name).collect(Collectors.joining(", "));
     }
 
     private void validateComponentAndValueType(PricingComponent component) {

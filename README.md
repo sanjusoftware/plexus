@@ -622,6 +622,7 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
 ```
 
 Notes:
+- Before creating pricing components, register all rule attributes via `POST /api/v1/pricing-metadata` (Step 4.0). Otherwise, requests can fail with errors like `Invalid rule attribute 'income'. Not found in PricingInputMetadata registry.`
 - `type` allowed values: `FEE`, `INTEREST_RATE`, `WAIVER`, `BENEFIT`, `DISCOUNT`, `PACKAGE_FEE`, `TAX`
 - Higher `priority` values are evaluated first; if omitted, the tier is assigned the lowest priority.
 - Tiers with the same `priority` are treated at the same evaluation level.

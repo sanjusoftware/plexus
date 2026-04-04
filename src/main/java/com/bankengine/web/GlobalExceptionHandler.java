@@ -14,8 +14,13 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.model.PriceValue;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -112,21 +117,27 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
-        String message = ex.getMessage();
-        if (message.contains("com.bankengine.catalog.model.FeatureComponent$DataType")) {
+        String message = ex.getMostSpecificCause().getMessage();
+        String lowerCaseMessage = message != null ? message.toLowerCase() : "";
+
+        if (message != null && message.contains("com.bankengine.catalog.model.FeatureComponent$DataType")) {
             message = "Invalid data type provided. Valid values are: STRING, DECIMAL, INTEGER, BOOLEAN, DATE.";
-        } else if (message.contains("com.bankengine.pricing.model.PricingComponent$ComponentType")) {
-            message = "Invalid value for pricing component type. Valid values are FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, TAX";
-        } else if (message.contains("com.bankengine.pricing.model.PriceValue$ValueType")) {
-            message = "Invalid value for price value type. Valid values are FEE_ABSOLUTE, FEE_PERCENTAGE, DISCOUNT_PERCENTAGE, DISCOUNT_ABSOLUTE, FREE_COUNT";
-        } else if (message.contains("java.lang.Boolean") || message.contains("boolean")) {
-            if (message.contains("allowProductInMultipleBundles")) {
+        } else if (message != null && message.contains("com.bankengine.pricing.model.PricingComponent$ComponentType")) {
+            message = "Invalid value for pricing component type. Valid values are " + enumValues(PricingComponent.ComponentType.values());
+        } else if (message != null && message.contains("com.bankengine.pricing.model.PriceValue$ValueType")) {
+            message = "Invalid value for price value type. Valid values are " + enumValues(PriceValue.ValueType.values());
+        } else if (lowerCaseMessage.contains("boolean")) {
+            if (lowerCaseMessage.contains("allowproductinmultiplebundles")) {
                 message = "Invalid value for Boolean allowProductInMultipleBundles. Should be true or false";
             } else {
                 message = "Invalid value for Boolean. Should be true or false";
             }
         }
         return buildResponseEntity(HttpStatus.BAD_REQUEST, "Bad Request", message);
+    }
+
+    private String enumValues(Enum<?>[] values) {
+        return Arrays.stream(values).map(Enum::name).collect(Collectors.joining(", "));
     }
 
     /**

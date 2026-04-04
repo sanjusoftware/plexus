@@ -8,6 +8,7 @@ import com.bankengine.pricing.dto.TierConditionDto;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
+import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.repository.*;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
@@ -22,9 +23,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -160,11 +163,16 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingComponentRequest dto = newPricingComponentRequest("BadType");
         dto.setType("INVALID_ENUM_VALUE");
 
+        String expectedMessage = "Invalid value for pricing component type. Valid values are " +
+                Arrays.stream(PricingComponent.ComponentType.values())
+                        .map(Enum::name)
+                        .collect(Collectors.joining(", "));
+
         mockMvc.perform(postWithCsrf(BASE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("Invalid value for pricing component type")));
+                .andExpect(jsonPath("$.message", is(expectedMessage)));
     }
 
     @Test
@@ -268,11 +276,16 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         PricingTierRequest req = getValidTierDto();
         req.getPriceValue().setValueType("INVALID_PRICE_TYPE");
 
+        String expectedMessage = "Invalid value for price value type. Valid values are " +
+                Arrays.stream(PriceValue.ValueType.values())
+                        .map(Enum::name)
+                        .collect(Collectors.joining(", "));
+
         mockMvc.perform(postWithCsrf(BASE_URL + "/{id}/tiers", component.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("Invalid value for price value type")));
+                .andExpect(jsonPath("$.message", is(expectedMessage)));
     }
 
     // --- CONFLICT & ERROR HANDLING ---

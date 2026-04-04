@@ -17,6 +17,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -26,6 +27,23 @@ public class FeatureComponentService extends BaseService {
     private final FeatureComponentRepository componentRepository;
     private final ProductFeatureLinkRepository linkRepository;
     private final FeatureComponentMapper featureComponentMapper;
+
+    @Override
+    protected <T extends VersionableEntity> void handleTemporalVersioning(T newEntity, T oldEntity, VersionRequest request) {
+        if (request == null) {
+            return;
+        }
+
+        LocalDate activationDate = request.getActivationDate() != null
+                ? request.getActivationDate()
+                : oldEntity.getActivationDate();
+        LocalDate expiryDate = request.getExpiryDate() != null
+                ? request.getExpiryDate()
+                : oldEntity.getExpiryDate();
+
+        newEntity.setActivationDate(activationDate);
+        newEntity.setExpiryDate(expiryDate);
+    }
 
     @Transactional(readOnly = true)
     public List<FeatureComponentResponse> getAllFeatures() {

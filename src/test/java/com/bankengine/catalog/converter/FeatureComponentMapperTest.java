@@ -6,6 +6,8 @@ import com.bankengine.catalog.model.FeatureComponent;
 import com.bankengine.common.model.VersionableEntity;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -33,6 +35,8 @@ class FeatureComponentMapperTest {
                 .dataType(FeatureComponent.DataType.STRING)
                 .version(2)
                 .status(VersionableEntity.EntityStatus.ACTIVE)
+                .activationDate(LocalDate.of(2026, 4, 1))
+                .expiryDate(LocalDate.of(2027, 4, 1))
                 .build();
 
         FeatureComponentResponse dto = mapper.toResponseDto(entity);
@@ -42,6 +46,8 @@ class FeatureComponentMapperTest {
         assertEquals(entity.getName(), dto.getName());
         assertEquals(2, dto.getVersion());
         assertEquals("ACTIVE", dto.getStatus());
+        assertEquals(LocalDate.of(2026, 4, 1), dto.getActivationDate());
+        assertEquals(LocalDate.of(2027, 4, 1), dto.getExpiryDate());
     }
 
     @Test

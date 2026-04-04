@@ -86,6 +86,26 @@ class BankConfigurationConstraintIntegrationTest extends AbstractIntegrationTest
                 .andExpect(jsonPath("$.message").value("A bank with this Issuer URL and Client ID combination already exists."));
     }
 
+    @Test
+    @WithSystemAdminRole
+    void shouldReturnUserFriendlyMessage_WhenAllowProductInMultipleBundlesIsInvalidBoolean() throws Exception {
+        String invalidBooleanPayload = """
+                {
+                  "name": "Bank C",
+                  "bankId": "BANK_C",
+                  "issuerUrl": "https://issuer-c.com",
+                  "clientId": "CLIENT_C",
+                  "allowProductInMultipleBundles": "xyz"
+                }
+                """;
+
+        mockMvc.perform(postWithCsrf("/api/v1/banks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBooleanPayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid value for Boolean allowProductInMultipleBundles. Should be true or false"));
+    }
+
     private void createBank(String bankId, String issuerUrl, String clientId) {
         txHelper.doInTransaction(() -> {
             try {

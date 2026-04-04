@@ -421,14 +421,19 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     void shouldVersionFeatureSuccessfully() throws Exception {
         FeatureComponent source = createFeatureComponentInDb("BaseFeature");
         final String code = source.getCode();
+        final LocalDate newActivationDate = LocalDate.now().plusDays(7);
+        final LocalDate newExpiryDate = LocalDate.now().plusDays(120);
         txHelper.doInTransaction(() -> {
             FeatureComponent fc = featureComponentRepository.findById(source.getId()).orElseThrow();
             fc.setStatus(VersionableEntity.EntityStatus.ACTIVE);
             fc.setVersion(1);
+            fc.setActivationDate(LocalDate.now());
             featureComponentRepository.save(fc);
         });
 
         VersionRequest vRequest = new VersionRequest();
+        vRequest.setActivationDate(newActivationDate);
+        vRequest.setExpiryDate(newExpiryDate);
 
         mockMvc.perform(postWithCsrf("/api/v1/features/{id}/create-new-version", source.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -437,11 +442,15 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.code", is(code)))
                 .andExpect(jsonPath("$.version", is(2)))
-                .andExpect(jsonPath("$.status", is("ACTIVE")));
+                .andExpect(jsonPath("$.status", is("ACTIVE")))
+                .andExpect(jsonPath("$.activationDate", is(newActivationDate.toString())))
+                .andExpect(jsonPath("$.expiryDate", is(newExpiryDate.toString())));
 
         txHelper.doInTransaction(() -> {
             FeatureComponent v2 = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 2).orElseThrow();
             assertThat(v2.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ACTIVE);
+            assertThat(v2.getActivationDate()).isEqualTo(newActivationDate);
+            assertThat(v2.getExpiryDate()).isEqualTo(newExpiryDate);
 
             FeatureComponent v1 = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 1).orElseThrow();
             assertThat(v1.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ARCHIVED);
