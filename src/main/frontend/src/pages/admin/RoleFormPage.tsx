@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Save, X, Shield, CheckCircle2, AlertCircle, Loader2, Lock, CheckSquare, Square, MinusSquare, Circle } from 'lucide-react';
+import { Save, X, Shield, CheckCircle2, Loader2, Lock, CheckSquare, Square, MinusSquare, Circle } from 'lucide-react';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface RoleMapping {
   name: string;
@@ -13,12 +14,12 @@ const RoleFormPage = () => {
   const { roleName } = useParams<{ roleName?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
+  const { setToast } = useAuth();
   const isEditing = !!roleName;
 
   const [availableAuthorities, setAvailableAuthorities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<RoleMapping>({ name: roleName || '', authorities: [] });
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -39,11 +40,11 @@ const RoleFormPage = () => {
             setFormData({ name: mapping.name, authorities: [...mapping.authorities] });
             setEntityName(mapping.name);
           } else {
-            setError(`Role "${roleName}" not found.`);
+            setToast({ message: `Role "${roleName}" not found.`, type: 'error' });
           }
         }
       } catch (err: any) {
-        setError('Failed to fetch required data.');
+        setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -114,13 +115,13 @@ const RoleFormPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setSubmitting(true);
     try {
       await axios.post('/api/v1/roles/mapping', { roleName: formData.name, authorities: formData.authorities });
+      setToast({ message: 'Permissions for the role have been successfully synchronized.', type: 'success' });
       navigate('/roles', { state: { success: 'Permissions for the role have been successfully synchronized.' } });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Role mapping update failed.');
+      setToast({ message: err.response?.data?.message || 'Role mapping update failed.', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -162,13 +163,6 @@ const RoleFormPage = () => {
 
       <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
         <form onSubmit={handleSubmit} className="p-12 space-y-12">
-          {error && (
-            <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
-              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-              <p className="text-sm font-bold">{error}</p>
-            </div>
-          )}
-
           <div className="bg-blue-50/50 p-10 rounded-[2.5rem] border border-blue-100/50 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-full bg-blue-100/20 -skew-x-12 translate-x-32"></div>
             <div className="relative">

@@ -1,10 +1,89 @@
 > Task :compileJava
 > Task :installFrontend UP-TO-DATE
-> Task :buildFrontend UP-TO-DAT> Task :compileJava
-> Task :installFrontend UP-TO-DATE
-> Task :buildFrontend UP-TO-DATE
-> Task :copyFrontend UP-TO-DATE
-> Task :processResources UP-TO-DATE
+
+> Task :buildFrontend
+
+> frontend@0.1.0 build
+> cross-env CI=false ESLINT_NO_DEV_ERRORS=true react-scripts build
+
+Creating an optimized production build...
+Compiled with warnings.
+
+[eslint]
+src/components/LivePricePreview.tsx
+  Line 28:6:  React Hook useEffect has a missing dependency: 'calculatePreview'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/PriceSimulationTool.tsx
+  Line 2:29:  'Copy' is defined but never used  @typescript-eslint/no-unused-vars
+
+src/pages/OnboardingPage.tsx
+  Line 71:6:  React Hook useCallback has a missing dependency: 'setToast'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/BankManagementPage.tsx
+  Line 5:132:  'AlertCircle' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+  Line 40:6:   React Hook useEffect has a missing dependency: 'fetchBanks'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/FeatureComponentFormPage.tsx
+  Line 40:6:  React Hook useEffect has a missing dependency: 'setToast'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/FeatureComponentsPage.tsx
+  Line 37:6:  React Hook useEffect has a missing dependency: 'fetchFeatures'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/PricingComponentFormPage.tsx
+  Line 163:6:  React Hook useEffect has missing dependencies: 'mapTierFromApi' and 'setToast'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/PricingComponentsPage.tsx
+  Line 85:6:  React Hook useEffect has a missing dependency: 'fetchComponents'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/PricingMetadataFormPage.tsx
+  Line 40:6:  React Hook useEffect has a missing dependency: 'setToast'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/PricingMetadataPage.tsx
+  Line 35:6:  React Hook useEffect has a missing dependency: 'fetchMetadata'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/ProductFormPage.tsx
+  Line 89:6:  React Hook useEffect has a missing dependency: 'setToast'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/ProductManagementPage.tsx
+  Line 62:6:  React Hook useEffect has a missing dependency: 'fetchInitialData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/ProductTypeFormPage.tsx
+  Line 41:6:  React Hook useEffect has a missing dependency: 'setToast'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/ProductTypesPage.tsx
+  Line 38:6:  React Hook useEffect has a missing dependency: 'fetchProductTypes'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/RoleFormPage.tsx
+  Line 54:6:  React Hook useEffect has a missing dependency: 'setToast'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/RoleManagementPage.tsx
+  Line 81:6:  React Hook useEffect has a missing dependency: 'fetchInitialData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  159.71 kB  build/static/js/main.281ced6f.js
+  8.18 kB    build/static/css/main.c11ec1a9.css
+  1.76 kB    build/static/js/453.825386d9.chunk.js
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  npm install -g serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+
+
+> Task :copyFrontend
+> Task :processResources
 > Task :classes
 > Task :resolveMainClassName
 
@@ -19,45 +98,45 @@
 
  :: Spring Boot ::                (v3.3.1)
 
-2026-03-31T13:14:20.659Z  INFO 3827 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Starting PlexusApplication using Java 21.0.10 with PID 3827 (/app/build/classes/java/main started by jules in /app)
-2026-03-31T13:14:20.663Z DEBUG 3827 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Running with Spring Boot v3.3.1, Spring v6.1.10
-2026-03-31T13:14:20.663Z  INFO 3827 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : The following 1 profile is active: "dev"
-2026-03-31T13:14:21.770Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-03-31T13:14:21.771Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-03-31T13:14:22.017Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 239 ms. Found 15 JPA repository interfaces.
-2026-03-31T13:14:22.545Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-03-31T13:14:22.546Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-03-31T13:14:22.580Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.auth.repository.RoleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.580Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.BundleProductLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.580Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.FeatureComponentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.581Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductBundleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.581Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductFeatureLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.581Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.581Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductTypeRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.582Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.common.repository.BankConfigurationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.582Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.BundlePricingLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.582Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PriceValueRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.585Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingComponentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.585Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingInputMetadataRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.586Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingTierRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.586Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.ProductPricingLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.587Z  INFO 3827 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.TierConditionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-03-31T13:14:22.587Z  INFO 3827 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 31 ms. Found 0 Redis repository interfaces.
-2026-03-31T13:14:23.829Z  INFO 3827 --- [           main] [                                                 ] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2026-03-31T13:14:23.846Z  INFO 3827 --- [           main] [                                                 ] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-31T13:14:23.846Z  INFO 3827 --- [           main] [                                                 ] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.25]
-2026-03-31T13:14:23.924Z  INFO 3827 --- [           main] [                                                 ] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-31T13:14:23.925Z  INFO 3827 --- [           main] [                                                 ] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3210 ms
-2026-03-31T13:14:24.340Z  INFO 3827 --- [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-03-31T13:14:24.565Z  INFO 3827 --- [           main] [                                                 ] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:plexusdb user=SA
-2026-03-31T13:14:24.567Z  INFO 3827 --- [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-03-31T13:14:24.582Z  INFO 3827 --- [           main] [                                                 ] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:plexusdb'
-2026-03-31T13:14:24.832Z  INFO 3827 --- [           main] [                                                 ] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2026-03-31T13:14:24.894Z  INFO 3827 --- [           main] [                                                 ] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.2.Final
-2026-03-31T13:14:24.932Z  INFO 3827 --- [           main] [                                                 ] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2026-03-31T13:14:25.312Z  INFO 3827 --- [           main] [                                                 ] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-03-31T13:14:25.361Z  WARN 3827 --- [           main] [                                                 ] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
-2026-03-31T13:14:27.278Z  INFO 3827 --- [           main] [                                                 ] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-05T13:42:20.049Z  INFO 151972 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Starting PlexusApplication using Java 21.0.10 with PID 151972 (/app/build/classes/java/main started by jules in /app)
+2026-04-05T13:42:20.052Z DEBUG 151972 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Running with Spring Boot v3.3.1, Spring v6.1.10
+2026-04-05T13:42:20.053Z  INFO 151972 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : The following 1 profile is active: "dev"
+2026-04-05T13:42:21.229Z  INFO 151972 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-04-05T13:42:21.229Z  INFO 151972 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-05T13:42:21.486Z  INFO 151972 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 250 ms. Found 15 JPA repository interfaces.
+2026-04-05T13:42:22.093Z  INFO 151972 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-04-05T13:42:22.095Z  INFO 151972 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-04-05T13:42:22.129Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.auth.repository.RoleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.129Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.BundleProductLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.130Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.FeatureComponentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.130Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductBundleRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.130Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductFeatureLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.131Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.131Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.catalog.repository.ProductTypeRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.132Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.common.repository.BankConfigurationRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.132Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.BundlePricingLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.133Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PriceValueRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.136Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingComponentRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.136Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingInputMetadataRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.137Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.PricingTierRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.138Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.ProductPricingLinkRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.138Z  INFO 151972 --- [           main] [                                                 ] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.bankengine.pricing.repository.TierConditionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-04-05T13:42:22.139Z  INFO 151972 --- [           main] [                                                 ] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 36 ms. Found 0 Redis repository interfaces.
+2026-04-05T13:42:23.448Z  INFO 151972 --- [           main] [                                                 ] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-04-05T13:42:23.467Z  INFO 151972 --- [           main] [                                                 ] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-05T13:42:23.467Z  INFO 151972 --- [           main] [                                                 ] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.25]
+2026-04-05T13:42:23.542Z  INFO 151972 --- [           main] [                                                 ] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-05T13:42:23.543Z  INFO 151972 --- [           main] [                                                 ] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3437 ms
+2026-04-05T13:42:23.923Z  INFO 151972 --- [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-05T13:42:24.122Z  INFO 151972 --- [           main] [                                                 ] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:plexusdb user=SA
+2026-04-05T13:42:24.124Z  INFO 151972 --- [           main] [                                                 ] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-05T13:42:24.137Z  INFO 151972 --- [           main] [                                                 ] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:plexusdb'
+2026-04-05T13:42:24.378Z  INFO 151972 --- [           main] [                                                 ] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-05T13:42:24.434Z  INFO 151972 --- [           main] [                                                 ] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.2.Final
+2026-04-05T13:42:24.470Z  INFO 151972 --- [           main] [                                                 ] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-05T13:42:24.823Z  INFO 151972 --- [           main] [                                                 ] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-05T13:42:24.874Z  WARN 151972 --- [           main] [                                                 ] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-05T13:42:26.710Z  INFO 151972 --- [           main] [                                                 ] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
 Hibernate: drop table if exists bank_category_conflicts cascade
 Hibernate: drop table if exists bank_configuration cascade
 Hibernate: drop table if exists bundle_pricing_link cascade
@@ -107,18 +186,18 @@ Hibernate: alter table if exists product_pricing_link add constraint FKm4wkb51is
 Hibernate: alter table if exists product_pricing_link add constraint FKbcr1wkacs2jh6j5oismthncsk foreign key (product_id) references product
 Hibernate: alter table if exists role_authority add constraint FK2052966dco7y9f97s1a824bj1 foreign key (role_id) references role
 Hibernate: alter table if exists tier_condition add constraint FKrr97dtiopm88a00d0it7k5v9r foreign key (pricing_tier_id) references pricing_tier
-2026-03-31T13:14:27.404Z  INFO 3827 --- [           main] [                                                 ] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-03-31T13:14:27.892Z  INFO 3827 --- [           main] [                                                 ] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
-2026-03-31T13:14:28.094Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextFilter    : Filter 'tenantContextFilter' configured for use
-2026-03-31T13:14:28.289Z  INFO 3827 --- [           main] [                                                 ] c.b.a.s.TenantSecurityInitializer        : Initializing TenantContextHolder with System Bank ID: SYSTEM
-2026-03-31T13:14:29.502Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
-2026-03-31T13:14:29.618Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
-2026-03-31T13:14:29.618Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:26.834Z  INFO 151972 --- [           main] [                                                 ] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-05T13:42:27.334Z  INFO 151972 --- [           main] [                                                 ] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-05T13:42:27.544Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextFilter    : Filter 'tenantContextFilter' configured for use
+2026-04-05T13:42:27.735Z  INFO 151972 --- [           main] [                                                 ] c.b.a.s.TenantSecurityInitializer        : Initializing TenantContextHolder with System Bank ID: SYSTEM
+2026-04-05T13:42:28.878Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-04-05T13:42:28.997Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:42:28.997Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select distinct pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pt1_0.pricing_component_id,pt1_0.id,pt1_0.apply_charge_on_full_breach,pt1_0.bank_id,pt1_0.code,c1_0.pricing_tier_id,c1_0.id,c1_0.attribute_name,c1_0.attribute_value,c1_0.bank_id,c1_0.connector,c1_0.created_at,c1_0.created_by,c1_0.operator,c1_0.updated_at,c1_0.updated_by,pt1_0.created_at,pt1_0.created_by,pt1_0.max_threshold,pt1_0.min_threshold,pt1_0.name,pv1_0.pricing_tier_id,pv1_0.id,pv1_0.bank_id,pv1_0.created_at,pv1_0.created_by,pv1_0.raw_value,pv1_0.updated_at,pv1_0.updated_by,pv1_0.value_type,pt1_0.priority,pt1_0.updated_at,pt1_0.updated_by,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 left join pricing_tier pt1_0 on pc1_0.id=pt1_0.pricing_component_id left join tier_condition c1_0 on pt1_0.id=c1_0.pricing_tier_id left join price_value pv1_0 on pt1_0.id=pv1_0.pricing_tier_id
-2026-03-31T13:14:29.801Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
-2026-03-31T13:14:29.802Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : GENERATED DRL FOR PACKAGE: pricing
-2026-03-31T13:14:29.802Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
-2026-03-31T13:14:29.802Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : package bankengine.pricing.rules.system;
+2026-04-05T13:42:29.164Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-04-05T13:42:29.164Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : GENERATED DRL FOR PACKAGE: pricing
+2026-04-05T13:42:29.165Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-04-05T13:42:29.165Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : package bankengine.pricing.rules.system;
 
 import com.bankengine.rules.model.PricingInput;
 import com.bankengine.pricing.model.PriceValue;
@@ -134,14 +213,14 @@ rule "Placeholder_pricing"
         // No rules defined for this tenant
 end
 
-2026-03-31T13:14:29.802Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
-2026-03-31T13:14:29.809Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
-2026-03-31T13:14:29.809Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:29.165Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-04-05T13:42:29.170Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:42:29.171Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select distinct pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.type in (?,?)
-2026-03-31T13:14:29.827Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
-2026-03-31T13:14:29.828Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : GENERATED DRL FOR PACKAGE: bundle
-2026-03-31T13:14:29.828Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
-2026-03-31T13:14:29.828Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : package bankengine.bundle.rules.system;
+2026-04-05T13:42:29.187Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-04-05T13:42:29.187Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : GENERATED DRL FOR PACKAGE: bundle
+2026-04-05T13:42:29.187Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-04-05T13:42:29.187Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : package bankengine.bundle.rules.system;
 
 import com.bankengine.rules.model.BundlePricingInput;
 import com.bankengine.pricing.model.PriceValue;
@@ -157,39 +236,39 @@ rule "Placeholder_bundle"
         // No rules defined for this tenant
 end
 
-2026-03-31T13:14:29.828Z  INFO 3827 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
-2026-03-31T13:14:30.089Z  WARN 3827 --- [           main] [                                                 ] o.k.m.i.embedder.MavenSettings           : Environment variable M2_HOME is not set
-2026-03-31T13:14:33.305Z  WARN 3827 --- [           main] [                                                 ] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2026-03-31T13:14:33.377Z DEBUG 3827 --- [           main] [                                                 ] swordEncoderAuthenticationManagerBuilder : No authenticationProviders and no parentAuthenticationManager defined. Returning null.
-2026-03-31T13:14:33.507Z  INFO 3827 --- [           main] [                                                 ] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
-2026-03-31T13:14:34.713Z  INFO 3827 --- [           main] [                                                 ] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
-2026-03-31T13:14:34.890Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
-2026-03-31T13:14:34.893Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
-2026-03-31T13:14:34.893Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:29.187Z  INFO 151972 --- [           main] [                                                 ] c.b.p.s.AbstractRuleBuilderService       : ========================================================
+2026-04-05T13:42:29.421Z  WARN 151972 --- [           main] [                                                 ] o.k.m.i.embedder.MavenSettings           : Environment variable M2_HOME is not set
+2026-04-05T13:42:32.441Z  WARN 151972 --- [           main] [                                                 ] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-05T13:42:32.527Z DEBUG 151972 --- [           main] [                                                 ] swordEncoderAuthenticationManagerBuilder : No authenticationProviders and no parentAuthenticationManager defined. Returning null.
+2026-04-05T13:42:32.661Z  INFO 151972 --- [           main] [                                                 ] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-04-05T13:42:33.814Z  INFO 151972 --- [           main] [                                                 ] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-04-05T13:42:34.044Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-04-05T13:42:34.049Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:42:34.049Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select bc1_0.id,bc1_0.admin_email,bc1_0.admin_name,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.client_id,bc1_0.client_secret,bc1_0.created_at,bc1_0.created_by,bc1_0.currency_code,bc1_0.issuer_url,bc1_0.name,bc1_0.status,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
-2026-03-31T13:14:34.981Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: false
-2026-03-31T13:14:35.003Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
-2026-03-31T13:14:35.004Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
-2026-03-31T13:14:35.004Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:34.142Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: false
+2026-04-05T13:42:34.164Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-04-05T13:42:34.165Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:42:34.165Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select bc1_0.id,bc1_0.admin_email,bc1_0.admin_name,bc1_0.allow_multi_bundle_product,bc1_0.bank_id,bc1_0.client_id,bc1_0.client_secret,bc1_0.created_at,bc1_0.created_by,bc1_0.currency_code,bc1_0.issuer_url,bc1_0.name,bc1_0.status,bc1_0.updated_at,bc1_0.updated_by from bank_configuration bc1_0 where bc1_0.bank_id=?
-2026-03-31T13:14:35.007Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: false
-2026-03-31T13:14:35.122Z DEBUG 3827 --- [           main] [                                                 ] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, TenantContextFilter, HeaderWriterFilter, CorsFilter, CsrfFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, BearerTokenAuthenticationFilter, CsrfCookieFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
-2026-03-31T13:14:36.694Z  INFO 3827 --- [           main] [                                                 ] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2026-03-31T13:14:36.716Z  INFO 3827 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Started PlexusApplication in 16.501 seconds (process running for 16.916)
+2026-04-05T13:42:34.168Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: false
+2026-04-05T13:42:34.274Z DEBUG 151972 --- [           main] [                                                 ] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, TenantContextFilter, HeaderWriterFilter, CorsFilter, CsrfFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, BearerTokenAuthenticationFilter, CsrfCookieFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-04-05T13:42:36.523Z  INFO 151972 --- [           main] [                                                 ] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-04-05T13:42:36.567Z  INFO 151972 --- [           main] [                                                 ] com.bankengine.PlexusApplication         : Started PlexusApplication in 17.232 seconds (process running for 17.894)
 --- Seeding System Admin: SYSTEM with ISSUER: https://login.microsoftonline.com/5dafae79-1a4c-4aac-b6f4-842a5ba73a33/v2.0 ---
-2026-03-31T13:14:36.886Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
-2026-03-31T13:14:36.887Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
-2026-03-31T13:14:36.887Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:36.840Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-04-05T13:42:36.854Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:42:36.854Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
-2026-03-31T13:14:36.934Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
-2026-03-31T13:14:36.935Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.023Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:42:37.024Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
 Created root bank: SYSTEM with client_id: bank-engine-api
-2026-03-31T13:14:37.016Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
-2026-03-31T13:14:37.017Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.187Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:42:37.187Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=? and r1_0.bank_id=?
-2026-03-31T13:14:37.033Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
-2026-03-31T13:14:37.034Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.207Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:42:37.208Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
 Seeded SYSTEM_ADMIN for SYSTEM
 Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
@@ -199,85 +278,85 @@ Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
 Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
 Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
 --- Seeding Comprehensive Development Data ---
-2026-03-31T13:14:37.053Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-04-05T13:42:37.231Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
 
 --- Seeding Tenant: GLOBAL-BANK-001 ---
-2026-03-31T13:14:37.053Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.053Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.232Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.232Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
-2026-03-31T13:14:37.055Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.056Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.235Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.235Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
 Seeded Bank Configuration for GLOBAL-BANK-001 with Issuer: https://dev-identity.bankengine.com/GLOBAL-BANK-001
-2026-03-31T13:14:37.078Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.078Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.261Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.261Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
-2026-03-31T13:14:37.082Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.082Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.267Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.268Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into role (bank_id,created_at,created_by,name,updated_at,updated_by,id) values (?,?,?,?,?,?,default)
 Seeded new BANK_ADMIN for GLOBAL-BANK-001 with 44 permissions.
-2026-03-31T13:14:37.085Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.086Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.272Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.272Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select count(*) from pricing_input_metadata pim1_0
 Seeding Core Pricing Input Metadata for bank: GLOBAL-BANK-001
-2026-03-31T13:14:37.151Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.153Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.295Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.295Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
 Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
 Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
 Hibernate: insert into pricing_input_metadata (attribute_key,bank_id,created_at,created_by,data_type,display_name,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.175Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.176Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.306Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.306Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
-2026-03-31T13:14:37.189Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.189Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.311Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.312Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product_type (bank_id,code,created_at,created_by,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
 Seeded Product Types for GLOBAL-BANK-001
-2026-03-31T13:14:37.198Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.198Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.318Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.319Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
-2026-03-31T13:14:37.204Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.205Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.324Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.325Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select fc1_0.id,fc1_0.activation_date,fc1_0.bank_id,fc1_0.code,fc1_0.created_at,fc1_0.created_by,fc1_0.data_type,fc1_0.expiry_date,fc1_0.name,fc1_0.status,fc1_0.updated_at,fc1_0.updated_by,fc1_0.version from feature_component fc1_0 where fc1_0.bank_id=? and fc1_0.code=? and fc1_0.version=?
-2026-03-31T13:14:37.212Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.212Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.333Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.333Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into feature_component (activation_date,bank_id,code,created_at,created_by,data_type,expiry_date,name,status,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.272Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.274Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.373Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.374Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
 Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.317Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.317Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.391Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.391Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product_feature_link (bank_id,created_at,created_by,feature_component_id,feature_value,product_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.324Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.324Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.398Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.398Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.bank_id=? and pc1_0.code=? and pc1_0.version=?
-2026-03-31T13:14:37.338Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.338Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.405Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.406Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into pricing_component (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,pro_rata_applicable,status,type,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.351Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.352Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.417Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.417Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into pricing_tier (apply_charge_on_full_breach,bank_id,code,created_at,created_by,max_threshold,min_threshold,name,pricing_component_id,priority,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.360Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.360Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.425Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.425Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into tier_condition (attribute_name,attribute_value,bank_id,connector,created_at,created_by,operator,pricing_tier_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.367Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.367Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.434Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.434Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into price_value (bank_id,created_at,created_by,pricing_tier_id,raw_value,updated_at,updated_by,value_type,id) values (?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.373Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.373Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.441Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.441Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
-2026-03-31T13:14:37.383Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.384Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.453Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.453Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product_pricing_link (bank_id,created_at,created_by,effective_date,expiry_date,fixed_value,fixed_value_type,pricing_component_id,product_id,target_component_code,updated_at,updated_by,use_rules_engine,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.396Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.396Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.461Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.461Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
-2026-03-31T13:14:37.402Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.402Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.465Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.465Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
-2026-03-31T13:14:37.409Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
-2026-03-31T13:14:37.409Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.470Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: GLOBAL-BANK-001
+2026-04-05T13:42:37.470Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product_bundle (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,status,target_customer_segments,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
 Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
 Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
@@ -327,78 +406,78 @@ Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
 Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
 Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
 Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
-2026-03-31T13:14:37.443Z DEBUG 3827 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-04-05T13:42:37.501Z DEBUG 151972 --- [           main] [                                                 ] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
 
 --- Seeding Tenant: LOCAL-BANK-002 ---
-2026-03-31T13:14:37.443Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.443Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.501Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.501Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
-2026-03-31T13:14:37.446Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.446Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.504Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.504Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into bank_configuration (admin_email,admin_name,allow_multi_bundle_product,bank_id,client_id,client_secret,created_at,created_by,currency_code,issuer_url,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
 Seeded Bank Configuration for LOCAL-BANK-002 with Issuer: https://dev-identity.bankengine.com/LOCAL-BANK-002
-2026-03-31T13:14:37.461Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.462Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.517Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.517Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select r1_0.id,r1_0.bank_id,r1_0.created_at,r1_0.created_by,r1_0.name,r1_0.updated_at,r1_0.updated_by from role r1_0 where r1_0.name=?
 Hibernate: select a1_0.role_id,a1_0.authority_name from role_authority a1_0 where a1_0.role_id=?
-2026-03-31T13:14:37.476Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.477Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.531Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.531Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Updated BANK_ADMIN for LOCAL-BANK-002 with 44 permissions.
-2026-03-31T13:14:37.479Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.480Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.533Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.534Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select count(*) from pricing_input_metadata pim1_0
-2026-03-31T13:14:37.486Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.486Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.539Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.540Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
-2026-03-31T13:14:37.489Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.489Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.543Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.544Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product_type (bank_id,code,created_at,created_by,name,status,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
 Seeded Product Types for LOCAL-BANK-002
-2026-03-31T13:14:37.491Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.491Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.546Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.546Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select pt1_0.id,pt1_0.bank_id,pt1_0.code,pt1_0.created_at,pt1_0.created_by,pt1_0.name,pt1_0.status,pt1_0.updated_at,pt1_0.updated_by from product_type pt1_0 where pt1_0.bank_id=? and pt1_0.code=?
-2026-03-31T13:14:37.494Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.494Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.550Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.550Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select fc1_0.id,fc1_0.activation_date,fc1_0.bank_id,fc1_0.code,fc1_0.created_at,fc1_0.created_by,fc1_0.data_type,fc1_0.expiry_date,fc1_0.name,fc1_0.status,fc1_0.updated_at,fc1_0.updated_by,fc1_0.version from feature_component fc1_0 where fc1_0.bank_id=? and fc1_0.code=? and fc1_0.version=?
-2026-03-31T13:14:37.497Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.497Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.554Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.554Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into feature_component (activation_date,bank_id,code,created_at,created_by,data_type,expiry_date,name,status,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.499Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.499Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.556Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.557Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
 Hibernate: insert into product (activation_date,bank_id,category,code,created_at,created_by,display_order,expiry_date,is_featured,full_description,icon_url,name,product_type_id,status,tagline,target_customer_segments,terms_and_conditions,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.503Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.503Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.562Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.562Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product_feature_link (bank_id,created_at,created_by,feature_component_id,feature_value,product_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.504Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.504Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.564Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.564Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select pc1_0.id,pc1_0.activation_date,pc1_0.bank_id,pc1_0.code,pc1_0.created_at,pc1_0.created_by,pc1_0.description,pc1_0.expiry_date,pc1_0.name,pc1_0.pro_rata_applicable,pc1_0.status,pc1_0.type,pc1_0.updated_at,pc1_0.updated_by,pc1_0.version from pricing_component pc1_0 where pc1_0.bank_id=? and pc1_0.code=? and pc1_0.version=?
-2026-03-31T13:14:37.508Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.508Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.568Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.568Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into pricing_component (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,pro_rata_applicable,status,type,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.511Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.511Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.570Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.570Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into pricing_tier (apply_charge_on_full_breach,bank_id,code,created_at,created_by,max_threshold,min_threshold,name,pricing_component_id,priority,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.512Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.512Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.572Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.572Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into tier_condition (attribute_name,attribute_value,bank_id,connector,created_at,created_by,operator,pricing_tier_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.514Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.514Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.574Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.574Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into price_value (bank_id,created_at,created_by,pricing_tier_id,raw_value,updated_at,updated_by,value_type,id) values (?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.515Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.515Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.575Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.576Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
-2026-03-31T13:14:37.520Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.520Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.581Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.581Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product_pricing_link (bank_id,created_at,created_by,effective_date,expiry_date,fixed_value,fixed_value_type,pricing_component_id,product_id,target_component_code,updated_at,updated_by,use_rules_engine,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
-2026-03-31T13:14:37.521Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.522Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.582Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.582Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
-2026-03-31T13:14:37.526Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.526Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.588Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.588Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: select p1_0.id,p1_0.activation_date,p1_0.bank_id,p1_0.category,p1_0.code,p1_0.created_at,p1_0.created_by,p1_0.display_order,p1_0.expiry_date,p1_0.is_featured,p1_0.full_description,p1_0.icon_url,p1_0.name,p1_0.product_type_id,p1_0.status,p1_0.tagline,p1_0.target_customer_segments,p1_0.terms_and_conditions,p1_0.updated_at,p1_0.updated_by,p1_0.version from product p1_0 where p1_0.bank_id=? and p1_0.code=? and p1_0.version=?
-2026-03-31T13:14:37.532Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
-2026-03-31T13:14:37.532Z DEBUG 3827 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+2026-04-05T13:42:37.592Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: LOCAL-BANK-002
+2026-04-05T13:42:37.592Z DEBUG 151972 --- [           main] [                                                 ] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
 Hibernate: insert into product_bundle (activation_date,bank_id,code,created_at,created_by,description,expiry_date,name,status,target_customer_segments,updated_at,updated_by,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,default)
 Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
 Hibernate: insert into bundle_product_link (bank_id,created_at,created_by,is_main_account,is_mandatory,product_id,product_bundle_id,updated_at,updated_by,id) values (?,?,?,?,?,?,?,?,?,default)
@@ -452,3 +531,516 @@ Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
 Hibernate: insert into role_authority (role_id,authority_name) values (?,?)
 
 --- Seeding Complete ---
+2026-04-05T13:43:36.694Z  INFO 151972 --- [nio-8080-exec-1] [                                                 ] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-05T13:43:36.695Z  INFO 151972 --- [nio-8080-exec-1] [                                                 ] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-04-05T13:43:36.698Z  INFO 151972 --- [nio-8080-exec-1] [                                                 ] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+2026-04-05T13:43:36.737Z DEBUG 151972 --- [nio-8080-exec-1] [69d26708dc3e854bff61a179680e3d17-ff61a179680e3d17] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/getUser
+2026-04-05T13:43:36.748Z  WARN 151972 --- [nio-8080-exec-1] [69d26708dc3e854bff61a179680e3d17-a92a57dffe0317eb] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:43:36.762Z DEBUG 151972 --- [nio-8080-exec-1] [69d26708dc3e854bff61a179680e3d17-a92a57dffe0317eb] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:43:36.781Z DEBUG 151972 --- [nio-8080-exec-1] [69d26708dc3e854bff61a179680e3d17-a92a57dffe0317eb] o.s.s.w.s.HttpSessionRequestCache        : Saved request http://localhost:8080/api/v1/auth/getUser?continue to session
+2026-04-05T13:43:37.230Z ERROR 151972 --- [nio-8080-exec-1] [                                                 ] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception
+
+org.springframework.data.redis.RedisConnectionFailureException: Unable to connect to Redis
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.translateException(LettuceConnectionFactory.java:1847) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1778) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getNativeConnection(LettuceConnectionFactory.java:1580) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.lambda$getConnection$0(LettuceConnectionFactory.java:1560) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.doInLock(LettuceConnectionFactory.java:1521) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getConnection(LettuceConnectionFactory.java:1557) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getSharedConnection(LettuceConnectionFactory.java:1243) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1049) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:383) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:363) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:97) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.DefaultHashOperations.putAll(DefaultHashOperations.java:164) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository$RedisSession.saveDelta(RedisSessionRepository.java:328) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository$RedisSession.save(RedisSessionRepository.java:306) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository.save(RedisSessionRepository.java:132) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository.save(RedisSessionRepository.java:45) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter$SessionRepositoryRequestWrapper.commitSession(SessionRepositoryFilter.java:229) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter.doFilterInternal(SessionRepositoryFilter.java:145) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:82) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:352) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:268) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:107) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:389) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:904) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: io.lettuce.core.RedisConnectionException: Unable to connect to localhost/<unresolved>:6379
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:78) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:56) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.AbstractRedisClient.getConnection(AbstractRedisClient.java:350) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.RedisClient.connect(RedisClient.java:215) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.lambda$getConnection$1(StandaloneConnectionProvider.java:112) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at java.base/java.util.Optional.orElseGet(Optional.java:364) ~[na:na]
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.getConnection(StandaloneConnectionProvider.java:112) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1776) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	... 48 common frames omitted
+Caused by: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: localhost/127.0.0.1:6379
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:694) ~[na:na]
+	at java.base/sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:973) ~[na:na]
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:336) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:339) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-04-05T13:43:37.265Z DEBUG 151972 --- [nio-8080-exec-1] [                                                 ] o.s.security.web.FilterChainProxy        : Securing GET /error
+2026-04-05T13:43:37.271Z DEBUG 151972 --- [nio-8080-exec-1] [69d26709fc0503723c4190eec461a97b-f7c6b1aeea830fef] o.s.security.web.FilterChainProxy        : Secured GET /error
+2026-04-05T13:43:37.325Z DEBUG 151972 --- [nio-8080-exec-1] [69d26709fc0503723c4190eec461a97b-f7c6b1aeea830fef] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2026-04-05T13:43:37.327Z DEBUG 151972 --- [nio-8080-exec-1] [69d26709fc0503723c4190eec461a97b-288946c1de98c7de] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2026-04-05T13:43:37.348Z DEBUG 151972 --- [nio-8080-exec-1] [69d26709fc0503723c4190eec461a97b-288946c1de98c7de] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:43:37.359Z ERROR 151972 --- [nio-8080-exec-1] [69d26709fc0503723c4190eec461a97b-f7c6b1aeea830fef] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] threw exception
+
+org.springframework.data.redis.RedisConnectionFailureException: Unable to connect to Redis
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.translateException(LettuceConnectionFactory.java:1847) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1778) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getNativeConnection(LettuceConnectionFactory.java:1580) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.lambda$getConnection$0(LettuceConnectionFactory.java:1560) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.doInLock(LettuceConnectionFactory.java:1521) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getConnection(LettuceConnectionFactory.java:1557) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getSharedConnection(LettuceConnectionFactory.java:1243) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1049) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:383) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:363) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:97) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.DefaultHashOperations.putAll(DefaultHashOperations.java:164) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository$RedisSession.saveDelta(RedisSessionRepository.java:328) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository$RedisSession.save(RedisSessionRepository.java:306) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository.save(RedisSessionRepository.java:132) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository.save(RedisSessionRepository.java:45) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter$SessionRepositoryRequestWrapper.commitSession(SessionRepositoryFilter.java:229) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter.doFilterInternal(SessionRepositoryFilter.java:145) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter.doFilterNestedErrorDispatch(SessionRepositoryFilter.java:152) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:72) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:352) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:268) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.invoke(ApplicationDispatcher.java:632) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.processRequest(ApplicationDispatcher.java:410) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.doForward(ApplicationDispatcher.java:330) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.forward(ApplicationDispatcher.java:267) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.session.web.http.SessionRepositoryFilter$SessionRepositoryRequestWrapper$SessionCommittingRequestDispatcher.forward(SessionRepositoryFilter.java:407) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.web.servlet.view.InternalResourceView.renderMergedOutputModel(InternalResourceView.java:171) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at org.springframework.web.servlet.view.AbstractView.render(AbstractView.java:314) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at org.springframework.web.servlet.DispatcherServlet.render(DispatcherServlet.java:1431) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at org.springframework.web.servlet.DispatcherServlet.processDispatchResult(DispatcherServlet.java:1167) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1106) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.25.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.25.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:479) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:340) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator.lambda$wrapSecured$0(ObservationFilterChainDecorator.java:82) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:128) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:100) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:91) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:221) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$0(ObservationFilterChainDecorator.java:323) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:224) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191) ~[spring-security-web-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$3(HandlerMappingIntrospector.java:195) ~[spring-webmvc-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:230) ~[spring-security-config-6.3.1.jar:6.3.1]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:352) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:268) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.session.web.http.SessionRepositoryFilter.doFilterInternal(SessionRepositoryFilter.java:142) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:82) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:352) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:268) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.invoke(ApplicationDispatcher.java:632) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.processRequest(ApplicationDispatcher.java:410) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.doForward(ApplicationDispatcher.java:330) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.forward(ApplicationDispatcher.java:267) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.custom(StandardHostValve.java:362) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.status(StandardHostValve.java:222) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.throwable(StandardHostValve.java:308) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:149) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:389) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:904) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: io.lettuce.core.RedisConnectionException: Unable to connect to localhost/<unresolved>:6379
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:78) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:56) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.AbstractRedisClient.getConnection(AbstractRedisClient.java:350) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.RedisClient.connect(RedisClient.java:215) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.lambda$getConnection$1(StandaloneConnectionProvider.java:112) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at java.base/java.util.Optional.orElseGet(Optional.java:364) ~[na:na]
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.getConnection(StandaloneConnectionProvider.java:112) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1776) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	... 180 common frames omitted
+Caused by: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: localhost/127.0.0.1:6379
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:694) ~[na:na]
+	at java.base/sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:973) ~[na:na]
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:336) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:339) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-04-05T13:43:37.371Z ERROR 151972 --- [nio-8080-exec-1] [                                                 ] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] threw exception
+
+org.springframework.data.redis.RedisConnectionFailureException: Unable to connect to Redis
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.translateException(LettuceConnectionFactory.java:1847) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1778) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getNativeConnection(LettuceConnectionFactory.java:1580) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.lambda$getConnection$0(LettuceConnectionFactory.java:1560) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.doInLock(LettuceConnectionFactory.java:1521) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getConnection(LettuceConnectionFactory.java:1557) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getSharedConnection(LettuceConnectionFactory.java:1243) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1049) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:383) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:363) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:97) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.DefaultHashOperations.putAll(DefaultHashOperations.java:164) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository$RedisSession.saveDelta(RedisSessionRepository.java:328) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository$RedisSession.save(RedisSessionRepository.java:306) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository.save(RedisSessionRepository.java:132) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository.save(RedisSessionRepository.java:45) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter$SessionRepositoryRequestWrapper.commitSession(SessionRepositoryFilter.java:229) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter.doFilterInternal(SessionRepositoryFilter.java:145) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:82) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:352) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:268) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.invoke(ApplicationDispatcher.java:632) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.processRequest(ApplicationDispatcher.java:410) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.doForward(ApplicationDispatcher.java:330) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.forward(ApplicationDispatcher.java:267) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.custom(StandardHostValve.java:362) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.status(StandardHostValve.java:222) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.throwable(StandardHostValve.java:308) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:149) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:389) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:904) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: io.lettuce.core.RedisConnectionException: Unable to connect to localhost/<unresolved>:6379
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:78) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:56) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.AbstractRedisClient.getConnection(AbstractRedisClient.java:350) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.RedisClient.connect(RedisClient.java:215) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.lambda$getConnection$1(StandaloneConnectionProvider.java:112) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at java.base/java.util.Optional.orElseGet(Optional.java:364) ~[na:na]
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.getConnection(StandaloneConnectionProvider.java:112) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1776) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	... 47 common frames omitted
+Caused by: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: localhost/127.0.0.1:6379
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:694) ~[na:na]
+	at java.base/sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:973) ~[na:na]
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:336) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:339) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-04-05T13:43:37.372Z ERROR 151972 --- [nio-8080-exec-1] [                                                 ] o.a.c.c.C.[Tomcat].[localhost]           : Exception Processing [ErrorPage[errorCode=0, location=/error]]
+
+org.springframework.data.redis.RedisConnectionFailureException: Unable to connect to Redis
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.translateException(LettuceConnectionFactory.java:1847) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1778) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getNativeConnection(LettuceConnectionFactory.java:1580) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.lambda$getConnection$0(LettuceConnectionFactory.java:1560) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.doInLock(LettuceConnectionFactory.java:1521) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getConnection(LettuceConnectionFactory.java:1557) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getSharedConnection(LettuceConnectionFactory.java:1243) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1049) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:383) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:363) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:97) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.core.DefaultHashOperations.putAll(DefaultHashOperations.java:164) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository$RedisSession.saveDelta(RedisSessionRepository.java:328) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository$RedisSession.save(RedisSessionRepository.java:306) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository.save(RedisSessionRepository.java:132) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.data.redis.RedisSessionRepository.save(RedisSessionRepository.java:45) ~[spring-session-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter$SessionRepositoryRequestWrapper.commitSession(SessionRepositoryFilter.java:229) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.SessionRepositoryFilter.doFilterInternal(SessionRepositoryFilter.java:145) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.session.web.http.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:82) ~[spring-session-core-3.3.1.jar:3.3.1]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:352) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:268) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101) ~[spring-web-6.1.10.jar:6.1.10]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.invoke(ApplicationDispatcher.java:632) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.processRequest(ApplicationDispatcher.java:410) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.doForward(ApplicationDispatcher.java:330) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.ApplicationDispatcher.forward(ApplicationDispatcher.java:267) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.custom(StandardHostValve.java:362) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.status(StandardHostValve.java:222) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.throwable(StandardHostValve.java:308) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:149) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:389) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:904) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.25.jar:10.1.25]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: io.lettuce.core.RedisConnectionException: Unable to connect to localhost/<unresolved>:6379
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:78) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:56) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.AbstractRedisClient.getConnection(AbstractRedisClient.java:350) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at io.lettuce.core.RedisClient.connect(RedisClient.java:215) ~[lettuce-core-6.3.2.RELEASE.jar:6.3.2.RELEASE/8941aea]
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.lambda$getConnection$1(StandaloneConnectionProvider.java:112) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at java.base/java.util.Optional.orElseGet(Optional.java:364) ~[na:na]
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.getConnection(StandaloneConnectionProvider.java:112) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1776) ~[spring-data-redis-3.3.1.jar:3.3.1]
+	... 47 common frames omitted
+Caused by: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: localhost/127.0.0.1:6379
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:694) ~[na:na]
+	at java.base/sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:973) ~[na:na]
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:336) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:339) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) ~[netty-transport-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[netty-common-4.1.111.Final.jar:4.1.111.Final]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-04-05T13:45:23.482Z DEBUG 151972 --- [nio-8080-exec-2] [69d267737ac0370ae23232bf770cd5a4-e23232bf770cd5a4] o.s.security.web.FilterChainProxy        : Securing GET /login
+2026-04-05T13:45:23.483Z  WARN 151972 --- [nio-8080-exec-2] [69d267737ac0370ae23232bf770cd5a4-da610a26fbd6eede] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:23.484Z DEBUG 151972 --- [nio-8080-exec-2] [69d267737ac0370ae23232bf770cd5a4-da610a26fbd6eede] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:23.486Z DEBUG 151972 --- [nio-8080-exec-2] [69d267737ac0370ae23232bf770cd5a4-8c6d4597e6aa970f] o.s.security.web.FilterChainProxy        : Secured GET /login
+2026-04-05T13:45:23.496Z DEBUG 151972 --- [nio-8080-exec-2] [69d267737ac0370ae23232bf770cd5a4-8c6d4597e6aa970f] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2026-04-05T13:45:23.499Z DEBUG 151972 --- [nio-8080-exec-2] [69d267737ac0370ae23232bf770cd5a4-b25810ada61522d3] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2026-04-05T13:45:23.641Z DEBUG 151972 --- [nio-8080-exec-4] [69d26773bd323a7e07d049997c834780-07d049997c834780] o.s.security.web.FilterChainProxy        : Securing GET /static/css/main.c11ec1a9.css
+2026-04-05T13:45:23.643Z  WARN 151972 --- [nio-8080-exec-4] [69d26773bd323a7e07d049997c834780-b114edd31d56cd0a] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:23.645Z DEBUG 151972 --- [nio-8080-exec-3] [69d26773d6a1f99f581361d96baf1ba0-581361d96baf1ba0] o.s.security.web.FilterChainProxy        : Securing GET /static/js/main.281ced6f.js
+2026-04-05T13:45:23.645Z  WARN 151972 --- [nio-8080-exec-3] [69d26773d6a1f99f581361d96baf1ba0-88ffcf2082de7b19] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:23.646Z DEBUG 151972 --- [nio-8080-exec-3] [69d26773d6a1f99f581361d96baf1ba0-88ffcf2082de7b19] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:23.648Z DEBUG 151972 --- [nio-8080-exec-4] [69d26773bd323a7e07d049997c834780-b114edd31d56cd0a] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:23.652Z DEBUG 151972 --- [nio-8080-exec-4] [69d26773bd323a7e07d049997c834780-ac52a22ed67f8369] o.s.security.web.FilterChainProxy        : Secured GET /static/css/main.c11ec1a9.css
+2026-04-05T13:45:23.656Z DEBUG 151972 --- [nio-8080-exec-3] [69d26773d6a1f99f581361d96baf1ba0-a5462d8ca0a1c5f2] o.s.security.web.FilterChainProxy        : Secured GET /static/js/main.281ced6f.js
+2026-04-05T13:45:24.158Z DEBUG 151972 --- [nio-8080-exec-5] [69d267749a98a9067049735ca1eaf550-7049735ca1eaf550] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/csrf
+2026-04-05T13:45:24.161Z  WARN 151972 --- [nio-8080-exec-5] [69d267749a98a9067049735ca1eaf550-ac0f117b2b523d63] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:24.162Z DEBUG 151972 --- [nio-8080-exec-5] [69d267749a98a9067049735ca1eaf550-ac0f117b2b523d63] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:24.167Z DEBUG 151972 --- [nio-8080-exec-5] [69d267749a98a9067049735ca1eaf550-b41c4e90ecea0c0b] o.s.security.web.FilterChainProxy        : Secured GET /api/v1/auth/csrf
+2026-04-05T13:45:24.171Z DEBUG 151972 --- [nio-8080-exec-5] [69d267749a98a9067049735ca1eaf550-b41c4e90ecea0c0b] c.b.auth.controller.AuthController       : [AUTH] CSRF token accessed: X-XSRF-TOKEN
+2026-04-05T13:45:24.230Z DEBUG 151972 --- [nio-8080-exec-6] [69d267748f390f7164a547acf5fbdecf-64a547acf5fbdecf] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/user
+2026-04-05T13:45:24.230Z  WARN 151972 --- [nio-8080-exec-6] [69d267748f390f7164a547acf5fbdecf-5ebe52d62459123e] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:24.231Z DEBUG 151972 --- [nio-8080-exec-6] [69d267748f390f7164a547acf5fbdecf-5ebe52d62459123e] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:24.518Z DEBUG 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-de08bd4f587b9eef] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/check-bank?bankId=NON-EXISTENT-BANK
+2026-04-05T13:45:24.519Z  WARN 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-c715fe13101486f3] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:24.535Z DEBUG 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-c715fe13101486f3] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:24.536Z DEBUG 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-acb5f5a44951842d] o.s.security.web.FilterChainProxy        : Secured GET /api/v1/auth/check-bank?bankId=NON-EXISTENT-BANK
+2026-04-05T13:45:24.555Z  INFO 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-acb5f5a44951842d] c.b.auth.controller.AuthController       : [AUTH] Check bank requested for bank: NON-EXISTENT-BANK
+2026-04-05T13:45:24.555Z DEBUG 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-acb5f5a44951842d] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: true
+2026-04-05T13:45:24.556Z DEBUG 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-acb5f5a44951842d] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-START] Intercepting repository call. SystemMode: true, Current BankId: null
+2026-04-05T13:45:24.556Z DEBUG 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-acb5f5a44951842d] c.b.common.aspect.TenantFilterAspect     : >>>> [ASPECT-BYPASS] System Mode active. Bypassing tenant filters.
+Hibernate: SELECT * FROM bank_configuration WHERE bank_id = ?
+2026-04-05T13:45:24.560Z  WARN 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-acb5f5a44951842d] c.b.auth.controller.AuthController       : [AUTH] Invalid bankId: NON-EXISTENT-BANK
+2026-04-05T13:45:24.561Z DEBUG 151972 --- [nio-8080-exec-7] [69d267745177cec1de08bd4f587b9eef-acb5f5a44951842d] c.b.auth.security.TenantContextHolder    : [TENANT-CONTEXT] System Mode set to: false
+2026-04-05T13:45:24.638Z DEBUG 151972 --- [nio-8080-exec-8] [69d267744ae87f7087b8d204b93ab5bb-87b8d204b93ab5bb] o.s.security.web.FilterChainProxy        : Securing GET /error?status=400&message=Invalid%20Bank%20ID&timestamp=2026-04-05T13%3A45%3A24.561114191
+2026-04-05T13:45:24.638Z  WARN 151972 --- [nio-8080-exec-8] [69d267744ae87f7087b8d204b93ab5bb-30b8c380e4f0dcf6] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:24.639Z DEBUG 151972 --- [nio-8080-exec-8] [69d267744ae87f7087b8d204b93ab5bb-30b8c380e4f0dcf6] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:24.642Z DEBUG 151972 --- [nio-8080-exec-8] [69d267744ae87f7087b8d204b93ab5bb-f15a464161c80c98] o.s.security.web.FilterChainProxy        : Secured GET /error?status=400&message=Invalid%20Bank%20ID&timestamp=2026-04-05T13%3A45%3A24.561114191
+2026-04-05T13:45:24.646Z DEBUG 151972 --- [nio-8080-exec-8] [69d267744ae87f7087b8d204b93ab5bb-f15a464161c80c98] o.s.security.web.FilterChainProxy        : Securing GET /index.html?status=400&message=Invalid%20Bank%20ID&timestamp=2026-04-05T13%3A45%3A24.561114191
+2026-04-05T13:45:24.652Z DEBUG 151972 --- [nio-8080-exec-8] [69d267744ae87f7087b8d204b93ab5bb-10e74fbd0d9c3b27] o.s.security.web.FilterChainProxy        : Secured GET /index.html?status=400&message=Invalid%20Bank%20ID&timestamp=2026-04-05T13%3A45%3A24.561114191
+2026-04-05T13:45:24.674Z DEBUG 151972 --- [nio-8080-exec-9] [69d2677461688b316c04bb5f7273ae14-6c04bb5f7273ae14] o.s.security.web.FilterChainProxy        : Securing GET /static/js/main.281ced6f.js
+2026-04-05T13:45:24.675Z DEBUG 151972 --- [io-8080-exec-10] [69d267746e5f28c6cc2c4144c9195aea-cc2c4144c9195aea] o.s.security.web.FilterChainProxy        : Securing GET /static/css/main.c11ec1a9.css
+2026-04-05T13:45:24.676Z  WARN 151972 --- [nio-8080-exec-9] [69d2677461688b316c04bb5f7273ae14-4152e9ec091d6873] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:24.677Z DEBUG 151972 --- [nio-8080-exec-9] [69d2677461688b316c04bb5f7273ae14-4152e9ec091d6873] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:24.676Z  WARN 151972 --- [io-8080-exec-10] [69d267746e5f28c6cc2c4144c9195aea-7bd006a21c432f2b] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:24.678Z DEBUG 151972 --- [nio-8080-exec-9] [69d2677461688b316c04bb5f7273ae14-373e1bb44f0120dd] o.s.security.web.FilterChainProxy        : Secured GET /static/js/main.281ced6f.js
+2026-04-05T13:45:24.679Z DEBUG 151972 --- [io-8080-exec-10] [69d267746e5f28c6cc2c4144c9195aea-7bd006a21c432f2b] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:24.681Z DEBUG 151972 --- [io-8080-exec-10] [69d267746e5f28c6cc2c4144c9195aea-33234637d5bdd816] o.s.security.web.FilterChainProxy        : Secured GET /static/css/main.c11ec1a9.css
+2026-04-05T13:45:24.797Z DEBUG 151972 --- [nio-8080-exec-1] [69d26774a8fc3c6b04874778f3b8ea51-04874778f3b8ea51] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/csrf
+2026-04-05T13:45:24.798Z  WARN 151972 --- [nio-8080-exec-1] [69d26774a8fc3c6b04874778f3b8ea51-1fb0cd40c88ffcd5] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:24.798Z DEBUG 151972 --- [nio-8080-exec-1] [69d26774a8fc3c6b04874778f3b8ea51-1fb0cd40c88ffcd5] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-04-05T13:45:24.799Z DEBUG 151972 --- [nio-8080-exec-1] [69d26774a8fc3c6b04874778f3b8ea51-1c745294c3f9ae67] o.s.security.web.FilterChainProxy        : Secured GET /api/v1/auth/csrf
+2026-04-05T13:45:24.800Z DEBUG 151972 --- [nio-8080-exec-1] [69d26774a8fc3c6b04874778f3b8ea51-1c745294c3f9ae67] c.b.auth.controller.AuthController       : [AUTH] CSRF token accessed: X-XSRF-TOKEN
+2026-04-05T13:45:24.818Z DEBUG 151972 --- [nio-8080-exec-2] [69d2677456fe1ced19ef78b62cfab552-19ef78b62cfab552] o.s.security.web.FilterChainProxy        : Securing GET /api/v1/auth/user
+2026-04-05T13:45:24.819Z  WARN 151972 --- [nio-8080-exec-2] [69d2677456fe1ced19ef78b62cfab552-a7a9d5277c5b9d83] c.b.auth.security.TenantContextFilter    : Tenant context setup failed: User is not authenticated or security context is empty.
+2026-04-05T13:45:24.820Z DEBUG 151972 --- [nio-8080-exec-2] [69d2677456fe1ced19ef78b62cfab552-a7a9d5277c5b9d83] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext

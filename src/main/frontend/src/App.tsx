@@ -23,6 +23,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { BreadcrumbProvider } from './context/BreadcrumbContext';
 import LoggedInUserLayout from './components/LoggedInUserLayout';
 import PermissionElement from './components/PermissionElement';
+import GlobalToast from './components/GlobalToast';
 import { Loader2 } from 'lucide-react';
 
 const ProtectedLayout = () => {
@@ -61,6 +62,7 @@ const PublicHome = () => {
 function App() {
   return (
     <AuthProvider>
+      <GlobalToast />
       <Router>
         <div className="min-h-screen bg-gray-50">
           <Routes>

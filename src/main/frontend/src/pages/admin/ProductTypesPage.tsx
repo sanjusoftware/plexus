@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, List, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, List, CheckCircle2 } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProductType {
   id: number;
@@ -14,10 +15,9 @@ interface ProductType {
 
 const ProductTypesPage = () => {
   const navigate = useNavigate();
+  const { setToast } = useAuth();
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [typeToActOn, setTypeToActOn] = useState<ProductType | null>(null);
 
@@ -27,7 +27,7 @@ const ProductTypesPage = () => {
       const response = await axios.get('/api/v1/product-types');
       setProductTypes(response.data);
     } catch (err: any) {
-      setError('Failed to fetch product types. Make sure you have the required permissions.');
+      setToast({ message: 'Failed to fetch product types. Make sure you have the required permissions.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -40,10 +40,10 @@ const ProductTypesPage = () => {
   const handleAction = async (id: number, action: string) => {
     try {
       await axios.post(`/api/v1/product-types/${id}/${action}`);
-      setSuccess(`Product type ${action}d successfully.`);
+      setToast({ message: `Product type ${action}d successfully.`, type: 'success' });
       fetchProductTypes();
     } catch (err: any) {
-      setError(err.response?.data?.message || `Failed to ${action} product type.`);
+      setToast({ message: err.response?.data?.message || `Failed to ${action} product type.`, type: 'error' });
     }
   };
 
@@ -53,14 +53,14 @@ const ProductTypesPage = () => {
     try {
       if (typeToActOn.status === 'DRAFT') {
         await axios.delete(`/api/v1/product-types/${typeToActOn.id}`);
-        setSuccess('Product type deleted successfully.');
+        setToast({ message: 'Product type deleted successfully.', type: 'success' });
       } else if (typeToActOn.status === 'ACTIVE') {
         await axios.post(`/api/v1/product-types/${typeToActOn.id}/archive`);
-        setSuccess('Product type archived successfully.');
+        setToast({ message: 'Product type archived successfully.', type: 'success' });
       }
       fetchProductTypes();
     } catch (err: any) {
-      setError(err.response?.data?.message || `Failed to ${typeToActOn.status === 'DRAFT' ? 'delete' : 'archive'} product type.`);
+      setToast({ message: err.response?.data?.message || `Failed to ${typeToActOn.status === 'DRAFT' ? 'delete' : 'archive'} product type.`, type: 'error' });
     } finally {
       setShowConfirmModal(false);
       setTypeToActOn(null);
@@ -90,19 +90,6 @@ const ProductTypesPage = () => {
           </button>
         </HasPermission>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl flex items-center animate-in fade-in slide-in-from-top-1">
-          <AlertCircle className="w-5 h-5 text-red-500 mr-3" />
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl flex items-center animate-in fade-in slide-in-from-top-1">
-          <CheckCircle2 className="w-5 h-5 text-green-500 mr-3" />
-          <p className="text-sm text-green-700">{success}</p>
-        </div>
-      )}
 
       {loading ? (
         <div className="flex justify-center p-24 bg-white rounded-2xl border"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>

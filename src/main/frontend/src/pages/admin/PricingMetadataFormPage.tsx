@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Loader2, Save, X, AlertCircle } from 'lucide-react';
+import { Loader2, Save, X } from 'lucide-react';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
+import { useAuth } from '../../context/AuthContext';
 
 const PricingMetadataFormPage = () => {
   const { attributeKey } = useParams<{ attributeKey?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
+  const { setToast } = useAuth();
   const isEditing = !!attributeKey;
 
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ attributeKey: '', displayName: '', dataType: 'STRING' });
   const [isKeyEdited, setIsKeyEdited] = useState(false);
-  const [error, setError] = useState('');
 
   const dataTypes = ['STRING', 'DECIMAL', 'INTEGER', 'BOOLEAN', 'DATE'];
 
@@ -29,7 +30,7 @@ const PricingMetadataFormPage = () => {
           setEntityName(meta.displayName);
           setIsKeyEdited(true);
         } catch (err: any) {
-          setError('Failed to fetch pricing metadata.');
+          setToast({ message: 'Failed to fetch pricing metadata.', type: 'error' });
         } finally {
           setLoading(false);
         }
@@ -40,7 +41,6 @@ const PricingMetadataFormPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setSubmitting(true);
     try {
       if (isEditing) {
@@ -48,9 +48,10 @@ const PricingMetadataFormPage = () => {
       } else {
         await axios.post('/api/v1/pricing-metadata', formData);
       }
+      setToast({ message: isEditing ? 'Metadata updated successfully.' : 'Metadata registered successfully.', type: 'success' });
       navigate('/pricing-metadata');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred while saving.');
+      setToast({ message: err.response?.data?.message || 'An error occurred while saving.', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -97,12 +98,6 @@ const PricingMetadataFormPage = () => {
 
       <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100 p-10">
         <form onSubmit={handleSubmit} className="space-y-8">
-          {error && (
-            <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
-              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-              <p className="text-xs font-bold">{error}</p>
-            </div>
-          )}
           <div>
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Friendly Display Name</label>
             <input

@@ -10,7 +10,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const BankManagementPage = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, setToast } = useAuth();
   const navigate = useNavigate();
   const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,8 +19,6 @@ const BankManagementPage = () => {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const [bankToDeactivate, setBankToDeactivate] = useState<string | null>(null);
   const [bankToReject, setBankToReject] = useState<string | null>(null);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
 
   const fetchBanks = async () => {
     setLoading(true);
@@ -29,7 +27,7 @@ const BankManagementPage = () => {
       setBanks(response.data || []);
     } catch (err) {
       console.error('Failed to fetch banks:', err);
-      setError('Failed to fetch banks. Make sure you have SYSTEM_ADMIN permissions.');
+      setToast({ message: 'Failed to fetch banks. Make sure you have SYSTEM_ADMIN permissions.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -42,13 +40,11 @@ const BankManagementPage = () => {
   }, [user, authLoading]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'reject') => {
-    setError('');
-    setSuccess('');
     try {
       await axios.post(`/api/v1/banks/${targetBankId}/${action}`);
 
       await fetchBanks();
-      setSuccess(`Bank ${targetBankId} has been successfully ${action === 'reject' ? 'rejected' : action + 'd'}.`);
+      setToast({ message: `Bank ${targetBankId} has been successfully ${action === 'reject' ? 'rejected' : action + 'd'}.`, type: 'success' });
       setSelectedBank(null);
       setShowDeactivateConfirm(false);
       setBankToDeactivate(null);
@@ -56,7 +52,7 @@ const BankManagementPage = () => {
       setBankToReject(null);
     } catch (err: any) {
       console.error(`Failed to ${action} bank:`, err);
-      setError(err.response?.data?.message || `Failed to ${action} bank.`);
+      setToast({ message: err.response?.data?.message || `Failed to ${action} bank.`, type: 'error' });
     }
   };
 
@@ -105,26 +101,6 @@ const BankManagementPage = () => {
           </button>
         </HasPermission>
       </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700 animate-in fade-in slide-in-from-top-1">
-          <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-          <p className="text-sm font-bold">{error}</p>
-          <button onClick={() => setError('')} className="ml-auto p-1 hover:bg-red-100 rounded-full transition">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-xl flex items-center text-green-700 animate-in fade-in slide-in-from-top-1">
-          <CheckCircle2 className="h-5 w-5 mr-3 flex-shrink-0" />
-          <p className="text-sm font-bold">{success}</p>
-          <button onClick={() => setSuccess('')} className="ml-auto p-1 hover:bg-green-100 rounded-full transition">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
       <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
         <div className="divide-y divide-gray-50">

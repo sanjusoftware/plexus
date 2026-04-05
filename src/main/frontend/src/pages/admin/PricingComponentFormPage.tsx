@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Trash2, Loader2, Save, X, Layers, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Loader2, Save, X, Layers } from 'lucide-react';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useAuth } from '../../context/AuthContext';
@@ -40,7 +40,6 @@ const PricingComponentFormPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [metadata, setMetadata] = useState<any[]>([]);
   const [isCodeEdited, setIsCodeEdited] = useState(false);
-  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState<any>({
     code: '',
@@ -150,11 +149,11 @@ const PricingComponentFormPage = () => {
             setEntityName(comp.name);
             setIsCodeEdited(true);
           } else {
-            setError('Pricing component not found.');
+            setToast({ message: 'Pricing component not found.', type: 'error' });
           }
         }
       } catch (err: any) {
-        setError('Failed to fetch required data.');
+        setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -244,7 +243,6 @@ const PricingComponentFormPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setSubmitting(true);
     try {
       const payload = buildSubmitPayload(formData);
@@ -260,7 +258,6 @@ const PricingComponentFormPage = () => {
       navigate('/pricing-components', { state: { success: isEditing ? 'Pricing component updated successfully.' : 'Pricing component created successfully.' } });
     } catch (err: any) {
       const message = err.response?.data?.message || 'An error occurred while saving the component.';
-      setError(message);
       setToast({ message, type: 'error' });
     } finally {
       setSubmitting(false);
@@ -297,13 +294,6 @@ const PricingComponentFormPage = () => {
 
       <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
         <form onSubmit={handleSubmit} className="p-10 space-y-10">
-          {error && (
-            <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
-              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-              <p className="text-sm font-bold">{error}</p>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Product-Facing Name</label>
