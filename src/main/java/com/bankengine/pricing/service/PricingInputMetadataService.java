@@ -12,6 +12,7 @@ import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -82,6 +83,7 @@ public class PricingInputMetadataService extends BaseService {
     }
 
     @Transactional
+    @CacheEvict(value = "pricingMetadata", key = "#dto.attributeKey")
     public PricingMetadataResponse createMetadata(PricingMetadataRequest dto) {
         // Business Rule: Key must be unique. Check before attempting save.
         if (pricingInputMetadataRepository.findByAttributeKey(dto.getAttributeKey()).isPresent()) {
@@ -102,6 +104,7 @@ public class PricingInputMetadataService extends BaseService {
     }
 
     @Transactional
+    @CacheEvict(value = "pricingMetadata", key = "#attributeKey")
     public PricingMetadataResponse updateMetadata(String attributeKey, PricingMetadataRequest dto) {
         PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
@@ -124,6 +127,7 @@ public class PricingInputMetadataService extends BaseService {
     }
 
     @Transactional
+    @CacheEvict(value = "pricingMetadata", key = "#attributeKey")
     public void deleteMetadata(String attributeKey) {
         PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));

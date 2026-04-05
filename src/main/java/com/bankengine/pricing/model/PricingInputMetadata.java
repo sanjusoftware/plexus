@@ -2,6 +2,8 @@ package com.bankengine.pricing.model;
 
 import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,6 +25,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @TenantEntity
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PricingInputMetadata extends AuditableEntity {
 
     @Id
@@ -38,10 +41,12 @@ public class PricingInputMetadata extends AuditableEntity {
     @Column(name = "display_name")
     private String displayName;
 
+    @JsonIgnore
     public String getFqnType() {
         return PricingDataType.fromString(dataType).getFqn();
     }
 
+    @JsonIgnore
     public boolean needsQuotes() {
         return PricingDataType.fromString(dataType).isQuoted();
     }
