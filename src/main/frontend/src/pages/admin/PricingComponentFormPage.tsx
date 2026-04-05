@@ -7,7 +7,7 @@ import PlexusSelect from '../../components/PlexusSelect';
 import { useAuth } from '../../context/AuthContext';
 
 const PricingComponentFormPage = () => {
-  const { user } = useAuth();
+  const { user, setToast } = useAuth();
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
@@ -50,26 +50,80 @@ const PricingComponentFormPage = () => {
     pricingTiers: []
   });
 
+  const getDefaultValueType = (componentType: string) => {
+    const discountTypes = ['WAIVER', 'BENEFIT', 'DISCOUNT'];
+    return discountTypes.includes(componentType) ? 'DISCOUNT_PERCENTAGE' : 'FEE_ABSOLUTE';
+  };
+
+  const mapTierFromApi = (tier: any, componentType: string) => {
+    const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) ? tier.priceValues[0] : null);
+    return {
+      id: tier.id,
+      code: tier.code || '',
+      name: tier.name || '',
+      priority: tier.priority,
+      minThreshold: tier.minThreshold,
+      maxThreshold: tier.maxThreshold,
+      applyChargeOnFullBreach: tier.applyChargeOnFullBreach || false,
+      isCodeEdited: true,
+      conditions: (tier.conditions || []).map((c: any) => ({
+        attributeName: c.attributeName || '',
+        operator: c.operator || 'EQ',
+        attributeValue: c.attributeValue || '',
+        connector: c.connector || 'AND'
+      })),
+      priceValue: {
+        priceAmount: firstValue?.rawValue ?? firstValue?.priceAmount ?? 0,
+        valueType: firstValue?.valueType || getDefaultValueType(componentType)
+      }
+    };
+  };
+
+  const buildSubmitPayload = (data: any) => ({
+    code: data.code,
+    name: data.name,
+    type: data.type,
+    description: data.description,
+    pricingTiers: (data.pricingTiers || []).map((tier: any) => ({
+      code: tier.code,
+      name: tier.name,
+      priority: tier.priority,
+      minThreshold: tier.minThreshold,
+      maxThreshold: tier.maxThreshold,
+      applyChargeOnFullBreach: !!tier.applyChargeOnFullBreach,
+      conditions: (tier.conditions || []).map((cond: any, index: number, arr: any[]) => ({
+        attributeName: cond.attributeName,
+        operator: cond.operator,
+        attributeValue: cond.attributeValue,
+        connector: index < arr.length - 1 ? (cond.connector || 'AND') : null
+      })),
+      priceValue: {
+        priceAmount: Number(tier.priceValue?.priceAmount || 0),
+        valueType: tier.priceValue?.valueType || getDefaultValueType(data.type)
+      }
+    }))
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const [metaRes, compRes] = await Promise.all([
           axios.get('/api/v1/pricing-metadata'),
-          isEditing ? axios.get('/api/v1/pricing-components') : Promise.resolve({ data: [] })
+          isEditing ? axios.get(`/api/v1/pricing-components/${id}`) : Promise.resolve({ data: null })
         ]);
 
         setMetadata(metaRes.data || []);
 
         if (isEditing) {
-          const comp = (compRes.data as any[]).find(c => c.id.toString() === id);
+          const comp = compRes.data;
           if (comp) {
             setFormData({
               code: comp.code,
               name: comp.name,
               type: comp.type,
               description: comp.description,
-              pricingTiers: (comp.pricingTiers || []).map((t: any) => ({ ...t, isCodeEdited: true }))
+              pricingTiers: (comp.pricingTiers || []).map((t: any) => mapTierFromApi(t, comp.type))
             });
             setEntityName(comp.name);
             setIsCodeEdited(true);
@@ -112,7 +166,7 @@ const PricingComponentFormPage = () => {
         name: '',
         isCodeEdited: false,
         conditions: [],
-        priceValue: { priceAmount: 0, valueType: 'ABSOLUTE' }
+        priceValue: { priceAmount: 0, valueType: getDefaultValueType(formData.type) }
       }]
     });
   };
@@ -152,14 +206,21 @@ const PricingComponentFormPage = () => {
     setError('');
     setSubmitting(true);
     try {
+      const payload = buildSubmitPayload(formData);
       if (isEditing) {
-        await axios.patch(`/api/v1/pricing-components/${id}`, formData);
+        await axios.patch(`/api/v1/pricing-components/${id}`, payload);
       } else {
-        await axios.post('/api/v1/pricing-components', formData);
+        await axios.post('/api/v1/pricing-components', payload);
       }
+      setToast({
+        message: isEditing ? 'Pricing component updated successfully.' : 'Pricing component created successfully.',
+        type: 'success'
+      });
       navigate('/pricing-components', { state: { success: isEditing ? 'Pricing component updated successfully.' : 'Pricing component created successfully.' } });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred while saving the component.');
+      const message = err.response?.data?.message || 'An error occurred while saving the component.';
+      setError(message);
+      setToast({ message, type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -238,8 +299,12 @@ const PricingComponentFormPage = () => {
             <div>
               <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Financial Type</label>
               <div className="flex space-x-4">
-                {['FEE', 'RATE'].map(t => (
-                  <button key={t} type="button" onClick={() => setFormData({...formData, type: t})} className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition border-2 ${formData.type === t ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}>{t}</button>
+                {[
+                  { value: 'FEE', label: 'FEE' },
+                  { value: 'INTEREST_RATE', label: 'RATE' },
+                  { value: 'DISCOUNT', label: 'DISCOUNT' }
+                ].map(t => (
+                  <button key={t.value} type="button" onClick={() => setFormData({...formData, type: t.value})} className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition border-2 ${formData.type === t.value ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}>{t.label}</button>
                 ))}
               </div>
             </div>
@@ -347,24 +412,29 @@ const PricingComponentFormPage = () => {
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Financial Value Type</label>
                       <PlexusSelect
-                        options={[
-                          { value: 'ABSOLUTE', label: 'ABSOLUTE VALUE' },
-                          { value: 'PERCENTAGE', label: 'PERCENTAGE RATE' },
-                          { value: 'DISCOUNT_ABSOLUTE', label: 'CASH DISCOUNT' },
-                          { value: 'DISCOUNT_PERCENTAGE', label: 'PERCENTAGE DISCOUNT' }
-                        ]}
+                        options={['WAIVER', 'BENEFIT', 'DISCOUNT'].includes(formData.type)
+                          ? [
+                            { value: 'DISCOUNT_ABSOLUTE', label: 'CASH DISCOUNT' },
+                            { value: 'DISCOUNT_PERCENTAGE', label: 'PERCENTAGE DISCOUNT' },
+                            { value: 'FREE_COUNT', label: 'FREE COUNT' }
+                          ]
+                          : [
+                            { value: 'FEE_ABSOLUTE', label: 'ABSOLUTE VALUE' },
+                            { value: 'FEE_PERCENTAGE', label: 'PERCENTAGE RATE' }
+                          ]}
                         value={{
-                          ABSOLUTE: 'ABSOLUTE VALUE',
-                          PERCENTAGE: 'PERCENTAGE RATE',
+                          FEE_ABSOLUTE: 'ABSOLUTE VALUE',
+                          FEE_PERCENTAGE: 'PERCENTAGE RATE',
                           DISCOUNT_ABSOLUTE: 'CASH DISCOUNT',
-                          DISCOUNT_PERCENTAGE: 'PERCENTAGE DISCOUNT'
+                          DISCOUNT_PERCENTAGE: 'PERCENTAGE DISCOUNT',
+                          FREE_COUNT: 'FREE COUNT'
                         }[tier.priceValue.valueType as string] ? {
                           value: tier.priceValue.valueType,
-                          label: ({ ABSOLUTE: 'ABSOLUTE VALUE', PERCENTAGE: 'PERCENTAGE RATE', DISCOUNT_ABSOLUTE: 'CASH DISCOUNT', DISCOUNT_PERCENTAGE: 'PERCENTAGE DISCOUNT' } as any)[tier.priceValue.valueType]
+                          label: ({ FEE_ABSOLUTE: 'ABSOLUTE VALUE', FEE_PERCENTAGE: 'PERCENTAGE RATE', DISCOUNT_ABSOLUTE: 'CASH DISCOUNT', DISCOUNT_PERCENTAGE: 'PERCENTAGE DISCOUNT', FREE_COUNT: 'FREE COUNT' } as any)[tier.priceValue.valueType]
                         } : null}
                         onChange={(opt) => {
                           const newTiers = [...formData.pricingTiers];
-                          newTiers[idx].priceValue = { ...newTiers[idx].priceValue, valueType: opt ? opt.value : 'ABSOLUTE' };
+                          newTiers[idx].priceValue = { ...newTiers[idx].priceValue, valueType: opt ? opt.value : getDefaultValueType(formData.type) };
                           setFormData({...formData, pricingTiers: newTiers});
                         }}
                       />

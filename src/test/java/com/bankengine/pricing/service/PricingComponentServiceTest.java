@@ -266,6 +266,87 @@ class PricingComponentServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Update Component - Should synchronize tiers, conditions, and values when pricingTiers is provided")
+    void updateComponent_ShouldSynchronizeTiers() {
+        Long id = 1L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(id);
+
+        PricingTier existingTier = new PricingTier();
+        existingTier.setCode("OLD_TIER");
+        component.setPricingTiers(new ArrayList<>(List.of(existingTier)));
+
+        PricingComponentRequest request = newPricingComponentRequest("Updated");
+        request.setType("FEE");
+
+        TierConditionDto conditionDto = new TierConditionDto();
+        conditionDto.setAttributeName("customerSegment");
+        conditionDto.setOperator(TierCondition.Operator.EQ);
+        conditionDto.setAttributeValue("RETAIL");
+        conditionDto.setConnector(TierCondition.LogicalConnector.AND);
+
+        PriceValueRequest valueRequest = new PriceValueRequest();
+        valueRequest.setPriceAmount(new java.math.BigDecimal("10.00"));
+        valueRequest.setValueType("FEE_ABSOLUTE");
+
+        PricingTierRequest tierRequest = new PricingTierRequest();
+        tierRequest.setName("Premium Waiver");
+        tierRequest.setCode("PREMIUM_WAIVER");
+        tierRequest.setConditions(List.of(conditionDto));
+        tierRequest.setPriceValue(valueRequest);
+        request.setPricingTiers(List.of(tierRequest));
+
+        PricingTier mappedTier = new PricingTier();
+        mappedTier.setCode("PREMIUM_WAIVER");
+        mappedTier.setConditions(new HashSet<>());
+        mappedTier.setPriceValues(new HashSet<>());
+
+        TierCondition mappedCondition = new TierCondition();
+        PriceValue mappedValue = new PriceValue();
+        mappedValue.setValueType(PriceValue.ValueType.FEE_ABSOLUTE);
+
+        when(componentRepository.findById(id)).thenReturn(Optional.of(component));
+        when(pricingTierMapper.toEntity(tierRequest)).thenReturn(mappedTier);
+        when(tierConditionMapper.toEntity(conditionDto)).thenReturn(mappedCondition);
+        when(priceValueMapper.toEntity(valueRequest)).thenReturn(mappedValue);
+        when(componentRepository.save(any(PricingComponent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pricingComponentMapper.toResponseDto(any(PricingComponent.class))).thenReturn(PricingComponentResponse.builder().build());
+
+        componentService.updateComponent(id, request);
+
+        assertEquals(1, component.getPricingTiers().size());
+        PricingTier synchronizedTier = component.getPricingTiers().get(0);
+        assertEquals("PREMIUM_WAIVER", synchronizedTier.getCode());
+        assertEquals(1, synchronizedTier.getConditions().size());
+        assertEquals(1, synchronizedTier.getPriceValues().size());
+        verify(reloadService).reloadKieContainer();
+    }
+
+    @Test
+    @DisplayName("Update Component - Should clear all tiers when empty pricingTiers list is provided")
+    void updateComponent_ShouldClearTiersWhenEmptyListProvided() {
+        Long id = 1L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(id);
+
+        PricingTier existingTier = new PricingTier();
+        existingTier.setCode("EXISTING");
+        component.setPricingTiers(new ArrayList<>(List.of(existingTier)));
+
+        PricingComponentRequest request = newPricingComponentRequest("Updated");
+        request.setPricingTiers(new ArrayList<>());
+
+        when(componentRepository.findById(id)).thenReturn(Optional.of(component));
+        when(componentRepository.save(any(PricingComponent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pricingComponentMapper.toResponseDto(any(PricingComponent.class))).thenReturn(PricingComponentResponse.builder().build());
+
+        componentService.updateComponent(id, request);
+
+        assertTrue(component.getPricingTiers().isEmpty());
+        verify(reloadService).reloadKieContainer();
+    }
+
+    @Test
     @DisplayName("Deep Clone - Should recursively clone Tiers, PriceValues, and Conditions")
     void testCloneTiersInternal_deepCloneWorkflow() {
         // 1. ARRANGE: Create a complex source structure

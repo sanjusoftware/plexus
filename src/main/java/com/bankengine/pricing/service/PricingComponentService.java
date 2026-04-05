@@ -25,9 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.Arrays;
 import java.util.stream.Collectors;
 
 @Service
@@ -125,6 +126,7 @@ public class PricingComponentService extends BaseService {
         }
 
         pricingComponentMapper.updateFromDto(requestDto, component);
+        synchronizePricingTiers(component, requestDto.getPricingTiers());
         validateComponentAndValueType(component);
         PricingComponent updated = pricingComponentRepository.save(component);
         reloadService.reloadKieContainer();
@@ -176,8 +178,15 @@ public class PricingComponentService extends BaseService {
 
     private void attachTiersToComponent(PricingComponent component, List<PricingTierRequest> tierDtos) {
         if (tierDtos == null) return;
+        component.setPricingTiers(buildPricingTiers(component, tierDtos));
+    }
 
-        List<PricingTier> tiers = tierDtos.stream().map(tierDto -> {
+    private List<PricingTier> buildPricingTiers(PricingComponent component, List<PricingTierRequest> tierDtos) {
+        if (tierDtos == null) {
+            return new ArrayList<>();
+        }
+
+        return tierDtos.stream().map(tierDto -> {
             PricingTier tier = pricingTierMapper.toEntity(tierDto);
             if (tierDto.getPriority() == null) {
                 tier.setPriority(Integer.MIN_VALUE);
@@ -201,9 +210,16 @@ public class PricingComponentService extends BaseService {
             tier.setPriceValues(Set.of(value));
 
             return tier;
-        }).toList();
+        }).collect(Collectors.toCollection(ArrayList::new));
+    }
 
-        component.setPricingTiers(tiers);
+    private void synchronizePricingTiers(PricingComponent component, List<PricingTierRequest> tierDtos) {
+        if (tierDtos == null) {
+            return; // PATCH semantics: omitted tiers means keep existing aggregate unchanged.
+        }
+
+        component.getPricingTiers().clear();
+        component.getPricingTiers().addAll(buildPricingTiers(component, tierDtos));
     }
 
     private void cloneTiersInternal(PricingComponent source, PricingComponent target) {
@@ -235,7 +251,7 @@ public class PricingComponentService extends BaseService {
             }
 
             return newTier;
-        }).toList();
+        }).collect(Collectors.toCollection(ArrayList::new));
 
         target.setPricingTiers(clonedTiers);
     }

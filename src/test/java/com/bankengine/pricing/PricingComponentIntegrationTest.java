@@ -5,10 +5,10 @@ import com.bankengine.pricing.dto.PriceValueRequest;
 import com.bankengine.pricing.dto.PricingComponentRequest;
 import com.bankengine.pricing.dto.PricingTierRequest;
 import com.bankengine.pricing.dto.TierConditionDto;
+import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
-import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.repository.*;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
@@ -33,10 +33,8 @@ import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
@@ -155,6 +153,35 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         // DELETE
         mockMvc.perform(deleteWithCsrf(BASE_URL + "/{id}", id))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldPersistPricingTiersAndConditionsOnPatchUpdate() throws Exception {
+        String createJson = mockMvc.perform(postWithCsrf(BASE_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newPricingComponentRequest("PatchWithTiers"))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long id = Long.valueOf(objectMapper.readTree(createJson).get("id").asText());
+
+        PricingComponentRequest patchRequest = newPricingComponentRequest("PatchWithTiers");
+        patchRequest.setPricingTiers(List.of(getValidTierDto()));
+
+        mockMvc.perform(patchWithCsrf(BASE_URL + "/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(patchRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pricingTiers.length()", is(1)))
+                .andExpect(jsonPath("$.pricingTiers[0].conditions.length()", is(1)))
+                .andExpect(jsonPath("$.pricingTiers[0].priceValues.length()", is(1)));
+
+        mockMvc.perform(get(BASE_URL + "/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pricingTiers.length()", is(1)))
+                .andExpect(jsonPath("$.pricingTiers[0].conditions[0].attributeName", is("customerSegment")))
+                .andExpect(jsonPath("$.pricingTiers[0].priceValues[0].valueType", is("FEE_ABSOLUTE")));
     }
 
     @Test
