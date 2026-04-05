@@ -263,6 +263,28 @@ docker compose up --build -d
   - Debugger: `http://identity-provider:9090/default/debugger`
 - **Redis Commander**: `http://localhost:8081`
 
+### B.1 One-command Hybrid Dev (Docker infra + local hot reload)
+If you want faster development feedback while keeping Docker convenience, use the hybrid scripts:
+
+- Docker runs infra only (`db`, `redis`, `oauth-mock`, `redis-ui`)
+- Spring Boot runs locally with `bootRun` (hot reload via IDE/DevTools)
+- React runs locally with `npm start` (hot reload on `localhost:3000`)
+
+**Quick Commands (from repository root):**
+
+```powershell
+./scripts/dev-up.ps1     # Start everything
+./scripts/dev-down.ps1   # Stop everything
+```
+
+Notes:
+- The frontend dev server now proxies `/api` calls to `http://localhost:8080` via `src/main/frontend/package.json`.
+- `dev-up.ps1` writes local runtime PID files into `.dev-runtime/` and reuses them to avoid duplicate process launches.
+- `dev-up.ps1` runs with `SPRING_PROFILES_ACTIVE=dev` but overrides datasource settings to PostgreSQL (`localhost:5432`) for Docker-backed parity.
+- `dev-up.ps1` stops the Docker `app` service (if running) and waits for local backend health on `:8080` before starting frontend.
+- By default, `dev-up.ps1` opens backend and frontend in two tabs of one Windows Terminal window (`plexus-dev`) when `wt` is available; otherwise it falls back to separate PowerShell windows.
+- `dev-down.ps1` gracefully shuts down all backend Java and frontend Node processes before stopping Docker infrastructure.
+
 ### C. Running Locally (IDE/CLI)
 For active development with hot-reloading (via H2 database):
 

@@ -13,13 +13,22 @@ export interface UserProfile {
 }
 
 export class AuthService {
+  private getBackendOrigin(): string {
+    // In CRA dev mode on :3000, full-page navigations are not proxied for HTML requests.
+    if (window.location.port === '3000') {
+      return `${window.location.protocol}//${window.location.hostname}:8080`;
+    }
+    return window.location.origin;
+  }
+
   public async login(bankId: string) {
     try {
       // First, check if the bank is valid and active
       await axios.get(`/api/v1/auth/check-bank?bankId=${bankId}`);
 
       // If successful, redirect to backend login endpoint which initiates OIDC flow
-      window.location.href = `/api/v1/auth/login?bankId=${bankId}`;
+      const backendOrigin = this.getBackendOrigin();
+      window.location.href = `${backendOrigin}/api/v1/auth/login?bankId=${encodeURIComponent(bankId)}`;
     } catch (err: any) {
       if (err.response) {
         const { status, data } = err.response;
