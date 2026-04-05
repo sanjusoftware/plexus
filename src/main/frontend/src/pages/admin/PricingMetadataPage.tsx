@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, X, Database, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Database, Info } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
+import { useAuth } from '../../context/AuthContext';
 
 interface PricingMetadata {
   id: number;
@@ -13,10 +14,9 @@ interface PricingMetadata {
 
 const PricingMetadataPage = () => {
   const navigate = useNavigate();
+  const { setToast } = useAuth();
   const [metadata, setMetadata] = useState<PricingMetadata[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const fetchMetadata = async () => {
     setLoading(true);
@@ -24,7 +24,7 @@ const PricingMetadataPage = () => {
       const response = await axios.get('/api/v1/pricing-metadata');
       setMetadata(response.data);
     } catch (err: any) {
-      setError('Failed to fetch pricing metadata. Check your permissions.');
+      setToast({ message: 'Failed to fetch pricing metadata. Check your permissions.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -38,10 +38,10 @@ const PricingMetadataPage = () => {
     if (!window.confirm('Are you sure? Deleting metadata might break existing rules that use this attribute.')) return;
     try {
       await axios.delete(`/api/v1/pricing-metadata/${attributeKey}`);
-      setSuccess('Metadata deleted successfully.');
+      setToast({ message: 'Metadata deleted successfully.', type: 'success' });
       fetchMetadata();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to delete.');
+      setToast({ message: err.response?.data?.message || 'Failed to delete.', type: 'error' });
     }
   };
 
@@ -72,29 +72,6 @@ const PricingMetadataPage = () => {
           The data type ensures the rule engine can correctly compare values (e.g., numeric comparison for DECIMAL).
         </p>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl text-red-700 text-sm font-bold flex items-center justify-between">
-          <div className="flex items-center">
-            <AlertCircle className="w-4 h-4 mr-3 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-          <button onClick={() => setError('')} className="ml-4 hover:bg-red-100 p-1 rounded-full transition text-red-500" title="Dismiss">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl text-green-700 text-sm font-bold flex items-center justify-between">
-          <div className="flex items-center">
-            <CheckCircle2 className="w-4 h-4 mr-3 flex-shrink-0" />
-            <span>{success}</span>
-          </div>
-          <button onClick={() => setSuccess('')} className="ml-4 hover:bg-green-100 p-1 rounded-full transition text-green-500" title="Dismiss">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {loading ? (
         <div className="flex justify-center p-24 bg-white rounded-3xl border border-gray-100 shadow-sm"><Loader2 className="w-12 h-12 animate-spin text-blue-600" /></div>

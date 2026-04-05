@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, CheckCircle2, ArrowLeft, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
 import axios from 'axios';
 import PlexusSelect from '../components/PlexusSelect';
 import { useAuth } from '../context/AuthContext';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
 
 const OnboardingPage = () => {
-  const { user } = useAuth();
+  const { user, setToast } = useAuth();
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,8 +64,7 @@ const OnboardingPage = () => {
       }
     } catch (err) {
       console.error('Failed to fetch bank data', err);
-      setStatus('error');
-      setMessage('Failed to load bank configuration for editing.');
+      setToast({ message: 'Failed to load bank configuration for editing.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -115,7 +114,7 @@ const OnboardingPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
-      setStatus('error');
+      setToast({ message, type: 'error' });
       return;
     }
     setLoading(true);
@@ -140,15 +139,16 @@ const OnboardingPage = () => {
       }
 
       setStatus('success');
-      setMessage(
-        isEditing ? 'Bank configuration has been updated successfully!' :
-        isAdmin ? 'New bank has been added successfully!' :
-        'Your onboarding request has been submitted successfully! A system administrator will review your request shortly.'
-      );
+      const successMsg = isEditing ? 'Bank configuration has been updated successfully!' :
+      isAdmin ? 'New bank has been added successfully!' :
+      'Your onboarding request has been submitted successfully! A system administrator will review your request shortly.';
+
+      setMessage(successMsg);
+      setToast({ message: successMsg, type: 'success' });
     } catch (err: any) {
-      setStatus('error');
       const errorDetail = err.response?.data?.message || err.response?.data || 'Failed to submit request. Please check your inputs and captcha.';
-      setMessage(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
+      const finalError = typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail);
+      setToast({ message: finalError, type: 'error' });
       fetchCaptcha(); // Refresh captcha on error
     } finally {
       setLoading(false);
@@ -205,13 +205,6 @@ const OnboardingPage = () => {
          isAdmin ? 'Fill out the form below to register a new bank in the system.' :
          'Fill out the form below to submit an onboarding request for your institution.'}
       </p>
-
-      {status === 'error' && (
-        <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center text-red-700">
-          <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-          <p className="text-sm font-medium">{message}</p>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>

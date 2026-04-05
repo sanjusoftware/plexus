@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
+import { useAuth } from '../../context/AuthContext';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -36,10 +37,9 @@ interface Product {
 const ProductManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setToast } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -47,7 +47,7 @@ const ProductManagementPage = () => {
       const p = await axios.get('/api/v1/products');
       setProducts(p.data.content || []);
     } catch (err: any) {
-      setError('Failed to fetch products. Please check your role permissions.');
+      setToast({ message: 'Failed to fetch products. Please check your role permissions.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -56,18 +56,18 @@ const ProductManagementPage = () => {
   useEffect(() => {
     fetchInitialData();
     if (location.state?.success) {
-      setSuccess(location.state.success);
+      setToast({ message: location.state.success, type: 'success' });
       window.history.replaceState({}, document.title);
     }
-  }, [location]);
+  }, [location, setToast]);
 
   const handleStatusAction = async (id: number, action: string) => {
     try {
       await axios.post(`/api/v1/products/${id}/${action}`);
-      setSuccess(`Product ${action}d successfully.`);
+      setToast({ message: `Product ${action}d successfully.`, type: 'success' });
       fetchInitialData();
     } catch (err: any) {
-      setError(err.response?.data?.message || `Failed to ${action} product.`);
+      setToast({ message: err.response?.data?.message || `Failed to ${action} product.`, type: 'error' });
     }
   };
 
@@ -75,10 +75,10 @@ const ProductManagementPage = () => {
     if (!window.confirm('Permanently delete this product?')) return;
     try {
       await axios.delete(`/api/v1/products/${id}`);
-      setSuccess('Product deleted.');
+      setToast({ message: 'Product deleted successfully.', type: 'success' });
       fetchInitialData();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Deletion failed.');
+      setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
     }
   };
 
@@ -112,9 +112,6 @@ const ProductManagementPage = () => {
            </p>
         </div>
       </div>
-
-      {error && <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-3xl text-red-700 text-sm font-bold flex items-center shadow-md animate-in slide-in-from-top-2"><AlertCircle className="w-5 h-5 mr-4" />{error}</div>}
-      {success && <div className="bg-green-50 border-l-4 border-green-500 p-6 rounded-r-3xl text-green-700 text-sm font-bold flex items-center shadow-md animate-in slide-in-from-top-2"><CheckCircle2 className="w-5 h-5 mr-4" />{success}</div>}
 
       {loading ? (
         <div className="flex justify-center p-32 bg-white rounded-[3rem] border border-gray-100 shadow-sm"><Loader2 className="w-16 h-16 animate-spin text-blue-600" /></div>

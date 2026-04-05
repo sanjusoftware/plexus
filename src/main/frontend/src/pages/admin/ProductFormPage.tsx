@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Trash2, Loader2, Save, X, ShieldCheck, Tag, AlertCircle, HelpCircle, Zap } from 'lucide-react';
+import { Trash2, Loader2, Save, X, ShieldCheck, Tag, HelpCircle, Zap } from 'lucide-react';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
+import { useAuth } from '../../context/AuthContext';
 import PlexusSelect from '../../components/PlexusSelect';
 import LivePricePreview from '../../components/LivePricePreview';
 import PriceSimulationTool from '../../components/PriceSimulationTool';
@@ -24,6 +25,7 @@ const ProductFormPage = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
+  const { setToast } = useAuth();
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,6 @@ const ProductFormPage = () => {
   const [pricingComponents, setPricingComponents] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [isCodeEdited, setIsCodeEdited] = useState(false);
-  const [error, setError] = useState('');
   const [showPriceSimulation, setShowPriceSimulation] = useState(false);
   const [showPricingHelp, setShowPricingHelp] = useState(false);
 
@@ -78,7 +79,7 @@ const ProductFormPage = () => {
           setIsCodeEdited(true);
         }
       } catch (err: any) {
-        setError('Failed to fetch required data.');
+        setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -103,7 +104,6 @@ const ProductFormPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setSubmitting(true);
 
     // Prepare payload for Fat DTO
@@ -135,7 +135,7 @@ const ProductFormPage = () => {
       }
       navigate('/products', { state: { success: isEditing ? 'Product successfully synced.' : 'Product created successfully.' } });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Operation failed.');
+      setToast({ message: err.response?.data?.message || 'Operation failed.', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -171,13 +171,6 @@ const ProductFormPage = () => {
 
       <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
         <form onSubmit={handleSubmit} className="p-12 space-y-12">
-          {error && (
-            <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
-              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-              <p className="text-sm font-bold">{error}</p>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Product Title</label>

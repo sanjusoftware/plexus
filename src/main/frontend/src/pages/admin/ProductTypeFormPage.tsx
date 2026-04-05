@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Loader2, Save, X, AlertCircle } from 'lucide-react';
+import { Loader2, Save, X } from 'lucide-react';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
+import { useAuth } from '../../context/AuthContext';
 
 const ProductTypeFormPage = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
+  const { setToast } = useAuth();
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [isCodeEdited, setIsCodeEdited] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     if (isEditing) {
@@ -27,10 +28,10 @@ const ProductTypeFormPage = () => {
             setEntityName(type.name);
             setIsCodeEdited(true);
           } else {
-            setError('Product type not found.');
+            setToast({ message: 'Product type not found.', type: 'error' });
           }
         } catch (err: any) {
-          setError('Failed to fetch product type.');
+          setToast({ message: 'Failed to fetch product type.', type: 'error' });
         } finally {
           setLoading(false);
         }
@@ -41,7 +42,6 @@ const ProductTypeFormPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setSubmitting(true);
     try {
       if (isEditing) {
@@ -49,9 +49,10 @@ const ProductTypeFormPage = () => {
       } else {
         await axios.post('/api/v1/product-types', formData);
       }
+      setToast({ message: isEditing ? 'Product type updated successfully.' : 'Product type created successfully.', type: 'success' });
       navigate('/product-types');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred while saving.');
+      setToast({ message: err.response?.data?.message || 'An error occurred while saving.', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -98,12 +99,6 @@ const ProductTypeFormPage = () => {
 
       <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100 p-10">
         <form onSubmit={handleSubmit} className="space-y-8">
-          {error && (
-            <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center text-red-700">
-              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-              <p className="text-xs font-bold">{error}</p>
-            </div>
-          )}
           <div>
             <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Display Name</label>
             <input

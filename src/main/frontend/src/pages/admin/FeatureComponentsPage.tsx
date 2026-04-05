@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, ShieldCheck, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, ShieldCheck, CheckCircle2, Info } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 
@@ -19,7 +19,6 @@ const FeatureComponentsPage = () => {
   const { setToast } = useAuth();
   const [features, setFeatures] = useState<FeatureComponent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   const fetchFeatures = async () => {
     setLoading(true);
@@ -27,7 +26,7 @@ const FeatureComponentsPage = () => {
       const response = await axios.get('/api/v1/features');
       setFeatures(response.data);
     } catch (err: any) {
-      setError('Failed to fetch feature components.');
+      setToast({ message: 'Failed to fetch feature components.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -43,7 +42,7 @@ const FeatureComponentsPage = () => {
       setToast({ message: 'Feature activated successfully.', type: 'success' });
       fetchFeatures();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Activation failed.');
+      setToast({ message: err.response?.data?.message || 'Activation failed.', type: 'error' });
     }
   };
 
@@ -54,7 +53,7 @@ const FeatureComponentsPage = () => {
       setToast({ message: 'Feature deleted successfully.', type: 'success' });
       fetchFeatures();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Deletion failed.');
+      setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
     }
   };
 
@@ -85,8 +84,6 @@ const FeatureComponentsPage = () => {
           These can be linked to products where concrete values are assigned.
         </p>
       </div>
-
-      {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl text-red-700 text-sm font-bold flex items-center shadow-sm"><AlertCircle className="w-4 h-4 mr-3" />{error}</div>}
 
       {loading ? (
         <div className="flex justify-center p-24 bg-white rounded-3xl border border-gray-100"><Loader2 className="w-12 h-12 animate-spin text-blue-600" /></div>

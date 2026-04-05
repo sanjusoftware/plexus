@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, Info } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 
@@ -47,7 +47,6 @@ const PricingComponentsPage = () => {
   const [components, setComponents] = useState<PricingComponent[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  const [error, setError] = useState('');
 
   const normalizeTier = (tier: any): PricingTier => {
     const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) ? tier.priceValues[0] : null);
@@ -75,7 +74,7 @@ const PricingComponentsPage = () => {
       const response = await axios.get('/api/v1/pricing-components');
       setComponents((response.data || []).map(normalizeComponent));
     } catch (err: any) {
-      setError('Failed to fetch pricing components.');
+      setToast({ message: 'Failed to fetch pricing components.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -98,7 +97,7 @@ const PricingComponentsPage = () => {
       setToast({ message: 'Component activated and is now ready for production use.', type: 'success' });
       fetchComponents();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Activation failed.');
+      setToast({ message: err.response?.data?.message || 'Activation failed.', type: 'error' });
     }
   };
 
@@ -109,7 +108,7 @@ const PricingComponentsPage = () => {
       setToast({ message: 'Component deleted successfully.', type: 'success' });
       fetchComponents();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Deletion failed.');
+      setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
     }
   };
 
@@ -140,8 +139,6 @@ const PricingComponentsPage = () => {
           Linking a component to a product enables these rules to execute during bundle pricing.
         </p>
       </div>
-
-      {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl text-red-700 text-sm font-bold flex items-center shadow-sm"><AlertCircle className="w-4 h-4 mr-3" />{error}</div>}
 
       {loading ? (
         <div className="flex justify-center p-24 bg-white rounded-3xl border border-gray-100"><Loader2 className="w-12 h-12 animate-spin text-blue-600" /></div>

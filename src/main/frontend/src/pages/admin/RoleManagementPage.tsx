@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Plus, Trash2, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
+import { useAuth } from '../../context/AuthContext';
 
 interface RoleMapping {
   name: string;
@@ -13,10 +14,9 @@ interface RoleMapping {
 const RoleManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setToast } = useAuth();
   const [mappings, setMappings] = useState<RoleMapping[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
   const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
@@ -66,7 +66,7 @@ const RoleManagementPage = () => {
         authorities: r.authorities || []
       })) || []);
     } catch (err: any) {
-      setError('Failed to fetch role mappings. Ensure you are a Bank Admin.');
+      setToast({ message: 'Failed to fetch role mappings. Ensure you are a Bank Admin.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -75,18 +75,18 @@ const RoleManagementPage = () => {
   useEffect(() => {
     fetchInitialData();
     if (location.state?.success) {
-      setSuccess(location.state.success);
+      setToast({ message: location.state.success, type: 'success' });
       window.history.replaceState({}, document.title);
     }
-  }, [location]);
+  }, [location, setToast]);
 
   const handleDelete = async (roleName: string) => {
     try {
       await axios.delete(`/api/v1/roles/${roleName}`);
-      setSuccess('Role deleted successfully.');
+      setToast({ message: 'Role deleted successfully.', type: 'success' });
       fetchInitialData();
     } catch (err: any) {
-      setError('Failed to delete role mapping.');
+      setToast({ message: 'Failed to delete role mapping.', type: 'error' });
     }
   };
 
@@ -127,9 +127,6 @@ const RoleManagementPage = () => {
            </p>
         </div>
       </div>
-
-      {error && <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-3xl text-red-700 text-sm font-bold flex items-center shadow-md"><AlertCircle className="w-5 h-5 mr-4" />{error}</div>}
-      {success && <div className="bg-green-50 border-l-4 border-green-500 p-6 rounded-r-3xl text-green-700 text-sm font-bold flex items-center shadow-md"><CheckCircle2 className="w-5 h-5 mr-4" />{success}</div>}
 
       {loading ? (
         <div className="flex justify-center p-32 bg-white rounded-[3rem] border border-gray-100"><Loader2 className="w-16 h-16 animate-spin text-blue-600" /></div>
