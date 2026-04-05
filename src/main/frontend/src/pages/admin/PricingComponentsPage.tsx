@@ -16,6 +16,7 @@ interface PriceValue {
   priceAmount: number;
   valueType: string;
   currency?: string;
+  rawValue?: number;
 }
 
 interface PricingTier {
@@ -27,6 +28,7 @@ interface PricingTier {
   applyChargeOnFullBreach?: boolean;
   conditions: TierCondition[];
   priceValue: PriceValue;
+  priceValues?: PriceValue[];
 }
 
 interface PricingComponent {
@@ -47,11 +49,31 @@ const PricingComponentsPage = () => {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [error, setError] = useState('');
 
+  const normalizeTier = (tier: any): PricingTier => {
+    const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) ? tier.priceValues[0] : null);
+    return {
+      ...tier,
+      conditions: tier.conditions || [],
+      priceValues: tier.priceValues || (firstValue ? [firstValue] : []),
+      priceValue: {
+        priceAmount: firstValue?.priceAmount ?? firstValue?.rawValue ?? 0,
+        valueType: firstValue?.valueType || '—',
+        currency: firstValue?.currency,
+        rawValue: firstValue?.rawValue
+      }
+    };
+  };
+
+  const normalizeComponent = (component: any): PricingComponent => ({
+    ...component,
+    pricingTiers: (component.pricingTiers || []).map(normalizeTier)
+  });
+
   const fetchComponents = async () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/v1/pricing-components');
-      setComponents(response.data);
+      setComponents((response.data || []).map(normalizeComponent));
     } catch (err: any) {
       setError('Failed to fetch pricing components.');
     } finally {
