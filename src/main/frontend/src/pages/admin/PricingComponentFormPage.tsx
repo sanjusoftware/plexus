@@ -50,6 +50,28 @@ const PricingComponentFormPage = () => {
     pricingTiers: []
   });
 
+  const getOperatorsForDataType = (dataType: string) => {
+    const allOps = [
+      { value: 'EQ', label: '=' },
+      { value: 'GT', label: '>' },
+      { value: 'LT', label: '<' },
+      { value: 'GE', label: '>=' },
+      { value: 'LE', label: '<=' }
+    ];
+
+    switch (dataType) {
+      case 'BOOLEAN':
+      case 'STRING':
+        return allOps.filter(op => op.value === 'EQ');
+      case 'INTEGER':
+      case 'DECIMAL':
+      case 'DATE':
+        return allOps;
+      default:
+        return allOps;
+    }
+  };
+
   const getDefaultValueType = (componentType: string) => {
     const discountTypes = ['WAIVER', 'BENEFIT', 'DISCOUNT'];
     return discountTypes.includes(componentType) ? 'DISCOUNT_PERCENTAGE' : 'FEE_ABSOLUTE';
@@ -180,7 +202,26 @@ const PricingComponentFormPage = () => {
   const handleConditionChange = (tierIdx: number, condIdx: number, field: string, value: any) => {
     const newTiers = [...formData.pricingTiers];
     const newConds = [...newTiers[tierIdx].conditions];
-    newConds[condIdx] = { ...newConds[condIdx], [field]: value };
+
+    if (field === 'attributeName') {
+      const oldAttr = newConds[condIdx].attributeName;
+      const oldMeta = metadata.find(m => m.attributeKey === oldAttr);
+      const newMeta = metadata.find(m => m.attributeKey === value);
+
+      if (oldMeta?.dataType !== newMeta?.dataType) {
+        newConds[condIdx] = {
+          ...newConds[condIdx],
+          attributeName: value,
+          attributeValue: '',
+          operator: 'EQ'
+        };
+      } else {
+        newConds[condIdx] = { ...newConds[condIdx], attributeName: value };
+      }
+    } else {
+      newConds[condIdx] = { ...newConds[condIdx], [field]: value };
+    }
+
     newTiers[tierIdx].conditions = newConds;
     setFormData({ ...formData, pricingTiers: newTiers });
   };
@@ -361,19 +402,65 @@ const PricingComponentFormPage = () => {
                             </div>
                             <div className="col-span-2">
                               <PlexusSelect
-                                options={[
-                                  { value: 'EQ', label: '=' },
-                                  { value: 'GT', label: '>' },
-                                  { value: 'LT', label: '<' },
-                                  { value: 'GE', label: '>=' },
-                                  { value: 'LE', label: '<=' }
-                                ]}
+                                options={getOperatorsForDataType(metadata.find(m => m.attributeKey === cond.attributeName)?.dataType || 'STRING')}
                                 value={{ EQ: '=', GT: '>', LT: '<', GE: '>=', LE: '<=' }[cond.operator as string] ? { value: cond.operator, label: ({ EQ: '=', GT: '>', LT: '<', GE: '>=', LE: '<=' } as any)[cond.operator] } : null}
                                 onChange={(opt) => handleConditionChange(idx, cidx, 'operator', opt ? opt.value : 'EQ')}
                                 menuPlacement="auto"
                               />
                             </div>
-                            <input type="text" className="col-span-3 border-2 border-gray-100 rounded-2xl p-4 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition h-[60px]" placeholder="Value..." value={cond.attributeValue} onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)} />
+                            <div className="col-span-3">
+                              {(() => {
+                                const dataType = metadata.find(m => m.attributeKey === cond.attributeName)?.dataType || 'STRING';
+                                switch (dataType) {
+                                  case 'BOOLEAN':
+                                    return (
+                                      <div className="h-[60px] flex items-center px-4 bg-white border-2 border-gray-100 rounded-2xl">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleConditionChange(idx, cidx, 'attributeValue', cond.attributeValue === 'true' ? 'false' : 'true')}
+                                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${cond.attributeValue === 'true' ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                        >
+                                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${cond.attributeValue === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                        <span className="ml-3 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                          {cond.attributeValue === 'true' ? 'TRUE' : 'FALSE'}
+                                        </span>
+                                      </div>
+                                    );
+                                  case 'DATE':
+                                    return (
+                                      <input
+                                        type="date"
+                                        className="w-full border-2 border-gray-100 rounded-2xl p-4 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition h-[60px]"
+                                        value={cond.attributeValue}
+                                        onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
+                                      />
+                                    );
+                                  case 'INTEGER':
+                                  case 'DECIMAL':
+                                    return (
+                                      <input
+                                        type="number"
+                                        step={dataType === 'INTEGER' ? '1' : 'any'}
+                                        className="w-full border-2 border-gray-100 rounded-2xl p-4 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition h-[60px]"
+                                        placeholder="Value..."
+                                        value={cond.attributeValue}
+                                        onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
+                                      />
+                                    );
+                                  default:
+                                    return (
+                                      <input
+                                        type="text"
+                                        className="w-full border-2 border-gray-100 rounded-2xl p-4 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition h-[60px]"
+                                        placeholder="Value..."
+                                        value={cond.attributeValue}
+                                        onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
+                                      />
+                                    );
+                                }
+                              })()}
+                            </div>
                             <div className="col-span-2">
                               {cidx < tier.conditions.length - 1 ? (
                                 <PlexusSelect
