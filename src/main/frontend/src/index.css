@@ -172,3 +172,18 @@
   }
 }
 
+
+:root {
+  --sidebar-width: 0px;
+}
+
+@media (min-width: 640px) {
+  /* This will be overridden by inline styles in LoggedInUserLayout for desktop,
+     but provides a baseline for screens where the sidebar is visible. */
+}
+
+@media (max-width: 639px) {
+  :root {
+    --sidebar-width: 0px !important;
+  }
+}
