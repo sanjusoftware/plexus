@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, Play, Copy, Download, Loader2 } from 'lucide-react';
+import { X, Settings, Play, Download, Loader2 } from 'lucide-react';
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
 
 interface PriceSimulationToolProps {

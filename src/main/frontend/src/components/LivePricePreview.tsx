@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, ChevronUp, DollarSign, AlertCircle, Loader2, TrendingUp } from 'lucide-react';
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
 
@@ -21,13 +21,7 @@ const LivePricePreview: React.FC<LivePricePreviewProps> = ({ productId, currentF
   );
 
   // Trigger calculation when inputs change
-  useEffect(() => {
-    if (productId) {
-      calculatePreview();
-    }
-  }, [transactionAmount, customerSegment, enrollmentDate, productId]);
-
-  const calculatePreview = async () => {
+  const calculatePreview = useCallback(async () => {
     if (!productId) {
       setError('Product ID required for price calculation');
       return;
@@ -52,7 +46,13 @@ const LivePricePreview: React.FC<LivePricePreviewProps> = ({ productId, currentF
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, transactionAmount, customerSegment, enrollmentDate]);
+
+  useEffect(() => {
+    if (productId) {
+      calculatePreview();
+    }
+  }, [productId, calculatePreview]);
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 overflow-hidden mt-8">

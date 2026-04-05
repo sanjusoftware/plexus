@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Trash2, Loader2, Save, X, Layers } from 'lucide-react';
+import { Plus, Trash2, Loader2, Save, Tag, Layers, X } from 'lucide-react';
+import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useAuth } from '../../context/AuthContext';
@@ -71,12 +72,12 @@ const PricingComponentFormPage = () => {
     }
   };
 
-  const getDefaultValueType = (componentType: string) => {
+  const getDefaultValueType = useCallback((componentType: string) => {
     const discountTypes = ['WAIVER', 'BENEFIT', 'DISCOUNT'];
     return discountTypes.includes(componentType) ? 'DISCOUNT_PERCENTAGE' : 'FEE_ABSOLUTE';
-  };
+  }, []);
 
-  const mapTierFromApi = (tier: any, componentType: string) => {
+  const mapTierFromApi = useCallback((tier: any, componentType: string) => {
     const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) ? tier.priceValues[0] : null);
     return {
       id: tier.id,
@@ -98,7 +99,7 @@ const PricingComponentFormPage = () => {
         valueType: firstValue?.valueType || getDefaultValueType(componentType)
       }
     };
-  };
+  }, [getDefaultValueType]);
 
   const buildSubmitPayload = (data: any) => ({
     code: data.code,
@@ -160,7 +161,7 @@ const PricingComponentFormPage = () => {
     };
 
     fetchData();
-  }, [id, isEditing, setEntityName]);
+  }, [id, isEditing, setEntityName, setToast, mapTierFromApi]);
 
   const handleTierChange = (index: number, field: string, value: any) => {
     const newTiers = [...formData.pricingTiers];
@@ -266,34 +267,25 @@ const PricingComponentFormPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center p-32">
-        <Loader2 className="w-16 h-16 animate-spin text-blue-600" />
+      <div className="flex justify-center p-20">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4 pb-10">
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center relative overflow-hidden">
-        <div className="relative">
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
-            {isEditing ? 'Update Pricing' : 'New Pricing'}
-          </h1>
-          <p className="text-gray-500 font-bold mt-0.5 uppercase tracking-widest text-[10px]">
-            Configure the core identity and tiered logic in one atomic operation.
-          </p>
-        </div>
-        <button
-          onClick={() => navigate('/pricing-components')}
-          className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-gray-100 transition relative border border-gray-100 shadow-sm"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
+    <AdminPage width="medium">
+      <AdminFormHeader
+        icon={Tag}
+        tone="purple"
+        title={isEditing ? 'Update Pricing' : 'New Pricing'}
+        description="Configure the core identity and tiered logic in one atomic operation."
+        onClose={() => navigate('/pricing-components')}
+      />
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="space-y-6 p-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Product-Facing Name</label>
               <input
@@ -344,8 +336,8 @@ const PricingComponentFormPage = () => {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-8">
-            <div className="flex justify-between items-center mb-6">
+          <div className="border-t border-gray-100 pt-6">
+            <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-purple-50 rounded-xl"><Layers className="w-5 h-5 text-purple-600" /></div>
                 <h3 className="text-lg font-bold text-gray-900 tracking-tight">Segment Pricing Tiers</h3>
@@ -355,7 +347,7 @@ const PricingComponentFormPage = () => {
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               {formData.pricingTiers.map((tier: any, idx: number) => (
                 <div key={idx} className="rounded-xl p-6 bg-gray-50/50 border border-gray-100 relative group transition hover:border-blue-200">
                   <button type="button" onClick={() => removeTier(idx)} className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-4 h-4" /></button>
@@ -526,7 +518,7 @@ const PricingComponentFormPage = () => {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-gray-100 flex space-x-4">
+          <div className="flex space-x-4 border-t border-gray-100 pt-6">
             <button type="button" onClick={() => navigate('/pricing-components')} className="flex-1 px-6 py-3 border border-gray-200 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
             <button type="submit" disabled={submitting} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50">
               {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
@@ -535,7 +527,7 @@ const PricingComponentFormPage = () => {
           </div>
         </form>
       </div>
-    </div>
+    </AdminPage>
   );
 };
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Loader2, Save, X } from 'lucide-react';
+import { Loader2, Save, List } from 'lucide-react';
+import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -38,7 +39,7 @@ const ProductTypeFormPage = () => {
       };
       fetchType();
     }
-  }, [id, isEditing, setEntityName]);
+  }, [id, isEditing, setEntityName, setToast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,39 +72,29 @@ const ProductTypeFormPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center p-32">
-        <Loader2 className="w-16 h-16 animate-spin text-blue-600" />
+      <div className="flex justify-center p-20">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center relative overflow-hidden">
-        <div className="relative">
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
-            {isEditing ? 'Edit' : 'New'} Product Type
-          </h1>
-          <p className="text-gray-500 font-bold mt-0.5 uppercase tracking-widest text-[10px]">
-            Define categories for bank products.
-          </p>
-        </div>
-        <button
-          onClick={handleCancel}
-          className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-gray-100 transition relative border border-gray-100 shadow-sm"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
+    <AdminPage width="narrow">
+      <AdminFormHeader
+        icon={List}
+        title={`${isEditing ? 'Edit' : 'New'} Product Type`}
+        description="Define categories for bank products."
+        onClose={handleCancel}
+      />
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 p-6">
+      <div className="admin-form">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Display Name</label>
+          <div className="admin-field">
+            <label className="admin-label">Display Name</label>
             <input
               type="text"
               required
-              className="block w-full border border-gray-200 rounded-xl p-2.5 font-bold text-gray-900 text-sm transition focus:border-blue-500 shadow-sm"
+              className="admin-input"
               value={formData.name}
               onChange={(e) => {
                 const name = e.target.value;
@@ -115,14 +106,14 @@ const ProductTypeFormPage = () => {
               }}
               placeholder="e.g. Savings Accounts"
             />
-            <p className="mt-1.5 text-[10px] text-gray-400 font-medium italic">The user-friendly name displayed in reports and customer interfaces.</p>
+            <p className="admin-help">The user-friendly name displayed in reports and customer interfaces.</p>
           </div>
-          <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Unique Code</label>
+          <div className="admin-field">
+            <label className="admin-label">Unique Code</label>
             <input
               type="text"
               required
-              className="block w-full border border-gray-200 rounded-xl p-2.5 font-mono font-bold text-blue-700 text-sm transition focus:border-blue-500 shadow-sm"
+              className="admin-input admin-input-mono"
               value={formData.code}
               onChange={(e) => {
                 setIsCodeEdited(true);
@@ -130,18 +121,18 @@ const ProductTypeFormPage = () => {
               }}
               placeholder="e.g. SAVINGS"
             />
-            <p className="mt-1.5 text-[10px] text-gray-400 font-medium italic">The immutable identifier used for API calls and system logic.</p>
+            <p className="admin-help">The immutable identifier used for API calls and system logic.</p>
           </div>
-          <div className="pt-4 flex space-x-3">
-            <button type="button" onClick={handleCancel} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition uppercase tracking-widest text-[10px]">Cancel</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center shadow-lg shadow-blue-100 uppercase tracking-widest text-[10px] disabled:opacity-50">
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+          <div className="admin-actions">
+            <button type="button" onClick={handleCancel} className="admin-secondary-btn sm:min-w-[140px]">Cancel</button>
+            <button type="submit" disabled={submitting} className="admin-primary-btn sm:min-w-[160px] sm:justify-center">
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Type
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </AdminPage>
   );
 };
 

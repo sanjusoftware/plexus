@@ -68,7 +68,7 @@ const OnboardingPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, setEntityName]);
+  }, [id, setEntityName, setToast]);
 
   useEffect(() => {
     if (!isAdmin) {

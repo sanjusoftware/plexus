@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Save, X, Shield, CheckCircle2, Loader2, Lock, CheckSquare, Square, MinusSquare, Circle } from 'lucide-react';
+import { Save, Shield, CheckCircle2, Loader2, Lock, CheckSquare, Square, MinusSquare, Circle } from 'lucide-react';
+import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -51,7 +52,7 @@ const RoleFormPage = () => {
     };
 
     fetchData();
-  }, [roleName, isEditing, setEntityName]);
+  }, [roleName, isEditing, setEntityName, setToast]);
 
   const toggleAuthority = (auth: string) => {
     const newAuths = new Set(formData.authorities);
@@ -129,40 +130,24 @@ const RoleFormPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center p-32">
-        <Loader2 className="w-16 h-16 animate-spin text-blue-600" />
+      <div className="flex justify-center p-20">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-10 space-y-4">
-      {/* Header */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center overflow-hidden relative">
-        <div className="flex items-center space-x-4 relative">
-          <div className="p-3 bg-blue-100 rounded-xl shadow-inner shadow-blue-200">
-            <Shield className="w-6 h-6 text-blue-700" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
-              {isEditing ? 'Authority Configuration' : 'Register New Role'}
-            </h1>
-            <p className="text-gray-500 font-bold mt-0.5 uppercase tracking-widest text-[10px]">
-              {isEditing ? `Modifying system permissions for role ${roleName}` : 'Define a new role and select its system permissions'}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => navigate('/roles')}
-          className="bg-gray-100 text-gray-500 p-2 rounded-xl hover:bg-gray-200 transition relative z-10"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
+    <AdminPage>
+      <AdminFormHeader
+        icon={Shield}
+        title={isEditing ? 'Authority Configuration' : 'Register New Role'}
+        description={isEditing ? `Modifying system permissions for role ${roleName}` : 'Define a new role and select its system permissions'}
+        onClose={() => navigate('/roles')}
+      />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
-          <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100/50 relative overflow-hidden">
+        <form onSubmit={handleSubmit} className="space-y-6 p-5">
+          <div className="relative overflow-hidden rounded-xl border border-blue-100/50 bg-blue-50/50 p-5">
             <div className="relative">
               <label className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-3">Role Name (Key)</label>
               <div className="relative max-w-xl">
@@ -184,8 +169,8 @@ const RoleFormPage = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6 px-2">Select Authorized Operations</label>
-            <div className="space-y-6">
+            <label className="mb-4 block px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Select Authorized Operations</label>
+            <div className="space-y-4">
               {Object.entries(groupAuthorities(availableAuthorities)).map(([category, subGroups]) => {
                 const allAuthsInCategory = Object.values(subGroups).flat();
                 const selectedInCat = allAuthsInCategory.filter(a => formData.authorities.includes(a));
@@ -193,8 +178,8 @@ const RoleFormPage = () => {
                 const isSomeSelected = selectedInCat.length > 0 && !isAllSelected;
 
                 return (
-                  <div key={category} className="bg-gray-50/50 rounded-xl border border-gray-100 p-6">
-                    <div className="flex items-center justify-between mb-6 pb-3 border-b border-gray-200/50">
+                  <div key={category} className="rounded-xl border border-gray-100 bg-gray-50/50 p-5">
+                    <div className="mb-4 flex items-center justify-between border-b border-gray-200/50 pb-3">
                       <h3 className="text-xs font-bold text-gray-900 uppercase tracking-tight flex items-center">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
                         {formatCategory(category)}
@@ -212,7 +197,7 @@ const RoleFormPage = () => {
                       </button>
                     </div>
 
-                    <div className="space-y-4">
+                     <div className="space-y-3">
                       {/* Sub-groups */}
                       {Object.entries(subGroups)
                         .sort(([a], [b]) => {
@@ -298,7 +283,7 @@ const RoleFormPage = () => {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-gray-50 flex space-x-4">
+          <div className="flex space-x-4 border-t border-gray-50 pt-6">
             <button type="button" onClick={() => navigate('/roles')} className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard</button>
             <button
               type="submit"
@@ -311,7 +296,7 @@ const RoleFormPage = () => {
           </div>
         </form>
       </div>
-    </div>
+    </AdminPage>
   );
 };
 

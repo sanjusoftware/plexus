@@ -1,3 +1,122 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .admin-page {
+	@apply mx-auto w-full space-y-3 pb-6;
+  }
+
+  .admin-page-header {
+	@apply flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .admin-page-header__content {
+	@apply flex min-w-0 items-start gap-3;
+  }
+
+  .admin-page-header__icon {
+	@apply hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex;
+  }
+
+  .admin-page-header__title {
+	@apply text-lg font-bold tracking-tight text-gray-900;
+  }
+
+  .admin-page-header__description {
+	@apply mt-0.5 text-xs text-gray-500;
+  }
+
+  .admin-page-header__actions {
+	@apply flex shrink-0 items-center gap-2 self-start sm:self-center;
+  }
+
+  .admin-card {
+	@apply rounded-xl border border-gray-200 bg-white shadow-sm;
+  }
+
+  .admin-info-banner {
+	@apply flex items-start gap-3 rounded-xl border-l-4 px-4 py-3 shadow-sm;
+  }
+
+  .admin-info-banner__icon {
+	@apply mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg;
+  }
+
+  .admin-icon-button {
+	@apply inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600;
+  }
+
+  .admin-primary-btn {
+	@apply inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .admin-secondary-btn {
+	@apply inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-xs font-bold uppercase tracking-widest text-gray-600 transition hover:bg-gray-50;
+  }
+
+  .admin-form {
+	@apply rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5;
+  }
+
+  .admin-form-grid {
+	@apply grid grid-cols-1 gap-4 md:grid-cols-2;
+  }
+
+  .admin-field {
+	@apply space-y-1.5;
+  }
+
+  .admin-label {
+	@apply block text-[10px] font-bold uppercase tracking-widest text-gray-500;
+  }
+
+  .admin-help {
+	@apply text-[10px] font-medium italic text-gray-400;
+  }
+
+  .admin-input {
+	@apply block w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-900 shadow-sm transition focus:border-blue-500 focus:outline-none;
+  }
+
+  .admin-input-mono {
+	@apply font-mono font-bold text-blue-700;
+  }
+
+  .admin-textarea {
+	@apply min-h-20 resize-y;
+  }
+
+  .admin-actions {
+	@apply flex flex-col-reverse gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:justify-end;
+  }
+
+  .admin-table-card {
+	@apply overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm;
+  }
+
+  .admin-table {
+	@apply min-w-full divide-y divide-gray-100;
+  }
+
+  .admin-table thead {
+	@apply bg-gray-50/80;
+  }
+
+  .admin-table th {
+	@apply px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500;
+  }
+
+  .admin-table td {
+	@apply px-4 py-2.5 text-xs text-gray-700;
+  }
+
+  .admin-table tbody {
+	@apply divide-y divide-gray-100 bg-white;
+  }
+
+  .admin-empty-state {
+	@apply px-4 py-8 text-center text-sm italic text-gray-500;
+  }
+}
+

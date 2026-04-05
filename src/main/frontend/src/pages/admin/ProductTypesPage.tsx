@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, List, CheckCircle2 } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
+import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { useAuth } from '../../context/AuthContext';
 
 interface ProductType {
@@ -21,7 +22,7 @@ const ProductTypesPage = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [typeToActOn, setTypeToActOn] = useState<ProductType | null>(null);
 
-  const fetchProductTypes = async () => {
+  const fetchProductTypes = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/v1/product-types');
@@ -31,11 +32,11 @@ const ProductTypesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setToast]);
 
   useEffect(() => {
     fetchProductTypes();
-  }, []);
+  }, [fetchProductTypes]);
 
   const handleAction = async (id: number, action: string) => {
     try {
@@ -73,48 +74,48 @@ const ProductTypesPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 flex items-center">
-            <List className="w-5 h-5 mr-2 text-blue-600" /> Product Types
-          </h1>
-          <p className="text-gray-500 text-xs mt-0.5">Define broad categories for your bank's products (e.g., SAVINGS, LOANS).</p>
-        </div>
-        <HasPermission action="POST" path="/api/v1/product-types">
-          <button
-            onClick={() => navigate('/product-types/create')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition font-bold shadow-md shadow-blue-100 text-sm"
-          >
-            <Plus className="w-4 h-4 mr-1.5" /> Add New Type
-          </button>
-        </HasPermission>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        icon={List}
+        title="Product Types"
+        description="Define broad categories for your bank's products such as savings, loans, and cards."
+        actions={
+          <HasPermission action="POST" path="/api/v1/product-types">
+            <button
+              onClick={() => navigate('/product-types/create')}
+              className="admin-primary-btn"
+            >
+              <Plus className="h-4 w-4" />
+              Add New Type
+            </button>
+          </HasPermission>
+        }
+      />
 
       {loading ? (
-        <div className="flex justify-center p-12 bg-white rounded-xl border"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+        <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50">
+        <div className="admin-table-card">
+          <table className="admin-table">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Code</th>
-                <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <tbody>
               {productTypes.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm italic">No product types found. Get started by creating your first one.</td>
+                  <td colSpan={4} className="admin-empty-state">No product types found. Get started by creating your first one.</td>
                 </tr>
               ) : (
                 productTypes.map((type) => (
                   <tr key={type.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-3 whitespace-nowrap text-xs font-mono font-bold text-blue-700">{type.code}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-xs text-gray-900 font-medium">{type.name}</td>
-                    <td className="px-6 py-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap font-mono font-bold text-blue-700">{type.code}</td>
+                    <td className="whitespace-nowrap text-sm font-medium text-gray-900">{type.name}</td>
+                    <td className="whitespace-nowrap">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         type.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
                         type.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
@@ -123,21 +124,21 @@ const ProductTypesPage = () => {
                         {type.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-right text-xs font-medium space-x-2">
+                    <td className="whitespace-nowrap text-right text-xs font-medium space-x-2">
                       {type.status === 'DRAFT' && (
                         <HasPermission action="POST" path="/api/v1/product-types/*/activate">
-                          <button onClick={() => handleAction(type.id, 'activate')} className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-green-200 transition flex items-center inline-flex" title="Activate">
-                            <CheckCircle2 className="w-3 h-3 mr-1" /> Activate
+                          <button onClick={() => handleAction(type.id, 'activate')} className="inline-flex items-center rounded-lg bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700 transition hover:bg-green-200" title="Activate">
+                            <CheckCircle2 className="mr-1 h-3 w-3" /> Activate
                           </button>
                         </HasPermission>
                       )}
                       {type.status !== 'ARCHIVED' && (
                         <>
                           <HasPermission action="PUT" path="/api/v1/product-types/*">
-                            <button onClick={() => navigate(`/product-types/edit/${type.id}`)} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => navigate(`/product-types/edit/${type.id}`)} className="rounded-lg p-1.5 text-blue-600 transition hover:bg-blue-50" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/product-types/*">
-                            <button onClick={() => triggerConfirmAction(type)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => triggerConfirmAction(type)} className="rounded-lg p-1.5 text-red-600 transition hover:bg-red-50" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="h-3.5 w-3.5" /></button>
                           </HasPermission>
                         </>
                       )}
@@ -161,7 +162,7 @@ const ProductTypesPage = () => {
         confirmText={typeToActOn?.status === 'DRAFT' ? "Confirm & Delete" : "Confirm & Archive"}
         variant="danger"
       />
-    </div>
+    </AdminPage>
   );
 };
 

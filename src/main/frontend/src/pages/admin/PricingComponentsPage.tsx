@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, Info } from 'lucide-react';
+import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 
@@ -48,7 +49,7 @@ const PricingComponentsPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
-  const normalizeTier = (tier: any): PricingTier => {
+  const normalizeTier = useCallback((tier: any): PricingTier => {
     const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) ? tier.priceValues[0] : null);
     return {
       ...tier,
@@ -61,14 +62,14 @@ const PricingComponentsPage = () => {
         rawValue: firstValue?.rawValue
       }
     };
-  };
+  }, []);
 
-  const normalizeComponent = (component: any): PricingComponent => ({
+  const normalizeComponent = useCallback((component: any): PricingComponent => ({
     ...component,
     pricingTiers: (component.pricingTiers || []).map(normalizeTier)
-  });
+  }), [normalizeTier]);
 
-  const fetchComponents = async () => {
+  const fetchComponents = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/v1/pricing-components');
@@ -78,11 +79,11 @@ const PricingComponentsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [normalizeComponent, setToast]);
 
   useEffect(() => {
     fetchComponents();
-  }, []);
+  }, [fetchComponents]);
 
   const toggleExpand = (id: number) => {
     const newExpanded = new Set(expandedRows);
@@ -113,73 +114,68 @@ const PricingComponentsPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 pb-10">
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-purple-50 rounded-xl"><Tag className="w-6 h-6 text-purple-600" /></div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Pricing Components</h1>
-            <p className="text-gray-500 font-medium mt-0.5 text-xs">Manage reusable pricing structures with multi-tier logic.</p>
-          </div>
-        </div>
-        <HasPermission action="POST" path="/api/v1/pricing-components">
-          <button
-            onClick={() => navigate('/pricing-components/create')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition font-bold shadow-md shadow-blue-100 text-sm"
-          >
-            <Plus className="w-4 h-4 mr-1.5" /> New Component
-          </button>
-        </HasPermission>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        icon={Tag}
+        tone="purple"
+        title="Pricing Components"
+        description="Manage reusable pricing structures with multi-tier logic."
+        actions={
+          <HasPermission action="POST" path="/api/v1/pricing-components">
+            <button
+              onClick={() => navigate('/pricing-components/create')}
+              className="admin-primary-btn"
+            >
+              <Plus className="h-4 w-4" /> New Component
+            </button>
+          </HasPermission>
+        }
+      />
 
-      <div className="bg-blue-50/50 border-l-4 border-blue-400 p-4 rounded-r-xl shadow-sm flex items-start space-x-4">
-        <div className="p-2 bg-blue-100 rounded-lg"><Info className="w-5 h-5 text-blue-700" /></div>
-        <p className="text-xs text-blue-900 font-medium leading-relaxed italic">
-          <strong>Expert Guidance:</strong> Components define the "what" (e.g., Monthly Fee), while Tiers define the "when" and "how much" (e.g., $10 for RETAIL segment).
-          Linking a component to a product enables these rules to execute during bundle pricing.
-        </p>
-      </div>
+      <AdminInfoBanner icon={Info} title="Expert Guidance">
+        <span className="italic">Components define the “what” (for example Monthly Fee), while tiers define the “when” and “how much”. Linking a component to a product enables these rules to execute during bundle pricing.</span>
+      </AdminInfoBanner>
 
       {loading ? (
-        <div className="flex justify-center p-16 bg-white rounded-xl border border-gray-100"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>
+        <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/50">
+        <div className="admin-table-card">
+          <table className="admin-table">
+            <thead>
               <tr>
-                <th className="w-10 px-4 py-3"></th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aggregate Component</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Type</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Segments</th>
-                <th className="px-4 py-3 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Actions</th>
+                <th className="w-10"></th>
+                <th>Aggregate Component</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Segments</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-50">
+            <tbody>
               {components.map((comp) => (
                 <React.Fragment key={comp.id}>
                   <tr className="hover:bg-gray-50 transition cursor-pointer group" onClick={() => toggleExpand(comp.id)}>
-                    <td className="px-4 py-3 text-center">
+                    <td className="text-center">
                       {expandedRows.has(comp.id) ? <ChevronDown className="w-4 h-4 text-blue-600 font-bold" /> : <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-400" />}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       <div className="text-sm font-bold text-gray-900 leading-tight">{comp.name}</div>
                       <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest">{comp.code}</div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${comp.type === 'FEE' ? 'bg-purple-50 text-purple-700 border border-purple-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
                         {comp.type}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${comp.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-yellow-50 text-yellow-700 border border-yellow-100'}`}>
                         {comp.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs font-bold text-gray-500">
+                    <td className="whitespace-nowrap font-bold text-gray-500">
                       {comp.pricingTiers?.length || 0} Tiers
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right text-xs font-medium space-x-1">
+                    <td className="whitespace-nowrap text-right text-xs font-medium space-x-1">
                       {comp.status === 'DRAFT' && (
                         <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
                           <button onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} className="text-green-600 hover:bg-green-50 p-1.5 rounded-lg transition border border-transparent hover:border-green-100" title="Activate Production Mode"><CheckCircle2 className="w-4 h-4" /></button>
@@ -195,7 +191,7 @@ const PricingComponentsPage = () => {
                   </tr>
                   {expandedRows.has(comp.id) && (
                     <tr className="bg-gray-50/30">
-                      <td colSpan={6} className="px-10 py-4 border-b border-gray-100">
+                      <td colSpan={6} className="border-b border-gray-100 px-8 py-3">
                         <div className="text-xs font-medium text-gray-600 mb-4 italic leading-relaxed border-l-2 border-gray-200 pl-3">{comp.description}</div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {comp.pricingTiers?.map((tier, idx) => (
@@ -240,7 +236,7 @@ const PricingComponentsPage = () => {
         </div>
       )}
 
-    </div>
+    </AdminPage>
   );
 };
 

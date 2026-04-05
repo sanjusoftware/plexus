@@ -126,13 +126,13 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main className="relative flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b px-6 py-3 flex justify-between items-center z-10">
-          <h1 className="text-xl font-bold text-gray-900 capitalize truncate mr-4">
+        <header className="z-10 flex items-center justify-between border-b bg-white px-4 py-2.5 lg:px-5">
+          <h1 className="mr-4 truncate text-lg font-bold capitalize text-gray-900 lg:text-xl">
             {user?.bankName || bankId}
           </h1>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-gray-900">{user?.name || user?.sub}</p>
               <p className="text-[10px] text-gray-500 mb-0.5">{user?.email}</p>
@@ -156,7 +156,7 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
         </header>
 
         {/* Content Area */}
-        <section className="flex-1 overflow-y-auto p-6">
+        <section className="flex-1 overflow-y-auto px-4 py-4 lg:px-5 lg:py-4.5">
           <Breadcrumbs />
           {children}
         </section>

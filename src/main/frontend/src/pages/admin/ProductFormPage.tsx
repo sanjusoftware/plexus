@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Trash2, Loader2, Save, X, ShieldCheck, Tag, HelpCircle, Zap } from 'lucide-react';
+import { Trash2, Loader2, Save, Package, ShieldCheck, Tag, HelpCircle, Zap } from 'lucide-react';
+import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import PlexusSelect from '../../components/PlexusSelect';
@@ -86,7 +87,7 @@ const ProductFormPage = () => {
     };
 
     fetchData();
-  }, [id, isEditing, setEntityName]);
+  }, [id, isEditing, setEntityName, setToast]);
 
   const addFeatureLink = () => {
     setFormData({
@@ -143,34 +144,24 @@ const ProductFormPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center p-32">
-        <Loader2 className="w-16 h-16 animate-spin text-blue-600" />
+      <div className="flex justify-center p-20">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 pb-10">
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center relative overflow-hidden">
-        <div className="relative">
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
-            {isEditing ? 'Update Product' : 'New Product'}
-          </h1>
-          <p className="text-gray-500 font-bold mt-0.5 uppercase tracking-widest text-[10px]">
-            Unified configuration of basic data, reusable features, and pricing bindings.
-          </p>
-        </div>
-        <button
-          onClick={() => navigate('/products')}
-          className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-gray-100 transition relative border border-gray-100 shadow-sm"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
+    <AdminPage>
+      <AdminFormHeader
+        icon={Package}
+        title={isEditing ? 'Update Product' : 'New Product'}
+        description="Unified configuration of basic data, reusable features, and pricing bindings."
+        onClose={() => navigate('/products')}
+      />
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <form onSubmit={handleSubmit} className="space-y-6 p-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Product Title</label>
               <input
@@ -241,15 +232,15 @@ const ProductFormPage = () => {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-8">
-            <div className="flex justify-between items-center mb-6">
+          <div className="border-t border-gray-100 pt-6">
+            <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-50 rounded-xl"><ShieldCheck className="w-5 h-5 text-blue-600" /></div>
                 <h3 className="text-lg font-bold text-gray-900 tracking-tight">Feature Component Links</h3>
               </div>
               <button type="button" onClick={addFeatureLink} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md shadow-blue-50">+ Add Component Link</button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {formData.features.map((link: any, idx: number) => (
                 <div key={idx} className="bg-gray-50 p-6 rounded-xl border border-gray-100 relative group transition hover:border-blue-200">
                   <button type="button" onClick={() => {
@@ -337,8 +328,8 @@ const ProductFormPage = () => {
             </div>
           </div>
 
-           <div className="border-t border-gray-100 pt-8">
-            <div className="flex justify-between items-center mb-6">
+           <div className="border-t border-gray-100 pt-6">
+            <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                  <div className="p-2 bg-purple-50 rounded-xl"><Tag className="w-5 h-5 text-purple-600" /></div>
                  <h3 className="text-lg font-bold text-gray-900 tracking-tight">Pricing Rule Bindings</h3>
@@ -355,7 +346,7 @@ const ProductFormPage = () => {
                 <button type="button" onClick={addPricingLink} className="bg-purple-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-purple-700 transition shadow-md shadow-purple-50">+ Add Pricing Link</button>
               </div>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Pricing Help Panel */}
               {showPricingHelp && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
@@ -466,7 +457,7 @@ const ProductFormPage = () => {
             </div>
           </div>
 
-           <div className="pt-8 border-t border-gray-100 flex space-x-4">
+           <div className="flex space-x-4 border-t border-gray-100 pt-6">
              <button type="button" onClick={() => navigate('/products')} className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
              {!isEditing && (
                <button
@@ -497,7 +488,7 @@ const ProductFormPage = () => {
         onClose={() => setShowPriceSimulation(false)}
         defaultProductId={id ? parseInt(id) : undefined}
       />
-    </div>
+    </AdminPage>
   );
 };
 

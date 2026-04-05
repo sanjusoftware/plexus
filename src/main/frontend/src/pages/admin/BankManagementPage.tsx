@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, AlertCircle, Edit
+  Building2, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit
 } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
 import axios from 'axios';
@@ -20,7 +20,7 @@ const BankManagementPage = () => {
   const [bankToDeactivate, setBankToDeactivate] = useState<string | null>(null);
   const [bankToReject, setBankToReject] = useState<string | null>(null);
 
-  const fetchBanks = async () => {
+  const fetchBanks = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/v1/banks');
@@ -31,13 +31,13 @@ const BankManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setToast]);
 
   useEffect(() => {
     if (!authLoading && user) {
       fetchBanks();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, fetchBanks]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'reject') => {
     try {

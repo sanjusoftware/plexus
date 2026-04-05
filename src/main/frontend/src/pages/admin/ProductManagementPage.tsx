@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info } from 'lucide-react';
+import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 
@@ -41,7 +42,7 @@ const ProductManagementPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
       const p = await axios.get('/api/v1/products');
@@ -51,7 +52,7 @@ const ProductManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setToast]);
 
   useEffect(() => {
     fetchInitialData();
@@ -59,7 +60,7 @@ const ProductManagementPage = () => {
       setToast({ message: location.state.success, type: 'success' });
       window.history.replaceState({}, document.title);
     }
-  }, [location, setToast]);
+  }, [location, setToast, fetchInitialData]);
 
   const handleStatusAction = async (id: number, action: string) => {
     try {
@@ -83,38 +84,29 @@ const ProductManagementPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 pb-10">
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-blue-50 rounded-xl shadow-inner shadow-blue-100"><Package className="w-6 h-6 text-blue-600" /></div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Product Management</h1>
-            <p className="text-gray-500 font-bold mt-0.5 uppercase tracking-widest text-[10px]">Configure Bank Offerings, Feature Sets & Pricing Bindings</p>
-          </div>
-        </div>
-        <HasPermission action="POST" path="/api/v1/products">
-          <button
-            onClick={() => navigate('/products/create')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition font-bold shadow-md shadow-blue-100 text-sm"
-          >
-            <Plus className="w-4 h-4 mr-1.5" /> Create New Product
-          </button>
-        </HasPermission>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        icon={Package}
+        title="Product Management"
+        description="Configure bank offerings, feature sets, and pricing bindings."
+        actions={
+          <HasPermission action="POST" path="/api/v1/products">
+            <button
+              onClick={() => navigate('/products/create')}
+              className="admin-primary-btn"
+            >
+              <Plus className="h-4 w-4" /> Create New Product
+            </button>
+          </HasPermission>
+        }
+      />
 
-      <div className="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-r-xl shadow-sm flex items-start space-x-4">
-        <div className="p-2 bg-indigo-100 rounded-lg"><Info className="w-5 h-5 text-indigo-700" /></div>
-        <div>
-           <p className="text-xs text-indigo-900 font-bold leading-relaxed uppercase tracking-wide mb-1">FAT DTO Architecture</p>
-           <p className="text-xs text-indigo-800 font-medium leading-relaxed italic max-w-4xl">
-              This system uses a decoupled model. Products are aggregates that link to reusable <strong>Feature Components</strong> and <strong>Pricing Components</strong>.
-              You can create the product, its features, and its pricing links in one atomic request below.
-           </p>
-        </div>
-      </div>
+      <AdminInfoBanner icon={Info} title="Fat DTO Architecture" tone="indigo">
+        <span className="italic">This system uses a decoupled model. Products are aggregates that link to reusable <strong>Feature Components</strong> and <strong>Pricing Components</strong>. You can create the product, its features, and its pricing links in one atomic request below.</span>
+      </AdminInfoBanner>
 
       {loading ? (
-        <div className="flex justify-center p-16 bg-white rounded-xl border border-gray-100 shadow-sm"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>
+        <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {products.length === 0 ? (
@@ -195,7 +187,7 @@ const ProductManagementPage = () => {
         </div>
       )}
 
-    </div>
+    </AdminPage>
   );
 };
 

@@ -92,21 +92,21 @@ const Breadcrumbs: React.FC = () => {
   if (crumbs.length === 0) return null;
 
   return (
-    <nav className="flex mb-6" aria-label="Breadcrumb">
+    <nav className="mb-4 flex" aria-label="Breadcrumb">
       <ol className="inline-flex items-center space-x-1 md:space-x-3">
         {crumbs.map((crumb, index) => (
           <li key={crumb.path} className="inline-flex items-center">
             {index > 0 && (
-              <ChevronRight className="w-4 h-4 text-gray-400 mx-1" />
+              <ChevronRight className="mx-1 h-4 w-4 text-gray-400" />
             )}
             {crumb.isLast ? (
-              <span className="text-sm font-black text-gray-900 uppercase tracking-widest">
+              <span className="text-xs font-black uppercase tracking-widest text-gray-900 sm:text-sm">
                 {crumb.label}
               </span>
             ) : (
               <Link
                 to={crumb.path}
-                className="text-sm font-bold text-gray-500 hover:text-blue-600 transition uppercase tracking-widest"
+                className="text-xs font-bold uppercase tracking-widest text-gray-500 transition hover:text-blue-600 sm:text-sm"
               >
                 {crumb.label}
               </Link>

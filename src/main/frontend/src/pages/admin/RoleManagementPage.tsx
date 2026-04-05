@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Trash2, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
@@ -57,7 +58,7 @@ const RoleManagementPage = () => {
     return subCategory.split(':').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
   };
 
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
       const m = await axios.get('/api/v1/roles/mapping');
@@ -70,7 +71,7 @@ const RoleManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setToast]);
 
   useEffect(() => {
     fetchInitialData();
@@ -78,7 +79,7 @@ const RoleManagementPage = () => {
       setToast({ message: location.state.success, type: 'success' });
       window.history.replaceState({}, document.title);
     }
-  }, [location, setToast]);
+  }, [location, setToast, fetchInitialData]);
 
   const handleDelete = async (roleName: string) => {
     try {
@@ -96,39 +97,29 @@ const RoleManagementPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 pb-10">
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center overflow-hidden relative">
-        <div className="flex items-center space-x-4 relative">
-          <div className="p-3 bg-blue-100 rounded-xl shadow-inner shadow-blue-200"><Shield className="w-6 h-6 text-blue-700" /></div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Roles & Permissions</h1>
-            <p className="text-gray-500 font-bold mt-0.5 uppercase tracking-widest text-[10px]">Map Identity Provider roles to granular system authorities</p>
-          </div>
-        </div>
-        <HasPermission action="POST" path="/api/v1/roles/mapping">
-          <button
-            onClick={() => navigate('/roles/register')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition font-bold shadow-md shadow-blue-100 uppercase tracking-widest text-[10px] relative"
-          >
-            <Plus className="w-4 h-4 mr-1.5" /> Register New Role
-          </button>
-        </HasPermission>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        icon={Shield}
+        title="Roles & Permissions"
+        description="Map identity provider roles to granular system authorities."
+        actions={
+          <HasPermission action="POST" path="/api/v1/roles/mapping">
+            <button
+              onClick={() => navigate('/roles/register')}
+              className="admin-primary-btn"
+            >
+              <Plus className="h-4 w-4" /> Register New Role
+            </button>
+          </HasPermission>
+        }
+      />
 
-      <div className="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-r-xl shadow-sm flex items-start space-x-4">
-        <div className="p-2 bg-indigo-100 rounded-lg"><Info className="w-5 h-5 text-indigo-700" /></div>
-        <div>
-           <p className="text-xs text-indigo-900 font-bold leading-relaxed uppercase tracking-wide mb-1">Internal RBAC Model</p>
-           <p className="text-xs text-indigo-800 font-medium leading-relaxed italic max-w-4xl">
-              Permissions are aggregated based on the roles present in the user's token.
-              Only authorities explicitly mapped below will be granted during the session handshake.
-              The <strong>SYSTEM_ADMIN</strong> role is managed globally and cannot be modified here.
-           </p>
-        </div>
-      </div>
+      <AdminInfoBanner icon={Info} title="Internal RBAC Model" tone="indigo">
+        <span className="italic">Permissions are aggregated based on the roles present in the user&apos;s token. Only authorities explicitly mapped below will be granted during the session handshake. The <strong>SYSTEM_ADMIN</strong> role is managed globally and cannot be modified here.</span>
+      </AdminInfoBanner>
 
       {loading ? (
-        <div className="flex justify-center p-16 bg-white rounded-xl border border-gray-100"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>
+        <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
         <div className="space-y-4">
           {mappings.map((mapping) => {
@@ -238,7 +229,7 @@ const RoleManagementPage = () => {
         confirmText="Confirm & Delete"
         variant="danger"
       />
-    </div>
+    </AdminPage>
   );
 };
 
