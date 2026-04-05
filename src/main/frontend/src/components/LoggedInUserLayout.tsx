@@ -18,6 +18,14 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
 
+  React.useEffect(() => {
+    const width = isCollapsed ? '80px' : '240px';
+    document.documentElement.style.setProperty('--sidebar-width', width);
+    return () => {
+      document.documentElement.style.removeProperty('--sidebar-width');
+    };
+  }, [isCollapsed]);
+
   const roles = (user?.roles as string[]) || [];
 
   const navItems = [
