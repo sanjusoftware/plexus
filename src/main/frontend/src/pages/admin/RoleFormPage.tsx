@@ -24,12 +24,13 @@ const RoleFormPage = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchData = async () => {
       setLoading(true);
       try {
         const [authsRes, mappingsRes] = await Promise.all([
-          axios.get('/api/v1/roles/authorities'),
-          isEditing ? axios.get('/api/v1/roles/mapping') : Promise.resolve({ data: [] })
+          axios.get('/api/v1/roles/authorities', { signal: controller.signal }),
+          isEditing ? axios.get('/api/v1/roles/mapping', { signal: controller.signal }) : Promise.resolve({ data: [] })
         ]);
 
         setAvailableAuthorities(authsRes.data || []);
@@ -45,13 +46,17 @@ const RoleFormPage = () => {
           }
         }
       } catch (err: any) {
+        if (axios.isCancel(err)) return;
         setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+    return () => controller.abort();
   }, [roleName, isEditing, setEntityName, setToast]);
 
   const toggleAuthority = (auth: string) => {

@@ -58,27 +58,32 @@ const RoleManagementPage = () => {
     return subCategory.split(':').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
   };
 
-  const fetchInitialData = useCallback(async () => {
+  const fetchInitialData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const m = await axios.get('/api/v1/roles/mapping');
+      const m = await axios.get('/api/v1/roles/mapping', { signal });
       setMappings(m.data.map((r: any) => ({
         name: r.name,
         authorities: r.authorities || []
       })) || []);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch role mappings. Ensure you are a Bank Admin.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
-    fetchInitialData();
+    const controller = new AbortController();
+    fetchInitialData(controller.signal);
     if (location.state?.success) {
       setToast({ message: location.state.success, type: 'success' });
       window.history.replaceState({}, document.title);
     }
+    return () => controller.abort();
   }, [location, setToast, fetchInitialData]);
 
   const handleDelete = async (roleName: string) => {

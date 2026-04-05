@@ -20,23 +20,28 @@ const BankManagementPage = () => {
   const [bankToDeactivate, setBankToDeactivate] = useState<string | null>(null);
   const [bankToReject, setBankToReject] = useState<string | null>(null);
 
-  const fetchBanks = useCallback(async () => {
+  const fetchBanks = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/banks');
+      const response = await axios.get('/api/v1/banks', { signal });
       setBanks(response.data || []);
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error('Failed to fetch banks:', err);
       setToast({ message: 'Failed to fetch banks. Make sure you have SYSTEM_ADMIN permissions.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
+    const controller = new AbortController();
     if (!authLoading && user) {
-      fetchBanks();
+      fetchBanks(controller.signal);
     }
+    return () => controller.abort();
   }, [user, authLoading, fetchBanks]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'reject') => {

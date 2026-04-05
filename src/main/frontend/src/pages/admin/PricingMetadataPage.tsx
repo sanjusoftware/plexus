@@ -27,20 +27,25 @@ const PricingMetadataPage = () => {
   const [metadata, setMetadata] = useState<PricingMetadata[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchMetadata = useCallback(async () => {
+  const fetchMetadata = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/pricing-metadata');
+      const response = await axios.get('/api/v1/pricing-metadata', { signal });
       setMetadata(response.data);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch pricing metadata. Check your permissions.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
-    fetchMetadata();
+    const controller = new AbortController();
+    fetchMetadata(controller.signal);
+    return () => controller.abort();
   }, [fetchMetadata]);
 
   const handleDelete = async (attributeKey: string) => {

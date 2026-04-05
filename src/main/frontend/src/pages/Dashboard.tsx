@@ -47,29 +47,34 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  const fetchStats = async () => {
+  const fetchStats = async (signal?: AbortSignal) => {
     if (!user) return;
     setLoading(true);
     try {
       const requests = [];
       if (canReadBankStats) {
-        requests.push(axios.get('/api/v1/dashboard/stats/local').then(res => setLocalStats(res.data)));
+        requests.push(axios.get('/api/v1/dashboard/stats/local', { signal }).then(res => setLocalStats(res.data)));
       }
       if (canReadSystemStats) {
-        requests.push(axios.get('/api/v1/dashboard/stats/global').then(res => setGlobalStats(res.data)));
+        requests.push(axios.get('/api/v1/dashboard/stats/global', { signal }).then(res => setGlobalStats(res.data)));
       }
       await Promise.all(requests);
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error('Failed to fetch dashboard stats:', err);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    const controller = new AbortController();
     if (!authLoading && user) {
-      fetchStats();
+      fetchStats(controller.signal);
     }
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, canReadBankStats, canReadSystemStats]);
 

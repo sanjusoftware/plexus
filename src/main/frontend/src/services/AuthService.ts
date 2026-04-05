@@ -41,24 +41,26 @@ export class AuthService {
     }
   }
 
-  public async getUser(): Promise<UserProfile | null> {
+  public async getUser(signal?: AbortSignal): Promise<UserProfile | null> {
     try {
-      const response = await axios.get('/api/v1/auth/user');
+      const response = await axios.get('/api/v1/auth/user', { signal });
       // Ensure we got a JSON response and not an HTML redirect page
       if (response.data && typeof response.data === 'object' && 'sub' in response.data) {
         return response.data;
       }
       return null;
     } catch (err) {
+      if (axios.isCancel(err)) throw err;
       return null;
     }
   }
 
-  public async getPermissionsMap(): Promise<Record<string, string[]>> {
+  public async getPermissionsMap(signal?: AbortSignal): Promise<Record<string, string[]>> {
     try {
-      const response = await axios.get('/api/v1/roles/permissions-map');
+      const response = await axios.get('/api/v1/roles/permissions-map', { signal });
       return response.data || {};
     } catch (err) {
+      if (axios.isCancel(err)) throw err;
       console.error('Failed to fetch permissions map', err);
       return {};
     }

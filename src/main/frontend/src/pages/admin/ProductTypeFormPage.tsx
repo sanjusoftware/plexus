@@ -20,9 +20,10 @@ const ProductTypeFormPage = () => {
 
   useEffect(() => {
     if (isEditing) {
+      const controller = new AbortController();
       const fetchType = async () => {
         try {
-          const response = await axios.get('/api/v1/product-types');
+          const response = await axios.get('/api/v1/product-types', { signal: controller.signal });
           const type = response.data.find((t: any) => t.id.toString() === id);
           if (type) {
             setFormData({ name: type.name, code: type.code });
@@ -32,12 +33,16 @@ const ProductTypeFormPage = () => {
             setToast({ message: 'Product type not found.', type: 'error' });
           }
         } catch (err: any) {
+          if (axios.isCancel(err)) return;
           setToast({ message: 'Failed to fetch product type.', type: 'error' });
         } finally {
-          setLoading(false);
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
         }
       };
       fetchType();
+      return () => controller.abort();
     }
   }, [id, isEditing, setEntityName, setToast]);
 

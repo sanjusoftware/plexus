@@ -42,24 +42,29 @@ const ProductManagementPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchInitialData = useCallback(async () => {
+  const fetchInitialData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const p = await axios.get('/api/v1/products');
+      const p = await axios.get('/api/v1/products', { signal });
       setProducts(p.data.content || []);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch products. Please check your role permissions.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
-    fetchInitialData();
+    const controller = new AbortController();
+    fetchInitialData(controller.signal);
     if (location.state?.success) {
       setToast({ message: location.state.success, type: 'success' });
       window.history.replaceState({}, document.title);
     }
+    return () => controller.abort();
   }, [location, setToast, fetchInitialData]);
 
   const handleStatusAction = async (id: number, action: string) => {

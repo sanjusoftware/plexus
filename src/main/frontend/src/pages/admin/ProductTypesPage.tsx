@@ -30,20 +30,25 @@ const ProductTypesPage = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [typeToActOn, setTypeToActOn] = useState<ProductType | null>(null);
 
-  const fetchProductTypes = useCallback(async () => {
+  const fetchProductTypes = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/product-types');
+      const response = await axios.get('/api/v1/product-types', { signal });
       setProductTypes(response.data);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch product types. Make sure you have the required permissions.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
-    fetchProductTypes();
+    const controller = new AbortController();
+    fetchProductTypes(controller.signal);
+    return () => controller.abort();
   }, [fetchProductTypes]);
 
   const handleAction = async (id: number, action: string) => {

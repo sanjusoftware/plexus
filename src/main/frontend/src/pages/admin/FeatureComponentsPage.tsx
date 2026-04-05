@@ -29,20 +29,25 @@ const FeatureComponentsPage = () => {
   const [features, setFeatures] = useState<FeatureComponent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchFeatures = useCallback(async () => {
+  const fetchFeatures = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/features');
+      const response = await axios.get('/api/v1/features', { signal });
       setFeatures(response.data);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch feature components.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
-    fetchFeatures();
+    const controller = new AbortController();
+    fetchFeatures(controller.signal);
+    return () => controller.abort();
   }, [fetchFeatures]);
 
   const handleActivate = async (id: number) => {

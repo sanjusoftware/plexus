@@ -127,12 +127,13 @@ const PricingComponentFormPage = () => {
   });
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchData = async () => {
       setLoading(true);
       try {
         const [metaRes, compRes] = await Promise.all([
-          axios.get('/api/v1/pricing-metadata'),
-          isEditing ? axios.get(`/api/v1/pricing-components/${id}`) : Promise.resolve({ data: null })
+          axios.get('/api/v1/pricing-metadata', { signal: controller.signal }),
+          isEditing ? axios.get(`/api/v1/pricing-components/${id}`, { signal: controller.signal }) : Promise.resolve({ data: null })
         ]);
 
         setMetadata(metaRes.data || []);
@@ -154,13 +155,17 @@ const PricingComponentFormPage = () => {
           }
         }
       } catch (err: any) {
+        if (axios.isCancel(err)) return;
         setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+    return () => controller.abort();
   }, [id, isEditing, setEntityName, setToast, mapTierFromApi]);
 
   const handleTierChange = (index: number, field: string, value: any) => {

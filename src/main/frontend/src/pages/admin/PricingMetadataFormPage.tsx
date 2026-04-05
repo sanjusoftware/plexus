@@ -23,20 +23,27 @@ const PricingMetadataFormPage = () => {
 
   useEffect(() => {
     if (isEditing) {
+      const controller = new AbortController();
       const fetchMetadata = async () => {
         try {
-          const response = await axios.get('/api/v1/pricing-metadata');
+          const response = await axios.get('/api/v1/pricing-metadata', { signal: controller.signal });
           const meta = response.data.find((m: any) => m.attributeKey === attributeKey);
-          setFormData({ attributeKey: meta.attributeKey, displayName: meta.displayName, dataType: meta.dataType });
-          setEntityName(meta.displayName);
-          setIsKeyEdited(true);
+          if (meta) {
+            setFormData({ attributeKey: meta.attributeKey, displayName: meta.displayName, dataType: meta.dataType });
+            setEntityName(meta.displayName);
+            setIsKeyEdited(true);
+          }
         } catch (err: any) {
+          if (axios.isCancel(err)) return;
           setToast({ message: 'Failed to fetch pricing metadata.', type: 'error' });
         } finally {
-          setLoading(false);
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
         }
       };
       fetchMetadata();
+      return () => controller.abort();
     }
   }, [attributeKey, isEditing, setEntityName, setToast]);
 

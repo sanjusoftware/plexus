@@ -21,7 +21,7 @@ const LivePricePreview: React.FC<LivePricePreviewProps> = ({ productId, currentF
   );
 
   // Trigger calculation when inputs change
-  const calculatePreview = useCallback(async () => {
+  const calculatePreview = useCallback(async (signal?: AbortSignal) => {
     if (!productId) {
       setError('Product ID required for price calculation');
       return;
@@ -38,20 +38,25 @@ const LivePricePreview: React.FC<LivePricePreviewProps> = ({ productId, currentF
         enrollmentDate,
       };
 
-      const pricing = await PricingService.calculateProductPrice(request);
+      const pricing = await PricingService.calculateProductPrice(request, signal);
       setResult(pricing);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setError(err.response?.data?.message || 'Failed to calculate price. Product may not be activated.');
       setResult(null);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [productId, transactionAmount, customerSegment, enrollmentDate]);
 
   useEffect(() => {
+    const controller = new AbortController();
     if (productId) {
-      calculatePreview();
+      calculatePreview(controller.signal);
     }
+    return () => controller.abort();
   }, [productId, calculatePreview]);
 
   return (

@@ -77,20 +77,25 @@ const PricingComponentsPage = () => {
     pricingTiers: (component.pricingTiers || []).map(normalizeTier)
   }), [normalizeTier]);
 
-  const fetchComponents = useCallback(async () => {
+  const fetchComponents = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/pricing-components');
+      const response = await axios.get('/api/v1/pricing-components', { signal });
       setComponents((response.data || []).map(normalizeComponent));
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch pricing components.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [normalizeComponent, setToast]);
 
   useEffect(() => {
-    fetchComponents();
+    const controller = new AbortController();
+    fetchComponents(controller.signal);
+    return () => controller.abort();
   }, [fetchComponents]);
 
   const toggleExpand = (id: number) => {

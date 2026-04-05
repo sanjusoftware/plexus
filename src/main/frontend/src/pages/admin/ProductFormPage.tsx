@@ -50,14 +50,15 @@ const ProductFormPage = () => {
   });
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchData = async () => {
       setLoading(true);
       try {
         const [fc, pc, pt, p] = await Promise.all([
-          axios.get('/api/v1/features'),
-          axios.get('/api/v1/pricing-components'),
-          axios.get('/api/v1/product-types'),
-          isEditing ? axios.get(`/api/v1/products/${id}`) : Promise.resolve({ data: null })
+          axios.get('/api/v1/features', { signal: controller.signal }),
+          axios.get('/api/v1/pricing-components', { signal: controller.signal }),
+          axios.get('/api/v1/product-types', { signal: controller.signal }),
+          isEditing ? axios.get(`/api/v1/products/${id}`, { signal: controller.signal }) : Promise.resolve({ data: null })
         ]);
 
         setFeatureComponents(fc.data || []);
@@ -80,13 +81,17 @@ const ProductFormPage = () => {
           setIsCodeEdited(true);
         }
       } catch (err: any) {
+        if (axios.isCancel(err)) return;
         setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+    return () => controller.abort();
   }, [id, isEditing, setEntityName, setToast]);
 
   const addFeatureLink = () => {

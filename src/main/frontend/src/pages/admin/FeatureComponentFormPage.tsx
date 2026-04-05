@@ -23,20 +23,25 @@ const FeatureComponentFormPage = () => {
 
   useEffect(() => {
     if (isEditing) {
+      const controller = new AbortController();
       const fetchFeature = async () => {
         try {
-          const response = await axios.get(`/api/v1/features/${id}`);
+          const response = await axios.get(`/api/v1/features/${id}`, { signal: controller.signal });
           const feat = response.data;
           setFormData({ code: feat.code, name: feat.name, dataType: feat.dataType });
           setEntityName(feat.name);
           setIsCodeEdited(true);
         } catch (err: any) {
+          if (axios.isCancel(err)) return;
           setToast({ message: 'Failed to fetch feature component.', type: 'error' });
         } finally {
-          setLoading(false);
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
         }
       };
       fetchFeature();
+      return () => controller.abort();
     }
   }, [id, isEditing, setEntityName, setToast]);
 

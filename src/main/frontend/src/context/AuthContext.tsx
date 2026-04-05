@@ -42,26 +42,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return config;
     });
 
+    const controller = new AbortController();
+
     const initAuth = async () => {
       try {
         // 1. Initialize CSRF token
-        await axios.get('/api/v1/auth/csrf');
+        await axios.get('/api/v1/auth/csrf', { signal: controller.signal });
 
         // 2. Fetch User Profile
-        const currentUser = await authService.getUser();
+        const currentUser = await authService.getUser(controller.signal);
         setUser(currentUser);
 
         // 3. Fetch Permissions Map if authenticated
         if (currentUser) {
-          const map = await authService.getPermissionsMap();
+          const map = await authService.getPermissionsMap(controller.signal);
           setPermissionsMap(map);
         }
       } catch (err) {
+        if (axios.isCancel(err)) return;
         // If unauthenticated (401), currentUser will be null via authService.getUser()
         // We only log actual connection errors here
         console.log('Auth initialization: User is not logged in.');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -98,6 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     return () => {
+      controller.abort();
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };

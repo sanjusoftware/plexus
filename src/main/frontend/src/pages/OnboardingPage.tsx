@@ -40,10 +40,10 @@ const OnboardingPage = () => {
   const [message, setMessage] = useState('');
   const [showSecret, setShowSecret] = useState(false);
 
-  const fetchBankData = useCallback(async () => {
+  const fetchBankData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get(`/api/v1/banks/${id}`);
+      const response = await axios.get(`/api/v1/banks/${id}`, { signal });
       const data = response.data;
       setFormData({
         bankId: data.bankId,
@@ -63,28 +63,36 @@ const OnboardingPage = () => {
         setCustomCurrency(data.currencyCode);
       }
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error('Failed to fetch bank data', err);
       setToast({ message: 'Failed to load bank configuration for editing.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [id, setEntityName, setToast]);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     if (!isAdmin) {
-      fetchCaptcha();
+      fetchCaptcha(controller.signal);
     }
 
     if (isEditing) {
-      fetchBankData();
+      fetchBankData(controller.signal);
     }
+
+    return () => controller.abort();
   }, [id, isAdmin, isEditing, fetchBankData]);
 
-  const fetchCaptcha = async () => {
+  const fetchCaptcha = async (signal?: AbortSignal) => {
     try {
-      const response = await axios.get('/api/v1/public/onboarding/captcha');
+      const response = await axios.get('/api/v1/public/onboarding/captcha', { signal });
       setCaptcha(response.data);
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error('Failed to fetch captcha');
     }
   };
