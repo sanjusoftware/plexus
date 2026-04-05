@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Settings, Play, Copy, Download, Loader2 } from 'lucide-react';
-import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../../services/PricingService';
+import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
 
 interface PriceSimulationToolProps {
   isOpen: boolean;

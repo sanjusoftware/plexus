@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, DollarSign, AlertCircle, Loader2, TrendingUp } from 'lucide-react';
-import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../../services/PricingService';
+import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
 
 interface LivePricePreviewProps {
   productId?: number;

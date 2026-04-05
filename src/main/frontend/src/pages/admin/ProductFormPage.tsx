@@ -393,7 +393,7 @@ const ProductFormPage = () => {
                   </div>
                 </div>
               )}
-              {/* ...existing code... */}
+              {formData.pricing.map((link: any, idx: number) => (
                 <div key={idx} className="bg-gray-50/50 p-8 rounded-3xl border-2 border-gray-100 relative hover:border-purple-200 transition">
                   <button type="button" onClick={() => {
                     const newP = [...formData.pricing];
