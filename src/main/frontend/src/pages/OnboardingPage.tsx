@@ -180,40 +180,40 @@ const OnboardingPage = () => {
       {!isAdmin && (
         <button
           onClick={() => navigate('/')}
-          className="flex items-center text-blue-600 hover:text-blue-800 font-medium mb-8 transition"
+          className="flex items-center text-blue-600 hover:text-blue-800 font-bold mb-4 text-sm transition"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-4 w-4 mr-1.5" />
           Back to Home
         </button>
       )}
 
-      <div className="flex justify-between items-start mb-2">
-        <h2 className="text-3xl font-bold text-gray-900">
+      <div className="flex justify-between items-start mb-1">
+        <h2 className="text-xl font-bold text-gray-900">
           {isEditing ? 'Edit Bank Configuration' : isAdmin ? 'Add New Bank' : 'Get Started'}
         </h2>
         {isAdmin && (
           <button
             onClick={() => navigate('/banks')}
-            className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-gray-100 transition border border-gray-100 shadow-sm"
+            className="bg-gray-50 text-gray-400 p-1.5 rounded-lg hover:bg-gray-100 transition border border-gray-100 shadow-sm"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>
-      <p className="text-gray-500 mb-10">
+      <p className="text-xs text-gray-500 mb-6 font-medium">
         {isEditing ? `Updating configuration for ${formData.name || id}` :
          isAdmin ? 'Fill out the form below to register a new bank in the system.' :
          'Fill out the form below to submit an onboarding request for your institution.'}
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Bank Name</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank Name</label>
             <input
               required
               type="text"
               placeholder="e.g. Global Bank"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition"
               value={formData.name}
               onChange={e => {
                 const name = e.target.value;
@@ -226,15 +226,15 @@ const OnboardingPage = () => {
             />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Bank ID {isEditing ? '(Read Only)' : '(Generated)'}</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank ID {isEditing ? '(Read Only)' : '(Generated)'}</label>
             <input
               required
               disabled={isEditing}
               type="text"
               placeholder="e.g. GLOBAL-BANK-001"
-              className={`w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${isEditing ? 'bg-gray-50 text-gray-500' : ''}`}
+              className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition ${isEditing ? 'bg-gray-50 text-gray-500' : ''}`}
               value={formData.bankId}
               onChange={e => {
                 setIsBankIdEdited(true);
@@ -243,7 +243,7 @@ const OnboardingPage = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Currency</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Currency</label>
             <div className="relative">
               {!isCustomCurrency ? (
                   <PlexusSelect
@@ -290,8 +290,8 @@ const OnboardingPage = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1">OIDC Issuer URL</label>
-          <p className="text-xs text-gray-500 mb-2">
+          <label className="block text-xs font-bold text-gray-700 mb-0.5">OIDC Issuer URL</label>
+          <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
             The discovery URL of your Identity Provider.
             <br />Example (Entra ID): <code className="bg-gray-100 px-1 rounded">https://login.microsoftonline.com/&#123;tenant-id&#125;/v2.0</code>
           </p>
@@ -299,37 +299,37 @@ const OnboardingPage = () => {
             required
             type="text"
             placeholder="https://login.microsoftonline.com/..."
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition"
             value={formData.issuerUrl}
             onChange={e => setFormData({ ...formData, issuerUrl: e.target.value })}
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Client ID</label>
-            <p className="text-xs text-gray-500 mb-2">
+            <label className="block text-xs font-bold text-gray-700 mb-0.5">Client ID</label>
+            <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
               The Application (client) ID registered in your IDP.
             </p>
             <input
               required
               type="text"
               placeholder="e.g. 12345678-...90ab"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition"
               value={formData.clientId}
               onChange={e => setFormData({ ...formData, clientId: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Client Secret (Optional)</label>
-            <p className="text-xs text-gray-500 mb-2">
+            <label className="block text-xs font-bold text-gray-700 mb-0.5">Client Secret (Optional)</label>
+            <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
               The Application Secret if your IDP requires it.
             </p>
             <div className="relative">
               <input
                 type={showSecret ? "text" : "password"}
                 placeholder="••••••••••••"
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition pr-12"
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition pr-10"
                 value={formData.clientSecret}
                 onChange={e => setFormData({ ...formData, clientSecret: e.target.value })}
               />
@@ -344,25 +344,25 @@ const OnboardingPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Admin Name</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Admin Name</label>
             <input
               required
               type="text"
               placeholder="Full Name"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition"
               value={formData.adminName}
               onChange={e => setFormData({ ...formData, adminName: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Admin Email</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Admin Email</label>
             <input
               required
               type="email"
               placeholder="email@bank.com"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition"
               value={formData.adminEmail}
               onChange={e => setFormData({ ...formData, adminEmail: e.target.value })}
             />
@@ -370,28 +370,28 @@ const OnboardingPage = () => {
         </div>
 
         {!isAdmin && (
-          <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center justify-between">
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-blue-900 mb-1">Security Check</p>
-              <p className="text-blue-700 text-lg font-mono">{captcha.question}</p>
+              <p className="text-[10px] font-bold text-blue-900 mb-0.5 uppercase tracking-widest">Security Check</p>
+              <p className="text-blue-700 text-base font-mono font-bold">{captcha.question}</p>
             </div>
             <input
               required
               type="text"
               placeholder="?"
-              className="w-20 px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold"
+              className="w-16 px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold text-sm"
               value={formData.captchaAnswer}
               onChange={e => setFormData({ ...formData, captchaAnswer: e.target.value })}
             />
           </div>
         )}
 
-        <div className="flex space-x-4">
+        <div className="flex space-x-3">
           {isAdmin && (
             <button
               type="button"
               onClick={() => navigate('/banks')}
-              className="flex-1 px-8 py-4 border-2 border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 transition uppercase tracking-widest text-sm"
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg font-bold text-gray-500 hover:bg-gray-50 transition uppercase tracking-widest text-[10px]"
             >
               Cancel
             </button>
@@ -399,10 +399,10 @@ const OnboardingPage = () => {
           <button
             disabled={loading}
             type="submit"
-            className="flex-[2] bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg disabled:opacity-50 flex items-center justify-center"
+            className="flex-[2] bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-blue-700 transition shadow-md disabled:opacity-50 flex items-center justify-center"
           >
-            {loading ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> {isEditing ? 'Updating...' : 'Submitting...'}</> :
-             isEditing ? <><Save className="h-5 w-5 mr-2" /> Update Bank</> : 'Submit Request'}
+            {loading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> {isEditing ? 'Updating...' : 'Submitting...'}</> :
+             isEditing ? <><Save className="h-4 w-4 mr-1.5" /> Update Bank</> : 'Submit Request'}
           </button>
         </div>
       </form>

@@ -273,34 +273,33 @@ const PricingComponentFormPage = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-20">
-      <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100 flex justify-between items-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-full bg-blue-50 -skew-x-12 translate-x-32 opacity-30"></div>
+    <div className="max-w-5xl mx-auto space-y-4 pb-10">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center relative overflow-hidden">
         <div className="relative">
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight uppercase">
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
             {isEditing ? 'Update Pricing' : 'New Pricing'}
           </h1>
-          <p className="text-gray-500 font-bold mt-1 uppercase tracking-widest text-[10px]">
+          <p className="text-gray-500 font-bold mt-0.5 uppercase tracking-widest text-[10px]">
             Configure the core identity and tiered logic in one atomic operation.
           </p>
         </div>
         <button
           onClick={() => navigate('/pricing-components')}
-          className="bg-gray-50 text-gray-400 p-3 rounded-2xl hover:bg-gray-100 transition relative border border-gray-100 shadow-sm"
+          className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-gray-100 transition relative border border-gray-100 shadow-sm"
         >
-          <X className="w-6 h-6" />
+          <X className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
-        <form onSubmit={handleSubmit} className="p-10 space-y-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Product-Facing Name</label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Product-Facing Name</label>
               <input
                 type="text"
                 required
-                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold transition focus:border-blue-500 shadow-sm"
+                className="w-full border border-gray-200 rounded-xl p-3 font-bold text-sm transition focus:border-blue-500 shadow-sm"
                 value={formData.name}
                 onChange={(e) => {
                   const name = e.target.value;
@@ -314,11 +313,11 @@ const PricingComponentFormPage = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Immutable Component Code</label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Immutable Component Code</label>
               <input
                 type="text"
                 required
-                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-bold text-blue-700 transition focus:border-blue-500 shadow-sm"
+                className="w-full border border-gray-200 rounded-xl p-3 font-mono font-bold text-blue-700 text-sm transition focus:border-blue-500 shadow-sm"
                 value={formData.code}
                 onChange={(e) => {
                   setIsCodeEdited(true);
@@ -328,59 +327,59 @@ const PricingComponentFormPage = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Financial Type</label>
-              <div className="flex space-x-4">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Financial Type</label>
+              <div className="flex space-x-3">
                 {[
                   { value: 'FEE', label: 'FEE' },
                   { value: 'INTEREST_RATE', label: 'RATE' },
                   { value: 'DISCOUNT', label: 'DISCOUNT' }
                 ].map(t => (
-                  <button key={t.value} type="button" onClick={() => setFormData({...formData, type: t.value})} className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition border-2 ${formData.type === t.value ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}>{t.label}</button>
+                  <button key={t.value} type="button" onClick={() => setFormData({...formData, type: t.value})} className={`flex-1 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition border ${formData.type === t.value ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100' : 'border-gray-200 text-gray-400 hover:border-gray-300'}`}>{t.label}</button>
                 ))}
               </div>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Business Description</label>
-              <textarea className="w-full border-2 border-gray-100 rounded-2xl p-4 h-28 font-medium transition focus:border-blue-500 shadow-sm" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Describe the purpose and lifecycle of this pricing component..." />
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Business Description</label>
+              <textarea className="w-full border border-gray-200 rounded-xl p-3 h-20 font-medium text-sm transition focus:border-blue-500 shadow-sm" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Describe the purpose and lifecycle of this pricing component..." />
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-10">
-            <div className="flex justify-between items-center mb-8">
+          <div className="border-t border-gray-100 pt-8">
+            <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-3">
-                <div className="p-2.5 bg-purple-50 rounded-xl"><Layers className="w-6 h-6 text-purple-600" /></div>
-                <h3 className="text-2xl font-black text-gray-900 tracking-tight">Segment Pricing Tiers</h3>
+                <div className="p-2 bg-purple-50 rounded-xl"><Layers className="w-5 h-5 text-purple-600" /></div>
+                <h3 className="text-lg font-bold text-gray-900 tracking-tight">Segment Pricing Tiers</h3>
               </div>
-              <button type="button" onClick={addTier} className="bg-purple-600 text-white px-5 py-2.5 rounded-xl flex items-center font-bold text-xs uppercase tracking-widest hover:bg-purple-700 transition shadow-lg shadow-purple-50">
-                <Plus className="w-4 h-4 mr-2" /> Add Logic Tier
+              <button type="button" onClick={addTier} className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center font-bold text-[10px] uppercase tracking-widest hover:bg-purple-700 transition shadow-md shadow-purple-50">
+                <Plus className="w-4 h-4 mr-1.5" /> Add Logic Tier
               </button>
             </div>
 
-            <div className="space-y-8">
+            <div className="space-y-6">
               {formData.pricingTiers.map((tier: any, idx: number) => (
-                <div key={idx} className="rounded-3xl p-8 bg-gray-50/50 border-2 border-gray-100 relative group transition hover:border-blue-200">
-                  <button type="button" onClick={() => removeTier(idx)} className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-5 h-5" /></button>
+                <div key={idx} className="rounded-xl p-6 bg-gray-50/50 border border-gray-100 relative group transition hover:border-blue-200">
+                  <button type="button" onClick={() => removeTier(idx)} className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-4 h-4" /></button>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Display Label</label>
-                      <input type="text" required className="w-full border-2 border-white rounded-xl p-3 font-bold text-xs bg-white shadow-sm focus:border-blue-500 transition" value={tier.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} />
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Display Label</label>
+                      <input type="text" required className="w-full border border-white rounded-lg p-2.5 font-bold text-[11px] bg-white shadow-sm focus:border-blue-500 transition" value={tier.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tier ID Code</label>
-                      <input type="text" required className="w-full border-2 border-white rounded-xl p-3 font-mono font-bold text-xs bg-white shadow-sm focus:border-blue-500 transition" value={tier.code} onChange={(e) => handleTierChange(idx, 'code', e.target.value)} />
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Tier ID Code</label>
+                      <input type="text" required className="w-full border border-white rounded-lg p-2.5 font-mono font-bold text-[11px] bg-white shadow-sm focus:border-blue-500 transition" value={tier.code} onChange={(e) => handleTierChange(idx, 'code', e.target.value)} />
                     </div>
                   </div>
 
-                  <div className="mb-8">
-                    <div className="flex justify-between items-center mb-4">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pricing Rules (Conditions)</label>
-                      <button type="button" onClick={() => addCondition(idx)} className="text-blue-600 hover:text-blue-700 text-[10px] font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-50">+ New Condition</button>
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pricing Rules (Conditions)</label>
+                      <button type="button" onClick={() => addCondition(idx)} className="text-blue-600 hover:text-blue-700 text-[10px] font-bold uppercase tracking-widest bg-white px-2 py-1 rounded-lg shadow-sm border border-blue-50">+ New Condition</button>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {tier.conditions?.map((cond: any, cidx: number) => (
-                        <div key={cidx} className="flex items-center space-x-3 animate-in slide-in-from-left-2 duration-200">
-                          <div className="flex-1 grid grid-cols-12 gap-2">
+                        <div key={cidx} className="flex items-center space-x-2 animate-in slide-in-from-left-2 duration-200">
+                          <div className="flex-1 grid grid-cols-12 gap-1.5">
                             <div className="col-span-5">
                               <PlexusSelect
                                 placeholder="Attribute..."
@@ -404,15 +403,15 @@ const PricingComponentFormPage = () => {
                                 switch (dataType) {
                                   case 'BOOLEAN':
                                     return (
-                                      <div className="h-[60px] flex items-center px-4 bg-white border-2 border-gray-100 rounded-2xl">
+                                      <div className="h-[42px] flex items-center px-3 bg-white border border-gray-200 rounded-lg">
                                         <button
                                           type="button"
                                           onClick={() => handleConditionChange(idx, cidx, 'attributeValue', cond.attributeValue === 'true' ? 'false' : 'true')}
-                                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${cond.attributeValue === 'true' ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${cond.attributeValue === 'true' ? 'bg-blue-600' : 'bg-gray-200'}`}
                                         >
-                                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${cond.attributeValue === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+                                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${cond.attributeValue === 'true' ? 'translate-x-5' : 'translate-x-1'}`} />
                                         </button>
-                                        <span className="ml-3 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                        <span className="ml-2 text-[9px] font-bold uppercase tracking-widest text-gray-500">
                                           {cond.attributeValue === 'true' ? 'TRUE' : 'FALSE'}
                                         </span>
                                       </div>
@@ -421,7 +420,7 @@ const PricingComponentFormPage = () => {
                                     return (
                                       <input
                                         type="date"
-                                        className="w-full border-2 border-gray-100 rounded-2xl p-4 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition h-[60px]"
+                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
                                         value={cond.attributeValue}
                                         onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
                                       />
@@ -432,7 +431,7 @@ const PricingComponentFormPage = () => {
                                       <input
                                         type="number"
                                         step={dataType === 'INTEGER' ? '1' : 'any'}
-                                        className="w-full border-2 border-gray-100 rounded-2xl p-4 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition h-[60px]"
+                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
                                         placeholder="Value..."
                                         value={cond.attributeValue}
                                         onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
@@ -442,7 +441,7 @@ const PricingComponentFormPage = () => {
                                     return (
                                       <input
                                         type="text"
-                                        className="w-full border-2 border-gray-100 rounded-2xl p-4 text-xs bg-white font-bold shadow-sm focus:border-blue-500 transition h-[60px]"
+                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
                                         placeholder="Value..."
                                         value={cond.attributeValue}
                                         onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
@@ -462,24 +461,24 @@ const PricingComponentFormPage = () => {
                                   onChange={(opt) => handleConditionChange(idx, cidx, 'connector', opt ? opt.value : 'AND')}
                                   menuPlacement="auto"
                                 />
-                              ) : <div className="w-full p-3"></div>}
+                              ) : <div className="w-full p-2.5"></div>}
                             </div>
                           </div>
-                          <button type="button" onClick={() => removeCondition(idx, cidx)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition"><X className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => removeCondition(idx, cidx)} className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition"><X className="w-4 h-4" /></button>
                         </div>
                       ))}
                       {(!tier.conditions || tier.conditions.length === 0) && (
-                        <div className="bg-white/50 border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center text-xs text-gray-400 font-medium">Default Tier: This price applies if no other tiered segments match.</div>
+                        <div className="bg-white/50 border border-dashed border-gray-200 rounded-lg p-3 text-center text-[11px] text-gray-400 font-medium">Default Tier: This price applies if no other tiered segments match.</div>
                       )}
                     </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-3xl border-2 border-blue-50 grid grid-cols-2 gap-8 shadow-sm">
+                  <div className="bg-white p-4 rounded-xl border border-blue-50 grid grid-cols-2 gap-6 shadow-sm">
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Calculated Price Amount ({currencyCode})</label>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Calculated Amount ({currencyCode})</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-blue-600">{getCurrencySymbol(currencyCode)}</span>
-                        <input type="number" step="0.01" required className="w-full border-2 border-gray-50 rounded-xl p-4 pl-8 font-black text-lg text-blue-900 transition focus:border-blue-500 focus:ring-0 shadow-sm" value={tier.priceValue.priceAmount} onChange={(e) => {
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-blue-600 text-sm">{getCurrencySymbol(currencyCode)}</span>
+                        <input type="number" step="0.01" required className="w-full border border-gray-200 rounded-lg p-2.5 pl-7 font-bold text-base text-blue-900 transition focus:border-blue-500 focus:ring-0 shadow-sm" value={tier.priceValue.priceAmount} onChange={(e) => {
                           const newTiers = [...formData.pricingTiers];
                           newTiers[idx].priceValue = { ...newTiers[idx].priceValue, priceAmount: parseFloat(e.target.value) };
                           setFormData({...formData, pricingTiers: newTiers});
@@ -487,7 +486,7 @@ const PricingComponentFormPage = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Financial Value Type</label>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Financial Value Type</label>
                       <PlexusSelect
                         options={['WAIVER', 'BENEFIT', 'DISCOUNT'].includes(formData.type)
                           ? [
@@ -527,10 +526,10 @@ const PricingComponentFormPage = () => {
             </div>
           </div>
 
-          <div className="pt-10 border-t border-gray-100 flex space-x-6">
-            <button type="button" onClick={() => navigate('/pricing-components')} className="flex-1 px-8 py-5 border-2 border-gray-100 rounded-2xl font-black text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-xs">Discard Changes</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-8 py-5 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition shadow-2xl shadow-blue-200 flex items-center justify-center uppercase tracking-widest text-xs disabled:opacity-50">
-              {submitting ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <Save className="w-6 h-6 mr-3" />}
+          <div className="pt-8 border-t border-gray-100 flex space-x-4">
+            <button type="button" onClick={() => navigate('/pricing-components')} className="flex-1 px-6 py-3 border border-gray-200 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
+            <button type="submit" disabled={submitting} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50">
+              {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
               Commit Structure
             </button>
           </div>
