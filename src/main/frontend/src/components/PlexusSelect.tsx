@@ -22,20 +22,21 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
     control: (base, state) => ({
       ...base,
       backgroundColor: 'white',
-      borderWidth: '2px',
-      borderColor: state.isFocused ? '#3b82f6' : '#f3f4f6', // blue-500 or gray-100
-      borderRadius: '1rem', // rounded-2xl
-      padding: '0.5rem',
+      borderWidth: '1px',
+      borderColor: state.isFocused ? '#3b82f6' : '#e5e7eb', // blue-500 or gray-200
+      borderRadius: '0.5rem', // rounded-lg
+      padding: '0',
       boxShadow: state.isFocused ? '0 0 0 4px rgba(59, 130, 246, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)', // focus:ring-4 focus:ring-blue-500/10 shadow-sm
       '&:hover': {
-        borderColor: state.isFocused ? '#3b82f6' : '#e5e7eb', // gray-200 on hover
+        borderColor: state.isFocused ? '#3b82f6' : '#d1d5db', // gray-300 on hover
       },
-      minHeight: '60px',
+      minHeight: '42px',
+      height: '42px',
       transition: 'all 0.2s',
     }),
     valueContainer: (base) => ({
       ...base,
-      padding: '0 0.5rem',
+      padding: '0 0.75rem',
     }),
     placeholder: (base) => ({
       ...base,
