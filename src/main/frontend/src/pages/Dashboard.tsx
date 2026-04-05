@@ -173,34 +173,34 @@ const Dashboard = () => {
     <div className="max-w-7xl mx-auto">
       {/* Temporary Welcome Banner */}
       {showWelcome && (
-        <div className="mb-6 p-4 bg-blue-900 text-white rounded-2xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-blue-800 rounded-lg">
-              <ShieldCheck className="h-6 w-6 text-blue-200" />
+        <div className="mb-4 p-3 bg-blue-900 text-white rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center space-x-3">
+            <div className="p-1.5 bg-blue-800 rounded-lg">
+              <ShieldCheck className="h-5 w-5 text-blue-200" />
             </div>
             <div>
-              <h3 className="font-bold">Welcome back, {user?.name}!</h3>
-              <p className="text-sm text-blue-200">You are logged into {user?.bankName}.</p>
+              <h3 className="font-bold text-sm">Welcome back, {user?.name}!</h3>
+              <p className="text-xs text-blue-200">You are logged into {user?.bankName}.</p>
             </div>
           </div>
-          <button onClick={() => setShowWelcome(false)} className="p-2 hover:bg-blue-800 rounded-full transition">
-            <X className="h-5 w-5" />
+          <button onClick={() => setShowWelcome(false)} className="p-1.5 hover:bg-blue-800 rounded-full transition">
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h1>
-          <p className="text-gray-500 mt-1">Real-time metrics and platform health.</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h1>
+          <p className="text-gray-500 text-xs mt-0.5 font-medium">Real-time metrics and platform health.</p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex space-x-2">
           <HasPermission action="POST" path="/api/v1/products">
             <button
               onClick={() => navigate('/products/create')}
-              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-sm hover:shadow flex items-center"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-md hover:shadow-lg flex items-center text-sm"
             >
-              <Plus className="h-5 w-5 mr-2" /> New Product
+              <Plus className="h-4 w-4 mr-1.5" /> New Product
             </button>
           </HasPermission>
         </div>

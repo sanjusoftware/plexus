@@ -87,46 +87,46 @@ const BankManagementPage = () => {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-3xl font-black text-blue-900 tracking-tight uppercase italic">Bank Management</h2>
-          <p className="text-gray-500 font-bold">Global banking infrastructure and tenant onboarding.</p>
+          <h2 className="text-xl font-bold text-blue-900 tracking-tight uppercase italic">Bank Management</h2>
+          <p className="text-gray-500 font-bold text-xs">Global banking infrastructure and tenant onboarding.</p>
         </div>
         <HasPermission action="POST" path="/api/v1/banks">
           <button
             onClick={() => navigate('/onboarding?admin=true')}
-            className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-blue-700 transition flex items-center shadow-lg shadow-blue-100 uppercase tracking-widest"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-700 transition flex items-center shadow-md shadow-blue-100 uppercase tracking-widest"
           >
-            <Plus className="h-5 w-5 mr-2" /> Add Bank
+            <Plus className="h-4 w-4 mr-1.5" /> Add Bank
           </button>
         </HasPermission>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="divide-y divide-gray-50">
           {banks.length === 0 ? (
-            <div className="p-20 text-center">
-               <Building2 className="h-16 w-16 text-gray-100 mx-auto mb-4" />
-               <p className="text-gray-400 font-black uppercase tracking-widest text-xs">No managed banks found.</p>
+            <div className="p-12 text-center">
+               <Building2 className="h-10 w-10 text-gray-100 mx-auto mb-2" />
+               <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No managed banks found.</p>
             </div>
           ) : (
             banks.map((item, idx) => (
               <div
                 key={idx}
                 onClick={() => openBankDetails(item)}
-                className="px-8 py-6 flex justify-between items-center hover:bg-blue-50/30 transition cursor-pointer group"
+                className="px-6 py-4 flex justify-between items-center hover:bg-blue-50/30 transition cursor-pointer group"
               >
-                <div className="flex items-center space-x-6">
-                  <div className="p-4 bg-blue-50 rounded-[1.5rem] group-hover:scale-110 transition duration-300">
-                    <Building2 className="h-6 w-6 text-blue-600" />
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-blue-50 rounded-xl group-hover:scale-105 transition duration-300">
+                    <Building2 className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="flex items-center space-x-3 mb-1">
-                      <p className="font-black text-gray-900 text-lg tracking-tight">
+                    <div className="flex items-center space-x-2 mb-0.5">
+                      <p className="font-bold text-gray-900 text-base tracking-tight">
                         {item.name || item.bankId}
-                        <span className="text-xs text-gray-400 font-bold ml-2 italic">({item.bankId})</span>
+                        <span className="text-[10px] text-gray-400 font-bold ml-1.5 italic">({item.bankId})</span>
                       </p>
-                      <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${
                         item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
                          item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
                          item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
@@ -134,39 +134,39 @@ const BankManagementPage = () => {
                         {item.status}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-400 font-medium mb-1">{item.issuerUrl}</p>
+                    <p className="text-xs text-gray-400 font-medium mb-0.5">{item.issuerUrl}</p>
                     {item.adminName && (
-                      <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                         <ShieldCheck className="h-3 w-3 mr-1 text-blue-400" /> {item.adminName} ({item.adminEmail})
+                      <div className="flex items-center text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                         <ShieldCheck className="h-2.5 w-2.5 mr-1 text-blue-400" /> {item.adminName} ({item.adminEmail})
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   {item.status === 'DRAFT' && (
                     <>
                       <HasPermission action="PUT" path="/api/v1/banks">
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
-                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition flex items-center"
+                          className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-blue-100 transition flex items-center"
                         >
-                          <Edit className="h-3 w-3 mr-1.5" /> Edit
+                          <Edit className="h-2.5 w-2.5 mr-1" /> Edit
                         </button>
                       </HasPermission>
                       <HasPermission action="POST" path="/api/v1/banks/*/activate">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                          className="px-4 py-2 bg-green-50 text-green-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-100 transition flex items-center"
+                          className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-green-100 transition flex items-center"
                         >
-                          <CheckCircle2 className="h-3 w-3 mr-1.5" /> Approve
+                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Approve
                         </button>
                       </HasPermission>
                       <HasPermission action="POST" path="/api/v1/banks/*/reject">
                         <button
                           onClick={(e) => { e.stopPropagation(); confirmReject(item.bankId); }}
-                          className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition flex items-center"
+                          className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-red-100 transition flex items-center"
                         >
-                          <XCircle className="h-3 w-3 mr-1.5" /> Reject
+                          <XCircle className="h-2.5 w-2.5 mr-1" /> Reject
                         </button>
                       </HasPermission>
                     </>
@@ -175,9 +175,9 @@ const BankManagementPage = () => {
                     <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
                       <button
                         onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
-                        className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition flex items-center"
+                        className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-gray-100 transition flex items-center"
                       >
-                        <Clock className="h-3 w-3 mr-1.5" /> Deactivate
+                        <Clock className="h-2.5 w-2.5 mr-1" /> Deactivate
                       </button>
                     </HasPermission>
                   )}
@@ -185,23 +185,23 @@ const BankManagementPage = () => {
                     <HasPermission action="POST" path="/api/v1/banks/*/activate">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                        className="px-4 py-2 bg-green-50 text-green-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-100 transition flex items-center"
+                        className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-green-100 transition flex items-center"
                       >
-                        <CheckCircle2 className="h-3 w-3 mr-1.5" /> Re-activate
+                        <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Re-activate
                       </button>
                     </HasPermission>
                   )}
-                  <div className="h-10 w-10 flex items-center justify-center rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
-                    <ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-white" />
+                  <div className="h-8 w-8 flex items-center justify-center rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
+                    <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-white" />
                   </div>
                 </div>
               </div>
             ))
           )}
         </div>
-        <div className="px-8 py-6 bg-gray-50/50 border-t flex justify-center">
-           <a href="/swagger-ui/index.html" target="_blank" className="flex items-center text-xs font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition">
-             Explore Global API in Swagger <ExternalLink className="h-3 w-3 ml-2" />
+        <div className="px-6 py-4 bg-gray-50/50 border-t flex justify-center">
+           <a href="/swagger-ui/index.html" target="_blank" className="flex items-center text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-blue-600 transition">
+             Explore Global API in Swagger <ExternalLink className="h-2.5 w-2.5 ml-1.5" />
            </a>
         </div>
       </div>
@@ -209,53 +209,52 @@ const BankManagementPage = () => {
       {/* Bank Details Modal */}
       {selectedBank && (
         <div className="fixed inset-0 bg-blue-900/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[3rem] shadow-2xl max-w-2xl w-full overflow-hidden border border-white/20">
-            <div className="px-10 py-8 bg-blue-900 text-white flex justify-between items-center relative">
-              <div className="absolute top-0 right-0 w-64 h-full bg-blue-800 -skew-x-12 translate-x-20 opacity-50"></div>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-white/20">
+            <div className="px-8 py-6 bg-blue-900 text-white flex justify-between items-center relative">
               <div className="relative">
-                <h2 className="text-3xl font-black tracking-tight uppercase italic">{selectedBank.name}</h2>
-                <p className="text-blue-300 text-xs font-bold uppercase tracking-widest mt-1">Entity ID: {selectedBank.bankId}</p>
+                <h2 className="text-xl font-bold tracking-tight uppercase italic">{selectedBank.name}</h2>
+                <p className="text-blue-300 text-[10px] font-bold uppercase tracking-widest mt-0.5">Entity ID: {selectedBank.bankId}</p>
               </div>
-              <button onClick={() => setSelectedBank(null)} className="p-3 hover:bg-blue-800 rounded-full transition relative border border-white/10">
-                <X className="h-6 w-6" />
+              <button onClick={() => setSelectedBank(null)} className="p-2 hover:bg-blue-800 rounded-xl transition relative border border-white/10">
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-10 space-y-8">
-              <div className="grid grid-cols-2 gap-10">
-                <div className="flex items-start space-x-4">
-                  <div className="p-2 bg-blue-50 rounded-xl"><Globe className="h-5 w-5 text-blue-600" /></div>
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="flex items-start space-x-3">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><Globe className="h-4 w-4 text-blue-600" /></div>
                   <div>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">OIDC Issuer URL</p>
-                    <p className="text-sm font-bold text-gray-900 break-all leading-tight">{selectedBank.issuerUrl}</p>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">OIDC Issuer URL</p>
+                    <p className="text-xs font-bold text-gray-900 break-all leading-tight">{selectedBank.issuerUrl}</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="p-2 bg-blue-50 rounded-xl"><ShieldCheck className="h-5 w-5 text-blue-600" /></div>
+                <div className="flex items-start space-x-3">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><ShieldCheck className="h-4 w-4 text-blue-600" /></div>
                   <div>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Application ID</p>
-                    <p className="text-sm font-bold text-gray-900 break-all leading-tight">{selectedBank.clientId || 'N/A'}</p>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Application ID</p>
+                    <p className="text-xs font-bold text-gray-900 break-all leading-tight">{selectedBank.clientId || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="p-2 bg-blue-50 rounded-xl"><Mail className="h-5 w-5 text-blue-600" /></div>
+                <div className="flex items-start space-x-3">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><Mail className="h-4 w-4 text-blue-600" /></div>
                   <div>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Lead Admin</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">{selectedBank.adminName}</p>
-                    <p className="text-[10px] text-gray-400 font-bold lowercase">{selectedBank.adminEmail}</p>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Lead Admin</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">{selectedBank.adminName}</p>
+                    <p className="text-[9px] text-gray-400 font-bold lowercase">{selectedBank.adminEmail}</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="p-2 bg-blue-50 rounded-xl"><DollarSign className="h-5 w-5 text-blue-600" /></div>
+                <div className="flex items-start space-x-3">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><DollarSign className="h-4 w-4 text-blue-600" /></div>
                   <div>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Base Currency</p>
-                    <p className="text-sm font-bold text-gray-900 uppercase">{selectedBank.currencyCode}</p>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Base Currency</p>
+                    <p className="text-xs font-bold text-gray-900 uppercase">{selectedBank.currencyCode}</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="p-2 bg-blue-50 rounded-xl"><Info className="h-5 w-5 text-blue-600" /></div>
+                <div className="flex items-start space-x-3">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><Info className="h-4 w-4 text-blue-600" /></div>
                   <div>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Lifecycle State</p>
-                    <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Lifecycle State</p>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${
                           selectedBank.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
                            selectedBank.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
                            selectedBank.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
@@ -266,21 +265,21 @@ const BankManagementPage = () => {
                 </div>
               </div>
 
-              <div className="pt-8 border-t flex space-x-4">
+              <div className="pt-6 border-t flex space-x-3">
                 {selectedBank.status === 'DRAFT' && (
                   <>
                     <HasPermission action="PUT" path="/api/v1/banks">
                       <button
                         onClick={() => navigate(`/banks/edit/${selectedBank.bankId}`)}
-                        className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center"
+                        className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md shadow-blue-100 flex items-center justify-center"
                       >
-                        <Edit className="h-4 w-4 mr-2" /> Edit Configuration
+                        <Edit className="h-3 w-3 mr-1.5" /> Edit Configuration
                       </button>
                     </HasPermission>
                     <HasPermission action="POST" path="/api/v1/banks/*/activate">
                       <button
                         onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
-                        className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100"
+                        className="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-green-700 transition shadow-md shadow-blue-100"
                       >
                         Approve Bank
                       </button>
@@ -288,7 +287,7 @@ const BankManagementPage = () => {
                     <HasPermission action="POST" path="/api/v1/banks/*/reject">
                       <button
                         onClick={() => confirmReject(selectedBank.bankId)}
-                        className="flex-1 bg-red-100 text-red-700 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-200 transition"
+                        className="flex-1 bg-red-100 text-red-700 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-200 transition"
                       >
                         Reject Request
                       </button>
@@ -299,7 +298,7 @@ const BankManagementPage = () => {
                   <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
                     <button
                       onClick={() => confirmDeactivate(selectedBank.bankId)}
-                      className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition"
+                      className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gray-200 transition"
                     >
                       Deactivate Bank
                     </button>
@@ -309,7 +308,7 @@ const BankManagementPage = () => {
                   <HasPermission action="POST" path="/api/v1/banks/*/activate">
                     <button
                       onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
-                      className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100"
+                      className="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-green-700 transition shadow-md shadow-blue-100"
                     >
                       Re-activate Bank
                     </button>

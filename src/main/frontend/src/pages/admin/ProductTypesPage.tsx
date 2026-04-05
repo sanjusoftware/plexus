@@ -73,48 +73,48 @@ const ProductTypesPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border">
+    <div className="max-w-6xl mx-auto space-y-4">
+      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <List className="w-6 h-6 mr-3 text-blue-600" /> Product Types
+          <h1 className="text-xl font-bold text-gray-900 flex items-center">
+            <List className="w-5 h-5 mr-2 text-blue-600" /> Product Types
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Define broad categories for your bank's products (e.g., SAVINGS, LOANS).</p>
+          <p className="text-gray-500 text-xs mt-0.5">Define broad categories for your bank's products (e.g., SAVINGS, LOANS).</p>
         </div>
         <HasPermission action="POST" path="/api/v1/product-types">
           <button
             onClick={() => navigate('/product-types/create')}
-            className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center hover:bg-blue-700 transition font-bold shadow-lg shadow-blue-100"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition font-bold shadow-md shadow-blue-100 text-sm"
           >
-            <Plus className="w-5 h-5 mr-2" /> Add New Type
+            <Plus className="w-4 h-4 mr-1.5" /> Add New Type
           </button>
         </HasPermission>
       </div>
 
       {loading ? (
-        <div className="flex justify-center p-24 bg-white rounded-2xl border"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>
+        <div className="flex justify-center p-12 bg-white rounded-xl border"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Code</th>
-                <th className="px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-8 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Code</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {productTypes.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-8 py-12 text-center text-gray-500 italic">No product types found. Get started by creating your first one.</td>
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm italic">No product types found. Get started by creating your first one.</td>
                 </tr>
               ) : (
                 productTypes.map((type) => (
                   <tr key={type.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-8 py-5 whitespace-nowrap text-sm font-mono font-bold text-blue-700">{type.code}</td>
-                    <td className="px-8 py-5 whitespace-nowrap text-sm text-gray-900 font-medium">{type.name}</td>
-                    <td className="px-8 py-5 whitespace-nowrap">
+                    <td className="px-6 py-3 whitespace-nowrap text-xs font-mono font-bold text-blue-700">{type.code}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-xs text-gray-900 font-medium">{type.name}</td>
+                    <td className="px-6 py-3 whitespace-nowrap">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         type.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
                         type.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
@@ -123,21 +123,21 @@ const ProductTypesPage = () => {
                         {type.status}
                       </span>
                     </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <td className="px-6 py-3 whitespace-nowrap text-right text-xs font-medium space-x-2">
                       {type.status === 'DRAFT' && (
                         <HasPermission action="POST" path="/api/v1/product-types/*/activate">
-                          <button onClick={() => handleAction(type.id, 'activate')} className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-200 transition flex items-center inline-flex" title="Activate">
-                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
+                          <button onClick={() => handleAction(type.id, 'activate')} className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-green-200 transition flex items-center inline-flex" title="Activate">
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> Activate
                           </button>
                         </HasPermission>
                       )}
                       {type.status !== 'ARCHIVED' && (
                         <>
                           <HasPermission action="PUT" path="/api/v1/product-types/*">
-                            <button onClick={() => navigate(`/product-types/edit/${type.id}`)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => navigate(`/product-types/edit/${type.id}`)} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/product-types/*">
-                            <button onClick={() => triggerConfirmAction(type)} className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={() => triggerConfirmAction(type)} className="text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="w-3.5 h-3.5" /></button>
                           </HasPermission>
                         </>
                       )}

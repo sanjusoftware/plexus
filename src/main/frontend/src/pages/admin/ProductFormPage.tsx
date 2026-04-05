@@ -150,34 +150,33 @@ const ProductFormPage = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20">
-      <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100 flex justify-between items-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-full bg-blue-50 -skew-x-12 translate-x-40 opacity-30"></div>
+    <div className="max-w-6xl mx-auto space-y-4 pb-10">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex justify-between items-center relative overflow-hidden">
         <div className="relative">
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight uppercase">
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
             {isEditing ? 'Update Product' : 'New Product'}
           </h1>
-          <p className="text-gray-500 font-bold mt-1 uppercase tracking-widest text-[10px]">
+          <p className="text-gray-500 font-bold mt-0.5 uppercase tracking-widest text-[10px]">
             Unified configuration of basic data, reusable features, and pricing bindings.
           </p>
         </div>
         <button
           onClick={() => navigate('/products')}
-          className="bg-gray-50 text-gray-400 p-3 rounded-2xl hover:bg-gray-100 transition relative border border-gray-100 shadow-sm"
+          className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-gray-100 transition relative border border-gray-100 shadow-sm"
         >
-          <X className="w-6 h-6" />
+          <X className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
-        <form onSubmit={handleSubmit} className="p-12 space-y-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Product Title</label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Product Title</label>
               <input
                 type="text"
                 required
-                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-black text-gray-900 transition focus:border-blue-500 shadow-sm"
+                className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-900 text-sm transition focus:border-blue-500 shadow-sm"
                 value={formData.name}
                 onChange={(e) => {
                   const name = e.target.value;
@@ -191,11 +190,11 @@ const ProductFormPage = () => {
               />
             </div>
             <div className="lg:col-span-1">
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Business Code (ID)</label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Business Code (ID)</label>
               <input
                 type="text"
                 required
-                className="w-full border-2 border-gray-100 rounded-2xl p-4 font-mono font-black text-blue-700 transition focus:border-blue-500 shadow-sm"
+                className="w-full border border-gray-200 rounded-xl p-3 font-mono font-bold text-blue-700 text-sm transition focus:border-blue-500 shadow-sm"
                 value={formData.code}
                 onChange={(e) => {
                   setIsCodeEdited(true);
@@ -205,7 +204,7 @@ const ProductFormPage = () => {
               />
             </div>
             <div className="lg:col-span-1">
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Product Classification</label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Product Classification</label>
               <PlexusSelect
                 required
                 placeholder="Select Category..."
@@ -215,7 +214,7 @@ const ProductFormPage = () => {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Target Market Segment</label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Target Market Segment</label>
               <PlexusSelect
                 required
                 options={[
@@ -237,32 +236,32 @@ const ProductFormPage = () => {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Short Marketing Tagline</label>
-              <input type="text" className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 transition focus:border-blue-500 shadow-sm" value={formData.tagline} onChange={(e) => setFormData({...formData, tagline: e.target.value})} placeholder="e.g. Grow your wealth with zero maintenance fees." />
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Short Marketing Tagline</label>
+              <input type="text" className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 text-sm transition focus:border-blue-500 shadow-sm" value={formData.tagline} onChange={(e) => setFormData({...formData, tagline: e.target.value})} placeholder="e.g. Grow your wealth with zero maintenance fees." />
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-12">
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-blue-50 rounded-2xl"><ShieldCheck className="w-6 h-6 text-blue-600" /></div>
-                <h3 className="text-2xl font-black text-gray-900 tracking-tight">Feature Component Links</h3>
+          <div className="border-t border-gray-100 pt-8">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-50 rounded-xl"><ShieldCheck className="w-5 h-5 text-blue-600" /></div>
+                <h3 className="text-lg font-bold text-gray-900 tracking-tight">Feature Component Links</h3>
               </div>
-              <button type="button" onClick={addFeatureLink} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-50">+ Add Component Link</button>
+              <button type="button" onClick={addFeatureLink} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md shadow-blue-50">+ Add Component Link</button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {formData.features.map((link: any, idx: number) => (
-                <div key={idx} className="bg-gray-50 p-8 rounded-3xl border-2 border-gray-100 relative group transition hover:border-blue-200">
+                <div key={idx} className="bg-gray-50 p-6 rounded-xl border border-gray-100 relative group transition hover:border-blue-200">
                   <button type="button" onClick={() => {
                     const newF = [...formData.features];
                     newF.splice(idx, 1);
                     setFormData({...formData, features: newF});
-                  }} className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-5 h-5" /></button>
+                  }} className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-4 h-4" /></button>
 
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Feature Definition</label>
-                      <select className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition" value={link.featureComponentCode} onChange={(e) => {
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Feature Definition</label>
+                      <select className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition" value={link.featureComponentCode} onChange={(e) => {
                         const newF = [...formData.features];
                         const val = e.target.value;
                         newF[idx].featureComponentCode = val;
@@ -285,10 +284,10 @@ const ProductFormPage = () => {
                     </div>
 
                     {link.featureComponentCode === 'CREATE_NEW' && (
-                      <div className="p-6 bg-blue-50/50 rounded-2xl border-2 border-blue-100 space-y-6 animate-in fade-in slide-in-from-top-2">
+                      <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-4 animate-in fade-in slide-in-from-top-2">
                          <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">New Feature Name</label>
-                            <input type="text" className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition" placeholder="e.g. Max Overdraft" value={link.featureName || ''} onChange={(e) => {
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">New Feature Name</label>
+                            <input type="text" className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition" placeholder="e.g. Max Overdraft" value={link.featureName || ''} onChange={(e) => {
                               const newF = [...formData.features];
                               newF[idx].featureName = e.target.value;
                               // Auto-gen code from name if it's new
@@ -296,18 +295,18 @@ const ProductFormPage = () => {
                               setFormData({...formData, features: newF});
                             }} />
                          </div>
-                         <div className="grid grid-cols-2 gap-4">
+                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Internal Code</label>
-                              <input type="text" className="w-full border-2 border-white rounded-xl p-3.5 text-[10px] bg-white font-mono font-black shadow-sm focus:border-blue-500 transition" placeholder="MAX_OVERDRAFT" value={link.tempCode || ''} onChange={(e) => {
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Internal Code</label>
+                              <input type="text" className="w-full border border-white rounded-lg p-2.5 text-[9px] bg-white font-mono font-bold shadow-sm focus:border-blue-500 transition" placeholder="MAX_OVERDRAFT" value={link.tempCode || ''} onChange={(e) => {
                                 const newF = [...formData.features];
                                 newF[idx].tempCode = e.target.value.toUpperCase().replace(/\s/g, '_');
                                 setFormData({...formData, features: newF});
                               }} />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Data Type</label>
-                              <select className="w-full border-2 border-white rounded-xl p-3.5 text-[10px] bg-white font-black shadow-sm focus:border-blue-500 transition" value={link.dataType} onChange={(e) => {
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Data Type</label>
+                              <select className="w-full border border-white rounded-lg p-2.5 text-[9px] bg-white font-bold shadow-sm focus:border-blue-500 transition" value={link.dataType} onChange={(e) => {
                                 const newF = [...formData.features];
                                 newF[idx].dataType = e.target.value;
                                 setFormData({...formData, features: newF});
@@ -324,8 +323,8 @@ const ProductFormPage = () => {
                     )}
 
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Concrete Value</label>
-                      <input type="text" className="w-full border-2 border-white rounded-xl p-3.5 text-xs bg-white font-black shadow-sm focus:border-blue-500 transition" placeholder="e.g. 5.5, YES, 12 months" value={link.featureValue} onChange={(e) => {
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Concrete Value</label>
+                      <input type="text" className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition" placeholder="e.g. 5.5, YES, 12 months" value={link.featureValue} onChange={(e) => {
                         const newF = [...formData.features];
                         newF[idx].featureValue = e.target.value;
                         setFormData({...formData, features: newF});
@@ -334,52 +333,52 @@ const ProductFormPage = () => {
                   </div>
                 </div>
               ))}
-              {formData.features.length === 0 && <div className="col-span-2 py-12 text-center text-gray-400 bg-white border-4 border-dashed rounded-[2.5rem] font-black uppercase tracking-widest text-[10px]">No Feature Components Selected</div>}
+              {formData.features.length === 0 && <div className="col-span-2 py-8 text-center text-gray-400 bg-white border-2 border-dashed rounded-xl font-bold uppercase tracking-widest text-[10px]">No Feature Components Selected</div>}
             </div>
           </div>
 
-           <div className="border-t border-gray-100 pt-12">
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex items-center space-x-4">
-                 <div className="p-3 bg-purple-50 rounded-2xl"><Tag className="w-6 h-6 text-purple-600" /></div>
-                 <h3 className="text-2xl font-black text-gray-900 tracking-tight">Pricing Rule Bindings</h3>
+           <div className="border-t border-gray-100 pt-8">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-3">
+                 <div className="p-2 bg-purple-50 rounded-xl"><Tag className="w-5 h-5 text-purple-600" /></div>
+                 <h3 className="text-lg font-bold text-gray-900 tracking-tight">Pricing Rule Bindings</h3>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex space-x-2">
                 <button
                   type="button"
                   onClick={() => setShowPricingHelp(!showPricingHelp)}
-                  className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition border border-blue-200"
+                  className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition border border-blue-200"
                   title="Pricing Help"
                 >
-                  <HelpCircle className="w-5 h-5" />
+                  <HelpCircle className="w-4 h-4" />
                 </button>
-                <button type="button" onClick={addPricingLink} className="bg-purple-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-700 transition shadow-lg shadow-purple-50">+ Add Pricing Link</button>
+                <button type="button" onClick={addPricingLink} className="bg-purple-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-purple-700 transition shadow-md shadow-purple-50">+ Add Pricing Link</button>
               </div>
             </div>
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* Pricing Help Panel */}
               {showPricingHelp && (
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
                   <div className="flex items-start space-x-3">
-                    <Zap className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <Zap className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h4 className="font-black text-blue-900 text-sm mb-3">Pricing Configuration Guide</h4>
-                      <div className="space-y-3 text-sm text-blue-800">
+                      <h4 className="font-bold text-blue-900 text-xs mb-2">Pricing Configuration Guide</h4>
+                      <div className="space-y-2 text-[11px] text-blue-800">
                         <div>
-                          <p className="font-bold mb-1">📌 Static Fixed Values</p>
-                          <p className="text-xs">Use this for simple pricing: Set a fixed amount (absolute) or percentage and apply it directly.</p>
+                          <p className="font-bold mb-0.5">📌 Static Fixed Values</p>
+                          <p>Use this for simple pricing: Set a fixed amount (absolute) or percentage and apply it directly.</p>
                         </div>
                         <div>
-                          <p className="font-bold mb-1">⚡ Dynamic Rules Engine</p>
-                          <p className="text-xs">Use this for complex pricing: Enable Drools rules that match customer segments and transaction amounts to select the right tier.</p>
+                          <p className="font-bold mb-0.5">⚡ Dynamic Rules Engine</p>
+                          <p>Use this for complex pricing: Enable Drools rules that match customer segments and transaction amounts to select the right tier.</p>
                         </div>
                         <div>
-                          <p className="font-bold mb-1">🎯 Fee Types</p>
-                          <p className="text-xs">FEE_ABSOLUTE (fixed amount), FEE_PERCENTAGE (% of transaction), RATE_ABSOLUTE (interest rate)</p>
+                          <p className="font-bold mb-0.5">🎯 Fee Types</p>
+                          <p>FEE_ABSOLUTE (fixed amount), FEE_PERCENTAGE (% of transaction), RATE_ABSOLUTE (interest rate)</p>
                         </div>
                         <div>
-                          <p className="font-bold mb-1">💰 Discount Targeting</p>
-                          <p className="text-xs">Leave target component blank for global discounts, or specify a component code to discount specific fees.</p>
+                          <p className="font-bold mb-0.5">💰 Discount Targeting</p>
+                          <p>Leave target component blank for global discounts, or specify a component code to discount specific fees.</p>
                         </div>
                       </div>
                     </div>
@@ -387,16 +386,16 @@ const ProductFormPage = () => {
                 </div>
               )}
               {formData.pricing.map((link: any, idx: number) => (
-                <div key={idx} className="bg-gray-50/50 p-8 rounded-3xl border-2 border-gray-100 relative hover:border-purple-200 transition">
+                <div key={idx} className="bg-gray-50/50 p-6 rounded-xl border border-gray-100 relative hover:border-purple-200 transition">
                   <button type="button" onClick={() => {
                     const newP = [...formData.pricing];
                     newP.splice(idx, 1);
                     setFormData({...formData, pricing: newP});
-                  }} className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-5 h-5" /></button>
+                  }} className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-4 h-4" /></button>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Pricing Aggregate Component</label>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Pricing Aggregate Component</label>
                       <PlexusSelect
                         placeholder="Select Global Pricing..."
                         options={pricingComponents.map(pc => ({ value: pc.code, label: `${pc.name} (${pc.type})` }))}
@@ -412,32 +411,32 @@ const ProductFormPage = () => {
                       />
                     </div>
                     <div className="flex items-end">
-                      <label className="flex items-center cursor-pointer p-4 bg-white rounded-xl border-2 border-gray-100 hover:border-blue-200 transition w-full shadow-sm">
-                        <input type="checkbox" className="w-6 h-6 rounded-lg text-blue-600 border-gray-300 focus:ring-blue-500" checked={link.useRulesEngine} onChange={(e) => {
+                      <label className="flex items-center cursor-pointer p-3 bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition w-full shadow-sm">
+                        <input type="checkbox" className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500" checked={link.useRulesEngine} onChange={(e) => {
                           const newP = [...formData.pricing];
                           newP[idx].useRulesEngine = e.target.checked;
                           setFormData({...formData, pricing: newP});
                         }} />
-                        <div className="ml-4">
-                          <span className="text-xs font-black text-gray-900 uppercase tracking-widest block">Activate Rules Engine</span>
-                          <span className="text-[10px] text-gray-400 font-bold uppercase italic tracking-tighter">Use dynamic tiered segments</span>
+                        <div className="ml-3">
+                          <span className="text-[11px] font-bold text-gray-900 uppercase tracking-widest block">Activate Rules Engine</span>
+                          <span className="text-[9px] text-gray-400 font-bold uppercase italic tracking-tighter">Use dynamic tiered segments</span>
                         </div>
                       </label>
                     </div>
                   </div>
 
                   {!link.useRulesEngine && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-white rounded-2xl border-2 border-purple-50 shadow-sm animate-in fade-in duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white rounded-xl border border-purple-50 shadow-sm animate-in fade-in duration-300">
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Static Override Amount</label>
-                        <input type="number" step="0.01" className="w-full border-2 border-gray-50 rounded-xl p-3.5 font-black text-gray-900 transition focus:border-purple-500 bg-gray-50/30" value={link.fixedValue} onChange={(e) => {
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Static Override Amount</label>
+                        <input type="number" step="0.01" className="w-full border border-gray-50 rounded-lg p-2.5 font-bold text-gray-900 text-sm transition focus:border-purple-500 bg-gray-50/30" value={link.fixedValue} onChange={(e) => {
                           const newP = [...formData.pricing];
                           newP[idx].fixedValue = parseFloat(e.target.value);
                           setFormData({...formData, pricing: newP});
                         }} />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Amount Type</label>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Amount Type</label>
                         <PlexusSelect
                           options={[
                             { value: 'FEE_ABSOLUTE', label: 'FEE (ABSOLUTE)' },
@@ -463,24 +462,24 @@ const ProductFormPage = () => {
                   )}
                 </div>
               ))}
-               {formData.pricing.length === 0 && <div className="py-12 text-center text-gray-400 bg-white border-4 border-dashed rounded-[2.5rem] font-black uppercase tracking-widest text-[10px]">No Pricing Components Bound</div>}
+               {formData.pricing.length === 0 && <div className="py-8 text-center text-gray-400 bg-white border-2 border-dashed rounded-xl font-bold uppercase tracking-widest text-[10px]">No Pricing Components Bound</div>}
             </div>
           </div>
 
-           <div className="pt-12 border-t border-gray-100 flex space-x-6">
-             <button type="button" onClick={() => navigate('/products')} className="flex-1 px-8 py-5 border-2 border-gray-100 rounded-3xl font-black text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-xs">Discard Changes</button>
+           <div className="pt-8 border-t border-gray-100 flex space-x-4">
+             <button type="button" onClick={() => navigate('/products')} className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
              {!isEditing && (
                <button
                  type="button"
                  onClick={() => setShowPriceSimulation(true)}
-                 className="flex-1 px-8 py-5 border-2 border-amber-200 text-amber-700 rounded-3xl font-black hover:bg-amber-50 transition uppercase tracking-widest text-xs flex items-center justify-center"
+                 className="flex-1 px-4 py-3 border border-amber-200 text-amber-700 rounded-xl font-bold hover:bg-amber-50 transition uppercase tracking-widest text-[10px] flex items-center justify-center"
                >
-                 <Zap className="w-5 h-5 mr-2" />
+                 <Zap className="w-4 h-4 mr-1.5" />
                  Test Pricing
                </button>
              )}
-             <button type="submit" disabled={submitting} className="flex-1 px-8 py-5 bg-blue-600 text-white rounded-3xl font-black hover:bg-blue-700 transition shadow-2xl shadow-blue-200 flex items-center justify-center uppercase tracking-widest text-xs disabled:opacity-50">
-               {submitting ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <Save className="w-6 h-6 mr-3" />}
+             <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50">
+               {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
                Commit Product Aggregate
              </button>
            </div>
