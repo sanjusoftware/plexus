@@ -23,14 +23,24 @@ public class CoreMetadataSeeder {
      */
     @Transactional
     public void seedCorePricingInputMetadata(String bankId) {
-        if (pricingInputMetadataRepository.count() == 0) {
-            System.out.println("Seeding Core Pricing Input Metadata for bank: " + bankId);
-            pricingInputMetadataRepository.saveAll(List.of(
-                    createMetadata("customerSegment", "Client Segment", "STRING", bankId),
-                    createMetadata("transactionAmount", "Transaction Amount", "DECIMAL", bankId),
-                    createMetadata("productId", "Product ID", "LONG", bankId),
-                    createMetadata("bankId", "Bank ID", "STRING", bankId)
-            ));
+        System.out.println("Seeding Core Pricing Input Metadata for bank: " + bankId);
+        List<PricingInputMetadata> metadataList = List.of(
+                createMetadata("customerSegment", "Client Segment", "STRING", bankId),
+                createMetadata("transactionAmount", "Transaction Amount", "DECIMAL", bankId),
+                createMetadata("productId", "Product ID", "LONG", bankId),
+                createMetadata("bankId", "Bank ID", "STRING", bankId)
+        );
+
+        for (PricingInputMetadata metadata : metadataList) {
+            pricingInputMetadataRepository.findByAttributeKey(metadata.getAttributeKey())
+                    .ifPresentOrElse(
+                            existing -> {
+                                existing.setDisplayName(metadata.getDisplayName());
+                                existing.setDataType(metadata.getDataType());
+                                pricingInputMetadataRepository.save(existing);
+                            },
+                            () -> pricingInputMetadataRepository.save(metadata)
+                    );
         }
     }
 

@@ -109,21 +109,32 @@ public class SystemAdminSeeder implements CommandLineRunner {
             );
 
             // 2. Manage SYSTEM_ADMIN Role
-            if (roleRepository.findByNameAndBankId("SYSTEM_ADMIN", systemBankId).isEmpty()) {
-                Role admin = new Role();
-                admin.setName("SYSTEM_ADMIN");
-                admin.setBankId(systemBankId);
-                admin.setAuthorities(Set.of(
-                    "system:bank:write",
-                    "system:bank:read",
-                    "auth:role:write",
-                    "auth:role:read",
-                    "system:stats:read",
-                    "bank:stats:read"
-                ));
-                roleRepository.save(admin);
-                System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);
-            }
+            Set<String> systemAdminAuthorities = Set.of(
+                "system:bank:write",
+                "system:bank:read",
+                "auth:role:write",
+                "auth:role:read",
+                "system:stats:read",
+                "bank:stats:read"
+            );
+
+            roleRepository.findByNameAndBankId("SYSTEM_ADMIN", systemBankId).ifPresentOrElse(
+                existingRole -> {
+                    if (!existingRole.getAuthorities().equals(systemAdminAuthorities)) {
+                        existingRole.setAuthorities(systemAdminAuthorities);
+                        roleRepository.save(existingRole);
+                        System.out.println("Updated SYSTEM_ADMIN authorities for " + systemBankId);
+                    }
+                },
+                () -> {
+                    Role admin = new Role();
+                    admin.setName("SYSTEM_ADMIN");
+                    admin.setBankId(systemBankId);
+                    admin.setAuthorities(systemAdminAuthorities);
+                    roleRepository.save(admin);
+                    System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);
+                }
+            );
         } finally {
             TenantContextHolder.clear();
         }

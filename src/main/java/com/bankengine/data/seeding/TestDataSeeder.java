@@ -104,8 +104,8 @@ public class TestDataSeeder implements CommandLineRunner {
     @Transactional
     public void seedBank(String bankId, String issuerUrl) {
         TenantContextHolder.setSystemMode(true);
-        System.out.println("\n--- Seeding Tenant: " + bankId + " ---");
         TenantContextHolder.setBankId(bankId);
+        System.out.println("\n--- Seeding Tenant: " + bankId + " ---");
 
         seedBankConfiguration(bankId, issuerUrl);
         seedTestRoles(bankId);
@@ -185,42 +185,97 @@ public class TestDataSeeder implements CommandLineRunner {
         String featureName = "Max Free ATM Txn";
         String featureCode = "MAX_FREE_ATM_TXN";
         FeatureComponent maxTxn = featureComponentRepository.findByBankIdAndCodeAndVersion(bankId, featureCode, 1)
+                .map(existing -> {
+                    existing.setName(featureName);
+                    existing.setDataType(DataType.INTEGER);
+                    existing.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+                    return featureComponentRepository.save(existing);
+                })
                 .orElseGet(() -> featureComponentRepository.save(createFeature(featureName, featureCode, DataType.INTEGER, bankId)));
 
-        Product savings = createProduct(bankId.equals(BANK_A) ? "Global Savings" : "Local Savings",
+        Product savings = saveOrUpdateProduct(bankId.equals(BANK_A) ? "Global Savings" : "Local Savings",
                 bankId.equals(BANK_A) ? "GLOB-SAV" : "LOC-SAV", casaType, bankId, "RETAIL");
-        Product checking = createProduct(bankId.equals(BANK_A) ? "Global Checking" : "Local Checking",
+        Product checking = saveOrUpdateProduct(bankId.equals(BANK_A) ? "Global Checking" : "Local Checking",
                 bankId.equals(BANK_A) ? "GLOB-CHK" : "LOC-CHK", casaType, bankId, "RETAIL");
 
-        productRepository.saveAll(List.of(savings, checking));
-        linkRepository.save(createLink(savings, maxTxn, "10", bankId));
+        linkRepository.findAll().stream()
+                .filter(l -> l.getProduct().getId().equals(savings.getId()) && l.getFeatureComponent().getId().equals(maxTxn.getId()))
+                .findFirst()
+                .ifPresentOrElse(
+                        existingLink -> {
+                            existingLink.setFeatureValue("10");
+                            linkRepository.save(existingLink);
+                        },
+                        () -> linkRepository.save(createLink(savings, maxTxn, "10", bankId))
+                );
+    }
+
+    private Product saveOrUpdateProduct(String name, String code, ProductType type, String bankId, String cat) {
+        return productRepository.findByBankIdAndCodeAndVersion(bankId, code, 1)
+                .map(existing -> {
+                    existing.setName(name);
+                    existing.setProductType(type);
+                    existing.setCategory(cat);
+                    existing.setActivationDate(LocalDate.now());
+                    existing.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+                    return productRepository.save(existing);
+                })
+                .orElseGet(() -> productRepository.save(createProduct(name, code, type, bankId, cat)));
     }
 
     @Transactional
     public void seedPricingComponentsAndLinks(String bankId) {
         String name = "Monthly Maintenance Fee";
         String code = "MONTHLY_MAINT_FEE";
-        PricingComponent fee = pricingComponentRepository.findByBankIdAndCodeAndVersion(bankId, code, 1).orElseGet(() -> {
-            PricingComponent pricingComponent = new PricingComponent();
-            pricingComponent.setName(name);
-            pricingComponent.setCode(code);
-            pricingComponent.setVersion(1);
-            pricingComponent.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-            pricingComponent.setType(ComponentType.FEE);
-            pricingComponent.setBankId(bankId);
-            return pricingComponentRepository.save(pricingComponent);
-        });
+        PricingComponent fee = pricingComponentRepository.findByBankIdAndCodeAndVersion(bankId, code, 1)
+                .map(existing -> {
+                    existing.setName(name);
+                    existing.setType(ComponentType.FEE);
+                    existing.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+                    return pricingComponentRepository.save(existing);
+                })
+                .orElseGet(() -> {
+                    PricingComponent pricingComponent = new PricingComponent();
+                    pricingComponent.setName(name);
+                    pricingComponent.setCode(code);
+                    pricingComponent.setVersion(1);
+                    pricingComponent.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+                    pricingComponent.setType(ComponentType.FEE);
+                    pricingComponent.setBankId(bankId);
+                    return pricingComponentRepository.save(pricingComponent);
+                });
 
-        PricingTier tier = createTier("Standard Tier", fee, bankId);
-        tierConditionRepository.save(createCondition(tier, "customerSegment", Operator.EQ, "STANDARD", bankId));
-        priceValueRepository.save(createPriceValue(new BigDecimal("15.00"), PriceValue.ValueType.FEE_ABSOLUTE, tier, bankId));
+        String tierName = "Standard Tier";
+        String tierCode = generateValidCode(tierName);
+        PricingTier tier = fee.getPricingTiers().stream()
+                .filter(t -> t.getCode().equals(tierCode))
+                .findFirst()
+                .map(existing -> {
+                    existing.setName(tierName + " " + bankId);
+                    return pricingTierRepository.save(existing);
+                })
+                .orElseGet(() -> createTier(tierName, fee, bankId));
+
+        // Update conditions
+        tier.getConditions().clear();
+        tier.getConditions().add(createCondition(tier, "customerSegment", Operator.EQ, "STANDARD", bankId));
+
+        // Update price values
+        tier.getPriceValues().clear();
+        tier.getPriceValues().add(createPriceValue(new BigDecimal("15.00"), PriceValue.ValueType.FEE_ABSOLUTE, tier, bankId));
+
+        pricingTierRepository.save(tier);
 
         productRepository.findByBankIdAndCodeAndVersion(bankId, bankId.equals(BANK_A) ? "GLOB-SAV" : "LOC-SAV", 1).ifPresent(p -> {
-            ProductPricingLink link = new ProductPricingLink();
-            link.setProduct(p);
-            link.setPricingComponent(fee);
-            link.setBankId(bankId);
-            productPricingLinkRepository.save(link);
+            boolean linkExists = productPricingLinkRepository.findAll().stream()
+                    .anyMatch(l -> l.getProduct().getId().equals(p.getId()) && l.getPricingComponent().getId().equals(fee.getId()));
+            if (!linkExists) {
+                ProductPricingLink link = new ProductPricingLink();
+                link.setProduct(p);
+                link.setPricingComponent(fee);
+                link.setBankId(bankId);
+                productPricingLinkRepository.save(link);
+            }
         });
     }
 
@@ -232,20 +287,28 @@ public class TestDataSeeder implements CommandLineRunner {
                 .orElseThrow(() -> new RuntimeException("Checking not found for " + bankId));
 
         String bankName = bankId.equals(BANK_A) ? "Gold Elite Bundle" : "Standard Starter Pack";
-        ProductBundle bundle = new ProductBundle();
-        bundle.setBankId(bankId);
-        bundle.setCode(generateValidCode(bankName));
+        String bundleCode = generateValidCode(bankName);
+
+        ProductBundle bundle = productBundleRepository.findByBankIdAndCodeAndVersion(bankId, bundleCode, 1)
+                .orElseGet(() -> {
+                    ProductBundle b = new ProductBundle();
+                    b.setBankId(bankId);
+                    b.setCode(bundleCode);
+                    b.setVersion(1);
+                    return b;
+                });
+
         bundle.setName(bankName);
         bundle.setDescription("Comprehensive bundle for " + bankId);
         bundle.setStatus(VersionableEntity.EntityStatus.ACTIVE);
         bundle.setActivationDate(LocalDate.now());
         bundle.setTargetCustomerSegments("RETAIL");
 
-        List<BundleProductLink> links = new ArrayList<>();
-        links.add(createBundleLink(bundle, savings, true, true, bankId));
-        links.add(createBundleLink(bundle, checking, false, false, bankId));
+        // Clear existing links and re-add to ensure they match seeded data
+        bundle.getContainedProducts().clear();
+        bundle.getContainedProducts().add(createBundleLink(bundle, savings, true, true, bankId));
+        bundle.getContainedProducts().add(createBundleLink(bundle, checking, false, false, bankId));
 
-        bundle.setContainedProducts(links);
         productBundleRepository.save(bundle);
         System.out.println("Seeded Product Bundle for " + bankId);
     }
