@@ -2,6 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, Info } from 'lucide-react';
+import {
+  AdminDataTable,
+  AdminDataTableActionButton,
+  AdminDataTableActionCell,
+  AdminDataTableActionsHeader,
+  AdminDataTableEmptyRow,
+  AdminDataTableRow
+} from '../../components/AdminDataTable';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
@@ -139,8 +147,7 @@ const PricingComponentsPage = () => {
       {loading ? (
         <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="admin-table-card">
-          <table className="admin-table">
+        <AdminDataTable aria-label="Pricing components table">
             <thead>
               <tr>
                 <th className="w-10"></th>
@@ -148,13 +155,13 @@ const PricingComponentsPage = () => {
                 <th>Type</th>
                 <th>Status</th>
                 <th>Segments</th>
-                <th className="text-right">Actions</th>
+                <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
             <tbody>
               {components.map((comp) => (
                 <React.Fragment key={comp.id}>
-                  <tr className="hover:bg-gray-50 transition cursor-pointer group" onClick={() => toggleExpand(comp.id)}>
+                  <AdminDataTableRow interactive className="group" onClick={() => toggleExpand(comp.id)}>
                     <td className="text-center">
                       {expandedRows.has(comp.id) ? <ChevronDown className="w-4 h-4 text-blue-600 font-bold" /> : <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-400" />}
                     </td>
@@ -175,20 +182,26 @@ const PricingComponentsPage = () => {
                     <td className="whitespace-nowrap font-bold text-gray-500">
                       {comp.pricingTiers?.length || 0} Tiers
                     </td>
-                    <td className="whitespace-nowrap text-right text-xs font-medium space-x-1">
+                    <AdminDataTableActionCell>
                       {comp.status === 'DRAFT' && (
                         <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
-                          <button onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} className="text-green-600 hover:bg-green-50 p-1.5 rounded-lg transition border border-transparent hover:border-green-100" title="Activate Production Mode"><CheckCircle2 className="w-4 h-4" /></button>
+                          <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} tone="success" title="Activate Production Mode" aria-label={`Activate ${comp.name}`}>
+                            <CheckCircle2 className="h-4 w-4" />
+                          </AdminDataTableActionButton>
                         </HasPermission>
                       )}
                       <HasPermission action="PATCH" path="/api/v1/pricing-components/*">
-                        <button onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition border border-transparent hover:border-blue-100" title="Edit Structure"><Edit2 className="w-4 h-4" /></button>
+                        <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} tone="primary" title="Edit Structure" aria-label={`Edit ${comp.name}`}>
+                          <Edit2 className="h-4 w-4" />
+                        </AdminDataTableActionButton>
                       </HasPermission>
                       <HasPermission action="DELETE" path="/api/v1/pricing-components/*">
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} className="text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition border border-transparent hover:border-red-100" title="Permanently Delete"><Trash2 className="w-4 h-4" /></button>
+                        <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} tone="danger" title="Permanently Delete" aria-label={`Delete ${comp.name}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </AdminDataTableActionButton>
                       </HasPermission>
-                    </td>
-                  </tr>
+                    </AdminDataTableActionCell>
+                  </AdminDataTableRow>
                   {expandedRows.has(comp.id) && (
                     <tr className="bg-gray-50/30">
                       <td colSpan={6} className="border-b border-gray-100 px-8 py-3">
@@ -231,9 +244,11 @@ const PricingComponentsPage = () => {
                   )}
                 </React.Fragment>
               ))}
+              {components.length === 0 && (
+                <AdminDataTableEmptyRow colSpan={6}>No pricing components found.</AdminDataTableEmptyRow>
+              )}
             </tbody>
-          </table>
-        </div>
+        </AdminDataTable>
       )}
 
     </AdminPage>

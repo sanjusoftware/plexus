@@ -2,6 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Database, Info } from 'lucide-react';
+import {
+  AdminDataTable,
+  AdminDataTableActionButton,
+  AdminDataTableActionCell,
+  AdminDataTableActionsHeader,
+  AdminDataTableEmptyRow,
+  AdminDataTableRow
+} from '../../components/AdminDataTable';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
@@ -71,41 +79,43 @@ const PricingMetadataPage = () => {
       {loading ? (
         <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="admin-table-card">
-          <table className="admin-table">
+        <AdminDataTable aria-label="Pricing metadata table">
             <thead>
               <tr>
+                <th>Name</th>
                 <th>Key</th>
-                <th>Display</th>
                 <th>Type</th>
-                <th className="text-right">Actions</th>
+                <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
             <tbody>
               {metadata.length === 0 ? (
-                <tr><td colSpan={4} className="admin-empty-state">No metadata registered. Rules engine will not recognize dynamic inputs.</td></tr>
+                <AdminDataTableEmptyRow colSpan={4}>No metadata registered. Rules engine will not recognize dynamic inputs.</AdminDataTableEmptyRow>
               ) : (
                 metadata.map((meta) => (
-                  <tr key={meta.id} className="hover:bg-gray-50/50 transition cursor-default">
-                    <td className="whitespace-nowrap bg-blue-50/20 font-mono font-bold text-blue-700">{meta.attributeKey}</td>
+                  <AdminDataTableRow key={meta.id}>
                     <td className="whitespace-nowrap text-sm font-bold text-gray-900">{meta.displayName}</td>
+                    <td className="whitespace-nowrap bg-blue-50/20 font-mono font-bold text-blue-700">{meta.attributeKey}</td>
                     <td className="whitespace-nowrap">
                       <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
                     </td>
-                    <td className="whitespace-nowrap text-right text-xs font-medium space-x-1">
+                    <AdminDataTableActionCell>
                       <HasPermission action="PUT" path="/api/v1/pricing-metadata/*">
-                        <button onClick={() => navigate(`/pricing-metadata/edit/${meta.attributeKey}`)} className="text-blue-600 hover:bg-blue-50 p-2.5 rounded-xl transition shadow-sm border border-blue-50" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                        <AdminDataTableActionButton onClick={() => navigate(`/pricing-metadata/edit/${meta.attributeKey}`)} tone="primary" title="Edit" aria-label={`Edit ${meta.displayName}`}>
+                          <Edit2 className="h-4 w-4" />
+                        </AdminDataTableActionButton>
                       </HasPermission>
                       <HasPermission action="DELETE" path="/api/v1/pricing-metadata/*">
-                        <button onClick={() => handleDelete(meta.attributeKey)} className="text-red-600 hover:bg-red-50 p-2.5 rounded-xl transition shadow-sm border border-red-50" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                        <AdminDataTableActionButton onClick={() => handleDelete(meta.attributeKey)} tone="danger" title="Delete" aria-label={`Delete ${meta.displayName}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </AdminDataTableActionButton>
                       </HasPermission>
-                    </td>
-                  </tr>
+                    </AdminDataTableActionCell>
+                  </AdminDataTableRow>
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+        </AdminDataTable>
       )}
 
     </AdminPage>

@@ -92,7 +92,7 @@
   }
 
   .admin-table-card {
-	@apply overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm;
+	@apply overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm;
   }
 
   .admin-table {
@@ -100,19 +100,71 @@
   }
 
   .admin-table thead {
-	@apply bg-gray-50/80;
+	@apply border-b border-gray-200 bg-slate-50;
   }
 
   .admin-table th {
-	@apply px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500;
+	@apply px-5 py-3.5 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-700;
   }
 
   .admin-table td {
-	@apply px-4 py-2.5 text-xs text-gray-700;
+	@apply px-5 py-4 align-middle text-xs font-medium text-gray-700;
   }
 
   .admin-table tbody {
 	@apply divide-y divide-gray-100 bg-white;
+  }
+
+  .admin-table__row {
+	@apply transition-colors duration-150;
+  }
+
+  .admin-table__row--hoverable {
+	@apply hover:bg-blue-50/30;
+  }
+
+  .admin-table__row--interactive {
+	@apply cursor-pointer;
+  }
+
+  .admin-table__actions-header {
+	@apply pr-5;
+  }
+
+  .admin-table__actions-cell {
+	@apply whitespace-nowrap;
+  }
+
+  .admin-table__actions {
+	@apply flex items-center justify-end gap-2;
+  }
+
+  .admin-table__action-btn {
+	@apply inline-flex items-center justify-center rounded-xl border bg-white shadow-sm transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .admin-table__action-btn--icon {
+	@apply h-11 w-11;
+  }
+
+  .admin-table__action-btn--compact {
+	@apply gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em];
+  }
+
+  .admin-table__action-btn--neutral {
+	@apply border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 focus:ring-gray-200;
+  }
+
+  .admin-table__action-btn--primary {
+	@apply border-blue-100 text-blue-600 hover:border-blue-200 hover:bg-blue-50 focus:ring-blue-200;
+  }
+
+  .admin-table__action-btn--success {
+	@apply border-green-100 text-green-600 hover:border-green-200 hover:bg-green-50 focus:ring-green-200;
+  }
+
+  .admin-table__action-btn--danger {
+	@apply border-red-100 text-red-600 hover:border-red-200 hover:bg-red-50 focus:ring-red-200;
   }
 
   .admin-empty-state {

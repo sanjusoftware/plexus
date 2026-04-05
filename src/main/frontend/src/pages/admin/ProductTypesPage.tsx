@@ -2,6 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, List, CheckCircle2 } from 'lucide-react';
+import {
+  AdminDataTable,
+  AdminDataTableActionButton,
+  AdminDataTableActionCell,
+  AdminDataTableActionsHeader,
+  AdminDataTableEmptyRow,
+  AdminDataTableRow
+} from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
@@ -95,26 +103,23 @@ const ProductTypesPage = () => {
       {loading ? (
         <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="admin-table-card">
-          <table className="admin-table">
+        <AdminDataTable aria-label="Product types table">
             <thead>
               <tr>
-                <th>Code</th>
                 <th>Name</th>
+                <th>Code</th>
                 <th>Status</th>
-                <th className="text-right">Actions</th>
+                <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
             <tbody>
               {productTypes.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="admin-empty-state">No product types found. Get started by creating your first one.</td>
-                </tr>
+                <AdminDataTableEmptyRow colSpan={4}>No product types found. Get started by creating your first one.</AdminDataTableEmptyRow>
               ) : (
                 productTypes.map((type) => (
-                  <tr key={type.id} className="hover:bg-gray-50/50 transition">
+                  <AdminDataTableRow key={type.id}>
+                    <td className="whitespace-nowrap text-sm font-bold text-gray-900">{type.name}</td>
                     <td className="whitespace-nowrap font-mono font-bold text-blue-700">{type.code}</td>
-                    <td className="whitespace-nowrap text-sm font-medium text-gray-900">{type.name}</td>
                     <td className="whitespace-nowrap">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         type.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
@@ -124,31 +129,35 @@ const ProductTypesPage = () => {
                         {type.status}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap text-right text-xs font-medium space-x-2">
+                    <AdminDataTableActionCell>
                       {type.status === 'DRAFT' && (
                         <HasPermission action="POST" path="/api/v1/product-types/*/activate">
-                          <button onClick={() => handleAction(type.id, 'activate')} className="inline-flex items-center rounded-lg bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700 transition hover:bg-green-200" title="Activate">
-                            <CheckCircle2 className="mr-1 h-3 w-3" /> Activate
-                          </button>
+                          <AdminDataTableActionButton onClick={() => handleAction(type.id, 'activate')} tone="success" size="compact" title="Activate" aria-label={`Activate ${type.name}`}>
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Activate
+                          </AdminDataTableActionButton>
                         </HasPermission>
                       )}
                       {type.status !== 'ARCHIVED' && (
                         <>
                           <HasPermission action="PUT" path="/api/v1/product-types/*">
-                            <button onClick={() => navigate(`/product-types/edit/${type.id}`)} className="rounded-lg p-1.5 text-blue-600 transition hover:bg-blue-50" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
+                            <AdminDataTableActionButton onClick={() => navigate(`/product-types/edit/${type.id}`)} tone="primary" title="Edit" aria-label={`Edit ${type.name}`}>
+                              <Edit2 className="h-4 w-4" />
+                            </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/product-types/*">
-                            <button onClick={() => triggerConfirmAction(type)} className="rounded-lg p-1.5 text-red-600 transition hover:bg-red-50" title={type.status === 'DRAFT' ? "Delete" : "Archive"}><Trash2 className="h-3.5 w-3.5" /></button>
+                            <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" title={type.status === 'DRAFT' ? "Delete" : "Archive"} aria-label={`${type.status === 'DRAFT' ? 'Delete' : 'Archive'} ${type.name}`}>
+                              <Trash2 className="h-4 w-4" />
+                            </AdminDataTableActionButton>
                           </HasPermission>
                         </>
                       )}
-                    </td>
-                  </tr>
+                    </AdminDataTableActionCell>
+                  </AdminDataTableRow>
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+        </AdminDataTable>
       )}
 
       <ConfirmationModal
