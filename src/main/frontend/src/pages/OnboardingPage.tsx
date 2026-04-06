@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ShieldCheck, Rocket, Info, ArrowLeft, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
 import axios from 'axios';
 import PlexusSelect from '../components/PlexusSelect';
+import GlobalToast from '../components/GlobalToast';
 import { useAuth } from '../context/AuthContext';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
 import { useAbortSignal } from '../hooks/useAbortSignal';
@@ -168,6 +169,7 @@ const OnboardingPage = () => {
 
   const renderForm = () => (
     <div className="max-w-xl w-full mx-auto">
+      <GlobalToast />
       {!isAdmin && (
         <button
           onClick={() => navigate('/')}
