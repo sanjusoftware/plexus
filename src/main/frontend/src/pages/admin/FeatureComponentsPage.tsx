@@ -130,19 +130,22 @@ const FeatureComponentsPage = () => {
                   <AdminDataTableActionCell>
                     {feat.status === 'DRAFT' && (
                       <HasPermission action="POST" path="/api/v1/features/*/activate">
-                        <AdminDataTableActionButton onClick={() => handleActivate(feat.id)} tone="success" title="Activate" aria-label={`Activate ${feat.name}`}>
-                          <CheckCircle2 className="h-4 w-4" />
+                        <AdminDataTableActionButton onClick={() => handleActivate(feat.id)} tone="success" size="compact" title="Activate" aria-label={`Activate ${feat.name}`}>
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Activate
                         </AdminDataTableActionButton>
                       </HasPermission>
                     )}
                     <HasPermission action="PUT" path="/api/v1/features/*">
-                      <AdminDataTableActionButton onClick={() => navigate(`/features/edit/${feat.id}`)} tone="primary" title="Edit" aria-label={`Edit ${feat.name}`}>
-                        <Edit2 className="h-4 w-4" />
+                      <AdminDataTableActionButton onClick={() => navigate(`/features/edit/${feat.id}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${feat.name}`}>
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Edit
                       </AdminDataTableActionButton>
                     </HasPermission>
                     <HasPermission action="DELETE" path="/api/v1/features/*">
-                      <AdminDataTableActionButton onClick={() => handleDelete(feat.id)} tone="danger" title="Delete" aria-label={`Delete ${feat.name}`}>
-                        <Trash2 className="h-4 w-4" />
+                      <AdminDataTableActionButton onClick={() => handleDelete(feat.id)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${feat.name}`}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
                       </AdminDataTableActionButton>
                     </HasPermission>
                   </AdminDataTableActionCell>

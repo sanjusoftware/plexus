@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Trash2, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Edit2, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
+import { AdminDataTableActionButton } from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
@@ -161,20 +162,24 @@ const RoleManagementPage = () => {
                   <div className="flex items-center space-x-3">
                     <div className="flex space-x-1.5 opacity-0 group-hover:opacity-100 transition duration-300">
                       <HasPermission action="POST" path="/api/v1/roles/mapping">
-                        <button
+                        <AdminDataTableActionButton
                           onClick={(e) => { e.stopPropagation(); navigate(`/roles/edit/${mapping.name}`); }}
-                          className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-lg transition border border-transparent hover:border-blue-100 font-bold text-[10px] uppercase flex items-center"
+                          tone="primary"
+                          size="compact"
                         >
+                          <Edit2 className="h-3.5 w-3.5" />
                           Edit
-                        </button>
+                        </AdminDataTableActionButton>
                       </HasPermission>
                       <HasPermission action="POST" path="/api/v1/roles/mapping">
-                        <button
+                        <AdminDataTableActionButton
                           onClick={(e) => { e.stopPropagation(); confirmDelete(mapping.name); }}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition border border-transparent hover:border-red-100"
+                          tone="danger"
+                          size="compact"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </AdminDataTableActionButton>
                       </HasPermission>
                     </div>
                     {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}

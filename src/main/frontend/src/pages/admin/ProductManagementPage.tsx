@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info, CheckCircle2 } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
+import { AdminDataTableActionButton } from '../../components/AdminDataTable';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
@@ -138,20 +139,37 @@ const ProductManagementPage = () => {
                   <div className="flex space-x-2 mt-4 md:mt-0">
                     {prod.status === 'DRAFT' && (
                       <HasPermission action="POST" path="/api/v1/products/*/activate">
-                        <button onClick={() => handleStatusAction(prod.id, 'activate')} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition shadow-md shadow-green-100">Activate</button>
+                        <AdminDataTableActionButton
+                          onClick={() => handleStatusAction(prod.id, 'activate')}
+                          tone="success"
+                          size="compact"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Activate
+                        </AdminDataTableActionButton>
                       </HasPermission>
                     )}
                     <HasPermission action="PATCH" path="/api/v1/products/*">
-                      <button onClick={() => navigate(`/products/edit/${prod.id}`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition shadow-sm border border-blue-50" title="Modify Product"><Edit2 className="w-4 h-4" /></button>
+                      <AdminDataTableActionButton
+                        onClick={() => navigate(`/products/edit/${prod.id}`)}
+                        tone="primary"
+                        size="compact"
+                        title="Modify Product"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Edit
+                      </AdminDataTableActionButton>
                     </HasPermission>
                     <HasPermission action="DELETE" path="/api/v1/products/*">
-                      <button
+                      <AdminDataTableActionButton
                         onClick={() => prod.status === 'ACTIVE' ? handleStatusAction(prod.id, 'archive') : handleDelete(prod.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition shadow-sm border border-red-50"
+                        tone="danger"
+                        size="compact"
                         title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {prod.status === 'ACTIVE' ? "Archive" : "Delete"}
+                      </AdminDataTableActionButton>
                     </HasPermission>
                   </div>
                 </div>
