@@ -53,13 +53,14 @@ interface PricingComponent {
 
 const PricingComponentsPage = () => {
   const navigate = useNavigate();
-  const { setToast } = useAuth();
+  const { user, setToast } = useAuth();
   const [components, setComponents] = useState<PricingComponent[]>([]);
+  const [metadata, setMetadata] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const normalizeTier = useCallback((tier: any): PricingTier => {
-    const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) ? tier.priceValues[0] : null);
+    const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) && tier.priceValues.length > 0 ? tier.priceValues[0] : null);
     return {
       ...tier,
       conditions: tier.conditions || [],
@@ -80,11 +81,15 @@ const PricingComponentsPage = () => {
 
   const signal = useAbortSignal();
 
-  const fetchComponents = useCallback(async (abortSignal: AbortSignal) => {
+  const fetchData = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/pricing-components', { signal: abortSignal });
-      setComponents((response.data || []).map(normalizeComponent));
+      const [compRes, metaRes] = await Promise.all([
+        axios.get('/api/v1/pricing-components', { signal: abortSignal }),
+        axios.get('/api/v1/pricing-metadata', { signal: abortSignal })
+      ]);
+      setComponents((compRes.data || []).map(normalizeComponent));
+      setMetadata(metaRes.data || []);
     } catch (err: any) {
       if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch pricing components.', type: 'error' });
@@ -96,8 +101,61 @@ const PricingComponentsPage = () => {
   }, [normalizeComponent, setToast]);
 
   useEffect(() => {
-    fetchComponents(signal);
-  }, [fetchComponents, signal]);
+    fetchData(signal);
+  }, [fetchData, signal]);
+
+  const formatCondition = (condition: TierCondition, currency: string) => {
+    const meta = metadata.find(m => m.attributeKey === condition.attributeName);
+    const label = meta ? meta.displayName : condition.attributeName;
+    const value = condition.attributeValue;
+    const op = condition.operator;
+
+    const getCurrencySymbol = (code: string) => {
+      const symbols: Record<string, string> = {
+        'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'INR': '₹', 'AUD': 'A$', 'CAD': 'C$', 'CHF': 'CHF', 'CNY': '¥', 'HKD': 'HK$', 'NZD': 'NZ$', 'SEK': 'kr', 'KRW': '₩', 'SGD': 'S$', 'NOK': 'kr', 'MXN': '$',
+      };
+      return symbols[code] || code;
+    };
+
+    const formatNumber = (val: string) => {
+      const n = parseFloat(val);
+      if (isNaN(n)) return val;
+      return new Intl.NumberFormat('en-US').format(n);
+    };
+
+    const opMap: Record<string, string> = {
+      'EQ': 'is',
+      'GT': 'is greater than',
+      'LT': 'is less than',
+      'GE': 'is greater than or equal to',
+      'LE': 'is less than or equal to'
+    };
+
+    const friendlyOp = opMap[op] || op;
+
+    if (meta?.dataType === 'BOOLEAN') {
+      const isTrue = value === 'true';
+      return (
+        <span>
+          User <span className="font-black text-blue-900">{isTrue ? 'is' : 'is NOT'}</span> {label}
+        </span>
+      );
+    }
+
+    let formattedValue = value;
+    if (meta?.dataType === 'INTEGER' || meta?.dataType === 'DECIMAL') {
+      formattedValue = formatNumber(value);
+      if (condition.attributeName.toLowerCase().includes('balance') || condition.attributeName.toLowerCase().includes('income')) {
+        formattedValue = `${getCurrencySymbol(currency)}${formattedValue}`;
+      }
+    }
+
+    return (
+      <span>
+        <span className="text-blue-500">{label}</span> {friendlyOp} <span className="font-black text-blue-900">{formattedValue}</span>
+      </span>
+    );
+  };
 
   const toggleExpand = (id: number) => {
     const newExpanded = new Set(expandedRows);
@@ -110,7 +168,7 @@ const PricingComponentsPage = () => {
     try {
       await axios.post(`/api/v1/pricing-components/${id}/activate`);
       setToast({ message: 'Component activated and is now ready for production use.', type: 'success' });
-      await fetchComponents(signal);
+      await fetchData(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Activation failed.', type: 'error' });
     }
@@ -121,7 +179,7 @@ const PricingComponentsPage = () => {
     try {
       await axios.delete(`/api/v1/pricing-components/${id}`);
       setToast({ message: 'Component deleted successfully.', type: 'success' });
-      await fetchComponents(signal);
+      await fetchData(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
     }
@@ -210,33 +268,48 @@ const PricingComponentsPage = () => {
                   </AdminDataTableRow>
                   {expandedRows.has(comp.id) && (
                     <tr className="bg-gray-50/30">
-                      <td colSpan={6} className="border-b border-gray-100 px-8 py-3">
+                      <td colSpan={6} className="border-b border-gray-100 px-8 py-3 bg-gray-50/50">
                         <div className="text-xs font-medium text-gray-600 mb-4 italic leading-relaxed border-l-2 border-gray-200 pl-3">{comp.description}</div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
                           {comp.pricingTiers?.map((tier, idx) => (
-                            <div key={idx} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
-                              <div className="flex justify-between items-start mb-4">
-                                <div>
-                                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Tier: {tier.code}</div>
-                                  <h4 className="font-bold text-gray-900 text-sm leading-tight">{tier.name}</h4>
+                            <div key={idx} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-center justify-between gap-6">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <span className="text-[9px] font-black bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded uppercase tracking-tighter">Tier #{idx + 1}</span>
+                                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{tier.code}</div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-blue-600 tracking-tight">{tier.priceValue.priceAmount}</div>
-                                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{tier.priceValue.valueType}</div>
+                                <h4 className="font-bold text-gray-900 text-sm mb-3">{tier.name}</h4>
+
+                                <div className="space-y-1.5">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {tier.conditions?.map((c, cidx) => (
+                                      <React.Fragment key={cidx}>
+                                        <div className="bg-blue-50/40 text-blue-800 px-3 py-1.5 rounded-lg text-[10px] font-medium border border-blue-100/50 flex items-center shadow-sm">
+                                          {formatCondition(c, user?.currencyCode || 'USD')}
+                                        </div>
+                                        {cidx < tier.conditions.length - 1 && (
+                                          <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">{c.connector}</span>
+                                        )}
+                                      </React.Fragment>
+                                    ))}
+                                    {(!tier.conditions || tier.conditions.length === 0) && (
+                                      <div className="text-[10px] text-gray-400 italic bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">No segment conditions (Catch-all Tier)</div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                              <div className="space-y-1.5">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 border-b border-gray-50 pb-0.5">Calculation Conditions</div>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {tier.conditions?.map((c, cidx) => (
-                                    <div key={cidx} className="bg-blue-50/50 text-blue-800 px-2 py-1 rounded-lg text-[10px] font-bold border border-blue-100/50 flex items-center">
-                                      <span className="text-blue-400 mr-1.5">{c.attributeName}</span>
-                                      <span className="bg-white px-1 py-0.5 rounded text-blue-600 font-bold mx-1">{c.operator}</span>
-                                      <span className="text-blue-900">{c.attributeValue}</span>
-                                      {cidx < tier.conditions.length - 1 && <span className="ml-1.5 font-bold text-blue-300 uppercase tracking-tighter text-[9px]">{c.connector}</span>}
-                                    </div>
-                                  ))}
-                                  {(!tier.conditions || tier.conditions.length === 0) && <div className="text-[10px] text-gray-400 italic">No segment conditions (Catch-all Tier)</div>}
+
+                              <div className="flex items-center space-x-6 pl-6 border-l border-gray-100 min-w-[200px] justify-end">
+                                <div className="text-right">
+                                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Price Configuration</div>
+                                  <div className="flex items-baseline justify-end space-x-1.5">
+                                    <span className="text-2xl font-black text-blue-600 tracking-tighter">
+                                      {tier.priceValue.valueType.includes('PERCENTAGE') ? '' : (user?.currencyCode || 'USD')}
+                                      {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(tier.priceValue.priceAmount)}
+                                      {tier.priceValue.valueType.includes('PERCENTAGE') ? '%' : ''}
+                                    </span>
+                                  </div>
+                                  <div className="text-[9px] font-black text-blue-400 uppercase tracking-widest mt-0.5">{tier.priceValue.valueType.replace(/_/g, ' ')}</div>
                                 </div>
                               </div>
                             </div>

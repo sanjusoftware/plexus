@@ -72,7 +72,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(component.getCode()).thenReturn("FEE_101");
         when(component.getVersion()).thenReturn(1);
         when(component.getName()).thenReturn("TestFee");
-        when(component.getPricingTiers()).thenReturn(List.of(tier1, tier2));
+        when(component.getPricingTiers()).thenReturn(Set.of(tier1, tier2));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(component));
         when(metadataService.getMetadataEntityByKey(any())).thenReturn(metadata);
@@ -119,7 +119,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(component.getCode()).thenReturn("FEE_100");
         when(component.getVersion()).thenReturn(1);
         when(component.getName()).thenReturn("TestFee");
-        when(component.getPricingTiers()).thenReturn(List.of(tier));
+        when(component.getPricingTiers()).thenReturn(Set.of(tier));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(component));
         when(metadataService.getMetadataEntityByKey("transactionAmount")).thenReturn(metadata);
@@ -166,7 +166,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(tierA.getId()).thenReturn(1001L);
         when(tierA.getCode()).thenReturn("TIER_1001");
         when(tierA.getPriceValues()).thenReturn(Set.of(new PriceValue()));
-        when(compA.getPricingTiers()).thenReturn(List.of(tierA));
+        when(compA.getPricingTiers()).thenReturn(Set.of(tierA));
 
         // 2. Component B: Transaction Tax (ID 102)
         PricingComponent compB = mock(PricingComponent.class);
@@ -178,7 +178,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(tierB.getId()).thenReturn(2002L);
         when(tierB.getCode()).thenReturn("TIER_2002");
         when(tierB.getPriceValues()).thenReturn(Set.of(new PriceValue()));
-        when(compB.getPricingTiers()).thenReturn(List.of(tierB));
+        when(compB.getPricingTiers()).thenReturn(Set.of(tierB));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(compA, compB));
 
@@ -202,7 +202,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(comp.getCode()).thenReturn("FEE_101");
         when(comp.getVersion()).thenReturn(1);
         when(comp.getName()).thenReturn("Comp");
-        when(comp.getPricingTiers()).thenReturn(List.of(tier));
+        when(comp.getPricingTiers()).thenReturn(Set.of(tier));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(comp));
 
@@ -233,7 +233,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(comp.getCode()).thenReturn("FEE_102");
         when(comp.getVersion()).thenReturn(1);
         when(comp.getName()).thenReturn("CompOR");
-        when(comp.getPricingTiers()).thenReturn(List.of(tier));
+        when(comp.getPricingTiers()).thenReturn(Set.of(tier));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(comp));
         when(metadataService.getMetadataEntityByKey(any())).thenReturn(mock(PricingInputMetadata.class));

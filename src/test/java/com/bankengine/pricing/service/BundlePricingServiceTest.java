@@ -28,6 +28,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -199,7 +200,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .name("SERVICE_FEE")
                 .code("SERVICE_FEE")
                 .proRataApplicable(true)
-                .pricingTiers(List.of(tier))
+                .pricingTiers(Set.of(tier))
                 .build();
 
         BundlePricingLink link = BundlePricingLink.builder()
@@ -241,7 +242,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .build();
 
         BundlePricingLink link = BundlePricingLink.builder()
-                .pricingComponent(PricingComponent.builder().name("OVER_LIMIT_FEE").code("OVER_LIMIT_FEE").pricingTiers(List.of(breachTier)).build())
+                .pricingComponent(PricingComponent.builder().name("OVER_LIMIT_FEE").code("OVER_LIMIT_FEE").pricingTiers(Set.of(breachTier)).build())
                 .fixedValue(new BigDecimal("50.00"))
                 .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
                 .build();
@@ -428,7 +429,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         PricingTier breachTier = PricingTier.builder().applyChargeOnFullBreach(true).build();
         PricingComponent component = PricingComponent.builder()
                 .name("BREACH_FEE").code("BREACH_FEE")
-                .pricingTiers(List.of(breachTier))
+                .pricingTiers(Set.of(breachTier))
                 .build();
 
         BundlePricingLink link = BundlePricingLink.builder()

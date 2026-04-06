@@ -51,7 +51,7 @@ public class ReproduceDuplicateRuleTest extends BaseServiceTest {
                 .code("MONTHLY_MAINTENANCE_FEE")
                 .version(1)
                 .name("Monthly Maintenance Fee")
-                .pricingTiers(List.of(tier))
+                .pricingTiers(Set.of(tier))
                 .build();
 
         // Mimic the duplication that likely happens in the repository
