@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { AdminDataTableActionButton } from '../../components/AdminDataTable';
 import { HasPermission } from '../../components/HasPermission';
@@ -27,7 +27,10 @@ interface Product {
   id: number;
   code: string;
   name: string;
-  productTypeCode: string;
+  productType?: {
+    code: string;
+    name: string;
+  };
   category: string;
   status: string;
   activationDate: string;
@@ -43,8 +46,19 @@ const ProductManagementPage = () => {
   const { setToast } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
   const signal = useAbortSignal();
+
+  const toggleExpand = (id: number) => {
+    const newExpanded = new Set(expandedIds);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedIds(newExpanded);
+  };
 
   const fetchInitialData = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
@@ -121,22 +135,32 @@ const ProductManagementPage = () => {
           ) : (
             products.map((prod) => (
               <div key={prod.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition duration-300 group">
-                <div className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-50 bg-gray-50/20 group-hover:bg-blue-50/10 transition duration-300">
+                <div
+                  className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-50 bg-gray-50/20 group-hover:bg-blue-50/10 transition duration-300 cursor-pointer"
+                  onClick={() => toggleExpand(prod.id)}
+                >
                   <div className="flex items-center space-x-4">
                     <div className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100 group-hover:bg-blue-600 group-hover:border-blue-500 transition duration-300">
                       <Package className="w-5 h-5 text-blue-600 group-hover:text-white transition duration-300" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 leading-tight group-hover:text-blue-900 transition">{prod.name}</h3>
+                      <div className="flex items-center space-x-2">
+                        <h3 className="text-lg font-bold text-gray-900 leading-tight group-hover:text-blue-900 transition">{prod.name}</h3>
+                        {expandedIds.has(prod.id) ? (
+                          <ChevronUp className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1">
                         <span className="bg-white px-1.5 py-0.5 rounded-lg border shadow-sm font-mono text-blue-600">{prod.code}</span>
-                        <span className="bg-white px-1.5 py-0.5 rounded-lg border shadow-sm">{prod.productTypeCode}</span>
+                        {prod.productType?.code && <span className="bg-white px-1.5 py-0.5 rounded-lg border shadow-sm">{prod.productType.code}</span>}
                         <span className="bg-white px-1.5 py-0.5 rounded-lg border shadow-sm">{prod.category}</span>
                         <span className={`px-1.5 py-0.5 rounded-lg border shadow-sm ${prod.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>{prod.status}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex space-x-2 mt-4 md:mt-0">
+                  <div className="flex space-x-2 mt-4 md:mt-0" onClick={(e) => e.stopPropagation()}>
                     {prod.status === 'DRAFT' && (
                       <HasPermission action="POST" path="/api/v1/products/*/activate">
                         <AdminDataTableActionButton
@@ -173,38 +197,40 @@ const ProductManagementPage = () => {
                     </HasPermission>
                   </div>
                 </div>
-                <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white">
-                  <div>
-                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-blue-50/50 p-1.5 rounded-lg w-fit">
-                      <ShieldCheck className="w-3 h-3 mr-1.5 text-blue-500" /> Linked Feature components
-                    </h4>
-                    <div className="space-y-2">
-                      {prod.features?.map((f, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-xs p-3 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-blue-100 hover:bg-white transition shadow-sm">
-                          <span className="font-bold text-gray-700">{f.featureName || f.featureComponentCode}</span>
-                          <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg text-[10px]">{f.featureValue}</span>
-                        </div>
-                      ))}
-                      {(!prod.features || prod.features.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No feature components bound to this product.</p>}
+                {expandedIds.has(prod.id) && (
+                  <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white">
+                    <div>
+                      <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-blue-50/50 p-1.5 rounded-lg w-fit">
+                        <ShieldCheck className="w-3 h-3 mr-1.5 text-blue-500" /> Linked Feature components
+                      </h4>
+                      <div className="space-y-2">
+                        {prod.features?.map((f, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-xs p-3 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-blue-100 hover:bg-white transition shadow-sm">
+                            <span className="font-bold text-gray-700">{f.featureName || f.featureComponentCode}</span>
+                            <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg text-[10px]">{f.featureValue}</span>
+                          </div>
+                        ))}
+                        {(!prod.features || prod.features.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No feature components bound to this product.</p>}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-purple-50/50 p-1.5 rounded-lg w-fit">
+                        <Tag className="w-3 h-3 mr-1.5 text-purple-500" /> Pricing rule bindings
+                      </h4>
+                      <div className="space-y-2">
+                        {prod.pricing?.map((p, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-xs p-3 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-purple-100 hover:bg-white transition shadow-sm">
+                            <span className="font-bold text-gray-700">{p.pricingComponentName || p.pricingComponentCode}</span>
+                            <span className={`font-bold px-2 py-0.5 rounded-lg text-[10px] ${p.useRulesEngine ? 'bg-amber-100 text-amber-700' : 'bg-purple-100 text-purple-700'}`}>
+                              {p.useRulesEngine ? 'DYNAMIC RULES' : `${p.fixedValue} (${p.fixedValueType})`}
+                            </span>
+                          </div>
+                        ))}
+                        {(!prod.pricing || prod.pricing.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No pricing rules bound to this product.</p>}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-purple-50/50 p-1.5 rounded-lg w-fit">
-                      <Tag className="w-3 h-3 mr-1.5 text-purple-500" /> Pricing rule bindings
-                    </h4>
-                    <div className="space-y-2">
-                      {prod.pricing?.map((p, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-xs p-3 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-purple-100 hover:bg-white transition shadow-sm">
-                          <span className="font-bold text-gray-700">{p.pricingComponentName || p.pricingComponentCode}</span>
-                          <span className={`font-bold px-2 py-0.5 rounded-lg text-[10px] ${p.useRulesEngine ? 'bg-amber-100 text-amber-700' : 'bg-purple-100 text-purple-700'}`}>
-                            {p.useRulesEngine ? 'DYNAMIC RULES' : `${p.fixedValue} (${p.fixedValueType})`}
-                          </span>
-                        </div>
-                      ))}
-                      {(!prod.pricing || prod.pricing.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No pricing rules bound to this product.</p>}
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             ))
           )}
