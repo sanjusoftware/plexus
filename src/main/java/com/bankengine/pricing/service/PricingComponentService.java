@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -178,7 +179,7 @@ public class PricingComponentService extends BaseService {
 
     private void attachTiersToComponent(PricingComponent component, List<PricingTierRequest> tierDtos) {
         if (tierDtos == null) return;
-        component.setPricingTiers(buildPricingTiers(component, tierDtos));
+        component.setPricingTiers(new LinkedHashSet<>(buildPricingTiers(component, tierDtos)));
     }
 
     private List<PricingTier> buildPricingTiers(PricingComponent component, List<PricingTierRequest> tierDtos) {
@@ -225,7 +226,7 @@ public class PricingComponentService extends BaseService {
     private void cloneTiersInternal(PricingComponent source, PricingComponent target) {
         if (source.getPricingTiers() == null) return;
 
-        List<PricingTier> clonedTiers = source.getPricingTiers().stream().map(oldTier -> {
+        Set<PricingTier> clonedTiers = source.getPricingTiers().stream().map(oldTier -> {
             PricingTier newTier = pricingTierMapper.clone(oldTier);
             newTier.setPricingComponent(target);
             newTier.setBankId(target.getBankId());
@@ -251,7 +252,7 @@ public class PricingComponentService extends BaseService {
             }
 
             return newTier;
-        }).collect(Collectors.toCollection(ArrayList::new));
+        }).collect(Collectors.toCollection(LinkedHashSet::new));
 
         target.setPricingTiers(clonedTiers);
     }

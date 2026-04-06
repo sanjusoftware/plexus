@@ -61,7 +61,7 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
         when(tier.getPriceValues()).thenReturn(Set.of(pv));
         when(tier.getPricingComponent()).thenReturn(waiver);
 
-        when(waiver.getPricingTiers()).thenReturn(List.of(tier));
+        when(waiver.getPricingTiers()).thenReturn(Set.of(tier));
         when(componentRepository.findByTypeIn(any())).thenReturn(List.of(waiver));
 
         String drl = bundleRuleBuilderService.buildAllRulesForCompilation();
@@ -97,7 +97,7 @@ class BundleRuleBuilderServiceTest extends BaseServiceTest {
         // Explicitly set price values to empty
         when(tier.getPriceValues()).thenReturn(Collections.emptySet());
 
-        when(waiver.getPricingTiers()).thenReturn(List.of(tier));
+        when(waiver.getPricingTiers()).thenReturn(Set.of(tier));
         when(componentRepository.findByTypeIn(any())).thenReturn(List.of(waiver));
 
         // ACT

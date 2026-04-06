@@ -6,8 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "pricing_component", uniqueConstraints = {
@@ -51,7 +51,7 @@ public class PricingComponent extends VersionableEntity {
 
     @OneToMany(mappedBy = "pricingComponent", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<PricingTier> pricingTiers = new ArrayList<>();
+    private Set<PricingTier> pricingTiers = new LinkedHashSet<>();
 
     public enum ComponentType {
         FEE, INTEREST_RATE, WAIVER, BENEFIT, DISCOUNT, PACKAGE_FEE, TAX
