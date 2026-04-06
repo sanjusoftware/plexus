@@ -52,6 +52,16 @@ const ProductFormPage = () => {
 
   const signal = useAbortSignal();
 
+  const getDefaultValueForType = (type: string) => {
+    switch (type) {
+      case 'BOOLEAN': return 'false';
+      case 'INTEGER':
+      case 'DECIMAL': return '0';
+      case 'DATE': return '';
+      default: return '';
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -242,34 +252,40 @@ const ProductFormPage = () => {
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-50 rounded-xl"><ShieldCheck className="w-5 h-5 text-blue-600" /></div>
-                <h3 className="text-lg font-bold text-gray-900 tracking-tight">Feature Component Links</h3>
+                <h3 className="text-lg font-bold text-gray-900 tracking-tight">Product Features</h3>
               </div>
-              <button type="button" onClick={addFeatureLink} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md shadow-blue-50">+ Add Component Link</button>
+              <button type="button" onClick={addFeatureLink} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md shadow-blue-50">+ Link Feature</button>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-4">
               {formData.features.map((link: any, idx: number) => (
-                <div key={idx} className="bg-gray-50 p-6 rounded-xl border border-gray-100 relative group transition hover:border-blue-200">
+                <div key={idx} className="bg-gray-50/50 p-6 rounded-xl border border-gray-100 relative group transition hover:border-blue-200">
                   <button type="button" onClick={() => {
                     const newF = [...formData.features];
                     newF.splice(idx, 1);
                     setFormData({...formData, features: newF});
                   }} className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-4 h-4" /></button>
 
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Feature Definition</label>
-                      <select className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition" value={link.featureComponentCode} onChange={(e) => {
+                      <select className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]" value={link.featureComponentCode} onChange={(e) => {
                         const newF = [...formData.features];
                         const val = e.target.value;
                         newF[idx].featureComponentCode = val;
                         if (val === 'CREATE_NEW') {
                           newF[idx].featureName = '';
                           newF[idx].dataType = 'STRING';
+                          newF[idx].featureValue = '';
+                        } else if (val === '') {
+                          newF[idx].featureName = '';
+                          newF[idx].dataType = 'STRING';
+                          newF[idx].featureValue = '';
                         } else {
                           const fc = featureComponents.find(f => f.code === val);
                           if (fc) {
                             newF[idx].featureName = fc.name;
                             newF[idx].dataType = fc.dataType;
+                            newF[idx].featureValue = getDefaultValueForType(fc.dataType);
                           }
                         }
                         setFormData({...formData, features: newF});
@@ -280,8 +296,81 @@ const ProductFormPage = () => {
                       </select>
                     </div>
 
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Concrete Value</label>
+                      {(() => {
+                        const dataType = link.dataType || 'STRING';
+                        switch (dataType) {
+                          case 'BOOLEAN':
+                            return (
+                              <div
+                                className="h-[42px] flex items-center px-3 bg-white border border-white rounded-lg shadow-sm cursor-pointer"
+                                onClick={() => {
+                                  const newF = [...formData.features];
+                                  newF[idx].featureValue = link.featureValue === 'true' ? 'false' : 'true';
+                                  setFormData({...formData, features: newF});
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${link.featureValue === 'true' ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                >
+                                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${link.featureValue === 'true' ? 'translate-x-5' : 'translate-x-1'}`} />
+                                </button>
+                                <span className="ml-2 text-[9px] font-bold uppercase tracking-widest text-gray-500 select-none">
+                                  {link.featureValue === 'true' ? 'TRUE' : 'FALSE'}
+                                </span>
+                              </div>
+                            );
+                          case 'DATE':
+                            return (
+                              <input
+                                type="date"
+                                className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
+                                value={link.featureValue}
+                                onChange={(e) => {
+                                  const newF = [...formData.features];
+                                  newF[idx].featureValue = e.target.value;
+                                  setFormData({...formData, features: newF});
+                                }}
+                              />
+                            );
+                          case 'INTEGER':
+                          case 'DECIMAL':
+                            return (
+                              <input
+                                type="number"
+                                step={dataType === 'INTEGER' ? '1' : 'any'}
+                                className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
+                                placeholder="Value..."
+                                value={link.featureValue}
+                                onChange={(e) => {
+                                  const newF = [...formData.features];
+                                  newF[idx].featureValue = e.target.value;
+                                  setFormData({...formData, features: newF});
+                                }}
+                              />
+                            );
+                          default:
+                            return (
+                              <input
+                                type="text"
+                                className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
+                                placeholder="e.g. 5.5, YES, 12 months"
+                                value={link.featureValue}
+                                onChange={(e) => {
+                                  const newF = [...formData.features];
+                                  newF[idx].featureValue = e.target.value;
+                                  setFormData({...formData, features: newF});
+                                }}
+                              />
+                            );
+                        }
+                      })()}
+                    </div>
+
                     {link.featureComponentCode === 'CREATE_NEW' && (
-                      <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="md:col-span-2 p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-4 animate-in fade-in slide-in-from-top-2">
                          <div>
                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">New Feature Name</label>
                             <input type="text" className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition" placeholder="e.g. Max Overdraft" value={link.featureName || ''} onChange={(e) => {
@@ -305,7 +394,9 @@ const ProductFormPage = () => {
                               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Data Type</label>
                               <select className="w-full border border-white rounded-lg p-2.5 text-[9px] bg-white font-bold shadow-sm focus:border-blue-500 transition" value={link.dataType} onChange={(e) => {
                                 const newF = [...formData.features];
-                                newF[idx].dataType = e.target.value;
+                                const newType = e.target.value;
+                                newF[idx].dataType = newType;
+                                newF[idx].featureValue = getDefaultValueForType(newType);
                                 setFormData({...formData, features: newF});
                               }}>
                                 <option value="STRING">STRING</option>
@@ -318,19 +409,10 @@ const ProductFormPage = () => {
                          </div>
                       </div>
                     )}
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Concrete Value</label>
-                      <input type="text" className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition" placeholder="e.g. 5.5, YES, 12 months" value={link.featureValue} onChange={(e) => {
-                        const newF = [...formData.features];
-                        newF[idx].featureValue = e.target.value;
-                        setFormData({...formData, features: newF});
-                      }} />
-                    </div>
                   </div>
                 </div>
               ))}
-              {formData.features.length === 0 && <div className="col-span-2 py-8 text-center text-gray-400 bg-white border-2 border-dashed rounded-xl font-bold uppercase tracking-widest text-[10px]">No Feature Components Selected</div>}
+              {formData.features.length === 0 && <div className="py-8 text-center text-gray-400 bg-white border-2 border-dashed rounded-xl font-bold uppercase tracking-widest text-[10px]">No Feature Components Selected</div>}
             </div>
           </div>
 
