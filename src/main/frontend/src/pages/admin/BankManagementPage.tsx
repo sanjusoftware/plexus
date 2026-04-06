@@ -9,6 +9,7 @@ import axios from 'axios';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 
 const BankManagementPage = () => {
   const { user, loading: authLoading, setToast } = useAuth();
@@ -92,124 +93,123 @@ const BankManagementPage = () => {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-blue-900 tracking-tight uppercase italic">Bank Management</h2>
-          <p className="text-gray-500 font-bold text-xs">Global banking infrastructure and tenant onboarding.</p>
-        </div>
-        <HasPermission action="POST" path="/api/v1/banks">
-          <button
-            onClick={() => navigate('/banks/create')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-700 transition flex items-center shadow-md shadow-blue-100 uppercase tracking-widest"
-          >
-            <Plus className="h-4 w-4 mr-1.5" /> Add Bank
-          </button>
-        </HasPermission>
-      </div>
-
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div className="divide-y divide-gray-50">
-          {banks.length === 0 ? (
-            <div className="p-12 text-center">
-               <Building2 className="h-10 w-10 text-gray-100 mx-auto mb-2" />
-               <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No managed banks found.</p>
-            </div>
-          ) : (
-            banks.map((item, idx) => (
-              <div
-                key={idx}
-                onClick={() => openBankDetails(item)}
-                className="px-6 py-4 flex justify-between items-center hover:bg-blue-50/30 transition cursor-pointer group"
+      <AdminPage width="wide">
+        <AdminPageHeader
+          icon={Building2}
+          title="Bank Management"
+          description="Global banking infrastructure and tenant onboarding."
+          actions={
+            <HasPermission action="POST" path="/api/v1/banks">
+              <button
+                onClick={() => navigate('/onboarding?admin=true')}
+                className="admin-primary-btn"
               >
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-blue-50 rounded-xl group-hover:scale-105 transition duration-300">
-                    <Building2 className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2 mb-0.5">
-                      <p className="font-bold text-gray-900 text-base tracking-tight">
-                        {item.name || item.bankId}
-                        <span className="text-[10px] text-gray-400 font-bold ml-1.5 italic">({item.bankId})</span>
-                      </p>
-                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${
-                        item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                         item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
-                         item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {item.status}
-                      </span>
+                <Plus className="h-4 w-4" />
+                Add Bank
+              </button>
+            </HasPermission>
+          }
+        />
+
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+          <div className="divide-y divide-gray-50">
+            {banks.length === 0 ? (
+              <div className="p-12 text-center">
+                 <Building2 className="h-10 w-10 text-gray-100 mx-auto mb-2" />
+                 <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No managed banks found.</p>
+              </div>
+            ) : (
+              banks.map((item, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => openBankDetails(item)}
+                  className="px-6 py-4 flex justify-between items-center hover:bg-blue-50/30 transition cursor-pointer group"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-blue-50 rounded-xl group-hover:scale-105 transition duration-300">
+                      <Building2 className="h-5 w-5 text-blue-600" />
                     </div>
-                    <p className="text-xs text-gray-400 font-medium mb-0.5">{item.issuerUrl}</p>
-                    {item.adminName && (
-                      <div className="flex items-center text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                         <ShieldCheck className="h-2.5 w-2.5 mr-1 text-blue-400" /> {item.adminName} ({item.adminEmail})
+                    <div>
+                      <div className="flex items-center space-x-2 mb-0.5">
+                        <p className="font-bold text-gray-900 text-base tracking-tight">
+                          {item.name || item.bankId}
+                          <span className="text-[10px] text-gray-400 font-bold ml-1.5 italic">({item.bankId})</span>
+                        </p>
+                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${
+                          item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                           item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
+                           item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {item.status}
+                        </span>
                       </div>
-                    )}
+                      <p className="text-xs text-gray-400 font-medium mb-0.5">{item.issuerUrl}</p>
+                      {item.adminName && (
+                        <div className="flex items-center text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                           <ShieldCheck className="h-2.5 w-2.5 mr-1 text-blue-400" /> {item.adminName} ({item.adminEmail})
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {item.status === 'DRAFT' && (
-                    <>
-                      <HasPermission action="PUT" path="/api/v1/banks">
+                  <div className="flex items-center space-x-2">
+                    {item.status === 'DRAFT' && (
+                      <>
+                        <HasPermission action="PUT" path="/api/v1/banks">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
+                            className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-blue-100 transition flex items-center"
+                          >
+                            <Edit className="h-2.5 w-2.5 mr-1" /> Edit
+                          </button>
+                        </HasPermission>
+                        <HasPermission action="POST" path="/api/v1/banks/*/activate">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
+                            className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-green-100 transition flex items-center"
+                          >
+                            <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Approve
+                          </button>
+                        </HasPermission>
+                        <HasPermission action="POST" path="/api/v1/banks/*/reject">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); confirmReject(item.bankId); }}
+                            className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-red-100 transition flex items-center"
+                          >
+                            <XCircle className="h-2.5 w-2.5 mr-1" /> Reject
+                          </button>
+                        </HasPermission>
+                      </>
+                    )}
+                    {item.status === 'ACTIVE' && (
+                      <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
                         <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
-                          className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-blue-100 transition flex items-center"
+                          onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
+                          className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-gray-100 transition flex items-center"
                         >
-                          <Edit className="h-2.5 w-2.5 mr-1" /> Edit
+                          <Clock className="h-2.5 w-2.5 mr-1" /> Deactivate
                         </button>
                       </HasPermission>
+                    )}
+                    {item.status === 'INACTIVE' && (
                       <HasPermission action="POST" path="/api/v1/banks/*/activate">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
                           className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-green-100 transition flex items-center"
                         >
-                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Approve
+                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Re-activate
                         </button>
                       </HasPermission>
-                      <HasPermission action="POST" path="/api/v1/banks/*/reject">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); confirmReject(item.bankId); }}
-                          className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-red-100 transition flex items-center"
-                        >
-                          <XCircle className="h-2.5 w-2.5 mr-1" /> Reject
-                        </button>
-                      </HasPermission>
-                    </>
-                  )}
-                  {item.status === 'ACTIVE' && (
-                    <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
-                        className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-gray-100 transition flex items-center"
-                      >
-                        <Clock className="h-2.5 w-2.5 mr-1" /> Deactivate
-                      </button>
-                    </HasPermission>
-                  )}
-                  {item.status === 'INACTIVE' && (
-                    <HasPermission action="POST" path="/api/v1/banks/*/activate">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                        className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-green-100 transition flex items-center"
-                      >
-                        <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Re-activate
-                      </button>
-                    </HasPermission>
-                  )}
-                  <div className="h-8 w-8 flex items-center justify-center rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
-                    <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-white" />
+                    )}
+                    <div className="h-8 w-8 flex items-center justify-center rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
+                      <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-white" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
-        <div className="px-6 py-4 bg-gray-50/50 border-t flex justify-center">
-           <a href="/swagger-ui/index.html" target="_blank" className="flex items-center text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-blue-600 transition">
-             Explore Global API in Swagger <ExternalLink className="h-2.5 w-2.5 ml-1.5" />
-           </a>
-        </div>
-      </div>
+      </AdminPage>
 
       {/* Bank Details Modal */}
       {selectedBank && (
