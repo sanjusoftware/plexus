@@ -147,13 +147,15 @@ const ProductTypesPage = () => {
                       {type.status !== 'ARCHIVED' && (
                         <>
                           <HasPermission action="PUT" path="/api/v1/product-types/*">
-                            <AdminDataTableActionButton onClick={() => navigate(`/product-types/edit/${type.id}`)} tone="primary" title="Edit" aria-label={`Edit ${type.name}`}>
-                              <Edit2 className="h-4 w-4" />
+                            <AdminDataTableActionButton onClick={() => navigate(`/product-types/edit/${type.id}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${type.name}`}>
+                              <Edit2 className="h-3.5 w-3.5" />
+                              Edit
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/product-types/*">
-                            <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" title={type.status === 'DRAFT' ? "Delete" : "Archive"} aria-label={`${type.status === 'DRAFT' ? 'Delete' : 'Archive'} ${type.name}`}>
-                              <Trash2 className="h-4 w-4" />
+                            <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" size="compact" title={type.status === 'DRAFT' ? "Delete" : "Archive"} aria-label={`${type.status === 'DRAFT' ? 'Delete' : 'Archive'} ${type.name}`}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {type.status === 'DRAFT' ? "Delete" : "Archive"}
                             </AdminDataTableActionButton>
                           </HasPermission>
                         </>

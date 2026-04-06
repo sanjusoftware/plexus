@@ -107,13 +107,15 @@ const PricingMetadataPage = () => {
                     </td>
                     <AdminDataTableActionCell>
                       <HasPermission action="PUT" path="/api/v1/pricing-metadata/*">
-                        <AdminDataTableActionButton onClick={() => navigate(`/pricing-metadata/edit/${meta.attributeKey}`)} tone="primary" title="Edit" aria-label={`Edit ${meta.displayName}`}>
-                          <Edit2 className="h-4 w-4" />
+                        <AdminDataTableActionButton onClick={() => navigate(`/pricing-metadata/edit/${meta.attributeKey}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${meta.displayName}`}>
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Edit
                         </AdminDataTableActionButton>
                       </HasPermission>
                       <HasPermission action="DELETE" path="/api/v1/pricing-metadata/*">
-                        <AdminDataTableActionButton onClick={() => handleDelete(meta.attributeKey)} tone="danger" title="Delete" aria-label={`Delete ${meta.displayName}`}>
-                          <Trash2 className="h-4 w-4" />
+                        <AdminDataTableActionButton onClick={() => handleDelete(meta.attributeKey)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${meta.displayName}`}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
                         </AdminDataTableActionButton>
                       </HasPermission>
                     </AdminDataTableActionCell>

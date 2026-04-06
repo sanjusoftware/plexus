@@ -249,19 +249,22 @@ const PricingComponentsPage = () => {
                     <AdminDataTableActionCell>
                       {comp.status === 'DRAFT' && (
                         <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
-                          <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} tone="success" title="Activate Production Mode" aria-label={`Activate ${comp.name}`}>
-                            <CheckCircle2 className="h-4 w-4" />
+                          <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} tone="success" size="compact" title="Activate Production Mode" aria-label={`Activate ${comp.name}`}>
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Activate
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
                       <HasPermission action="PATCH" path="/api/v1/pricing-components/*">
-                        <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} tone="primary" title="Edit Structure" aria-label={`Edit ${comp.name}`}>
-                          <Edit2 className="h-4 w-4" />
+                        <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} tone="primary" size="compact" title="Edit Structure" aria-label={`Edit ${comp.name}`}>
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Edit
                         </AdminDataTableActionButton>
                       </HasPermission>
                       <HasPermission action="DELETE" path="/api/v1/pricing-components/*">
-                        <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} tone="danger" title="Permanently Delete" aria-label={`Delete ${comp.name}`}>
-                          <Trash2 className="h-4 w-4" />
+                        <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} tone="danger" size="compact" title="Permanently Delete" aria-label={`Delete ${comp.name}`}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
                         </AdminDataTableActionButton>
                       </HasPermission>
                     </AdminDataTableActionCell>

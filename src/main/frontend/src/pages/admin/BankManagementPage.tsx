@@ -2,10 +2,18 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit
+  Building2, Loader2, Plus, ArrowRight, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit
 } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
 import axios from 'axios';
+import {
+  AdminDataTable,
+  AdminDataTableActionButton,
+  AdminDataTableActionCell,
+  AdminDataTableActionsHeader,
+  AdminDataTableEmptyRow,
+  AdminDataTableRow
+} from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
@@ -111,104 +119,125 @@ const BankManagementPage = () => {
           }
         />
 
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-          <div className="divide-y divide-gray-50">
+        <AdminDataTable aria-label="Managed banks table">
+          <thead>
+            <tr>
+              <th>Bank Information</th>
+              <th>Issuer URL</th>
+              <th>Status</th>
+              <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
+            </tr>
+          </thead>
+          <tbody>
             {banks.length === 0 ? (
-              <div className="p-12 text-center">
-                 <Building2 className="h-10 w-10 text-gray-100 mx-auto mb-2" />
-                 <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No managed banks found.</p>
-              </div>
+              <AdminDataTableEmptyRow colSpan={4}>No managed banks found.</AdminDataTableEmptyRow>
             ) : (
               banks.map((item, idx) => (
-                <div
+                <AdminDataTableRow
                   key={idx}
                   onClick={() => openBankDetails(item)}
-                  className="px-6 py-4 flex justify-between items-center hover:bg-blue-50/30 transition cursor-pointer group"
+                  interactive
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className="p-3 bg-blue-50 rounded-xl group-hover:scale-105 transition duration-300">
-                      <Building2 className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2 mb-0.5">
-                        <p className="font-bold text-gray-900 text-base tracking-tight">
-                          {item.name || item.bankId}
-                          <span className="text-[10px] text-gray-400 font-bold ml-1.5 italic">({item.bankId})</span>
-                        </p>
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${
-                          item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                           item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
-                           item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {item.status}
-                        </span>
+                  <td className="whitespace-nowrap">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-50 rounded-lg">
+                        <Building2 className="h-4 w-4 text-blue-600" />
                       </div>
-                      <p className="text-xs text-gray-400 font-medium mb-0.5">{item.issuerUrl}</p>
-                      {item.adminName && (
-                        <div className="flex items-center text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                           <ShieldCheck className="h-2.5 w-2.5 mr-1 text-blue-400" /> {item.adminName} ({item.adminEmail})
+                      <div>
+                        <div className="text-sm font-bold text-gray-900 leading-tight">
+                          {item.name || item.bankId}
                         </div>
-                      )}
+                        <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest uppercase">
+                          ID: {item.bankId}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
+                  </td>
+                  <td className="whitespace-nowrap text-xs text-gray-500 font-medium">
+                    {item.issuerUrl}
+                  </td>
+                  <td className="whitespace-nowrap">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                       item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
+                       item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <AdminDataTableActionCell>
                     {item.status === 'DRAFT' && (
                       <>
                         <HasPermission action="PUT" path="/api/v1/banks">
-                          <button
+                          <AdminDataTableActionButton
                             onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
-                            className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-blue-100 transition flex items-center"
+                            tone="primary"
+                            size="compact"
+                            title="Edit"
                           >
-                            <Edit className="h-2.5 w-2.5 mr-1" /> Edit
-                          </button>
+                            <Edit className="h-3.5 w-3.5" /> Edit
+                          </AdminDataTableActionButton>
                         </HasPermission>
                         <HasPermission action="POST" path="/api/v1/banks/*/activate">
-                          <button
+                          <AdminDataTableActionButton
                             onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                            className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-green-100 transition flex items-center"
+                            tone="success"
+                            size="compact"
+                            title="Approve"
                           >
-                            <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Approve
-                          </button>
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                          </AdminDataTableActionButton>
                         </HasPermission>
                         <HasPermission action="POST" path="/api/v1/banks/*/reject">
-                          <button
+                          <AdminDataTableActionButton
                             onClick={(e) => { e.stopPropagation(); confirmReject(item.bankId); }}
-                            className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-red-100 transition flex items-center"
+                            tone="danger"
+                            size="compact"
+                            title="Reject"
                           >
-                            <XCircle className="h-2.5 w-2.5 mr-1" /> Reject
-                          </button>
+                            <XCircle className="h-3.5 w-3.5" /> Reject
+                          </AdminDataTableActionButton>
                         </HasPermission>
                       </>
                     )}
                     {item.status === 'ACTIVE' && (
                       <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
-                        <button
+                        <AdminDataTableActionButton
                           onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
-                          className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-gray-100 transition flex items-center"
+                          tone="neutral"
+                          size="compact"
+                          title="Deactivate"
                         >
-                          <Clock className="h-2.5 w-2.5 mr-1" /> Deactivate
-                        </button>
+                          <Clock className="h-3.5 w-3.5" /> Deactivate
+                        </AdminDataTableActionButton>
                       </HasPermission>
                     )}
                     {item.status === 'INACTIVE' && (
                       <HasPermission action="POST" path="/api/v1/banks/*/activate">
-                        <button
+                        <AdminDataTableActionButton
                           onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                          className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-green-100 transition flex items-center"
+                          tone="success"
+                          size="compact"
+                          title="Re-activate"
                         >
-                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Re-activate
-                        </button>
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Re-activate
+                        </AdminDataTableActionButton>
                       </HasPermission>
                     )}
-                    <div className="h-8 w-8 flex items-center justify-center rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
-                      <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-white" />
-                    </div>
-                  </div>
-                </div>
+                    <AdminDataTableActionButton
+                      onClick={(e) => { e.stopPropagation(); openBankDetails(item); }}
+                      tone="neutral"
+                      size="compact"
+                      title="View Details"
+                    >
+                      <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
+                    </AdminDataTableActionButton>
+                  </AdminDataTableActionCell>
+                </AdminDataTableRow>
               ))
             )}
-          </div>
-        </div>
+          </tbody>
+        </AdminDataTable>
       </AdminPage>
 
       {/* Bank Details Modal */}
