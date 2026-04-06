@@ -17,37 +17,34 @@ const GlobalToast: React.FC = () => {
   if (!toast) return null;
 
   return (
-    <div
-      className="fixed z-[9999] transition-all duration-300 animate-in fade-in slide-in-from-top-2"
-      style={{
-        top: '28px',
-        left: 'calc(50% + (var(--sidebar-width, 0px) / 2))',
-        transform: 'translate(-50%, -50%)'
-      } as React.CSSProperties}
-    >
-      <div className={`flex items-center space-x-2 px-2.5 py-1 rounded-lg shadow-lg border ${
-        toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'
+    <div className={`mb-4 p-3 rounded-xl shadow-lg border flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500 relative z-50 ${
+      toast.type === 'error' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
+    }`}>
+      <div className={`flex items-center space-x-3 ${
+        toast.type === 'error' ? 'text-red-800' : 'text-green-800'
       }`}>
-        <div className={`p-1 rounded-md ${toast.type === 'error' ? 'bg-red-100' : 'bg-green-100'}`}>
+        <div className={`p-1.5 rounded-lg ${toast.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
           {toast.type === 'error' ? (
-            <ShieldAlert className="h-3.5 w-3.5" />
+            <ShieldAlert className="h-5 w-5" />
           ) : (
-            <ShieldCheck className="h-3.5 w-3.5" />
+            <ShieldCheck className="h-5 w-5" />
           )}
         </div>
-        <div className="flex-1 pr-1.5 whitespace-nowrap">
-          <p className="text-[11px] font-bold leading-none mb-0.5">
+        <div>
+          <h3 className="font-bold text-sm">
             {toast.type === 'error' ? 'Error' : 'Success'}
-          </p>
-          <p className="text-[10px] opacity-90 leading-none">{toast.message}</p>
+          </h3>
+          <p className="text-xs opacity-90">{toast.message}</p>
         </div>
-        <button
-          onClick={() => setToast(null)}
-          className="p-0.5 hover:bg-black/5 rounded-full transition"
-        >
-          <X className="h-3 w-3" />
-        </button>
       </div>
+      <button
+        onClick={() => setToast(null)}
+        className={`p-1.5 rounded-full transition ${
+          toast.type === 'error' ? 'hover:bg-red-100 text-red-400' : 'hover:bg-green-100 text-green-400'
+        }`}
+      >
+        <X className="h-4 w-4" />
+      </button>
     </div>
   );
 };

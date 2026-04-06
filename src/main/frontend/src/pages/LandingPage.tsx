@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Settings, BarChart3, Mail, Globe, Cpu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import OnboardingSuccessModal from '../components/OnboardingSuccessModal';
+import GlobalToast from '../components/GlobalToast';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -21,6 +22,9 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
+      <div className="max-w-7xl mx-auto px-8 pt-4">
+        <GlobalToast />
+      </div>
       <OnboardingSuccessModal
         isOpen={!!successState}
         onClose={() => setSuccessState(null)}
