@@ -17,7 +17,7 @@ const OnboardingPage = () => {
   const authorities = (user?.roles as string[]) || [];
   const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
 
-  const isAdmin = (new URLSearchParams(location.search).get('admin') === 'true' || !!id) && isSystemAdmin;
+  const isAdmin = (new URLSearchParams(location.search).get('admin') === 'true' || !!id || location.pathname === '/banks/create') && isSystemAdmin;
   const isEditing = !!id && isSystemAdmin;
 
   const [formData, setFormData] = useState({
