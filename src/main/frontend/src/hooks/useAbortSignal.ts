@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Custom hook to provide an AbortSignal that is automatically aborted
@@ -6,19 +6,21 @@ import { useEffect, useRef } from 'react';
  * during double-mounting in development (React StrictMode).
  */
 export const useAbortSignal = () => {
-  const controllerRef = useRef<AbortController | null>(null);
-
-  if (!controllerRef.current) {
-    controllerRef.current = new AbortController();
-  }
+  const [controller, setController] = useState(() => new AbortController());
 
   useEffect(() => {
-    return () => {
-      if (controllerRef.current) {
-        controllerRef.current.abort();
-      }
-    };
-  }, []);
+    // In React 18 Strict Mode (development), components are mounted, unmounted,
+    // and remounted. The cleanup from the first mount will abort the controller.
+    // If we detect the controller is aborted, we trigger a re-render with a new one
+    // so the second mount can successfully perform its side effects.
+    if (controller.signal.aborted) {
+      setController(new AbortController());
+    }
 
-  return controllerRef.current.signal;
+    return () => {
+      controller.abort();
+    };
+  }, [controller]);
+
+  return controller.signal;
 };
