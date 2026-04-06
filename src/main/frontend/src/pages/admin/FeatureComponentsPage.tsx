@@ -13,6 +13,7 @@ import {
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 interface FeatureComponent {
   id: number;
@@ -29,27 +30,32 @@ const FeatureComponentsPage = () => {
   const [features, setFeatures] = useState<FeatureComponent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchFeatures = useCallback(async () => {
+  const signal = useAbortSignal();
+
+  const fetchFeatures = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/features');
+      const response = await axios.get('/api/v1/features', { signal: abortSignal });
       setFeatures(response.data);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch feature components.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!abortSignal.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
-    fetchFeatures();
-  }, [fetchFeatures]);
+    fetchFeatures(signal);
+  }, [fetchFeatures, signal]);
 
   const handleActivate = async (id: number) => {
     try {
       await axios.post(`/api/v1/features/${id}/activate`);
       setToast({ message: 'Feature activated successfully.', type: 'success' });
-      fetchFeatures();
+      await fetchFeatures(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Activation failed.', type: 'error' });
     }
@@ -60,7 +66,7 @@ const FeatureComponentsPage = () => {
     try {
       await axios.delete(`/api/v1/features/${id}`);
       setToast({ message: 'Feature deleted successfully.', type: 'success' });
-      fetchFeatures();
+      await fetchFeatures(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
     }

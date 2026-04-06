@@ -8,6 +8,7 @@ import { HasPermission } from '../../components/HasPermission';
 import axios from 'axios';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 const BankManagementPage = () => {
   const { user, loading: authLoading, setToast } = useAuth();
@@ -19,31 +20,35 @@ const BankManagementPage = () => {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const [bankToDeactivate, setBankToDeactivate] = useState<string | null>(null);
   const [bankToReject, setBankToReject] = useState<string | null>(null);
+  const signal = useAbortSignal();
 
-  const fetchBanks = useCallback(async () => {
+  const fetchBanks = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/banks');
+      const response = await axios.get('/api/v1/banks', { signal: abortSignal });
       setBanks(response.data || []);
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error('Failed to fetch banks:', err);
       setToast({ message: 'Failed to fetch banks. Make sure you have SYSTEM_ADMIN permissions.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!abortSignal.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
     if (!authLoading && user) {
-      fetchBanks();
+      fetchBanks(signal);
     }
-  }, [user, authLoading, fetchBanks]);
+  }, [user, authLoading, fetchBanks, signal]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'reject') => {
     try {
       await axios.post(`/api/v1/banks/${targetBankId}/${action}`);
 
-      await fetchBanks();
+      await fetchBanks(signal);
       setToast({ message: `Bank ${targetBankId} has been successfully ${action === 'reject' ? 'rejected' : action + 'd'}.`, type: 'success' });
       setSelectedBank(null);
       setShowDeactivateConfirm(false);

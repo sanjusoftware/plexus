@@ -13,6 +13,7 @@ import {
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 interface TierCondition {
   attributeName: string;
@@ -77,21 +78,26 @@ const PricingComponentsPage = () => {
     pricingTiers: (component.pricingTiers || []).map(normalizeTier)
   }), [normalizeTier]);
 
-  const fetchComponents = useCallback(async () => {
+  const signal = useAbortSignal();
+
+  const fetchComponents = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/pricing-components');
+      const response = await axios.get('/api/v1/pricing-components', { signal: abortSignal });
       setComponents((response.data || []).map(normalizeComponent));
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch pricing components.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!abortSignal.aborted) {
+        setLoading(false);
+      }
     }
   }, [normalizeComponent, setToast]);
 
   useEffect(() => {
-    fetchComponents();
-  }, [fetchComponents]);
+    fetchComponents(signal);
+  }, [fetchComponents, signal]);
 
   const toggleExpand = (id: number) => {
     const newExpanded = new Set(expandedRows);
@@ -104,7 +110,7 @@ const PricingComponentsPage = () => {
     try {
       await axios.post(`/api/v1/pricing-components/${id}/activate`);
       setToast({ message: 'Component activated and is now ready for production use.', type: 'success' });
-      fetchComponents();
+      await fetchComponents(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Activation failed.', type: 'error' });
     }
@@ -115,7 +121,7 @@ const PricingComponentsPage = () => {
     try {
       await axios.delete(`/api/v1/pricing-components/${id}`);
       setToast({ message: 'Component deleted successfully.', type: 'success' });
-      fetchComponents();
+      await fetchComponents(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
     }

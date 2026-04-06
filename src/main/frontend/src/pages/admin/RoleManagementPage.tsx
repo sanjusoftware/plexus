@@ -6,6 +6,7 @@ import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/Ad
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 interface RoleMapping {
   name: string;
@@ -58,34 +59,39 @@ const RoleManagementPage = () => {
     return subCategory.split(':').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
   };
 
-  const fetchInitialData = useCallback(async () => {
+  const signal = useAbortSignal();
+
+  const fetchInitialData = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const m = await axios.get('/api/v1/roles/mapping');
+      const m = await axios.get('/api/v1/roles/mapping', { signal: abortSignal });
       setMappings(m.data.map((r: any) => ({
         name: r.name,
         authorities: r.authorities || []
       })) || []);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch role mappings. Ensure you are a Bank Admin.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!abortSignal.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
-    fetchInitialData();
+    fetchInitialData(signal);
     if (location.state?.success) {
       setToast({ message: location.state.success, type: 'success' });
       window.history.replaceState({}, document.title);
     }
-  }, [location, setToast, fetchInitialData]);
+  }, [location, setToast, fetchInitialData, signal]);
 
   const handleDelete = async (roleName: string) => {
     try {
       await axios.delete(`/api/v1/roles/${roleName}`);
       setToast({ message: 'Role deleted successfully.', type: 'success' });
-      fetchInitialData();
+      await fetchInitialData(signal);
     } catch (err: any) {
       setToast({ message: 'Failed to delete role mapping.', type: 'error' });
     }

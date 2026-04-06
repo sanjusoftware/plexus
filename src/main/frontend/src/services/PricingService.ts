@@ -46,11 +46,12 @@ class PricingServiceClass {
   /**
    * Calculate pricing for a single product
    */
-  async calculateProductPrice(request: ProductPriceRequest): Promise<ProductPricingCalculationResult> {
+  async calculateProductPrice(request: ProductPriceRequest, signal?: AbortSignal): Promise<ProductPricingCalculationResult> {
     try {
-      const response = await axios.post('/api/v1/pricing/calculate/product', request);
+      const response = await axios.post('/api/v1/pricing/calculate/product', request, { signal });
       return response.data;
     } catch (error) {
+      if (axios.isCancel(error)) throw error;
       console.error('Product pricing calculation failed:', error);
       throw error;
     }
@@ -59,11 +60,12 @@ class PricingServiceClass {
   /**
    * Calculate pricing for a product bundle
    */
-  async calculateBundlePrice(request: BundlePriceRequest): Promise<BundlePriceResponse> {
+  async calculateBundlePrice(request: BundlePriceRequest, signal?: AbortSignal): Promise<BundlePriceResponse> {
     try {
-      const response = await axios.post('/api/v1/pricing/calculate/bundle', request);
+      const response = await axios.post('/api/v1/pricing/calculate/bundle', request, { signal });
       return response.data;
     } catch (error) {
+      if (axios.isCancel(error)) throw error;
       console.error('Bundle pricing calculation failed:', error);
       throw error;
     }

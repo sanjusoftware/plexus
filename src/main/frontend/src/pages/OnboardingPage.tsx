@@ -5,6 +5,7 @@ import axios from 'axios';
 import PlexusSelect from '../components/PlexusSelect';
 import { useAuth } from '../context/AuthContext';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
+import { useAbortSignal } from '../hooks/useAbortSignal';
 
 const OnboardingPage = () => {
   const { user, setToast } = useAuth();
@@ -39,11 +40,12 @@ const OnboardingPage = () => {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [showSecret, setShowSecret] = useState(false);
+  const signal = useAbortSignal();
 
-  const fetchBankData = useCallback(async () => {
+  const fetchBankData = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get(`/api/v1/banks/${id}`);
+      const response = await axios.get(`/api/v1/banks/${id}`, { signal: abortSignal });
       const data = response.data;
       setFormData({
         bankId: data.bankId,
@@ -63,28 +65,32 @@ const OnboardingPage = () => {
         setCustomCurrency(data.currencyCode);
       }
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error('Failed to fetch bank data', err);
       setToast({ message: 'Failed to load bank configuration for editing.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!abortSignal.aborted) {
+        setLoading(false);
+      }
     }
   }, [id, setEntityName, setToast]);
 
   useEffect(() => {
     if (!isAdmin) {
-      fetchCaptcha();
+      fetchCaptcha(signal);
     }
 
     if (isEditing) {
-      fetchBankData();
+      fetchBankData(signal);
     }
-  }, [id, isAdmin, isEditing, fetchBankData]);
+  }, [id, isAdmin, isEditing, fetchBankData, signal]);
 
-  const fetchCaptcha = async () => {
+  const fetchCaptcha = async (abortSignal: AbortSignal) => {
     try {
-      const response = await axios.get('/api/v1/public/onboarding/captcha');
+      const response = await axios.get('/api/v1/public/onboarding/captcha', { signal: abortSignal });
       setCaptcha(response.data);
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error('Failed to fetch captcha');
     }
   };
@@ -149,7 +155,7 @@ const OnboardingPage = () => {
       const errorDetail = err.response?.data?.message || err.response?.data || 'Failed to submit request. Please check your inputs and captcha.';
       const finalError = typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail);
       setToast({ message: finalError, type: 'error' });
-      fetchCaptcha(); // Refresh captcha on error
+      fetchCaptcha(signal); // Refresh captcha on error
     } finally {
       setLoading(false);
     }

@@ -6,6 +6,7 @@ import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 const PricingMetadataFormPage = () => {
   const { attributeKey } = useParams<{ attributeKey?: string }>();
@@ -20,25 +21,31 @@ const PricingMetadataFormPage = () => {
   const [isKeyEdited, setIsKeyEdited] = useState(false);
 
   const dataTypes = ['STRING', 'DECIMAL', 'INTEGER', 'BOOLEAN', 'DATE'];
+  const signal = useAbortSignal();
 
   useEffect(() => {
     if (isEditing) {
       const fetchMetadata = async () => {
         try {
-          const response = await axios.get('/api/v1/pricing-metadata');
+          const response = await axios.get('/api/v1/pricing-metadata', { signal });
           const meta = response.data.find((m: any) => m.attributeKey === attributeKey);
-          setFormData({ attributeKey: meta.attributeKey, displayName: meta.displayName, dataType: meta.dataType });
-          setEntityName(meta.displayName);
-          setIsKeyEdited(true);
+          if (meta) {
+            setFormData({ attributeKey: meta.attributeKey, displayName: meta.displayName, dataType: meta.dataType });
+            setEntityName(meta.displayName);
+            setIsKeyEdited(true);
+          }
         } catch (err: any) {
+          if (axios.isCancel(err)) return;
           setToast({ message: 'Failed to fetch pricing metadata.', type: 'error' });
         } finally {
-          setLoading(false);
+          if (!signal.aborted) {
+            setLoading(false);
+          }
         }
       };
       fetchMetadata();
     }
-  }, [attributeKey, isEditing, setEntityName, setToast]);
+  }, [attributeKey, isEditing, setEntityName, setToast, signal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

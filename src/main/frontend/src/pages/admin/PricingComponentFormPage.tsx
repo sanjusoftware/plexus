@@ -6,6 +6,7 @@ import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 const PricingComponentFormPage = () => {
   const { user, setToast } = useAuth();
@@ -126,13 +127,15 @@ const PricingComponentFormPage = () => {
     }))
   });
 
+  const signal = useAbortSignal();
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const [metaRes, compRes] = await Promise.all([
-          axios.get('/api/v1/pricing-metadata'),
-          isEditing ? axios.get(`/api/v1/pricing-components/${id}`) : Promise.resolve({ data: null })
+          axios.get('/api/v1/pricing-metadata', { signal }),
+          isEditing ? axios.get(`/api/v1/pricing-components/${id}`, { signal }) : Promise.resolve({ data: null })
         ]);
 
         setMetadata(metaRes.data || []);
@@ -154,14 +157,17 @@ const PricingComponentFormPage = () => {
           }
         }
       } catch (err: any) {
+        if (axios.isCancel(err)) return;
         setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
-  }, [id, isEditing, setEntityName, setToast, mapTierFromApi]);
+  }, [id, isEditing, setEntityName, setToast, mapTierFromApi, signal]);
 
   const handleTierChange = (index: number, field: string, value: any) => {
     const newTiers = [...formData.pricingTiers];

@@ -6,6 +6,7 @@ import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import PlexusSelect from '../../components/PlexusSelect';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 import LivePricePreview from '../../components/LivePricePreview';
 import PriceSimulationTool from '../../components/PriceSimulationTool';
 
@@ -49,15 +50,17 @@ const ProductFormPage = () => {
     pricing: []
   });
 
+  const signal = useAbortSignal();
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const [fc, pc, pt, p] = await Promise.all([
-          axios.get('/api/v1/features'),
-          axios.get('/api/v1/pricing-components'),
-          axios.get('/api/v1/product-types'),
-          isEditing ? axios.get(`/api/v1/products/${id}`) : Promise.resolve({ data: null })
+          axios.get('/api/v1/features', { signal }),
+          axios.get('/api/v1/pricing-components', { signal }),
+          axios.get('/api/v1/product-types', { signal }),
+          isEditing ? axios.get(`/api/v1/products/${id}`, { signal }) : Promise.resolve({ data: null })
         ]);
 
         setFeatureComponents(fc.data || []);
@@ -80,14 +83,17 @@ const ProductFormPage = () => {
           setIsCodeEdited(true);
         }
       } catch (err: any) {
+        if (axios.isCancel(err)) return;
         setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
-  }, [id, isEditing, setEntityName, setToast]);
+  }, [id, isEditing, setEntityName, setToast, signal]);
 
   const addFeatureLink = () => {
     setFormData({
