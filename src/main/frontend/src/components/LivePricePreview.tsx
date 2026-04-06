@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, ChevronUp, DollarSign, AlertCircle, Loader2, TrendingUp } from 'lucide-react';
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
+import { useAbortSignal } from '../hooks/useAbortSignal';
+import axios from 'axios';
 
 interface LivePricePreviewProps {
   productId?: number;
@@ -19,9 +21,10 @@ const LivePricePreview: React.FC<LivePricePreviewProps> = ({ productId, currentF
   const [enrollmentDate, setEnrollmentDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const signal = useAbortSignal();
 
   // Trigger calculation when inputs change
-  const calculatePreview = useCallback(async () => {
+  const calculatePreview = useCallback(async (abortSignal: AbortSignal) => {
     if (!productId) {
       setError('Product ID required for price calculation');
       return;
@@ -38,21 +41,24 @@ const LivePricePreview: React.FC<LivePricePreviewProps> = ({ productId, currentF
         enrollmentDate,
       };
 
-      const pricing = await PricingService.calculateProductPrice(request);
+      const pricing = await PricingService.calculateProductPrice(request, abortSignal);
       setResult(pricing);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setError(err.response?.data?.message || 'Failed to calculate price. Product may not be activated.');
       setResult(null);
     } finally {
-      setLoading(false);
+      if (!abortSignal.aborted) {
+        setLoading(false);
+      }
     }
   }, [productId, transactionAmount, customerSegment, enrollmentDate]);
 
   useEffect(() => {
     if (productId) {
-      calculatePreview();
+      calculatePreview(signal);
     }
-  }, [productId, calculatePreview]);
+  }, [productId, calculatePreview, signal]);
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 overflow-hidden mt-8">

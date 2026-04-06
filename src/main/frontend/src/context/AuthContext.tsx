@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { authService, UserProfile } from '../services/AuthService';
 import axios from 'axios';
+import { useAbortSignal } from '../hooks/useAbortSignal';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -30,6 +31,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userRef.current = user;
   }, [user]);
 
+  const signal = useAbortSignal();
+
   useEffect(() => {
     axios.defaults.withCredentials = true;
 
@@ -45,23 +48,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initAuth = async () => {
       try {
         // 1. Initialize CSRF token
-        await axios.get('/api/v1/auth/csrf');
+        await axios.get('/api/v1/auth/csrf', { signal });
 
         // 2. Fetch User Profile
-        const currentUser = await authService.getUser();
+        const currentUser = await authService.getUser(signal);
         setUser(currentUser);
 
         // 3. Fetch Permissions Map if authenticated
         if (currentUser) {
-          const map = await authService.getPermissionsMap();
+          const map = await authService.getPermissionsMap(signal);
           setPermissionsMap(map);
         }
       } catch (err) {
+        if (axios.isCancel(err)) return;
         // If unauthenticated (401), currentUser will be null via authService.getUser()
         // We only log actual connection errors here
         console.log('Auth initialization: User is not logged in.');
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -101,7 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, []);
+  }, [signal]);
 
   const login = async (bankId: string) => {
     await authService.login(bankId);

@@ -13,6 +13,7 @@ import {
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 interface PricingMetadata {
   id: number;
@@ -27,28 +28,33 @@ const PricingMetadataPage = () => {
   const [metadata, setMetadata] = useState<PricingMetadata[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchMetadata = useCallback(async () => {
+  const signal = useAbortSignal();
+
+  const fetchMetadata = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/pricing-metadata');
+      const response = await axios.get('/api/v1/pricing-metadata', { signal: abortSignal });
       setMetadata(response.data);
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch pricing metadata. Check your permissions.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!abortSignal.aborted) {
+        setLoading(false);
+      }
     }
   }, [setToast]);
 
   useEffect(() => {
-    fetchMetadata();
-  }, [fetchMetadata]);
+    fetchMetadata(signal);
+  }, [fetchMetadata, signal]);
 
   const handleDelete = async (attributeKey: string) => {
     if (!window.confirm('Are you sure? Deleting metadata might break existing rules that use this attribute.')) return;
     try {
       await axios.delete(`/api/v1/pricing-metadata/${attributeKey}`);
       setToast({ message: 'Metadata deleted successfully.', type: 'success' });
-      fetchMetadata();
+      fetchMetadata(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Failed to delete.', type: 'error' });
     }

@@ -5,6 +5,7 @@ import { Loader2, Save, List } from 'lucide-react';
 import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 const ProductTypeFormPage = () => {
   const { id } = useParams<{ id?: string }>();
@@ -17,12 +18,13 @@ const ProductTypeFormPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [isCodeEdited, setIsCodeEdited] = useState(false);
+  const signal = useAbortSignal();
 
   useEffect(() => {
     if (isEditing) {
       const fetchType = async () => {
         try {
-          const response = await axios.get('/api/v1/product-types');
+          const response = await axios.get('/api/v1/product-types', { signal });
           const type = response.data.find((t: any) => t.id.toString() === id);
           if (type) {
             setFormData({ name: type.name, code: type.code });
@@ -32,14 +34,17 @@ const ProductTypeFormPage = () => {
             setToast({ message: 'Product type not found.', type: 'error' });
           }
         } catch (err: any) {
+          if (axios.isCancel(err)) return;
           setToast({ message: 'Failed to fetch product type.', type: 'error' });
         } finally {
-          setLoading(false);
+          if (!signal.aborted) {
+            setLoading(false);
+          }
         }
       };
       fetchType();
     }
-  }, [id, isEditing, setEntityName, setToast]);
+  }, [id, isEditing, setEntityName, setToast, signal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
