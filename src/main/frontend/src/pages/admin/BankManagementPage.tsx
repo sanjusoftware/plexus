@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Building2, Loader2, Plus, ArrowRight, ExternalLink, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit
+  Building2, Loader2, Plus, ArrowRight, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit
 } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
 import axios from 'axios';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import OnboardingSuccessModal from '../../components/OnboardingSuccessModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
@@ -14,7 +15,9 @@ import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 const BankManagementPage = () => {
   const { user, loading: authLoading, setToast } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [banks, setBanks] = useState<any[]>([]);
+  const [successState, setSuccessState] = useState<{ title: string; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedBank, setSelectedBank] = useState<any>(null);
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
@@ -44,6 +47,17 @@ const BankManagementPage = () => {
       fetchBanks(signal);
     }
   }, [user, authLoading, fetchBanks, signal]);
+
+  useEffect(() => {
+    if (location.state?.onboardingSuccess) {
+      setSuccessState({
+        title: location.state.title,
+        message: location.state.message
+      });
+      // Clear navigation state to prevent modal from re-appearing on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'reject') => {
     try {
@@ -93,6 +107,12 @@ const BankManagementPage = () => {
 
   return (
     <>
+      <OnboardingSuccessModal
+        isOpen={!!successState}
+        onClose={() => setSuccessState(null)}
+        title={successState?.title || ''}
+        message={successState?.message || ''}
+      />
       <AdminPage width="wide">
         <AdminPageHeader
           icon={Building2}

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Building2, Package, Loader2, Plus, ShieldCheck, Users, Tag, Layers, X
 } from 'lucide-react';
 import axios from 'axios';
 import { HasPermission } from '../components/HasPermission';
+import OnboardingSuccessModal from '../components/OnboardingSuccessModal';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { useAbortSignal } from '../hooks/useAbortSignal';
 
@@ -21,8 +22,10 @@ interface StatsSet {
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasPermission } = useHasPermission();
   const [localStats, setLocalStats] = useState<StatsSet | null>(null);
+  const [successState, setSuccessState] = useState<{ title: string; message: string } | null>(null);
   const [globalStats, setGlobalStats] = useState<StatsSet | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -77,6 +80,17 @@ const Dashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, canReadBankStats, canReadSystemStats, signal]);
+
+  useEffect(() => {
+    if (location.state?.onboardingSuccess) {
+      setSuccessState({
+        title: location.state.title,
+        message: location.state.message
+      });
+      // Clear navigation state to prevent modal from re-appearing on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   if (authLoading || (user && loading)) {
     return (
@@ -176,6 +190,12 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
+      <OnboardingSuccessModal
+        isOpen={!!successState}
+        onClose={() => setSuccessState(null)}
+        title={successState?.title || ''}
+        message={successState?.message || ''}
+      />
       {/* Temporary Welcome Banner */}
       {showWelcome && (
         <div className="mb-4 p-3 bg-blue-900 text-white rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
