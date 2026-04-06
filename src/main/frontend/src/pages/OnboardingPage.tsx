@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, CheckCircle2, ArrowLeft, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, ArrowLeft, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
 import axios from 'axios';
 import PlexusSelect from '../components/PlexusSelect';
 import { useAuth } from '../context/AuthContext';
@@ -37,7 +37,6 @@ const OnboardingPage = () => {
   const [isBankIdEdited, setIsBankIdEdited] = useState(false);
   const [captcha, setCaptcha] = useState({ question: '', id: '' });
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [showSecret, setShowSecret] = useState(false);
   const signal = useAbortSignal();
@@ -124,7 +123,6 @@ const OnboardingPage = () => {
       return;
     }
     setLoading(true);
-    setStatus('idle');
     try {
       const bankDetails = {
         ...formData,
@@ -144,13 +142,20 @@ const OnboardingPage = () => {
         await axios.post('/api/v1/public/onboarding', submissionData);
       }
 
-      setStatus('success');
       const successMsg = isEditing ? 'Bank configuration has been updated successfully!' :
       isAdmin ? 'New bank has been added successfully!' :
       'Your onboarding request has been submitted successfully! A system administrator will review your request shortly.';
 
-      setMessage(successMsg);
+      const successTitle = isEditing ? 'Update Successful!' : isAdmin ? 'Bank Created!' : 'Request Submitted!';
+
       setToast({ message: successMsg, type: 'success' });
+      navigate(isAdmin ? '/banks' : '/', {
+        state: {
+          onboardingSuccess: true,
+          title: successTitle,
+          message: successMsg
+        }
+      });
     } catch (err: any) {
       const errorDetail = err.response?.data?.message || err.response?.data || 'Failed to submit request. Please check your inputs and captcha.';
       const finalError = typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail);
@@ -160,26 +165,6 @@ const OnboardingPage = () => {
       setLoading(false);
     }
   };
-
-  if (status === 'success') {
-    return (
-      <div className={`${isAdmin ? '' : 'min-h-screen bg-gray-50'} flex items-center justify-center p-4`}>
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center">
-          <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto mb-6" />
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            {isEditing ? 'Update Successful!' : isAdmin ? 'Bank Created!' : 'Request Submitted!'}
-          </h2>
-          <p className="text-gray-600 mb-8">{message}</p>
-          <button
-            onClick={() => navigate(isAdmin ? '/banks' : '/dashboard')}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
-          >
-            {isAdmin ? 'Back to Bank Management' : 'Return to Home'}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const renderForm = () => (
     <div className="max-w-xl w-full mx-auto">

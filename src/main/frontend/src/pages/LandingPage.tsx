@@ -1,12 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Settings, BarChart3, Mail, Globe, Cpu } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import OnboardingSuccessModal from '../components/OnboardingSuccessModal';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [successState, setSuccessState] = useState<{ title: string; message: string } | null>(null);
+
+  useEffect(() => {
+    if (location.state?.onboardingSuccess) {
+      setSuccessState({
+        title: location.state.title,
+        message: location.state.message
+      });
+      // Clear navigation state to prevent modal from re-appearing on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
+      <OnboardingSuccessModal
+        isOpen={!!successState}
+        onClose={() => setSuccessState(null)}
+        title={successState?.title || ''}
+        message={successState?.message || ''}
+      />
       {/* Navigation */}
       <nav className="flex items-center justify-between px-8 py-6 border-b">
         <div className="flex items-center space-x-2">
