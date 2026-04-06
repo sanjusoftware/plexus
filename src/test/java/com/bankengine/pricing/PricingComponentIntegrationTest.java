@@ -278,7 +278,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
         // Fetch the generated Tier ID
         Long tierId = txHelper.doInTransaction(() ->
-                componentRepository.findById(compId).get().getPricingTiers().get(0).getId()
+                componentRepository.findById(compId).get().getPricingTiers().iterator().next().getId()
         );
 
         PricingTierRequest updateReq = getValidTierDto();

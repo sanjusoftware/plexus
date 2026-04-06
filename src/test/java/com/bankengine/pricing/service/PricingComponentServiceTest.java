@@ -65,7 +65,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         component.setStatus(status);
         component.setCode(TEST_CODE);
         component.setType(PricingComponent.ComponentType.FEE);
-        component.setPricingTiers(new ArrayList<>());
+        component.setPricingTiers(new LinkedHashSet<>());
         return component;
     }
 
@@ -83,7 +83,8 @@ class PricingComponentServiceTest extends BaseServiceTest {
         entity.setBankId(TEST_BANK_ID);
         entity.setCode("MTH-FEE");
         entity.setType(PricingComponent.ComponentType.FEE);
-        entity.setPricingTiers(new ArrayList<>());
+        entity.setPricingTiers(new LinkedHashSet<>());
+        entity.setPricingTiers(new LinkedHashSet<>());
 
         when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq("MTH-FEE"), anyInt())).thenReturn(false);
         when(pricingComponentMapper.toEntity(request)).thenReturn(entity);
@@ -190,7 +191,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         entity.setBankId(TEST_BANK_ID);
         entity.setCode(TEST_CODE);
         entity.setType(PricingComponent.ComponentType.FEE);
-        entity.setPricingTiers(new ArrayList<>());
+        entity.setPricingTiers(new LinkedHashSet<>());
 
         PricingTier tierEntity = new PricingTier();
         PriceValue value = new PriceValue();
@@ -205,7 +206,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         componentService.createComponent(request);
 
         assertEquals(1, entity.getPricingTiers().size());
-        assertEquals(Integer.MIN_VALUE, entity.getPricingTiers().get(0).getPriority());
+        assertEquals(Integer.MIN_VALUE, entity.getPricingTiers().iterator().next().getPriority());
     }
 
     @Test
@@ -274,7 +275,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
 
         PricingTier existingTier = new PricingTier();
         existingTier.setCode("OLD_TIER");
-        component.setPricingTiers(new ArrayList<>(List.of(existingTier)));
+        component.setPricingTiers(new LinkedHashSet<>(List.of(existingTier)));
 
         PricingComponentRequest request = newPricingComponentRequest("Updated");
         request.setType("FEE");
@@ -315,7 +316,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         componentService.updateComponent(id, request);
 
         assertEquals(1, component.getPricingTiers().size());
-        PricingTier synchronizedTier = component.getPricingTiers().get(0);
+        PricingTier synchronizedTier = component.getPricingTiers().iterator().next();
         assertEquals("PREMIUM_WAIVER", synchronizedTier.getCode());
         assertEquals(1, synchronizedTier.getConditions().size());
         assertEquals(1, synchronizedTier.getPriceValues().size());
@@ -331,7 +332,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
 
         PricingTier existingTier = new PricingTier();
         existingTier.setCode("EXISTING");
-        component.setPricingTiers(new ArrayList<>(List.of(existingTier)));
+        component.setPricingTiers(new LinkedHashSet<>(List.of(existingTier)));
 
         PricingComponentRequest request = newPricingComponentRequest("Updated");
         request.setPricingTiers(new ArrayList<>());
@@ -363,7 +364,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         TierCondition oldCond = new TierCondition();
         oldTier.setConditions(new HashSet<>(Set.of(oldCond)));
 
-        source.setPricingTiers(List.of(oldTier));
+        source.setPricingTiers(Set.of(oldTier));
 
         // Prepare the target (new version)
         PricingComponent target = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
@@ -396,7 +397,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         assertNotNull(target.getPricingTiers());
         assertEquals(1, target.getPricingTiers().size());
 
-        PricingTier resultTier = target.getPricingTiers().get(0);
+        PricingTier resultTier = target.getPricingTiers().iterator().next();
         assertEquals(target, resultTier.getPricingComponent(), "Tier must point to the NEW component");
         assertEquals(1, resultTier.getPriceValues().size(), "Value must be cloned");
         assertEquals(1, resultTier.getConditions().size(), "Condition must be cloned");
@@ -427,7 +428,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         source.setCode("PRC-100");
 
         PricingTier oldTier = new PricingTier();
-        source.setPricingTiers(List.of(oldTier));
+        source.setPricingTiers(Set.of(oldTier));
 
         PricingComponent newVersion = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
         newVersion.setVersion(2);
@@ -499,7 +500,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
 
         assertNotNull(component.getPricingTiers());
         assertEquals(1, component.getPricingTiers().size());
-        PricingTier tier = component.getPricingTiers().get(0);
+        PricingTier tier = component.getPricingTiers().iterator().next();
         assertEquals(1, tier.getConditions().size());
         assertEquals(1, tier.getPriceValues().size());
     }
@@ -559,7 +560,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PriceValue value = new PriceValue();
         value.setValueType(PriceValue.ValueType.FEE_ABSOLUTE); // Fee value (Mismatch)
         tier.setPriceValues(Set.of(value));
-        component.setPricingTiers(List.of(tier));
+        component.setPricingTiers(Set.of(tier));
 
         PricingComponentRequest request = newPricingComponentRequest("Mismatch");
         request.setType("DISCOUNT");
@@ -579,7 +580,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PriceValue value = new PriceValue();
         value.setValueType(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
         tier.setPriceValues(Set.of(value));
-        component.setPricingTiers(List.of(tier));
+        component.setPricingTiers(Set.of(tier));
 
         PricingComponentRequest request = newPricingComponentRequest("Mismatch Fee");
         request.setType("FEE");
@@ -691,7 +692,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         source.setCode("PRC-NULL");
         PricingComponent target = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
         target.setCode("PRC-NULL");
-        target.setPricingTiers(new ArrayList<>()); // MapStruct often initializes collections
+        target.setPricingTiers(new LinkedHashSet<>()); // MapStruct often initializes collections
 
         when(componentRepository.findById(1L)).thenReturn(Optional.of(source));
         when(pricingComponentMapper.clone(source)).thenReturn(target);
@@ -710,7 +711,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingTier tier = new PricingTier();
         tier.setPriceValues(null);
         tier.setConditions(null);
-        source.setPricingTiers(List.of(tier));
+        source.setPricingTiers(Set.of(tier));
 
         PricingComponent target = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
         target.setCode("PRC-NESTED-NULL");
@@ -727,8 +728,8 @@ class PricingComponentServiceTest extends BaseServiceTest {
         componentService.versionComponent(1L, new VersionRequest());
 
         assertNotNull(target.getPricingTiers());
-        assertTrue(target.getPricingTiers().get(0).getPriceValues().isEmpty());
-        assertTrue(target.getPricingTiers().get(0).getConditions().isEmpty());
+        assertTrue(target.getPricingTiers().iterator().next().getPriceValues().isEmpty());
+        assertTrue(target.getPricingTiers().iterator().next().getConditions().isEmpty());
     }
 
     @Test
@@ -740,7 +741,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PriceValue value = new PriceValue();
         value.setValueType(PriceValue.ValueType.FEE_ABSOLUTE);
         tier.setPriceValues(Set.of(value));
-        component.setPricingTiers(List.of(tier));
+        component.setPricingTiers(Set.of(tier));
 
         PricingComponentRequest request = newPricingComponentRequest("Package Fee");
         request.setType("PACKAGE_FEE");
@@ -761,7 +762,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PriceValue value = new PriceValue();
         value.setValueType(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
         tier.setPriceValues(Set.of(value));
-        component.setPricingTiers(List.of(tier));
+        component.setPricingTiers(Set.of(tier));
 
         PricingComponentRequest request = newPricingComponentRequest("Waiver");
         request.setType("WAIVER");
