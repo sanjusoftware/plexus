@@ -68,15 +68,24 @@ function App() {
           <Routes>
             <Route path="/" element={<PublicHome />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/onboarding" element={
+              <BreadcrumbProvider>
+                <OnboardingPage />
+              </BreadcrumbProvider>
+            } />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/error" element={<ErrorPage />} />
 
             <Route element={<ProtectedLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/banks" element={
                 <PermissionElement permission="system:bank:read">
                   <BankManagementPage />
+                </PermissionElement>
+              } />
+              <Route path="/banks/create" element={
+                <PermissionElement action="POST" path="/api/v1/banks">
+                  <OnboardingPage />
                 </PermissionElement>
               } />
               <Route path="/banks/edit/:id" element={

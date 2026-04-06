@@ -25,6 +25,12 @@ const LandingPage = () => {
           >
             Login
           </button>
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="border-2 border-blue-600 text-blue-600 px-6 py-2 rounded-full font-semibold hover:bg-blue-50 transition"
+          >
+            Signup
+          </button>
         </div>
       </nav>
 
@@ -126,14 +132,22 @@ const LandingPage = () => {
         <Mail className="h-16 w-16 text-blue-600 mx-auto mb-6" />
         <h2 className="text-3xl font-bold text-blue-900 mb-4">Ready to Transform?</h2>
         <p className="text-xl text-gray-600 mb-10">
-          Interested in onboarding your bank? Contact our sales team to request a demo and setup your tenant.
+          Interested in onboarding your bank? Contact our sales team to request a demo or get started immediately.
         </p>
-        <a
-          href="mailto:sales@plexus.com"
-          className="inline-block bg-blue-600 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-blue-700 transition shadow-lg"
-        >
-          Contact Sales
-        </a>
+        <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-6">
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="bg-blue-600 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-blue-700 transition shadow-lg"
+          >
+            Signup Now
+          </button>
+          <a
+            href="mailto:sales@plexus.com"
+            className="inline-block border-2 border-blue-600 text-blue-600 px-10 py-4 rounded-full font-bold text-lg hover:bg-blue-50 transition"
+          >
+            Contact Sales
+          </a>
+        </div>
       </section>
 
       {/* Footer */}

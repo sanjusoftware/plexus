@@ -99,7 +99,7 @@ const BankManagementPage = () => {
         </div>
         <HasPermission action="POST" path="/api/v1/banks">
           <button
-            onClick={() => navigate('/onboarding?admin=true')}
+            onClick={() => navigate('/banks/create')}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-700 transition flex items-center shadow-md shadow-blue-100 uppercase tracking-widest"
           >
             <Plus className="h-4 w-4 mr-1.5" /> Add Bank
