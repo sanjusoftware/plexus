@@ -408,17 +408,23 @@ const ProductFormPage = () => {
                       />
                     </div>
                     <div className="flex items-end">
-                      <label className="flex items-center cursor-pointer p-3 bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition w-full shadow-sm">
-                        <input type="checkbox" className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500" checked={link.useRulesEngine} onChange={(e) => {
-                          const newP = [...formData.pricing];
-                          newP[idx].useRulesEngine = e.target.checked;
-                          setFormData({...formData, pricing: newP});
-                        }} />
-                        <div className="ml-3">
-                          <span className="text-[11px] font-bold text-gray-900 uppercase tracking-widest block">Activate Rules Engine</span>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase italic tracking-tighter">Use dynamic tiered segments</span>
+                      <div className="flex items-center justify-between px-4 bg-white rounded-lg border border-gray-200 transition w-full shadow-sm h-[42px]">
+                        <div className="flex flex-col justify-center">
+                          <span className="text-[11px] font-bold text-gray-900 uppercase tracking-widest leading-tight">Activate Rules Engine</span>
+                          <span className="text-[9px] text-gray-400 font-bold uppercase italic tracking-tighter leading-tight">Use dynamic tiered segments</span>
                         </div>
-                      </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newP = [...formData.pricing];
+                            newP[idx].useRulesEngine = !link.useRulesEngine;
+                            setFormData({...formData, pricing: newP});
+                          }}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${link.useRulesEngine ? 'bg-blue-600' : 'bg-gray-200'}`}
+                        >
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${link.useRulesEngine ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -426,11 +432,17 @@ const ProductFormPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white rounded-xl border border-purple-50 shadow-sm animate-in fade-in duration-300">
                       <div>
                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Static Override Amount</label>
-                        <input type="number" step="0.01" className="w-full border border-gray-50 rounded-lg p-2.5 font-bold text-gray-900 text-sm transition focus:border-purple-500 bg-gray-50/30" value={link.fixedValue} onChange={(e) => {
-                          const newP = [...formData.pricing];
-                          newP[idx].fixedValue = parseFloat(e.target.value);
-                          setFormData({...formData, pricing: newP});
-                        }} />
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full border border-gray-200 rounded-lg px-3 font-bold text-gray-900 text-sm transition focus:border-blue-500 bg-white h-[42px] shadow-sm"
+                          value={link.fixedValue ?? ''}
+                          onChange={(e) => {
+                            const newP = [...formData.pricing];
+                            newP[idx].fixedValue = parseFloat(e.target.value);
+                            setFormData({...formData, pricing: newP});
+                          }}
+                        />
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Amount Type</label>
