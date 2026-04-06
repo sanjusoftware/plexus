@@ -6,6 +6,7 @@ import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import StyledSelect from '../../components/StyledSelect';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 const FeatureComponentFormPage = () => {
   const { id } = useParams<{ id?: string }>();
@@ -20,13 +21,13 @@ const FeatureComponentFormPage = () => {
   const [isCodeEdited, setIsCodeEdited] = useState(false);
 
   const dataTypes = ['STRING', 'INTEGER', 'BOOLEAN', 'DECIMAL', 'DATE'];
+  const signal = useAbortSignal();
 
   useEffect(() => {
     if (isEditing) {
-      const controller = new AbortController();
       const fetchFeature = async () => {
         try {
-          const response = await axios.get(`/api/v1/features/${id}`, { signal: controller.signal });
+          const response = await axios.get(`/api/v1/features/${id}`, { signal });
           const feat = response.data;
           setFormData({ code: feat.code, name: feat.name, dataType: feat.dataType });
           setEntityName(feat.name);
@@ -35,15 +36,14 @@ const FeatureComponentFormPage = () => {
           if (axios.isCancel(err)) return;
           setToast({ message: 'Failed to fetch feature component.', type: 'error' });
         } finally {
-          if (!controller.signal.aborted) {
+          if (!signal.aborted) {
             setLoading(false);
           }
         }
       };
       fetchFeature();
-      return () => controller.abort();
     }
-  }, [id, isEditing, setEntityName, setToast]);
+  }, [id, isEditing, setEntityName, setToast, signal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -14,6 +14,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 interface ProductType {
   id: number;
@@ -30,32 +31,32 @@ const ProductTypesPage = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [typeToActOn, setTypeToActOn] = useState<ProductType | null>(null);
 
-  const fetchProductTypes = useCallback(async (signal?: AbortSignal) => {
+  const signal = useAbortSignal();
+
+  const fetchProductTypes = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/product-types', { signal });
+      const response = await axios.get('/api/v1/product-types', { signal: abortSignal });
       setProductTypes(response.data);
     } catch (err: any) {
       if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch product types. Make sure you have the required permissions.', type: 'error' });
     } finally {
-      if (!signal?.aborted) {
+      if (!abortSignal.aborted) {
         setLoading(false);
       }
     }
   }, [setToast]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchProductTypes(controller.signal);
-    return () => controller.abort();
-  }, [fetchProductTypes]);
+    fetchProductTypes(signal);
+  }, [fetchProductTypes, signal]);
 
   const handleAction = async (id: number, action: string) => {
     try {
       await axios.post(`/api/v1/product-types/${id}/${action}`);
       setToast({ message: `Product type ${action}d successfully.`, type: 'success' });
-      fetchProductTypes();
+      await fetchProductTypes(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || `Failed to ${action} product type.`, type: 'error' });
     }
@@ -72,7 +73,7 @@ const ProductTypesPage = () => {
         await axios.post(`/api/v1/product-types/${typeToActOn.id}/archive`);
         setToast({ message: 'Product type archived successfully.', type: 'success' });
       }
-      fetchProductTypes();
+      await fetchProductTypes(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || `Failed to ${typeToActOn.status === 'DRAFT' ? 'delete' : 'archive'} product type.`, type: 'error' });
     } finally {

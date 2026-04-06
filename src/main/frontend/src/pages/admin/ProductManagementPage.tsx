@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info } from 'l
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -42,36 +43,36 @@ const ProductManagementPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchInitialData = useCallback(async (signal?: AbortSignal) => {
+  const signal = useAbortSignal();
+
+  const fetchInitialData = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const p = await axios.get('/api/v1/products', { signal });
+      const p = await axios.get('/api/v1/products', { signal: abortSignal });
       setProducts(p.data.content || []);
     } catch (err: any) {
       if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch products. Please check your role permissions.', type: 'error' });
     } finally {
-      if (!signal?.aborted) {
+      if (!abortSignal.aborted) {
         setLoading(false);
       }
     }
   }, [setToast]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchInitialData(controller.signal);
+    fetchInitialData(signal);
     if (location.state?.success) {
       setToast({ message: location.state.success, type: 'success' });
       window.history.replaceState({}, document.title);
     }
-    return () => controller.abort();
-  }, [location, setToast, fetchInitialData]);
+  }, [location, setToast, fetchInitialData, signal]);
 
   const handleStatusAction = async (id: number, action: string) => {
     try {
       await axios.post(`/api/v1/products/${id}/${action}`);
       setToast({ message: `Product ${action}d successfully.`, type: 'success' });
-      fetchInitialData();
+      await fetchInitialData(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || `Failed to ${action} product.`, type: 'error' });
     }
@@ -82,7 +83,7 @@ const ProductManagementPage = () => {
     try {
       await axios.delete(`/api/v1/products/${id}`);
       setToast({ message: 'Product deleted successfully.', type: 'success' });
-      fetchInitialData();
+      await fetchInitialData(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
     }

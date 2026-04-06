@@ -5,6 +5,7 @@ import { Save, Shield, CheckCircle2, Loader2, Lock, CheckSquare, Square, MinusSq
 import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
+import { useAbortSignal } from '../../hooks/useAbortSignal';
 
 interface RoleMapping {
   name: string;
@@ -22,15 +23,15 @@ const RoleFormPage = () => {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<RoleMapping>({ name: roleName || '', authorities: [] });
   const [submitting, setSubmitting] = useState(false);
+  const signal = useAbortSignal();
 
   useEffect(() => {
-    const controller = new AbortController();
     const fetchData = async () => {
       setLoading(true);
       try {
         const [authsRes, mappingsRes] = await Promise.all([
-          axios.get('/api/v1/roles/authorities', { signal: controller.signal }),
-          isEditing ? axios.get('/api/v1/roles/mapping', { signal: controller.signal }) : Promise.resolve({ data: [] })
+          axios.get('/api/v1/roles/authorities', { signal }),
+          isEditing ? axios.get('/api/v1/roles/mapping', { signal }) : Promise.resolve({ data: [] })
         ]);
 
         setAvailableAuthorities(authsRes.data || []);
@@ -49,15 +50,14 @@ const RoleFormPage = () => {
         if (axios.isCancel(err)) return;
         setToast({ message: 'Failed to fetch required data.', type: 'error' });
       } finally {
-        if (!controller.signal.aborted) {
+        if (!signal.aborted) {
           setLoading(false);
         }
       }
     };
 
     fetchData();
-    return () => controller.abort();
-  }, [roleName, isEditing, setEntityName, setToast]);
+  }, [roleName, isEditing, setEntityName, setToast, signal]);
 
   const toggleAuthority = (auth: string) => {
     const newAuths = new Set(formData.authorities);

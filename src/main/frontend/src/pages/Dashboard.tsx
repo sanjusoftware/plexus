@@ -7,6 +7,7 @@ import {
 import axios from 'axios';
 import { HasPermission } from '../components/HasPermission';
 import { useHasPermission } from '../hooks/useHasPermission';
+import { useAbortSignal } from '../hooks/useAbortSignal';
 
 interface StatsSet {
   products: Record<string, number>;
@@ -25,6 +26,7 @@ const Dashboard = () => {
   const [globalStats, setGlobalStats] = useState<StatsSet | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+  const signal = useAbortSignal();
 
   const authorities = (user?.permissions as string[]) || [];
   const canReadBankStats = authorities.includes('bank:stats:read');
@@ -47,36 +49,34 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  const fetchStats = async (signal?: AbortSignal) => {
+  const fetchStats = async (abortSignal: AbortSignal) => {
     if (!user) return;
     setLoading(true);
     try {
       const requests = [];
       if (canReadBankStats) {
-        requests.push(axios.get('/api/v1/dashboard/stats/local', { signal }).then(res => setLocalStats(res.data)));
+        requests.push(axios.get('/api/v1/dashboard/stats/local', { signal: abortSignal }).then(res => setLocalStats(res.data)));
       }
       if (canReadSystemStats) {
-        requests.push(axios.get('/api/v1/dashboard/stats/global', { signal }).then(res => setGlobalStats(res.data)));
+        requests.push(axios.get('/api/v1/dashboard/stats/global', { signal: abortSignal }).then(res => setGlobalStats(res.data)));
       }
       await Promise.all(requests);
     } catch (err) {
       if (axios.isCancel(err)) return;
       console.error('Failed to fetch dashboard stats:', err);
     } finally {
-      if (!signal?.aborted) {
+      if (!abortSignal.aborted) {
         setLoading(false);
       }
     }
   };
 
   useEffect(() => {
-    const controller = new AbortController();
     if (!authLoading && user) {
-      fetchStats(controller.signal);
+      fetchStats(signal);
     }
-    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, canReadBankStats, canReadSystemStats]);
+  }, [user, authLoading, canReadBankStats, canReadSystemStats, signal]);
 
   if (authLoading || (user && loading)) {
     return (
