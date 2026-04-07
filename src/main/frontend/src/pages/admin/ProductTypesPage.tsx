@@ -124,8 +124,8 @@ const ProductTypesPage = () => {
               ) : (
                 productTypes.map((type) => (
                   <AdminDataTableRow key={type.id}>
-                    <td className="whitespace-nowrap text-sm font-bold text-gray-900">{type.name}</td>
-                    <td className="whitespace-nowrap font-mono font-bold text-blue-700">{type.code}</td>
+                    <td className="whitespace-nowrap text-sm font-bold text-gray-900 max-w-[200px] truncate" title={type.name}>{type.name}</td>
+                    <td className="whitespace-nowrap font-mono font-bold text-blue-700 max-w-[150px] truncate" title={type.code}>{type.code}</td>
                     <td className="whitespace-nowrap">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         type.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
