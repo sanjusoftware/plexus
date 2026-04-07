@@ -229,9 +229,9 @@ const PricingComponentsPage = () => {
                     <td className="text-center">
                       {expandedRows.has(comp.id) ? <ChevronDown className="w-4 h-4 text-blue-600 font-bold" /> : <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-400" />}
                     </td>
-                    <td className="whitespace-nowrap">
-                      <div className="text-sm font-bold text-gray-900 leading-tight">{comp.name}</div>
-                      <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest">{comp.code}</div>
+                    <td className="whitespace-nowrap max-w-[200px]">
+                      <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={comp.name}>{comp.name}</div>
+                      <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={comp.code}>{comp.code}</div>
                     </td>
                     <td className="whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${comp.type === 'FEE' ? 'bg-purple-50 text-purple-700 border border-purple-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>

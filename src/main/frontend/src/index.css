@@ -93,6 +93,12 @@
 
   .admin-table-card {
 	@apply overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm;
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* IE/Edge */
+  }
+
+  .admin-table-card::-webkit-scrollbar {
+	display: none; /* Chrome/Safari */
   }
 
   .admin-table {

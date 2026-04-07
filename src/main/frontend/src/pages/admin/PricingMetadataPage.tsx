@@ -100,8 +100,8 @@ const PricingMetadataPage = () => {
               ) : (
                 metadata.map((meta) => (
                   <AdminDataTableRow key={meta.id}>
-                    <td className="whitespace-nowrap text-sm font-bold text-gray-900">{meta.displayName}</td>
-                    <td className="whitespace-nowrap bg-blue-50/20 font-mono font-bold text-blue-700">{meta.attributeKey}</td>
+                    <td className="whitespace-nowrap text-sm font-bold text-gray-900 max-w-[200px] truncate" title={meta.displayName}>{meta.displayName}</td>
+                    <td className="whitespace-nowrap bg-blue-50/20 font-mono font-bold text-blue-700 max-w-[150px] truncate" title={meta.attributeKey}>{meta.attributeKey}</td>
                     <td className="whitespace-nowrap">
                       <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
                     </td>

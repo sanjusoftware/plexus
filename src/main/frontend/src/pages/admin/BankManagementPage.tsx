@@ -173,7 +173,7 @@ const BankManagementPage = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap text-xs text-gray-500 font-medium">
+                  <td className="whitespace-nowrap text-xs text-gray-500 font-medium max-w-[200px] truncate" title={item.issuerUrl}>
                     {item.issuerUrl}
                   </td>
                   <td className="whitespace-nowrap">

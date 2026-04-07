@@ -110,9 +110,9 @@ const FeatureComponentsPage = () => {
             <tbody>
               {features.map((feat) => (
                 <AdminDataTableRow key={feat.id}>
-                  <td className="whitespace-nowrap">
-                    <div className="text-sm font-bold text-gray-900 leading-tight">{feat.name}</div>
-                    <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest">{feat.code}</div>
+                  <td className="whitespace-nowrap max-w-[250px]">
+                    <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={feat.name}>{feat.name}</div>
+                    <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={feat.code}>{feat.code}</div>
                   </td>
                   <td className="whitespace-nowrap">
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 border border-gray-200">
