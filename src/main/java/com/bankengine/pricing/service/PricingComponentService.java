@@ -148,8 +148,8 @@ public class PricingComponentService extends BaseService {
         PricingComponent component = getPricingComponentById(id);
         validateDraft(component);
         component.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-        if (activationDate != null && component.getActivationDate() == null) {
-            component.setActivationDate(activationDate);
+        if (component.getActivationDate() == null) {
+            component.setActivationDate(activationDate != null ? activationDate : LocalDate.now());
         }
         PricingComponent saved = pricingComponentRepository.save(component);
         reloadService.reloadKieContainer();

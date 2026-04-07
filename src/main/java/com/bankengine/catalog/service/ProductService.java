@@ -166,6 +166,9 @@ public class ProductService extends BaseService {
 
         // Auto-activate linked DRAFT components, propagating the product's activation date
         product.getProductPricingLinks().forEach(link -> {
+            if (link.getEffectiveDate() == null) {
+                link.setEffectiveDate(product.getActivationDate());
+            }
             PricingComponent pc = link.getPricingComponent();
             if (pc.isDraft()) {
                 pricingComponentService.activateComponent(pc.getId(), product.getActivationDate());
