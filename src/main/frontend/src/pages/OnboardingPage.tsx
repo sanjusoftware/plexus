@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, ArrowLeft, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, ArrowLeft, Loader2, Eye, EyeOff, Save } from 'lucide-react';
 import axios from 'axios';
 import PlexusSelect from '../components/PlexusSelect';
 import GlobalToast from '../components/GlobalToast';
 import { useAuth } from '../context/AuthContext';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
 import { useAbortSignal } from '../hooks/useAbortSignal';
+import { AdminPage, AdminFormHeader } from '../components/AdminPageLayout';
+import { Building2 } from 'lucide-react';
 
 const OnboardingPage = () => {
   const { user, setToast } = useAuth();
@@ -18,7 +20,7 @@ const OnboardingPage = () => {
   const authorities = (user?.roles as string[]) || [];
   const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
 
-  const isAdmin = (new URLSearchParams(location.search).get('admin') === 'true' || !!id || location.pathname === '/banks/create') && isSystemAdmin;
+  const isAdmin = (new URLSearchParams(location.search).get('admin') === 'true' || !!id || location.pathname === '/banks/create' || location.pathname.startsWith('/banks/edit/')) && isSystemAdmin;
   const isEditing = !!id && isSystemAdmin;
 
   const [formData, setFormData] = useState({
@@ -168,38 +170,30 @@ const OnboardingPage = () => {
   };
 
   const renderForm = () => (
-    <div className="max-w-xl w-full mx-auto">
-      <GlobalToast />
+    <div className={isAdmin ? "" : "max-w-xl w-full mx-auto"}>
+      {!isAdmin && <GlobalToast />}
       {!isAdmin && (
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center text-blue-600 hover:text-blue-800 font-bold mb-4 text-sm transition"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1.5" />
-          Back to Home
-        </button>
+        <>
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center text-blue-600 hover:text-blue-800 font-bold mb-4 text-sm transition"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Back to Home
+          </button>
+
+          <div className="flex justify-between items-start mb-1">
+            <h2 className="text-xl font-bold text-gray-900">
+              Get Started
+            </h2>
+          </div>
+          <p className="text-xs text-gray-500 mb-6 font-medium">
+            Fill out the form below to submit an onboarding request for your institution.
+          </p>
+        </>
       )}
 
-      <div className="flex justify-between items-start mb-1">
-        <h2 className="text-xl font-bold text-gray-900">
-          {isEditing ? 'Edit Bank Configuration' : isAdmin ? 'Add New Bank' : 'Get Started'}
-        </h2>
-        {isAdmin && (
-          <button
-            onClick={() => navigate('/banks')}
-            className="bg-gray-50 text-gray-400 p-1.5 rounded-lg hover:bg-gray-100 transition border border-gray-100 shadow-sm"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-      <p className="text-xs text-gray-500 mb-6 font-medium">
-        {isEditing ? `Updating configuration for ${formData.name || id}` :
-         isAdmin ? 'Fill out the form below to register a new bank in the system.' :
-         'Fill out the form below to submit an onboarding request for your institution.'}
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className={isAdmin ? "space-y-6" : "space-y-4"}>
         <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank Name</label>
             <input
@@ -379,23 +373,26 @@ const OnboardingPage = () => {
           </div>
         )}
 
-        <div className="flex space-x-3">
+        <div className={isAdmin ? "flex space-x-4 border-t border-gray-100 pt-6" : "flex space-x-3"}>
           {isAdmin && (
             <button
               type="button"
               onClick={() => navigate('/banks')}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg font-bold text-gray-500 hover:bg-gray-50 transition uppercase tracking-widest text-[10px]"
+              className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]"
             >
-              Cancel
+              Discard Changes
             </button>
           )}
           <button
             disabled={loading}
             type="submit"
-            className="flex-[2] bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-blue-700 transition shadow-md disabled:opacity-50 flex items-center justify-center"
+            className={isAdmin
+              ? "flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50"
+              : "flex-[2] bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-blue-700 transition shadow-md disabled:opacity-50 flex items-center justify-center"
+            }
           >
             {loading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> {isEditing ? 'Updating...' : 'Submitting...'}</> :
-             isEditing ? <><Save className="h-4 w-4 mr-1.5" /> Update Bank</> : 'Submit Request'}
+             isEditing ? <><Save className="h-4 w-4 mr-1.5" /> Commit Configuration</> : isAdmin ? 'Commit New Bank' : 'Submit Request'}
           </button>
         </div>
       </form>
@@ -403,7 +400,19 @@ const OnboardingPage = () => {
   );
 
   if (isAdmin) {
-    return <div className="p-8">{renderForm()}</div>;
+    return (
+      <AdminPage width="medium">
+        <AdminFormHeader
+          icon={Building2}
+          title={isEditing ? 'Update Bank' : 'New Bank'}
+          description={isEditing ? `Updating configuration for ${formData.name || id}` : 'Fill out the form below to register a new bank in the system.'}
+          onClose={() => navigate('/banks')}
+        />
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 p-8">
+          {renderForm()}
+        </div>
+      </AdminPage>
+    );
   }
 
   return (
