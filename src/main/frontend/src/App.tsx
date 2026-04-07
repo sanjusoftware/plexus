@@ -61,8 +61,8 @@ const PublicHome = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <div className="min-h-screen bg-gray-50">
           <Routes>
             <Route path="/" element={<PublicHome />} />
@@ -188,8 +188,8 @@ function App() {
             <Route path="*" element={<ErrorPage />} />
           </Routes>
         </div>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { authService, UserProfile } from '../services/AuthService';
 import axios from 'axios';
 import { useAbortSignal } from '../hooks/useAbortSignal';
@@ -22,6 +23,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [permissionsMap, setPermissionsMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+  const location = useLocation();
+  const lastToastKey = useRef<string | null>(null);
+
+  // Clear toast on navigation
+  useEffect(() => {
+    // If the location key changes and it's different from the one when the toast was set, clear the toast
+    if (toast && lastToastKey.current && lastToastKey.current !== location.key) {
+      setToast(null);
+      lastToastKey.current = null;
+    }
+  }, [location.key, toast]);
+
+  const setInternalToast = useCallback((newToast: { message: string; type: 'error' | 'success' } | null) => {
+    setToast(newToast);
+    // When setting a toast, we associate it with the CURRENT location key
+    lastToastKey.current = newToast ? location.key : null;
+  }, [location.key]);
 
   // Use a ref to keep track of the current user state for the interceptor
   // without re-running the initialization effect when the user changes.
@@ -88,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // The toast should appear for both unauthenticated (if they get 403)
         // and authenticated users lacking permissions.
         if (status === 403) {
-          setToast({
+          setInternalToast({
             message: 'Access Denied: You do not have permission to perform this action.',
             type: 'error'
           });
@@ -107,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, [signal]);
+  }, [signal, setInternalToast]);
 
   const login = async (bankId: string) => {
     await authService.login(bankId);
@@ -130,7 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       bankId: user?.bank_id || null,
       permissionsMap,
       toast,
-      setToast
+      setToast: setInternalToast
     }}>
       {children}
     </AuthContext.Provider>
