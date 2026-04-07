@@ -83,7 +83,7 @@ const ProductFormPage = () => {
           setFormData({
             code: prod.code,
             name: prod.name,
-            productTypeCode: prod.productTypeCode,
+            productTypeCode: prod.productType?.code || '',
             category: prod.category,
             tagline: prod.tagline || '',
             fullDescription: prod.fullDescription || '',
@@ -472,7 +472,7 @@ const ProductFormPage = () => {
                     setFormData({...formData, pricing: newP});
                   }} className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-4 h-4" /></button>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Pricing Aggregate Component</label>
                       <PlexusSelect
@@ -507,6 +507,48 @@ const ProductFormPage = () => {
                           <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${link.useRulesEngine ? 'translate-x-5' : 'translate-x-1'}`} />
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Effective Date</label>
+                      <input
+                        type="date"
+                        className="w-full border border-gray-200 rounded-lg px-3 font-bold text-gray-900 text-[11px] transition focus:border-blue-500 bg-white h-[42px] shadow-sm"
+                        value={link.effectiveDate || ''}
+                        onChange={(e) => {
+                          const newP = [...formData.pricing];
+                          newP[idx].effectiveDate = e.target.value;
+                          setFormData({...formData, pricing: newP});
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Expiry Date</label>
+                      <input
+                        type="date"
+                        className="w-full border border-gray-200 rounded-lg px-3 font-bold text-gray-900 text-[11px] transition focus:border-blue-500 bg-white h-[42px] shadow-sm"
+                        value={link.expiryDate || ''}
+                        onChange={(e) => {
+                          const newP = [...formData.pricing];
+                          newP[idx].expiryDate = e.target.value;
+                          setFormData({...formData, pricing: newP});
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Target Component Code</label>
+                      <PlexusSelect
+                        placeholder="Select Target (Optional)..."
+                        options={pricingComponents.filter(pc => pc.code !== link.pricingComponentCode).map(pc => ({ value: pc.code, label: pc.code }))}
+                        value={link.targetComponentCode ? { value: link.targetComponentCode, label: link.targetComponentCode } : null}
+                        onChange={(opt) => {
+                          const newP = [...formData.pricing];
+                          newP[idx].targetComponentCode = opt ? opt.value : '';
+                          setFormData({...formData, pricing: newP});
+                        }}
+                      />
                     </div>
                   </div>
 
