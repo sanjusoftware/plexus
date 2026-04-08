@@ -13,7 +13,16 @@ const mockAxios = {
 
 jest.mock('axios', () => ({
   __esModule: true,
-  default: mockAxios
+  default: {
+    get: (...args: any[]) => mockAxios.get(...args),
+    post: (...args: any[]) => mockAxios.post(...args),
+    delete: (...args: any[]) => mockAxios.delete(...args),
+    interceptors: {
+      request: { use: jest.fn(), eject: jest.fn() },
+      response: { use: jest.fn(), eject: jest.fn() }
+    },
+    defaults: { withCredentials: false }
+  }
 }), { virtual: true });
 
 jest.mock('react-router-dom', () => ({

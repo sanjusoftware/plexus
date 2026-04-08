@@ -87,6 +87,11 @@ function App() {
                   <OnboardingPage />
                 </PermissionElement>
               } />
+              <Route path="/my-bank" element={
+                <PermissionElement action="PUT" path="/api/v1/banks">
+                  <OnboardingPage />
+                </PermissionElement>
+              } />
               <Route path="/banks/edit/:id" element={
                 <PermissionElement action="PUT" path="/api/v1/banks/*">
                   <OnboardingPage />
