@@ -186,18 +186,18 @@ const BankManagementPage = () => {
                     </span>
                   </td>
                   <AdminDataTableActionCell>
+                    <HasPermission action="PUT" path="/api/v1/banks/*">
+                      <AdminDataTableActionButton
+                        onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
+                        tone="primary"
+                        size="compact"
+                        title="Edit"
+                      >
+                        <Edit className="h-3.5 w-3.5" /> Edit
+                      </AdminDataTableActionButton>
+                    </HasPermission>
                     {item.status === 'DRAFT' && (
                       <>
-                        <HasPermission action="PUT" path="/api/v1/banks">
-                          <AdminDataTableActionButton
-                            onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
-                            tone="primary"
-                            size="compact"
-                            title="Edit"
-                          >
-                            <Edit className="h-3.5 w-3.5" /> Edit
-                          </AdminDataTableActionButton>
-                        </HasPermission>
                         <HasPermission action="POST" path="/api/v1/banks/*/activate">
                           <AdminDataTableActionButton
                             onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
@@ -320,16 +320,16 @@ const BankManagementPage = () => {
               </div>
 
               <div className="pt-6 border-t flex space-x-3">
+                <HasPermission action="PUT" path="/api/v1/banks/*">
+                  <button
+                    onClick={() => navigate(`/banks/edit/${selectedBank.bankId}`)}
+                    className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md shadow-blue-100 flex items-center justify-center"
+                  >
+                    <Edit className="h-3 w-3 mr-1.5" /> Edit Configuration
+                  </button>
+                </HasPermission>
                 {selectedBank.status === 'DRAFT' && (
                   <>
-                    <HasPermission action="PUT" path="/api/v1/banks">
-                      <button
-                        onClick={() => navigate(`/banks/edit/${selectedBank.bankId}`)}
-                        className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md shadow-blue-100 flex items-center justify-center"
-                      >
-                        <Edit className="h-3 w-3 mr-1.5" /> Edit Configuration
-                      </button>
-                    </HasPermission>
                     <HasPermission action="POST" path="/api/v1/banks/*/activate">
                       <button
                         onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}

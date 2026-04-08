@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ShieldCheck, Rocket, Info, ArrowLeft, Loader2, Eye, EyeOff, Save } from 'lucide-react';
+import { ShieldCheck, Rocket, Info, ArrowLeft, Loader2, Eye, EyeOff, Save, Trash2, Plus, Settings2 } from 'lucide-react';
 import axios from 'axios';
 import PlexusSelect from '../components/PlexusSelect';
 import GlobalToast from '../components/GlobalToast';
@@ -20,10 +20,11 @@ const OnboardingPage = () => {
   const authorities = (user?.roles as string[]) || [];
   const isSystemAdmin = authorities.includes('SYSTEM_ADMIN');
 
-  const isAdmin = (new URLSearchParams(location.search).get('admin') === 'true' || !!id || location.pathname === '/banks/create' || location.pathname.startsWith('/banks/edit/')) && isSystemAdmin;
-  const isEditing = !!id && isSystemAdmin;
+  const isMyBank = location.pathname === '/my-bank';
+  const isAdmin = (isMyBank || !!id || location.pathname === '/banks/create' || location.pathname.startsWith('/banks/edit/')) && (isSystemAdmin || isMyBank);
+  const isEditing = (!!id && isSystemAdmin) || isMyBank;
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     bankId: '',
     name: '',
     issuerUrl: '',
@@ -32,7 +33,9 @@ const OnboardingPage = () => {
     adminName: '',
     adminEmail: '',
     currencyCode: 'USD',
-    captchaAnswer: ''
+    captchaAnswer: '',
+    allowProductInMultipleBundles: false,
+    categoryConflictRules: []
   });
 
   const [customCurrency, setCustomCurrency] = useState('');
@@ -47,7 +50,10 @@ const OnboardingPage = () => {
   const fetchBankData = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get(`/api/v1/banks/${id}`, { signal: abortSignal });
+      const targetId = isMyBank ? user?.bank_id : id;
+      if (!targetId) return;
+
+      const response = await axios.get(`/api/v1/banks/${targetId}`, { signal: abortSignal });
       const data = response.data;
       setFormData({
         bankId: data.bankId,
@@ -58,12 +64,15 @@ const OnboardingPage = () => {
         adminName: data.adminName,
         adminEmail: data.adminEmail,
         currencyCode: data.currencyCode,
-        captchaAnswer: ''
+        captchaAnswer: '',
+        allowProductInMultipleBundles: data.allowProductInMultipleBundles || false,
+        categoryConflictRules: data.categoryConflictRules || []
       });
       setEntityName(data.name);
       setIsBankIdEdited(true);
-      if (!['USD', 'EUR', 'GBP', 'JPY'].includes(data.currencyCode)) {
-        setIsCustomCurrency(true);
+      const isCustom = data.currencyCode && !['USD', 'EUR', 'GBP', 'JPY'].includes(data.currencyCode);
+      setIsCustomCurrency(isCustom);
+      if (isCustom) {
         setCustomCurrency(data.currencyCode);
       }
     } catch (err) {
@@ -75,7 +84,7 @@ const OnboardingPage = () => {
         setLoading(false);
       }
     }
-  }, [id, setEntityName, setToast]);
+  }, [id, isMyBank, user?.bank_id, setEntityName, setToast]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -132,7 +141,9 @@ const OnboardingPage = () => {
         currencyCode: isCustomCurrency ? customCurrency.toUpperCase() : formData.currencyCode
       };
 
-      if (isEditing) {
+      if (isMyBank) {
+        await axios.put('/api/v1/banks', bankDetails);
+      } else if (isEditing) {
         await axios.put(`/api/v1/banks/${id}`, bankDetails);
       } else if (isAdmin) {
         await axios.post('/api/v1/banks', bankDetails);
@@ -169,6 +180,25 @@ const OnboardingPage = () => {
     }
   };
 
+  const addConflictRule = () => {
+    setFormData({
+      ...formData,
+      categoryConflictRules: [...formData.categoryConflictRules, { categoryA: '', categoryB: '' }]
+    });
+  };
+
+  const removeConflictRule = (index: number) => {
+    const newRules = [...formData.categoryConflictRules];
+    newRules.splice(index, 1);
+    setFormData({ ...formData, categoryConflictRules: newRules });
+  };
+
+  const updateConflictRule = (index: number, field: 'categoryA' | 'categoryB', value: string) => {
+    const newRules = [...formData.categoryConflictRules];
+    newRules[index] = { ...newRules[index], [field]: value.toUpperCase().trim() };
+    setFormData({ ...formData, categoryConflictRules: newRules });
+  };
+
   const renderForm = () => (
     <div className={isAdmin ? "" : "max-w-xl w-full mx-auto"}>
       {!isAdmin && <GlobalToast />}
@@ -194,167 +224,263 @@ const OnboardingPage = () => {
       )}
 
       <form onSubmit={handleSubmit} className={isAdmin ? "space-y-6" : "space-y-4"}>
-        <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank Name</label>
-            <input
-              required
-              type="text"
-              placeholder="e.g. Global Bank"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition"
-              value={formData.name}
-              onChange={e => {
-                const name = e.target.value;
-                let bankId = formData.bankId;
-                if (!isEditing && !isBankIdEdited) {
-                  bankId = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
-                }
-                setFormData({ ...formData, name, bankId });
-              }}
-            />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank ID {isEditing ? '(Read Only)' : '(Generated)'}</label>
-            <input
-              required
-              disabled={isEditing}
-              type="text"
-              placeholder="e.g. GLOBAL-BANK-001"
-              className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition ${isEditing ? 'bg-gray-50 text-gray-500' : ''}`}
-              value={formData.bankId}
-              onChange={e => {
-                setIsBankIdEdited(true);
-                setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '_') });
-              }}
-            />
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2 text-blue-900 mb-2">
+            <Info className="h-4 w-4" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">Core Configuration</h3>
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">Currency</label>
-            <div className="relative">
-              {!isCustomCurrency ? (
-                  <PlexusSelect
-                    options={[
-                      { value: 'USD', label: 'USD - US Dollar' },
-                      { value: 'EUR', label: 'EUR - Euro' },
-                      { value: 'GBP', label: 'GBP - British Pound' },
-                      { value: 'JPY', label: 'JPY - Japanese Yen' },
-                      { value: 'OTHER', label: 'Other (Enter code...)' }
-                    ]}
-                    value={['USD', 'EUR', 'GBP', 'JPY'].includes(formData.currencyCode) ? {
-                      value: formData.currencyCode,
-                      label: ({ USD: 'USD - US Dollar', EUR: 'EUR - Euro', GBP: 'GBP - British Pound', JPY: 'JPY - Japanese Yen' } as any)[formData.currencyCode]
-                    } : null}
-                    onChange={opt => {
-                      if (opt?.value === 'OTHER') {
-                        setIsCustomCurrency(true);
-                      } else if (opt) {
-                        setFormData({ ...formData, currencyCode: opt.value });
-                      }
-                    }}
-                  />
-              ) : (
-                <div className="flex space-x-2">
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank Name</label>
+              <input
+                required
+                disabled={isMyBank && !isSystemAdmin}
+                type="text"
+                placeholder="e.g. Global Bank"
+                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                value={formData.name}
+                onChange={e => {
+                  const name = e.target.value;
+                  let bankId = formData.bankId;
+                  if (!isEditing && !isBankIdEdited) {
+                    bankId = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+                  }
+                  setFormData({ ...formData, name, bankId });
+                }}
+              />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank ID {isEditing ? '(Read Only)' : '(Generated)'}</label>
+              <input
+                required
+                disabled={isEditing}
+                type="text"
+                placeholder="e.g. GLOBAL-BANK-001"
+                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition ${isEditing ? 'bg-gray-50 text-gray-500' : ''}`}
+                value={formData.bankId}
+                onChange={e => {
+                  setIsBankIdEdited(true);
+                  setFormData({ ...formData, bankId: e.target.value.toUpperCase().replace(/\s/g, '_') });
+                }}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">Currency</label>
+              <div className="relative">
+                {(!isCustomCurrency) ? (
+                    <PlexusSelect
+                      isDisabled={isMyBank && !isSystemAdmin}
+                      options={[
+                        { value: 'USD', label: 'USD - US Dollar' },
+                        { value: 'EUR', label: 'EUR - Euro' },
+                        { value: 'GBP', label: 'GBP - British Pound' },
+                        { value: 'JPY', label: 'JPY - Japanese Yen' },
+                        { value: 'OTHER', label: 'Other (Enter code...)' }
+                      ]}
+                      value={['USD', 'EUR', 'GBP', 'JPY'].includes(formData.currencyCode) ? {
+                        value: formData.currencyCode,
+                        label: ({ USD: 'USD - US Dollar', EUR: 'EUR - Euro', GBP: 'GBP - British Pound', JPY: 'JPY - Japanese Yen' } as any)[formData.currencyCode]
+                      } : null}
+                      onChange={opt => {
+                        if (opt?.value === 'OTHER') {
+                          setIsCustomCurrency(true);
+                        } else if (opt) {
+                          setFormData({ ...formData, currencyCode: opt.value });
+                        }
+                      }}
+                    />
+                ) : (
+                  <div className="flex space-x-2">
+                    <input
+                      autoFocus
+                      disabled={isMyBank && !isSystemAdmin}
+                      type="text"
+                      placeholder="e.g. AUD"
+                      className={`flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                      value={customCurrency}
+                      onChange={e => setCustomCurrency(e.target.value.toUpperCase())}
+                    />
+                    {(!isMyBank || isSystemAdmin) && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCurrency(false)}
+                        className="px-3 text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-0.5">OIDC Issuer URL</label>
+            <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
+              The discovery URL of your Identity Provider.
+            </p>
+            <input
+              required
+              disabled={isMyBank && !isSystemAdmin}
+              type="text"
+              placeholder="https://login.microsoftonline.com/..."
+              className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+              value={formData.issuerUrl}
+              onChange={e => setFormData({ ...formData, issuerUrl: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-0.5">Client ID</label>
+              <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
+                The Application (client) ID registered in your IDP.
+              </p>
+              <input
+                required
+                disabled={isMyBank && !isSystemAdmin}
+                type="text"
+                placeholder="e.g. 12345678-...90ab"
+                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                value={formData.clientId}
+                onChange={e => setFormData({ ...formData, clientId: e.target.value })}
+              />
+            </div>
+            {(!isMyBank || isSystemAdmin) && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-0.5">Client Secret (Optional)</label>
+                <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
+                  The Application Secret if your IDP requires it.
+                </p>
+                <div className="relative">
                   <input
-                    autoFocus
-                    type="text"
-                    placeholder="e.g. AUD"
-                    className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                    value={customCurrency}
-                    onChange={e => setCustomCurrency(e.target.value.toUpperCase())}
+                    type={showSecret ? "text" : "password"}
+                    placeholder="••••••••••••"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition pr-10"
+                    value={formData.clientSecret}
+                    onChange={e => setFormData({ ...formData, clientSecret: e.target.value })}
                   />
                   <button
                     type="button"
-                    onClick={() => setIsCustomCurrency(false)}
-                    className="px-3 text-sm text-blue-600 hover:text-blue-800"
+                    onClick={() => setShowSecret(!showSecret)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg text-gray-400"
                   >
-                    Reset
+                    {showSecret ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        </div>
 
-        <div>
-          <label className="block text-xs font-bold text-gray-700 mb-0.5">OIDC Issuer URL</label>
-          <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
-            The discovery URL of your Identity Provider.
-            <br />Example (Entra ID): <code className="bg-gray-100 px-1 rounded">https://login.microsoftonline.com/&#123;tenant-id&#125;/v2.0</code>
-          </p>
-          <input
-            required
-            type="text"
-            placeholder="https://login.microsoftonline.com/..."
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition"
-            value={formData.issuerUrl}
-            onChange={e => setFormData({ ...formData, issuerUrl: e.target.value })}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-0.5">Client ID</label>
-            <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
-              The Application (client) ID registered in your IDP.
-            </p>
-            <input
-              required
-              type="text"
-              placeholder="e.g. 12345678-...90ab"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition"
-              value={formData.clientId}
-              onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-0.5">Client Secret (Optional)</label>
-            <p className="text-[10px] text-gray-500 mb-1.5 font-medium italic">
-              The Application Secret if your IDP requires it.
-            </p>
-            <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">Admin Name</label>
               <input
-                type={showSecret ? "text" : "password"}
-                placeholder="••••••••••••"
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition pr-10"
-                value={formData.clientSecret}
-                onChange={e => setFormData({ ...formData, clientSecret: e.target.value })}
+                required
+                disabled={isMyBank && !isSystemAdmin}
+                type="text"
+                placeholder="Full Name"
+                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                value={formData.adminName}
+                onChange={e => setFormData({ ...formData, adminName: e.target.value })}
               />
-              <button
-                type="button"
-                onClick={() => setShowSecret(!showSecret)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg text-gray-400"
-              >
-                {showSecret ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">Admin Email</label>
+              <input
+                required
+                disabled={isMyBank && !isSystemAdmin}
+                type="email"
+                placeholder="email@bank.com"
+                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                value={formData.adminEmail}
+                onChange={e => setFormData({ ...formData, adminEmail: e.target.value })}
+              />
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t">
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">Admin Name</label>
-            <input
-              required
-              type="text"
-              placeholder="Full Name"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition"
-              value={formData.adminName}
-              onChange={e => setFormData({ ...formData, adminName: e.target.value })}
-            />
+        {/* Advanced Configuration Section */}
+        {isAdmin && (
+          <div className="pt-6 border-t border-gray-100 space-y-6">
+            <div className="flex items-center space-x-2 text-blue-900">
+              <Settings2 className="h-4 w-4" />
+              <h3 className="text-xs font-bold uppercase tracking-widest">Advanced Engine Configuration</h3>
+            </div>
+
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-xs font-bold text-gray-900">Allow Product in Multiple Bundles</label>
+                  <p className="text-[10px] text-blue-700 font-medium">If enabled, a single product can be linked to multiple pricing bundles or packages.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, allowProductInMultipleBundles: !formData.allowProductInMultipleBundles })}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${formData.allowProductInMultipleBundles ? 'bg-blue-600' : 'bg-gray-200'}`}
+                >
+                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${formData.allowProductInMultipleBundles ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-900">Category Conflict Rules</label>
+                  <p className="text-[10px] text-gray-500 font-medium">Define pairs of product categories that cannot be bundled together.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addConflictRule}
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md flex items-center"
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add Rule
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {formData.categoryConflictRules.map((rule: any, idx: number) => (
+                  <div key={idx} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm animate-in fade-in slide-in-from-top-1">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="CATEGORY A"
+                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
+                        value={rule.categoryA}
+                        onChange={(e) => updateConflictRule(idx, 'categoryA', e.target.value)}
+                      />
+                    </div>
+                    <div className="text-gray-400 font-bold text-[10px]">CONFLICTS WITH</div>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="CATEGORY B"
+                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
+                        value={rule.categoryB}
+                        onChange={(e) => updateConflictRule(idx, 'categoryB', e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeConflictRule(idx)}
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                {formData.categoryConflictRules.length === 0 && (
+                  <div className="text-center py-6 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No conflict rules defined</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">Admin Email</label>
-            <input
-              required
-              type="email"
-              placeholder="email@bank.com"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition"
-              value={formData.adminEmail}
-              onChange={e => setFormData({ ...formData, adminEmail: e.target.value })}
-            />
-          </div>
-        </div>
+        )}
 
         {!isAdmin && (
           <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
@@ -377,7 +503,7 @@ const OnboardingPage = () => {
           {isAdmin && (
             <button
               type="button"
-              onClick={() => navigate('/banks')}
+              onClick={() => navigate(isMyBank ? '/dashboard' : '/banks')}
               className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]"
             >
               Discard Changes
@@ -404,9 +530,9 @@ const OnboardingPage = () => {
       <AdminPage width="medium">
         <AdminFormHeader
           icon={Building2}
-          title={isEditing ? 'Update Bank' : 'New Bank'}
-          description={isEditing ? `Updating configuration for ${formData.name || id}` : 'Fill out the form below to register a new bank in the system.'}
-          onClose={() => navigate('/banks')}
+          title={isMyBank ? 'My Bank Settings' : isEditing ? 'Update Bank' : 'New Bank'}
+          description={isMyBank ? `Manage your institution's global configuration.` : isEditing ? `Updating configuration for ${formData.name || id}` : 'Fill out the form below to register a new bank in the system.'}
+          onClose={() => navigate(isMyBank ? '/dashboard' : '/banks')}
         />
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 p-8">
           {renderForm()}
