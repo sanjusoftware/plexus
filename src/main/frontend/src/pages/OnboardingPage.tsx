@@ -297,7 +297,7 @@ const OnboardingPage = () => {
                       disabled={isMyBank && !isSystemAdmin}
                       type="text"
                       placeholder="e.g. AUD"
-                      className={`flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                      className={`flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
                       value={customCurrency}
                       onChange={e => setCustomCurrency(e.target.value.toUpperCase())}
                     />
@@ -530,7 +530,7 @@ const OnboardingPage = () => {
       <AdminPage width="medium">
         <AdminFormHeader
           icon={Building2}
-          title={isMyBank ? 'My Bank Settings' : isEditing ? 'Update Bank' : 'New Bank'}
+          title={loading ? 'Bank Settings' : isMyBank ? 'My Bank Settings' : isEditing ? (formData.name || formData.bankId || id) : 'New Bank'}
           description={isMyBank ? `Manage your institution's global configuration.` : isEditing ? `Updating configuration for ${formData.name || id}` : 'Fill out the form below to register a new bank in the system.'}
           onClose={() => navigate(isMyBank ? '/dashboard' : '/banks')}
         />
