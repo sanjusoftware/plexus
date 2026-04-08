@@ -59,6 +59,62 @@ class BankConfigurationServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("UpdateBank as Bank Admin on DRAFT bank should throw exception")
+    void updateBank_AsBankAdmin_OnDraftBank_ShouldThrowException() {
+        BankConfiguration existing = new BankConfiguration();
+        existing.setBankId(TEST_BANK_ID);
+        existing.setStatus(com.bankengine.common.model.BankStatus.DRAFT);
+        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(existing));
+
+        assertThrows(IllegalStateException.class, () ->
+                bankConfigurationService.updateBank(standardRequest, false)
+        );
+    }
+
+    @Test
+    @DisplayName("UpdateBank as Bank Admin on ACTIVE bank should only update allowed fields")
+    void updateBank_AsBankAdmin_OnActiveBank_ShouldOnlyUpdateAllowedFields() {
+        BankConfiguration existing = new BankConfiguration();
+        existing.setBankId(TEST_BANK_ID);
+        existing.setStatus(com.bankengine.common.model.BankStatus.ACTIVE);
+        existing.setName("Original Name");
+        existing.setClientSecret("Original Secret");
+        existing.setAllowProductInMultipleBundles(false);
+        existing.setCategoryConflictRules(new ArrayList<>());
+        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(existing));
+
+        standardRequest.setName("New Name");
+        standardRequest.setClientSecret("New Secret");
+        standardRequest.setAllowProductInMultipleBundles(true);
+        standardRequest.setCategoryConflictRules(List.of(new BankConfigurationRequest.CategoryConflictDto("A", "B")));
+
+        bankConfigurationService.updateBank(standardRequest, false);
+
+        assertEquals("Original Name", existing.getName());
+        assertEquals("Original Secret", existing.getClientSecret());
+        assertTrue(existing.isAllowProductInMultipleBundles());
+        assertEquals(1, existing.getCategoryConflictRules().size());
+        verify(bankConfigurationRepository).save(existing);
+    }
+
+    @Test
+    @DisplayName("UpdateBank as System Admin on DRAFT bank should update all fields")
+    void updateBank_AsSystemAdmin_OnDraftBank_ShouldUpdateAllFields() {
+        BankConfiguration existing = new BankConfiguration();
+        existing.setBankId(TEST_BANK_ID);
+        existing.setStatus(com.bankengine.common.model.BankStatus.DRAFT);
+        existing.setName("Original Name");
+        existing.setCategoryConflictRules(new ArrayList<>());
+        when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(existing));
+
+        standardRequest.setName("New Name");
+        bankConfigurationService.updateBank(standardRequest, true);
+
+        assertEquals("New Name", existing.getName());
+        verify(bankConfigurationRepository).save(existing);
+    }
+
+    @Test
     @DisplayName("CreateBank should save config but NOT create super admin role yet")
     void createBank_ShouldSaveConfigButNotCreateRole() {
         // Arrange
@@ -150,7 +206,7 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         when(bankConfigurationRepository.findByBankId(TEST_BANK_ID)).thenReturn(Optional.of(existing));
 
         standardRequest.setClientSecret("new-secret");
-        BankConfigurationResponse response = bankConfigurationService.updateBank(standardRequest);
+        BankConfigurationResponse response = bankConfigurationService.updateBank(standardRequest, true);
 
         assertNotNull(response);
         assertTrue(response.isAllowProductInMultipleBundles());
@@ -173,7 +229,7 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         standardRequest.setBankId("MISSING");
         when(bankConfigurationRepository.findByBankId("MISSING")).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () ->
-                bankConfigurationService.updateBank(standardRequest)
+                bankConfigurationService.updateBank(standardRequest, true)
         );
     }
 
