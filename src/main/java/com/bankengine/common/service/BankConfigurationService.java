@@ -117,25 +117,55 @@ public class BankConfigurationService extends BaseService {
 
     @Transactional
     @SystemAdminBypass
-    public BankConfigurationResponse updateBank(BankConfigurationRequest request) {
-        return updateBankInternal(getCurrentBankId(), request);
+    public BankConfigurationResponse updateBank(BankConfigurationRequest request, boolean isSystemAdmin) {
+        return updateBankInternal(getCurrentBankId(), request, isSystemAdmin);
     }
 
     @Transactional
     @SystemAdminBypass
     public BankConfigurationResponse updateBankById(String bankId, BankConfigurationRequest request) {
-        return updateBankInternal(bankId, request);
+        return updateBankInternal(bankId, request, true);
     }
 
-    private BankConfigurationResponse updateBankInternal(String bankId, BankConfigurationRequest request) {
+    private BankConfigurationResponse updateBankInternal(String bankId, BankConfigurationRequest request, boolean isSystemAdmin) {
 
         BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
-        if (config.getStatus() != BankStatus.DRAFT) {
-            throw new IllegalStateException("Only banks in DRAFT status can be edited.");
+        // System admin can update any bank in any status
+        // Bank admin can only update approved (ACTIVE) banks, and only specific fields
+        if (!isSystemAdmin && config.getStatus() != BankStatus.ACTIVE) {
+            throw new IllegalStateException("Bank Admin can only edit banks that are ACTIVE (approved by System Admin).");
         }
 
+        // If not system admin, restrict what can be updated
+        if (!isSystemAdmin) {
+            updateBankAdminFields(config, request);
+        } else {
+            // System admin can update all fields
+            updateAllBankFields(config, request);
+        }
+
+        bankConfigurationRepository.save(config);
+        return mapToResponse(config);
+    }
+
+    private void updateBankAdminFields(BankConfiguration config, BankConfigurationRequest request) {
+        // Bank admin can only update: allowProductInMultipleBundles and categoryConflictRules
+        if (request.getAllowProductInMultipleBundles() != null) {
+            config.setAllowProductInMultipleBundles(request.getAllowProductInMultipleBundles());
+        }
+
+        if (request.getCategoryConflictRules() != null) {
+            config.getCategoryConflictRules().clear();
+            config.getCategoryConflictRules().addAll(request.getCategoryConflictRules().stream()
+                    .map(dto -> new CategoryConflictRule(dto.getCategoryA(), dto.getCategoryB()))
+                    .toList());
+        }
+    }
+
+    private void updateAllBankFields(BankConfiguration config, BankConfigurationRequest request) {
+        // System admin can update all fields (DRAFT or ACTIVE banks)
         if (request.getName() != null) {
             config.setName(request.getName());
         }
@@ -174,9 +204,6 @@ public class BankConfigurationService extends BaseService {
                     .map(dto -> new CategoryConflictRule(dto.getCategoryA(), dto.getCategoryB()))
                     .toList());
         }
-
-        bankConfigurationRepository.save(config);
-        return mapToResponse(config);
     }
 
     @Transactional

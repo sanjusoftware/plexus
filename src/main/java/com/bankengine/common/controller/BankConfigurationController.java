@@ -1,5 +1,6 @@
 package com.bankengine.common.controller;
 
+import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.dto.BankConfigurationResponse;
 import com.bankengine.common.service.BankConfigurationService;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/banks")
 @RequiredArgsConstructor
-@Tag(name = "Bank Management", description = "Endpoints for managing bank configurations (System Admin only).")
+@Tag(name = "Bank Management", description = "Endpoints for managing bank configurations.")
 public class BankConfigurationController {
 
     private final BankConfigurationService bankConfigurationService;
@@ -28,14 +29,15 @@ public class BankConfigurationController {
 
     @PutMapping
     @PreAuthorize("hasAuthority('system:bank:write') or hasAuthority('bank:config:write')")
-    @Operation(summary = "Update an existing bank configuration")
+    @Operation(summary = "Update bank configuration", description = "Bank Admins can update only allowProductInMultipleBundles and categoryConflictRules for ACTIVE banks. System Admins can update all fields for any bank.")
     public ResponseEntity<BankConfigurationResponse> updateBank(@RequestBody BankConfigurationRequest request) {
-        return ResponseEntity.ok(bankConfigurationService.updateBank(request));
+        boolean isSystemAdmin = TenantContextHolder.getSystemBankId().equals(TenantContextHolder.getBankId());
+        return ResponseEntity.ok(bankConfigurationService.updateBank(request, isSystemAdmin));
     }
 
     @PutMapping("/{bankId}")
     @PreAuthorize("hasAuthority('system:bank:write')")
-    @Operation(summary = "Update an existing bank configuration (System Admin only)")
+    @Operation(summary = "Update bank configuration by ID (System Admin only)", description = "Allows System Admin to update any bank configuration by its ID, regardless of status.")
     public ResponseEntity<BankConfigurationResponse> updateBankById(@PathVariable String bankId, @RequestBody BankConfigurationRequest request) {
         return ResponseEntity.ok(bankConfigurationService.updateBankById(bankId, request));
     }
