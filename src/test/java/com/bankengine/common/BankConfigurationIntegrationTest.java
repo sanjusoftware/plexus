@@ -3,6 +3,7 @@ package com.bankengine.common;
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.TestTransactionHelper;
 import com.bankengine.test.config.AbstractIntegrationTest;
@@ -21,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -212,7 +213,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {BANK_A_ADMIN_ROLE}, bankId = "BANK_A")
     void bankAdmin_CanUpdateOwnBank() throws Exception {
-        createBank("BANK_A");
+        createBank("BANK_A", BankStatus.ACTIVE);
         BankConfigurationRequest request = BankConfigurationRequest.builder()
                 .allowProductInMultipleBundles(true)
                 .categoryConflictRules(List.of())
@@ -227,24 +228,6 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.bankId").value("BANK_A"))
                 .andExpect(jsonPath("$.allowProductInMultipleBundles").value(true));
     }
-
-//    @Test
-//    @WithSystemAdminRole
-//    void systemAdmin_CannotCreateDuplicateIssuer() throws Exception {
-//        createBank("EXISTING_BANK");
-//        BankConfigurationRequest request = BankConfigurationRequest.builder()
-//                .name("Duplicate Bank")
-//                .bankId("DUPLICATE_BANK")
-//                .allowProductInMultipleBundles(true)
-//                .categoryConflictRules(List.of())
-//                .issuerUrl(ISSUER_A)
-//                .build();
-//        mockMvc.perform(postWithCsrf("/api/v1/banks")
-//                        .with(csrf())
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
-//                .andExpect(status().is4xxClientError());
-//    }
 
     @Test
     void whenUntrustedIssuer_shouldReturn401Json() throws Exception {
@@ -264,6 +247,10 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
     }
 
     private void createBank(String bank_id) {
+        createBank(bank_id, BankStatus.DRAFT);
+    }
+
+    private void createBank(String bank_id, BankStatus status) {
         txHelper.doInTransaction(() -> {
             try {
                 TenantContextHolder.setSystemMode(true);
@@ -272,6 +259,7 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                 bank.setIssuerUrl(ISSUER_A);
                 bank.setClientId(CLIENT_ID_A);
                 bank.setAllowProductInMultipleBundles(false);
+                bank.setStatus(status);
                 bankConfigurationRepository.save(bank);
                 return null;
             } finally {
