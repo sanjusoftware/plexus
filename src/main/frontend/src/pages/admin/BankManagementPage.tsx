@@ -25,6 +25,7 @@ const BankManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [banks, setBanks] = useState<any[]>([]);
+  const [myBank, setMyBank] = useState<any>(null);
   const [successState, setSuccessState] = useState<{ title: string; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedBank, setSelectedBank] = useState<any>(null);
@@ -37,18 +38,43 @@ const BankManagementPage = () => {
   const fetchBanks = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/banks', { signal: abortSignal });
-      setBanks(response.data || []);
+      const isSystemAdmin = user?.permissions?.includes('system:bank:read');
+      const canReadConfig = user?.permissions?.includes('bank:config:read');
+
+      let otherBanks: any[] = [];
+      let ownBank: any = null;
+
+      if (isSystemAdmin) {
+        const response = await axios.get('/api/v1/banks', { signal: abortSignal });
+        const allBanks = response.data || [];
+        // Identify own bank within the full list if present
+        ownBank = allBanks.find((b: any) => b.bankId === user?.bank_id);
+        otherBanks = allBanks.filter((b: any) => b.bankId !== user?.bank_id);
+      }
+
+      // If not system admin, or if ownBank not found in allBanks (unlikely for sys admin),
+      // and user has config read permission, fetch it specifically
+      if (!ownBank && canReadConfig && user?.bank_id) {
+        try {
+          const myBankRes = await axios.get(`/api/v1/banks/${user.bank_id}`, { signal: abortSignal });
+          ownBank = myBankRes.data;
+        } catch (err) {
+          console.error('Failed to fetch own bank details:', err);
+        }
+      }
+
+      setBanks(otherBanks);
+      setMyBank(ownBank);
     } catch (err) {
       if (axios.isCancel(err)) return;
       console.error('Failed to fetch banks:', err);
-      setToast({ message: 'Failed to fetch banks. Make sure you have SYSTEM_ADMIN permissions.', type: 'error' });
+      setToast({ message: 'Failed to fetch banks.', type: 'error' });
     } finally {
       if (!abortSignal.aborted) {
         setLoading(false);
       }
     }
-  }, [setToast]);
+  }, [setToast, user]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -149,112 +175,187 @@ const BankManagementPage = () => {
             </tr>
           </thead>
           <tbody>
-            {banks.length === 0 ? (
+            {banks.length === 0 && !myBank ? (
               <AdminDataTableEmptyRow colSpan={4}>No managed banks found.</AdminDataTableEmptyRow>
             ) : (
-              banks.map((item, idx) => (
-                <AdminDataTableRow
-                  key={idx}
-                  onClick={() => openBankDetails(item)}
-                  interactive
-                >
-                  <td className="whitespace-nowrap">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-50 rounded-lg">
-                        <Building2 className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-gray-900 leading-tight">
-                          {item.name || item.bankId}
+              <>
+                {banks.map((item, idx) => (
+                  <AdminDataTableRow
+                    key={item.bankId}
+                    onClick={() => openBankDetails(item)}
+                    interactive
+                  >
+                    <td className="whitespace-nowrap">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-blue-50 rounded-lg">
+                          <Building2 className="h-4 w-4 text-blue-600" />
                         </div>
-                        <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest uppercase">
-                          ID: {item.bankId}
+                        <div>
+                          <div className="text-sm font-bold text-gray-900 leading-tight">
+                            {item.name || item.bankId}
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest uppercase">
+                            ID: {item.bankId}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap text-xs text-gray-500 font-medium max-w-[200px] truncate" title={item.issuerUrl}>
-                    {item.issuerUrl}
-                  </td>
-                  <td className="whitespace-nowrap">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                       item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
-                       item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <AdminDataTableActionCell>
-                    <HasPermission action="PUT" path="/api/v1/banks/*">
-                      <AdminDataTableActionButton
-                        onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
-                        tone="primary"
-                        size="compact"
-                        title="Edit"
-                      >
-                        <Edit className="h-3.5 w-3.5" /> Edit
-                      </AdminDataTableActionButton>
-                    </HasPermission>
-                    {item.status === 'DRAFT' && (
-                      <>
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-500 font-medium max-w-[200px] truncate" title={item.issuerUrl}>
+                      {item.issuerUrl}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                         item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
+                         item.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <AdminDataTableActionCell>
+                      <HasPermission action="PUT" path="/api/v1/banks/*">
+                        <AdminDataTableActionButton
+                          onClick={(e) => { e.stopPropagation(); navigate(`/banks/edit/${item.bankId}`); }}
+                          tone="primary"
+                          size="compact"
+                          title="Edit"
+                        >
+                          <Edit className="h-3.5 w-3.5" /> Edit
+                        </AdminDataTableActionButton>
+                      </HasPermission>
+                      {item.status === 'DRAFT' && (
+                        <>
+                          <HasPermission action="POST" path="/api/v1/banks/*/activate">
+                            <AdminDataTableActionButton
+                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
+                              tone="success"
+                              size="compact"
+                              title="Approve"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                          <HasPermission action="POST" path="/api/v1/banks/*/reject">
+                            <AdminDataTableActionButton
+                              onClick={(e) => { e.stopPropagation(); confirmReject(item.bankId); }}
+                              tone="danger"
+                              size="compact"
+                              title="Reject"
+                            >
+                              <XCircle className="h-3.5 w-3.5" /> Reject
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                        </>
+                      )}
+                      {item.status === 'ACTIVE' && (
+                        <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
+                          <AdminDataTableActionButton
+                            onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
+                            tone="neutral"
+                            size="compact"
+                            title="Deactivate"
+                          >
+                            <Clock className="h-3.5 w-3.5" /> Deactivate
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                      )}
+                      {item.status === 'INACTIVE' && (
                         <HasPermission action="POST" path="/api/v1/banks/*/activate">
                           <AdminDataTableActionButton
                             onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
                             tone="success"
                             size="compact"
-                            title="Approve"
+                            title="Re-activate"
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Re-activate
                           </AdminDataTableActionButton>
                         </HasPermission>
-                        <HasPermission action="POST" path="/api/v1/banks/*/reject">
-                          <AdminDataTableActionButton
-                            onClick={(e) => { e.stopPropagation(); confirmReject(item.bankId); }}
-                            tone="danger"
-                            size="compact"
-                            title="Reject"
-                          >
-                            <XCircle className="h-3.5 w-3.5" /> Reject
-                          </AdminDataTableActionButton>
-                        </HasPermission>
-                      </>
+                      )}
+                      <AdminDataTableActionButton
+                        onClick={(e) => { e.stopPropagation(); openBankDetails(item); }}
+                        tone="neutral"
+                        size="compact"
+                        title="View Details"
+                      >
+                        <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
+                      </AdminDataTableActionButton>
+                    </AdminDataTableActionCell>
+                  </AdminDataTableRow>
+                ))}
+
+                {myBank && (
+                  <>
+                    {banks.length > 0 && (
+                      <tr className="bg-gray-50/30">
+                        <td colSpan={4} className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-px flex-1 bg-gray-200"></div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">My Bank Settings</span>
+                            <div className="h-px flex-1 bg-gray-200"></div>
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                    {item.status === 'ACTIVE' && (
-                      <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
+                    <AdminDataTableRow
+                      onClick={() => openBankDetails(myBank)}
+                      interactive
+                      className="bg-blue-50/50"
+                    >
+                      <td className="whitespace-nowrap relative">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-lg"></div>
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Building2 className="h-4 w-4 text-blue-700" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-black text-gray-900 leading-tight">
+                                {myBank.name || myBank.bankId}
+                              </div>
+                              <span className="px-1.5 py-0.5 bg-blue-600 text-[8px] font-bold text-white rounded uppercase tracking-wider">OWN</span>
+                            </div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest uppercase">
+                              ID: {myBank.bankId}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap text-xs text-gray-600 font-bold max-w-[200px] truncate" title={myBank.issuerUrl}>
+                        {myBank.issuerUrl}
+                      </td>
+                      <td className="whitespace-nowrap">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          myBank.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                           myBank.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' :
+                           myBank.status === 'INACTIVE' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {myBank.status}
+                        </span>
+                      </td>
+                      <AdminDataTableActionCell>
+                        <HasPermission action="PUT" path="/api/v1/banks">
+                          <AdminDataTableActionButton
+                            onClick={(e) => { e.stopPropagation(); navigate(`/my-bank`); }}
+                            tone="primary"
+                            size="compact"
+                            title="Edit My Bank Settings"
+                          >
+                            <Edit className="h-3.5 w-3.5" /> Edit
+                          </AdminDataTableActionButton>
+                        </HasPermission>
                         <AdminDataTableActionButton
-                          onClick={(e) => { e.stopPropagation(); confirmDeactivate(item.bankId); }}
+                          onClick={(e) => { e.stopPropagation(); openBankDetails(myBank); }}
                           tone="neutral"
                           size="compact"
-                          title="Deactivate"
+                          title="View Details"
                         >
-                          <Clock className="h-3.5 w-3.5" /> Deactivate
+                          <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
                         </AdminDataTableActionButton>
-                      </HasPermission>
-                    )}
-                    {item.status === 'INACTIVE' && (
-                      <HasPermission action="POST" path="/api/v1/banks/*/activate">
-                        <AdminDataTableActionButton
-                          onClick={(e) => { e.stopPropagation(); handleStatusUpdate(item.bankId, 'activate'); }}
-                          tone="success"
-                          size="compact"
-                          title="Re-activate"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Re-activate
-                        </AdminDataTableActionButton>
-                      </HasPermission>
-                    )}
-                    <AdminDataTableActionButton
-                      onClick={(e) => { e.stopPropagation(); openBankDetails(item); }}
-                      tone="neutral"
-                      size="compact"
-                      title="View Details"
-                    >
-                      <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
-                    </AdminDataTableActionButton>
-                  </AdminDataTableActionCell>
-                </AdminDataTableRow>
-              ))
+                      </AdminDataTableActionCell>
+                    </AdminDataTableRow>
+                  </>
+                )}
+              </>
             )}
           </tbody>
         </AdminDataTable>

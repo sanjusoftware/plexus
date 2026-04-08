@@ -78,7 +78,7 @@ function App() {
             <Route element={<ProtectedLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/banks" element={
-                <PermissionElement permission="system:bank:read">
+                <PermissionElement permission="bank:management:access">
                   <BankManagementPage />
                 </PermissionElement>
               } />
