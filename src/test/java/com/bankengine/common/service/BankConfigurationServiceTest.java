@@ -11,6 +11,7 @@ import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
+import com.bankengine.web.exception.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -258,5 +259,33 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         verify(bankConfigurationRepository).save(argThat(config ->
             config.getCategoryConflictRules() == null || config.getCategoryConflictRules().isEmpty()
         ));
+    }
+
+    @Test
+    @DisplayName("ValidateRequest should throw ValidationException for empty categories")
+    void validateRequest_WithEmptyCategories_ShouldThrowException() {
+        standardRequest.setCategoryConflictRules(List.of(
+                new BankConfigurationRequest.CategoryConflictDto("", "B")
+        ));
+        assertThrows(ValidationException.class, () -> bankConfigurationService.createBank(standardRequest));
+    }
+
+    @Test
+    @DisplayName("ValidateRequest should throw ValidationException for self-conflicting category")
+    void validateRequest_WithSelfConflict_ShouldThrowException() {
+        standardRequest.setCategoryConflictRules(List.of(
+                new BankConfigurationRequest.CategoryConflictDto("A", "a")
+        ));
+        assertThrows(ValidationException.class, () -> bankConfigurationService.createBank(standardRequest));
+    }
+
+    @Test
+    @DisplayName("ValidateRequest should throw ValidationException for duplicate rules")
+    void validateRequest_WithDuplicateRules_ShouldThrowException() {
+        standardRequest.setCategoryConflictRules(List.of(
+                new BankConfigurationRequest.CategoryConflictDto("A", "B"),
+                new BankConfigurationRequest.CategoryConflictDto("b", "a")
+        ));
+        assertThrows(ValidationException.class, () -> bankConfigurationService.createBank(standardRequest));
     }
 }

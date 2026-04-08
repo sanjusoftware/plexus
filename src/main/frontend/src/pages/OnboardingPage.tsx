@@ -43,7 +43,7 @@ const OnboardingPage = () => {
   const [isBankIdEdited, setIsBankIdEdited] = useState(false);
   const [captcha, setCaptcha] = useState({ question: '', id: '' });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSecret, setShowSecret] = useState(false);
   const signal = useAbortSignal();
 
@@ -107,31 +107,70 @@ const OnboardingPage = () => {
   };
 
   const validateForm = () => {
-    if (formData.adminName.length < 3 || formData.adminName.length > 50) {
-      setMessage('Admin Name must be between 3 and 50 characters.');
-      return false;
+    const errors: Record<string, string> = {};
+
+    if (!formData.name?.trim()) {
+      errors.name = 'Bank Name is required.';
     }
+
+    if (formData.adminName.length < 3 || formData.adminName.length > 50) {
+      errors.adminName = 'Admin Name must be between 3 and 50 characters.';
+    }
+
+    if (!formData.adminEmail?.trim()) {
+      errors.adminEmail = 'Admin Email is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail)) {
+      errors.adminEmail = 'Please enter a valid email address.';
+    }
+
     const urlPattern = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
     if (!urlPattern.test(formData.issuerUrl)) {
-      setMessage('Please enter a valid OIDC Issuer URL (starting with http:// or https://).');
-      return false;
+      errors.issuerUrl = 'Please enter a valid OIDC Issuer URL (starting with http:// or https://).';
     }
+
     if (!formData.clientId) {
-      setMessage('Client ID is required.');
-      return false;
+      errors.clientId = 'Client ID is required.';
+    } else {
+      // Relaxed validation: Allow alphanumeric, hyphens, underscores and dots.
+      const clientIdPattern = /^[a-zA-Z0-9._-]+$/i;
+      if (!clientIdPattern.test(formData.clientId)) {
+        errors.clientId = 'Client ID must be alphanumeric and may contain hyphens, underscores, or dots.';
+      }
     }
-    const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!guidPattern.test(formData.clientId)) {
-      setMessage('Client ID must be a valid GUID (e.g., 12345678-1234-1234-1234-1234567890ab).');
-      return false;
+
+    if (!isAdmin && !formData.captchaAnswer) {
+      errors.captchaAnswer = 'Security answer is required.';
     }
-    return true;
+
+    // Category Conflict Rules validation
+    const seenPairs = new Set<string>();
+    formData.categoryConflictRules.forEach((rule: any, idx: number) => {
+      const catA = rule.categoryA?.trim();
+      const catB = rule.categoryB?.trim();
+
+      if (!catA || !catB) {
+        errors[`conflictRule_${idx}`] = 'Both categories must be specified.';
+      } else if (catA === catB) {
+        errors[`conflictRule_${idx}`] = 'A category cannot conflict with itself.';
+      } else {
+        const pair = [catA, catB].sort().join('|');
+        if (seenPairs.has(pair)) {
+          errors[`conflictRule_${idx}`] = 'This conflict rule is a duplicate.';
+        }
+        seenPairs.add(pair);
+      }
+    });
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
+
     if (!validateForm()) {
-      setToast({ message, type: 'error' });
+      setToast({ message: 'Please correct the highlighted errors.', type: 'error' });
       return;
     }
     setLoading(true);
@@ -172,7 +211,7 @@ const OnboardingPage = () => {
       });
     } catch (err: any) {
       const errorDetail = err.response?.data?.message || err.response?.data || 'Failed to submit request. Please check your inputs and captcha.';
-      const finalError = typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail);
+      const finalError = typeof errorDetail === 'string' ? (errorDetail || 'Unknown error occurred.') : JSON.stringify(errorDetail);
       setToast({ message: finalError, type: 'error' });
       fetchCaptcha(signal); // Refresh captcha on error
     } finally {
@@ -232,11 +271,10 @@ const OnboardingPage = () => {
           <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank Name</label>
               <input
-                required
                 disabled={isMyBank && !isSystemAdmin}
                 type="text"
                 placeholder="e.g. Global Bank"
-                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''} ${fieldErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                 value={formData.name}
                 onChange={e => {
                   const name = e.target.value;
@@ -245,15 +283,16 @@ const OnboardingPage = () => {
                     bankId = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
                   }
                   setFormData({ ...formData, name, bankId });
+                  if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: '' });
                 }}
               />
+              {fieldErrors.name && <p className="mt-1 text-[10px] text-red-500 font-bold">{fieldErrors.name}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5">Bank ID {isEditing ? '(Read Only)' : '(Generated)'}</label>
               <input
-                required
                 disabled={isEditing}
                 type="text"
                 placeholder="e.g. GLOBAL-BANK-001"
@@ -322,14 +361,17 @@ const OnboardingPage = () => {
               The discovery URL of your Identity Provider.
             </p>
             <input
-              required
               disabled={isMyBank && !isSystemAdmin}
               type="text"
               placeholder="https://login.microsoftonline.com/..."
-              className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+              className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''} ${fieldErrors.issuerUrl ? 'border-red-500' : 'border-gray-300'}`}
               value={formData.issuerUrl}
-              onChange={e => setFormData({ ...formData, issuerUrl: e.target.value })}
+              onChange={e => {
+                setFormData({ ...formData, issuerUrl: e.target.value });
+                if (fieldErrors.issuerUrl) setFieldErrors({ ...fieldErrors, issuerUrl: '' });
+              }}
             />
+            {fieldErrors.issuerUrl && <p className="mt-1 text-[10px] text-red-500 font-bold">{fieldErrors.issuerUrl}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -339,14 +381,17 @@ const OnboardingPage = () => {
                 The Application (client) ID registered in your IDP.
               </p>
               <input
-                required
                 disabled={isMyBank && !isSystemAdmin}
                 type="text"
                 placeholder="e.g. 12345678-...90ab"
-                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''} ${fieldErrors.clientId ? 'border-red-500' : 'border-gray-300'}`}
                 value={formData.clientId}
-                onChange={e => setFormData({ ...formData, clientId: e.target.value })}
+                onChange={e => {
+                  setFormData({ ...formData, clientId: e.target.value });
+                  if (fieldErrors.clientId) setFieldErrors({ ...fieldErrors, clientId: '' });
+                }}
               />
+              {fieldErrors.clientId && <p className="mt-1 text-[10px] text-red-500 font-bold">{fieldErrors.clientId}</p>}
             </div>
             {(!isMyBank || isSystemAdmin) && (
               <div>
@@ -378,26 +423,32 @@ const OnboardingPage = () => {
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5">Admin Name</label>
               <input
-                required
                 disabled={isMyBank && !isSystemAdmin}
                 type="text"
                 placeholder="Full Name"
-                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''} ${fieldErrors.adminName ? 'border-red-500' : 'border-gray-300'}`}
                 value={formData.adminName}
-                onChange={e => setFormData({ ...formData, adminName: e.target.value })}
+                onChange={e => {
+                  setFormData({ ...formData, adminName: e.target.value });
+                  if (fieldErrors.adminName) setFieldErrors({ ...fieldErrors, adminName: '' });
+                }}
               />
+              {fieldErrors.adminName && <p className="mt-1 text-[10px] text-red-500 font-bold">{fieldErrors.adminName}</p>}
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5">Admin Email</label>
               <input
-                required
                 disabled={isMyBank && !isSystemAdmin}
                 type="email"
                 placeholder="email@bank.com"
-                className={`w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''}`}
+                className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${(isMyBank && !isSystemAdmin) ? 'bg-gray-50 text-gray-500' : ''} ${fieldErrors.adminEmail ? 'border-red-500' : 'border-gray-300'}`}
                 value={formData.adminEmail}
-                onChange={e => setFormData({ ...formData, adminEmail: e.target.value })}
+                onChange={e => {
+                  setFormData({ ...formData, adminEmail: e.target.value });
+                  if (fieldErrors.adminEmail) setFieldErrors({ ...fieldErrors, adminEmail: '' });
+                }}
               />
+              {fieldErrors.adminEmail && <p className="mt-1 text-[10px] text-red-500 font-bold">{fieldErrors.adminEmail}</p>}
             </div>
           </div>
         </div>
@@ -443,33 +494,44 @@ const OnboardingPage = () => {
 
               <div className="space-y-3">
                 {formData.categoryConflictRules.map((rule: any, idx: number) => (
-                  <div key={idx} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm animate-in fade-in slide-in-from-top-1">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        placeholder="CATEGORY A"
-                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
-                        value={rule.categoryA}
-                        onChange={(e) => updateConflictRule(idx, 'categoryA', e.target.value)}
-                      />
+                  <div key={idx} className="space-y-1">
+                    <div className={`flex items-center space-x-3 bg-white p-3 rounded-lg border shadow-sm animate-in fade-in slide-in-from-top-1 ${fieldErrors[`conflictRule_${idx}`] ? 'border-red-500' : 'border-gray-200'}`}>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          placeholder="CATEGORY A"
+                          className="w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
+                          value={rule.categoryA}
+                          onChange={(e) => {
+                            updateConflictRule(idx, 'categoryA', e.target.value);
+                            if (fieldErrors[`conflictRule_${idx}`]) setFieldErrors({ ...fieldErrors, [`conflictRule_${idx}`]: '' });
+                          }}
+                        />
+                      </div>
+                      <div className="text-gray-400 font-bold text-[10px]">CONFLICTS WITH</div>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          placeholder="CATEGORY B"
+                          className="w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
+                          value={rule.categoryB}
+                          onChange={(e) => {
+                            updateConflictRule(idx, 'categoryB', e.target.value);
+                            if (fieldErrors[`conflictRule_${idx}`]) setFieldErrors({ ...fieldErrors, [`conflictRule_${idx}`]: '' });
+                          }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeConflictRule(idx)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
-                    <div className="text-gray-400 font-bold text-[10px]">CONFLICTS WITH</div>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        placeholder="CATEGORY B"
-                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
-                        value={rule.categoryB}
-                        onChange={(e) => updateConflictRule(idx, 'categoryB', e.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeConflictRule(idx)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {fieldErrors[`conflictRule_${idx}`] && (
+                      <p className="px-1 text-[10px] text-red-500 font-bold">{fieldErrors[`conflictRule_${idx}`]}</p>
+                    )}
                   </div>
                 ))}
                 {formData.categoryConflictRules.length === 0 && (
@@ -483,19 +545,24 @@ const OnboardingPage = () => {
         )}
 
         {!isAdmin && (
-          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-blue-900 mb-0.5 uppercase tracking-widest">Security Check</p>
-              <p className="text-blue-700 text-base font-mono font-bold">{captcha.question}</p>
+          <div className="space-y-1">
+            <div className={`bg-blue-50 p-4 rounded-xl border flex items-center justify-between ${fieldErrors.captchaAnswer ? 'border-red-500' : 'border-blue-100'}`}>
+              <div>
+                <p className="text-[10px] font-bold text-blue-900 mb-0.5 uppercase tracking-widest">Security Check</p>
+                <p className="text-blue-700 text-base font-mono font-bold">{captcha.question}</p>
+              </div>
+              <input
+                type="text"
+                placeholder="?"
+                className="w-16 px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold text-sm"
+                value={formData.captchaAnswer}
+                onChange={e => {
+                  setFormData({ ...formData, captchaAnswer: e.target.value });
+                  if (fieldErrors.captchaAnswer) setFieldErrors({ ...fieldErrors, captchaAnswer: '' });
+                }}
+              />
             </div>
-            <input
-              required
-              type="text"
-              placeholder="?"
-              className="w-16 px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold text-sm"
-              value={formData.captchaAnswer}
-              onChange={e => setFormData({ ...formData, captchaAnswer: e.target.value })}
-            />
+            {fieldErrors.captchaAnswer && <p className="mt-1 text-[10px] text-red-500 font-bold">{fieldErrors.captchaAnswer}</p>}
           </div>
         )}
 
