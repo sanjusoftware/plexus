@@ -266,7 +266,7 @@ const BankManagementPage = () => {
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-white/20">
             <div className="px-8 py-6 bg-blue-900 text-white flex justify-between items-center relative">
               <div className="relative">
-                <h2 className="text-xl font-bold tracking-tight uppercase italic">{selectedBank.name}</h2>
+                <h2 className="text-xl font-bold tracking-tight uppercase italic">{selectedBank.name || selectedBank.bankId}</h2>
                 <p className="text-blue-300 text-[10px] font-bold uppercase tracking-widest mt-0.5">Entity ID: {selectedBank.bankId}</p>
               </div>
               <button onClick={() => setSelectedBank(null)} className="p-2 hover:bg-blue-800 rounded-xl transition relative border border-white/10">
