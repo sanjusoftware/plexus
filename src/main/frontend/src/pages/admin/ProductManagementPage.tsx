@@ -83,9 +83,9 @@ const ProductManagementPage = () => {
     fetchInitialData(signal);
     if (location.state?.success) {
       setToast({ message: location.state.success, type: 'success' });
-      window.history.replaceState({}, document.title);
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location, setToast, fetchInitialData, signal]);
+  }, [location, setToast, fetchInitialData, signal, navigate]);
 
   const handleStatusAction = async (id: number, action: string) => {
     try {

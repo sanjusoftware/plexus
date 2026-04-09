@@ -135,6 +135,7 @@
 
   .admin-table__actions-header {
 	@apply pr-5;
+    text-align: right;
   }
 
   .admin-table__actions-cell {

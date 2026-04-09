@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, List, CheckCircle2 } from 'lucide-react';
 import {
@@ -25,6 +25,7 @@ interface ProductType {
 
 const ProductTypesPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setToast } = useAuth();
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +51,11 @@ const ProductTypesPage = () => {
 
   useEffect(() => {
     fetchProductTypes(signal);
-  }, [fetchProductTypes, signal]);
+    if (location.state?.success) {
+      setToast({ message: location.state.success, type: 'success' });
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [fetchProductTypes, signal, location, setToast, navigate]);
 
   const handleAction = async (id: number, action: string) => {
     try {
@@ -112,20 +117,21 @@ const ProductTypesPage = () => {
         <AdminDataTable aria-label="Product types table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Code</th>
+                <th>Type Details</th>
                 <th>Status</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
             <tbody>
               {productTypes.length === 0 ? (
-                <AdminDataTableEmptyRow colSpan={4}>No product types found. Get started by creating your first one.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={3}>No product types found. Get started by creating your first one.</AdminDataTableEmptyRow>
               ) : (
                 productTypes.map((type) => (
                   <AdminDataTableRow key={type.id}>
-                    <td className="whitespace-nowrap text-sm font-bold text-gray-900 max-w-[200px] truncate" title={type.name}>{type.name}</td>
-                    <td className="whitespace-nowrap font-mono font-bold text-blue-700 max-w-[150px] truncate" title={type.code}>{type.code}</td>
+                    <td className="whitespace-nowrap max-w-[250px]">
+                      <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={type.name}>{type.name}</div>
+                      <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={type.code}>{type.code}</div>
+                    </td>
                     <td className="whitespace-nowrap">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         type.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
