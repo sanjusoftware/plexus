@@ -56,8 +56,9 @@ const PricingMetadataFormPage = () => {
       } else {
         await axios.post('/api/v1/pricing-metadata', formData);
       }
-      setToast({ message: isEditing ? 'Metadata updated successfully.' : 'Metadata registered successfully.', type: 'success' });
-      navigate('/pricing-metadata');
+      navigate('/pricing-metadata', {
+        state: { success: isEditing ? 'Metadata updated successfully.' : 'Metadata registered successfully.' }
+      });
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'An error occurred while saving.', type: 'error' });
     } finally {

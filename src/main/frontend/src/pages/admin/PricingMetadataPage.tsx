@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit2, Trash2, Loader2, Database, Info } from 'lucide-react';
 import {
@@ -24,6 +24,7 @@ interface PricingMetadata {
 
 const PricingMetadataPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setToast } = useAuth();
   const [metadata, setMetadata] = useState<PricingMetadata[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +48,11 @@ const PricingMetadataPage = () => {
 
   useEffect(() => {
     fetchMetadata(signal);
-  }, [fetchMetadata, signal]);
+    if (location.state?.success) {
+      setToast({ message: location.state.success, type: 'success' });
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [fetchMetadata, signal, location, setToast, navigate]);
 
   const handleDelete = async (attributeKey: string) => {
     if (!window.confirm('Are you sure? Deleting metadata might break existing rules that use this attribute.')) return;
@@ -88,20 +93,21 @@ const PricingMetadataPage = () => {
         <AdminDataTable aria-label="Pricing metadata table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Key</th>
+                <th>Attribute Details</th>
                 <th>Type</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
             <tbody>
               {metadata.length === 0 ? (
-                <AdminDataTableEmptyRow colSpan={4}>No metadata registered. Rules engine will not recognize dynamic inputs.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={3}>No metadata registered. Rules engine will not recognize dynamic inputs.</AdminDataTableEmptyRow>
               ) : (
                 metadata.map((meta) => (
                   <AdminDataTableRow key={meta.id}>
-                    <td className="whitespace-nowrap text-sm font-bold text-gray-900 max-w-[200px] truncate" title={meta.displayName}>{meta.displayName}</td>
-                    <td className="whitespace-nowrap bg-blue-50/20 font-mono font-bold text-blue-700 max-w-[150px] truncate" title={meta.attributeKey}>{meta.attributeKey}</td>
+                    <td className="whitespace-nowrap max-w-[250px]">
+                      <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={meta.displayName}>{meta.displayName}</div>
+                      <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={meta.attributeKey}>{meta.attributeKey}</div>
+                    </td>
                     <td className="whitespace-nowrap">
                       <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
                     </td>
