@@ -23,7 +23,20 @@ const RoleFormPage = () => {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<RoleMapping>({ name: roleName || '', authorities: [] });
   const [submitting, setSubmitting] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const signal = useAbortSignal();
+
+  useEffect(() => {
+    const categories = Array.from(new Set(
+      availableAuthorities.map(auth => {
+        const parts = auth.split(':');
+        return parts.length > 1 ? parts[0] : 'other';
+      })
+    ));
+
+    // Edit mode starts collapsed by default; create mode remains expanded.
+    setExpandedCategories(isEditing ? new Set() : new Set(categories));
+  }, [availableAuthorities, isEditing]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,6 +119,18 @@ const RoleFormPage = () => {
     setFormData({ ...formData, authorities: Array.from(newAuths) });
   };
 
+  const toggleCategoryExpansion = (category: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
+
   const formatCategory = (category: string) => {
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase() + " Management Permissions";
   };
@@ -146,32 +171,33 @@ const RoleFormPage = () => {
       <AdminFormHeader
         icon={Shield}
         title={isEditing ? 'Authority Configuration' : 'Register New Role'}
-        description={isEditing ? `Modifying system permissions for role ${roleName}` : 'Define a new role and select its system permissions'}
+        description={isEditing ? <span>Modifying system permissions for role <strong className="text-gray-900">{roleName}</strong></span> : 'Define a new role and select its system permissions'}
         onClose={() => navigate('/roles')}
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <form onSubmit={handleSubmit} className="space-y-6 p-5">
-          <div className="relative overflow-hidden rounded-xl border border-blue-100/50 bg-blue-50/50 p-5">
-            <div className="relative">
-              <label className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-3">Role Name (Key)</label>
-              <div className="relative max-w-xl">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-300" />
-                <input
-                  type="text"
-                  required
-                  disabled={isEditing}
-                  className={`w-full border border-white rounded-xl p-3 pl-10 font-mono font-bold text-lg text-blue-700 transition focus:border-blue-500 shadow-sm uppercase placeholder:text-blue-100 ${isEditing ? 'bg-blue-100/30 cursor-not-allowed border-transparent' : 'bg-white'}`}
-                  value={formData.name}
-                  onChange={(e) => {
-                    setFormData({...formData, name: e.target.value.toUpperCase()});
-                  }}
-                  placeholder="e.g. CUSTOMER_SUPPORT"
-                />
+          {!isEditing && (
+            <div className="relative overflow-hidden rounded-xl border border-blue-100/50 bg-blue-50/50 p-5">
+              <div className="relative">
+                <label className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-3">Role Name (Key)</label>
+                <div className="relative max-w-xl">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-300" />
+                  <input
+                    type="text"
+                    required
+                    className="w-full border border-white rounded-xl p-3 pl-10 font-mono font-bold text-lg text-blue-700 transition focus:border-blue-500 shadow-sm uppercase placeholder:text-blue-100 bg-white"
+                    value={formData.name}
+                    onChange={(e) => {
+                      setFormData({...formData, name: e.target.value.toUpperCase()});
+                    }}
+                    placeholder="e.g. CUSTOMER_SUPPORT"
+                  />
+                </div>
+                <p className="mt-2.5 text-[10px] text-blue-400/80 font-bold italic">This must match the exact string sent by your Identity Provider in the <code>roles</code> claim.</p>
               </div>
-              <p className="mt-2.5 text-[10px] text-blue-400/80 font-bold italic">This must match the exact string sent by your Identity Provider in the <code>roles</code> claim.</p>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="mb-4 block px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Select Authorized Operations</label>
@@ -181,27 +207,47 @@ const RoleFormPage = () => {
                 const selectedInCat = allAuthsInCategory.filter(a => formData.authorities.includes(a));
                 const isAllSelected = selectedInCat.length === allAuthsInCategory.length;
                 const isSomeSelected = selectedInCat.length > 0 && !isAllSelected;
+                const isExpanded = expandedCategories.has(category);
 
                 return (
-                  <div key={category} className="rounded-xl border border-gray-100 bg-gray-50/50 p-5">
-                    <div className="mb-4 flex items-center justify-between border-b border-gray-200/50 pb-3">
-                      <h3 className="text-xs font-bold text-gray-900 uppercase tracking-tight flex items-center">
+                  <div key={category} className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
+                    <div
+                      className={`flex items-center justify-between rounded-lg px-2 py-2 transition-colors hover:bg-gray-100/70 ${isExpanded ? 'mb-2 border-b border-gray-200/50 pb-2' : 'mb-0'} cursor-pointer`}
+                      onClick={() => toggleCategoryExpansion(category)}
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={isExpanded}
+                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${formatCategory(category)}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleCategoryExpansion(category);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center text-xs font-bold text-gray-900 uppercase tracking-tight">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
                         {formatCategory(category)}
                         <span className="ml-3 text-[9px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-200">
                           {selectedInCat.length} / {allAuthsInCategory.length} Selected
                         </span>
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => toggleCategory(category, allAuthsInCategory)}
-                        className="flex items-center space-x-1.5 text-[9px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-700 transition px-3 py-1.5 bg-white rounded-lg border border-gray-100 shadow-sm"
-                      >
-                        {isAllSelected ? <CheckSquare className="w-3.5 h-3.5" /> : isSomeSelected ? <MinusSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
-                        <span>{isAllSelected ? 'Deselect All' : 'Select All'}</span>
-                      </button>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCategory(category, allAuthsInCategory);
+                          }}
+                          className="flex items-center space-x-1.5 text-[9px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-700 transition px-3 py-1.5 bg-white rounded-lg border border-gray-100 shadow-sm"
+                        >
+                          {isAllSelected ? <CheckSquare className="w-3.5 h-3.5" /> : isSomeSelected ? <MinusSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+                          <span>{isAllSelected ? 'Deselect All' : 'Select All'}</span>
+                        </button>
+                      </div>
                     </div>
 
+                    {isExpanded && (
                      <div className="space-y-3">
                       {/* Sub-groups */}
                       {Object.entries(subGroups)
@@ -279,6 +325,7 @@ const RoleFormPage = () => {
                         );
                       })}
                     </div>
+                    )}
                   </div>
                 );
               })}

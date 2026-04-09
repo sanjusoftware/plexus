@@ -9,7 +9,7 @@ interface AdminPageProps {
 
 interface AdminPageHeaderProps {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
   tone?: 'blue' | 'purple' | 'indigo' | 'amber';
   actions?: React.ReactNode;
