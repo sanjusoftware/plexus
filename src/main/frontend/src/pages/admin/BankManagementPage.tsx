@@ -90,9 +90,9 @@ const BankManagementPage = () => {
         message: location.state.message
       });
       // Clear navigation state to prevent modal from re-appearing on refresh
-      window.history.replaceState({}, document.title);
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state]);
+  }, [location.state, location.pathname, navigate]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'reject') => {
     try {

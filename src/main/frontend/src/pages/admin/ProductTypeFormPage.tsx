@@ -55,8 +55,9 @@ const ProductTypeFormPage = () => {
       } else {
         await axios.post('/api/v1/product-types', formData);
       }
-      setToast({ message: isEditing ? 'Product type updated successfully.' : 'Product type created successfully.', type: 'success' });
-      navigate('/product-types');
+      navigate('/product-types', {
+        state: { success: isEditing ? 'Product type updated successfully.' : 'Product type created successfully.' }
+      });
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'An error occurred while saving.', type: 'error' });
     } finally {
