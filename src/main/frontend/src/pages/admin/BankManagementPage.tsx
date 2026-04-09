@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Building2, Loader2, Plus, ArrowRight, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit
+  Building2, Loader2, Plus, ArrowRight, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit,
+  Layers, AlertTriangle
 } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
 import axios from 'axios';
@@ -416,6 +417,39 @@ const BankManagementPage = () => {
                         }`}>
                       {selectedBank.status}
                     </span>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><Layers className="h-4 w-4 text-blue-600" /></div>
+                  <div>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Allow Multi-Bundle Products</p>
+                    <div className="flex items-center h-[18px]">
+                      <div className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${selectedBank.allowProductInMultipleBundles ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                        <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform ${selectedBank.allowProductInMultipleBundles ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </div>
+                      <span className="ml-2 text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                        {selectedBank.allowProductInMultipleBundles ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 col-span-2">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><AlertTriangle className="h-4 w-4 text-blue-600" /></div>
+                  <div className="flex-1">
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1.5">Category Conflict Rules</p>
+                    {selectedBank.categoryConflictRules && selectedBank.categoryConflictRules.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedBank.categoryConflictRules.map((rule: any, idx: number) => (
+                          <div key={idx} className="flex items-center space-x-2 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-700">{rule.categoryA}</span>
+                            <span className="text-[8px] font-bold text-gray-300 uppercase tracking-tighter italic">vs</span>
+                            <span className="text-[10px] font-black text-gray-700">{rule.categoryB}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs font-bold text-gray-300 italic">No conflict rules defined</p>
+                    )}
                   </div>
                 </div>
               </div>
