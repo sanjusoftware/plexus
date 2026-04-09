@@ -1,6 +1,7 @@
 package com.bankengine.web;
 
 import com.bankengine.web.dto.ApiError;
+import com.bankengine.web.dto.Violation;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
 import com.bankengine.web.exception.ValidationException;
@@ -31,12 +32,16 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler({MethodArgumentNotValidException.class, IllegalArgumentException.class})
     public ResponseEntity<ApiError> handleValidationExceptions(Exception ex) {
-        Map<String, String> fieldErrors = new HashMap<>();
         String message = "Input validation failed: One or more fields contain invalid data.";
+        java.util.List<Violation> violations = new java.util.ArrayList<>();
 
         if (ex instanceof MethodArgumentNotValidException methodEx) {
             methodEx.getBindingResult().getFieldErrors().forEach(error ->
-                    fieldErrors.put(error.getField(), error.getDefaultMessage())
+                    violations.add(Violation.builder()
+                            .field(error.getField())
+                            .reason(error.getDefaultMessage())
+                            .severity(Violation.Severity.ERROR)
+                            .build())
             );
         } else {
             message = ex.getMessage();
@@ -46,8 +51,9 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Bad Request")
+                .code("VALIDATION_ERROR")
                 .message(message)
-                .details(fieldErrors.isEmpty() ? null : fieldErrors)
+                .errors(violations.isEmpty() ? null : violations)
                 .build();
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
@@ -59,7 +65,15 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiError> handleCustomValidationException(ValidationException ex) {
-        return buildResponseEntity(HttpStatus.UNPROCESSABLE_ENTITY, "Business Rule Violation", ex.getMessage());
+        ApiError body = ApiError.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
+                .error("Business Rule Violation")
+                .code(ex.getCode())
+                .message(ex.getMessage())
+                .errors(ex.getViolations().isEmpty() ? null : ex.getViolations())
+                .build();
+        return new ResponseEntity<>(body, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     /**
@@ -68,7 +82,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiError> handleNotFoundException(NotFoundException ex) {
-        return buildResponseEntity(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage());
+        return buildResponseEntity(HttpStatus.NOT_FOUND, "Not Found", "RESOURCE_NOT_FOUND", ex.getMessage());
     }
 
     /**
@@ -81,7 +95,7 @@ public class GlobalExceptionHandler {
         if (message != null && (message.startsWith("Bank already exists: ") || message.startsWith("Bank ID already in use: "))) {
             message = "Bank ID should be unique";
         }
-        return buildResponseEntity(HttpStatus.CONFLICT, "Illegal State", message);
+        return buildResponseEntity(HttpStatus.CONFLICT, "Illegal State", "CONFLICT", message);
     }
 
     /**
@@ -90,7 +104,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(DependencyViolationException.class)
     public ResponseEntity<ApiError> handleDependencyViolationException(DependencyViolationException ex) {
-        return buildResponseEntity(HttpStatus.CONFLICT, "Conflict (Dependency)", ex.getMessage());
+        return buildResponseEntity(HttpStatus.CONFLICT, "Conflict (Dependency)", "DEPENDENCY_VIOLATION", ex.getMessage());
     }
 
     /**
@@ -108,7 +122,7 @@ public class GlobalExceptionHandler {
             message = "Bank ID should be unique";
         }
 
-        return buildResponseEntity(HttpStatus.CONFLICT, "Conflict", message);
+        return buildResponseEntity(HttpStatus.CONFLICT, "Conflict", "DATA_INTEGRITY_VIOLATION", message);
     }
 
     /**
@@ -133,7 +147,7 @@ public class GlobalExceptionHandler {
                 message = "Invalid value for Boolean. Should be true or false";
             }
         }
-        return buildResponseEntity(HttpStatus.BAD_REQUEST, "Bad Request", message);
+        return buildResponseEntity(HttpStatus.BAD_REQUEST, "Bad Request", "MALFORMED_JSON", message);
     }
 
     private String enumValues(Enum<?>[] values) {
@@ -146,17 +160,18 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiError> handleConstraintViolationException(ConstraintViolationException ex) {
-        return buildResponseEntity(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());
+        return buildResponseEntity(HttpStatus.BAD_REQUEST, "Bad Request", "CONSTRAINT_VIOLATION", ex.getMessage());
     }
 
     /**
      * Helper method to maintain a consistent API error structure.
      */
-    private ResponseEntity<ApiError> buildResponseEntity(HttpStatus status, String error, String message) {
+    private ResponseEntity<ApiError> buildResponseEntity(HttpStatus status, String error, String code, String message) {
         ApiError body = ApiError.builder()
                 .timestamp(LocalDateTime.now())
                 .status(status.value())
                 .error(error)
+                .code(code)
                 .message(message)
                 .build();
         return new ResponseEntity<>(body, status);

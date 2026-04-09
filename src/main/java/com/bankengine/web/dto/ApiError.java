@@ -25,9 +25,15 @@ public class ApiError {
     @Schema(description = "Human-readable explanation of the failure.", example = "Input validation failed: One or more fields contain invalid data.")
     private final String message;
 
+    @Schema(description = "Business-specific error code.", example = "BUSINESS_RULE_VIOLATION")
+    private final String code;
+
     @Schema(description = "Request path that produced the error when available.", example = "/api/v1/pricing-components/100/tiers")
     private final String path;
 
     @Schema(description = "Optional field-level validation messages keyed by field name.")
     private final Map<String, String> details;
+
+    @Schema(description = "Structured list of business rule violations.")
+    private final java.util.List<Violation> errors;
 }
