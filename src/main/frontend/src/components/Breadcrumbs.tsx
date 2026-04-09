@@ -100,13 +100,13 @@ const Breadcrumbs: React.FC = () => {
               <ChevronRight className="mx-1 h-4 w-4 text-gray-400" />
             )}
             {crumb.isLast ? (
-              <span className="text-xs font-black uppercase tracking-widest text-gray-900 sm:text-sm">
+              <span className="text-xs font-bold text-gray-900 sm:text-sm">
                 {crumb.label}
               </span>
             ) : (
               <Link
                 to={crumb.path}
-                className="text-xs font-bold uppercase tracking-widest text-gray-500 transition hover:text-blue-600 sm:text-sm"
+                className="text-xs font-semibold text-gray-500 transition hover:text-blue-600 sm:text-sm"
               >
                 {crumb.label}
               </Link>
