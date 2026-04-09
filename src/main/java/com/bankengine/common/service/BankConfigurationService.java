@@ -13,6 +13,7 @@ import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.web.exception.NotFoundException;
+import com.bankengine.web.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,6 +46,7 @@ public class BankConfigurationService extends BaseService {
     @Transactional
     @SystemAdminBypass // Allows SYSTEM to create/update across tenants
     public BankConfigurationResponse createBank(BankConfigurationRequest request) {
+        validateRequest(request);
         String bankId = deriveBankId(request);
 
         if (bankConfigurationRepository.findByBankIdUnfiltered(bankId).isPresent()) {
@@ -93,6 +95,7 @@ public class BankConfigurationService extends BaseService {
     @Transactional
     @SystemAdminBypass
     public BankConfigurationResponse submitOnboarding(BankConfigurationRequest request) {
+        validateRequest(request);
         String bankId = deriveBankId(request);
 
         if (bankConfigurationRepository.findByBankIdUnfiltered(bankId).isPresent()) {
@@ -128,7 +131,7 @@ public class BankConfigurationService extends BaseService {
     }
 
     private BankConfigurationResponse updateBankInternal(String bankId, BankConfigurationRequest request, boolean isSystemAdmin) {
-
+        validateRequest(request);
         BankConfiguration config = bankConfigurationRepository.findByBankId(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
 
@@ -161,6 +164,30 @@ public class BankConfigurationService extends BaseService {
             config.getCategoryConflictRules().addAll(request.getCategoryConflictRules().stream()
                     .map(dto -> new CategoryConflictRule(dto.getCategoryA(), dto.getCategoryB()))
                     .toList());
+        }
+    }
+
+    private void validateRequest(BankConfigurationRequest request) {
+        if (request.getCategoryConflictRules() != null) {
+            java.util.Set<String> seenPairs = new HashSet<>();
+            for (BankConfigurationRequest.CategoryConflictDto rule : request.getCategoryConflictRules()) {
+                String catA = rule.getCategoryA() != null ? rule.getCategoryA().trim().toUpperCase() : "";
+                String catB = rule.getCategoryB() != null ? rule.getCategoryB().trim().toUpperCase() : "";
+
+                if (catA.isEmpty() || catB.isEmpty()) {
+                    throw new ValidationException("Both categories in a conflict rule must be specified.");
+                }
+
+                if (catA.equals(catB)) {
+                    throw new ValidationException("A category cannot conflict with itself: " + catA);
+                }
+
+                String pair = catA.compareTo(catB) < 0 ? catA + "|" + catB : catB + "|" + catA;
+                if (seenPairs.contains(pair)) {
+                    throw new ValidationException("Duplicate conflict rule: " + catA + " and " + catB);
+                }
+                seenPairs.add(pair);
+            }
         }
     }
 
