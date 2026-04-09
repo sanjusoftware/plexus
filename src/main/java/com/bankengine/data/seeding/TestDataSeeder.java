@@ -145,7 +145,7 @@ public class TestDataSeeder implements CommandLineRunner {
         Set<String> allSystemAuthorities = authorityDiscoveryService.discoverAllAuthorities();
 
         // 2. Check if the BANK_ADMIN role exists for this bank
-        roleRepository.findByName("BANK_ADMIN").ifPresentOrElse(
+        roleRepository.findByNameAndBankId("BANK_ADMIN", bankId).ifPresentOrElse(
                 existingRole -> {
                     // For dev mode, we update the existing role to ensure it gets NEWLY created permissions
                     existingRole.setAuthorities(new HashSet<>(allSystemAuthorities));
