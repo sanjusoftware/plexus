@@ -123,7 +123,7 @@ public class AuthorityDiscoveryService {
      * Extracts the permission string from the @PreAuthorize expression.
      */
     private Stream<String> extractFromElement(AnnotatedElement element) {
-        PreAuthorize annotation = element.getAnnotation(PreAuthorize.class);
+        PreAuthorize annotation = AnnotatedElementUtils.findMergedAnnotation(element, PreAuthorize.class);
         if (annotation == null || annotation.value().isEmpty()) {
             return Stream.empty();
         }
