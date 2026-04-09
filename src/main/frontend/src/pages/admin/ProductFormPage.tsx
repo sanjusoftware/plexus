@@ -268,32 +268,42 @@ const ProductFormPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Feature Definition</label>
-                      <select className="w-full border border-white rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]" value={link.featureComponentCode} onChange={(e) => {
-                        const newF = [...formData.features];
-                        const val = e.target.value;
-                        newF[idx].featureComponentCode = val;
-                        if (val === 'CREATE_NEW') {
-                          newF[idx].featureName = '';
-                          newF[idx].dataType = 'STRING';
-                          newF[idx].featureValue = '';
-                        } else if (val === '') {
-                          newF[idx].featureName = '';
-                          newF[idx].dataType = 'STRING';
-                          newF[idx].featureValue = '';
-                        } else {
-                          const fc = featureComponents.find(f => f.code === val);
-                          if (fc) {
-                            newF[idx].featureName = fc.name;
-                            newF[idx].dataType = fc.dataType;
-                            newF[idx].featureValue = getDefaultValueForType(fc.dataType);
+                      <PlexusSelect
+                        placeholder="Select Global Component..."
+                        options={[
+                          { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' },
+                          ...featureComponents.map(fc => ({ value: fc.code, label: `${fc.name} (${fc.dataType})` }))
+                        ]}
+                        value={(() => {
+                          if (link.featureComponentCode === 'CREATE_NEW') {
+                            return { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' };
                           }
-                        }
-                        setFormData({...formData, features: newF});
-                      }}>
-                        <option value="">Select Global Component...</option>
-                        <option value="CREATE_NEW" className="text-blue-600 font-bold">+ CREATE NEW FEATURE...</option>
-                        {featureComponents.map(fc => <option key={fc.id} value={fc.code}>{fc.name} ({fc.dataType})</option>)}
-                      </select>
+                          const fc = featureComponents.find(f => f.code === link.featureComponentCode);
+                          return fc ? { value: fc.code, label: `${fc.name} (${fc.dataType})` } : null;
+                        })()}
+                        onChange={(opt) => {
+                          const newF = [...formData.features];
+                          const val = opt ? opt.value : '';
+                          newF[idx].featureComponentCode = val;
+                          if (val === 'CREATE_NEW') {
+                            newF[idx].featureName = '';
+                            newF[idx].dataType = 'STRING';
+                            newF[idx].featureValue = '';
+                          } else if (val === '') {
+                            newF[idx].featureName = '';
+                            newF[idx].dataType = 'STRING';
+                            newF[idx].featureValue = '';
+                          } else {
+                            const fc = featureComponents.find(f => f.code === val);
+                            if (fc) {
+                              newF[idx].featureName = fc.name;
+                              newF[idx].dataType = fc.dataType;
+                              newF[idx].featureValue = getDefaultValueForType(fc.dataType);
+                            }
+                          }
+                          setFormData({...formData, features: newF});
+                        }}
+                      />
                     </div>
 
                     <div>
@@ -392,19 +402,23 @@ const ProductFormPage = () => {
                             </div>
                             <div>
                               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Data Type</label>
-                              <select className="w-full border border-white rounded-lg p-2.5 text-[9px] bg-white font-bold shadow-sm focus:border-blue-500 transition" value={link.dataType} onChange={(e) => {
-                                const newF = [...formData.features];
-                                const newType = e.target.value;
-                                newF[idx].dataType = newType;
-                                newF[idx].featureValue = getDefaultValueForType(newType);
-                                setFormData({...formData, features: newF});
-                              }}>
-                                <option value="STRING">STRING</option>
-                                <option value="INTEGER">INTEGER</option>
-                                <option value="BOOLEAN">BOOLEAN</option>
-                                <option value="DECIMAL">DECIMAL</option>
-                                <option value="DATE">DATE</option>
-                              </select>
+                              <PlexusSelect
+                                options={[
+                                  { value: 'STRING', label: 'STRING' },
+                                  { value: 'INTEGER', label: 'INTEGER' },
+                                  { value: 'BOOLEAN', label: 'BOOLEAN' },
+                                  { value: 'DECIMAL', label: 'DECIMAL' },
+                                  { value: 'DATE', label: 'DATE' }
+                                ]}
+                                value={link.dataType ? { value: link.dataType, label: link.dataType } : null}
+                                onChange={(opt) => {
+                                  const newF = [...formData.features];
+                                  const newType = opt ? opt.value : 'STRING';
+                                  newF[idx].dataType = newType;
+                                  newF[idx].featureValue = getDefaultValueForType(newType);
+                                  setFormData({...formData, features: newF});
+                                }}
+                              />
                             </div>
                          </div>
                       </div>

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, DollarSign, AlertCircle, Loader2, TrendingUp } 
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
 import { useAbortSignal } from '../hooks/useAbortSignal';
 import axios from 'axios';
+import PlexusSelect from './PlexusSelect';
 
 interface LivePricePreviewProps {
   productId?: number;
@@ -112,16 +113,16 @@ const LivePricePreview: React.FC<LivePricePreviewProps> = ({ productId, currentF
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
                   Customer Segment
                 </label>
-                <select
-                  value={customerSegment}
-                  onChange={(e) => setCustomerSegment(e.target.value)}
-                  className="w-full border-2 border-gray-100 rounded-xl p-3 font-black text-gray-900 transition focus:border-blue-500 focus:ring-blue-200"
-                >
-                  <option value="RETAIL">Retail</option>
-                  <option value="PREMIUM">Premium</option>
-                  <option value="CORPORATE">Corporate</option>
-                  <option value="VIP">VIP</option>
-                </select>
+                <PlexusSelect
+                  options={[
+                    { value: 'RETAIL', label: 'RETAIL' },
+                    { value: 'PREMIUM', label: 'PREMIUM' },
+                    { value: 'CORPORATE', label: 'CORPORATE' },
+                    { value: 'VIP', label: 'VIP' }
+                  ]}
+                  value={{ value: customerSegment, label: customerSegment }}
+                  onChange={(opt) => setCustomerSegment(opt ? opt.value : 'RETAIL')}
+                />
               </div>
 
               <div>

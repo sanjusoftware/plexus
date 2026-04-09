@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Loader2, Save, ShieldCheck } from 'lucide-react';
 import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
-import StyledSelect from '../../components/StyledSelect';
+import PlexusSelect from '../../components/PlexusSelect';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
@@ -122,15 +122,12 @@ const FeatureComponentFormPage = () => {
           </div>
           <div className="admin-field">
             <label className="admin-label">Data Type</label>
-            <StyledSelect
+            <PlexusSelect
               required
-              value={formData.dataType}
-              onChange={(e) => setFormData({ ...formData, dataType: e.target.value })}
-            >
-              {dataTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </StyledSelect>
+              options={dataTypes.map(type => ({ value: type, label: type }))}
+              value={{ value: formData.dataType, label: formData.dataType }}
+              onChange={(opt) => setFormData({ ...formData, dataType: opt ? opt.value : 'STRING' })}
+            />
           </div>
           <div className="admin-actions">
             <button type="button" onClick={handleCancel} className="admin-secondary-btn sm:min-w-[140px]">Cancel</button>

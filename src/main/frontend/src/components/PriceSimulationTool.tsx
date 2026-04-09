@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Settings, Play, Download, Loader2 } from 'lucide-react';
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
+import PlexusSelect from './PlexusSelect';
 
 interface PriceSimulationToolProps {
   isOpen: boolean;
@@ -235,16 +236,16 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
                       Customer Segment
                     </label>
-                    <select
-                      value={currentScenario.customerSegment}
-                      onChange={(e) => updateScenario(selectedScenario, { customerSegment: e.target.value })}
-                      className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500"
-                    >
-                      <option value="RETAIL">Retail</option>
-                      <option value="PREMIUM">Premium</option>
-                      <option value="CORPORATE">Corporate</option>
-                      <option value="VIP">VIP</option>
-                    </select>
+                    <PlexusSelect
+                      options={[
+                        { value: 'RETAIL', label: 'RETAIL' },
+                        { value: 'PREMIUM', label: 'PREMIUM' },
+                        { value: 'CORPORATE', label: 'CORPORATE' },
+                        { value: 'VIP', label: 'VIP' }
+                      ]}
+                      value={{ value: currentScenario.customerSegment, label: currentScenario.customerSegment }}
+                      onChange={(opt) => updateScenario(selectedScenario, { customerSegment: opt ? opt.value : 'RETAIL' })}
+                    />
                   </div>
                 </div>
 
