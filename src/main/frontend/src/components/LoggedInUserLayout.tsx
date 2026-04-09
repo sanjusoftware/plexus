@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumbs from './Breadcrumbs';
 import GlobalToast from './GlobalToast';
 import {
-  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield, ChevronLeft, ChevronRight, ShieldCheck, ExternalLink, Settings
+  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield, ChevronLeft, ChevronRight, ShieldCheck, ExternalLink
 } from 'lucide-react';
 
 interface LoggedInUserLayoutProps {
@@ -40,13 +40,7 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
       label: 'Bank Management',
       icon: Building2,
       path: '/banks',
-      show: hasPermission({ action: 'GET', path: '/api/v1/banks' })
-    },
-    {
-      label: 'My Bank Settings',
-      icon: Settings,
-      path: '/my-bank',
-      show: hasPermission({ action: 'PUT', path: '/api/v1/banks' })
+      show: hasPermission({ action: 'GET', path: '/api/v1/banks' }) || hasPermission('bank:config:read')
     },
     {
       label: 'Product Types',

@@ -38,7 +38,11 @@ const PermissionElement: React.FC<PermissionElementProps> = ({
     ? { action, path }
     : null;
 
-  if (check && !hasPermission(check)) {
+  if (check === 'bank:management:access') {
+    if (!hasPermission('system:bank:read') && !hasPermission('bank:config:read')) {
+      return <Navigate to="/dashboard" replace />;
+    }
+  } else if (check && !hasPermission(check)) {
     // If not permitted, redirect to dashboard (or an access denied page)
     return <Navigate to="/dashboard" replace />;
   }
