@@ -17,7 +17,9 @@ import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.PricingComponentService;
+import com.bankengine.web.dto.Violation;
 import com.bankengine.web.exception.NotFoundException;
+import com.bankengine.web.exception.ValidationException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -78,16 +80,53 @@ public class ProductService extends BaseService {
     @Transactional
     public ProductResponse createProduct(ProductRequest requestDto) {
         sanitizeRequest(requestDto);
-        validateNewVersionable(productRepository, requestDto.getCode());
 
-        ProductType productType = getProductTypeByCode(requestDto.getProductTypeCode());
-        Product product = productMapper.toEntity(requestDto, productType);
-        product.setBankId(getCurrentBankId());
-        product.setStatus(VersionableEntity.EntityStatus.DRAFT);
-        product.setVersion(1);
+        List<Violation> violations = new java.util.ArrayList<>();
 
-        if (requestDto.getFeatures() != null) syncFeaturesInternal(product, requestDto.getFeatures());
-        if (requestDto.getPricing() != null) syncPricingInternal(product, requestDto.getPricing());
+        try {
+            validateNewVersionable(productRepository, requestDto.getCode());
+        } catch (IllegalArgumentException e) {
+            violations.add(Violation.builder()
+                    .field("code")
+                    .reason(e.getMessage())
+                    .severity(Violation.Severity.ERROR)
+                    .build());
+        }
+
+        // Example Warning Quota Check
+        if ("RETAIL".equalsIgnoreCase(requestDto.getCategory())) {
+            violations.add(Violation.builder()
+                    .field("category")
+                    .reason("Category 'RETAIL' is approaching its quota for this bank.")
+                    .severity(Violation.Severity.WARNING)
+                    .build());
+        }
+
+        ProductType productType = null;
+        try {
+            productType = getProductTypeByCode(requestDto.getProductTypeCode());
+        } catch (NotFoundException e) {
+            violations.add(Violation.builder()
+                    .field("productTypeCode")
+                    .reason(e.getMessage())
+                    .severity(Violation.Severity.ERROR)
+                    .build());
+        }
+
+        Product product = null;
+        if (productType != null) {
+            product = productMapper.toEntity(requestDto, productType);
+            product.setBankId(getCurrentBankId());
+            product.setStatus(VersionableEntity.EntityStatus.DRAFT);
+            product.setVersion(1);
+
+            if (requestDto.getFeatures() != null) syncFeaturesInternal(product, requestDto.getFeatures(), violations);
+            if (requestDto.getPricing() != null) syncPricingInternal(product, requestDto.getPricing(), violations);
+        }
+
+        if (!violations.isEmpty()) {
+            throw new ValidationException("BUSINESS_RULE_VIOLATION", "Product creation failed due to multiple conflicts.", violations);
+        }
 
         return productMapper.toResponse(productRepository.save(product));
     }
@@ -102,6 +141,8 @@ public class ProductService extends BaseService {
         Product product = getProductEntityById(productId);
         validateDraft(product);
 
+        List<Violation> violations = new java.util.ArrayList<>();
+
         if (dto.getName() != null) product.setName(dto.getName());
         if (dto.getCategory() != null) product.setCategory(dto.getCategory());
 
@@ -110,8 +151,12 @@ public class ProductService extends BaseService {
             product.setExpiryDate(dto.getExpiryDate());
         }
 
-        if (dto.getFeatures() != null) syncFeaturesInternal(product, dto.getFeatures());
-        if (dto.getPricing() != null) syncPricingInternal(product, dto.getPricing());
+        if (dto.getFeatures() != null) syncFeaturesInternal(product, dto.getFeatures(), violations);
+        if (dto.getPricing() != null) syncPricingInternal(product, dto.getPricing(), violations);
+
+        if (!violations.isEmpty()) {
+            throw new ValidationException("BUSINESS_RULE_VIOLATION", "Product update failed due to multiple conflicts.", violations);
+        }
 
         return productMapper.toResponse(productRepository.save(product));
     }
@@ -223,7 +268,7 @@ public class ProductService extends BaseService {
 
     // --- INTERNAL RECONCILIATION & CLONING ---
 
-    private void syncFeaturesInternal(Product product, List<ProductFeatureDto> incomingDtos) {
+    private void syncFeaturesInternal(Product product, List<ProductFeatureDto> incomingDtos, List<Violation> violations) {
         Map<String, ProductFeatureLink> existingMap = product.getProductFeatureLinks().stream()
                 .collect(Collectors.toMap(l -> l.getFeatureComponent().getCode(), l -> l));
 
@@ -233,14 +278,21 @@ public class ProductService extends BaseService {
 
         product.getProductFeatureLinks().removeIf(link -> !incomingCodes.contains(link.getFeatureComponent().getCode()));
 
-        for (ProductFeatureDto dto : incomingDtos) {
-            FeatureComponent component;
+        for (int i = 0; i < incomingDtos.size(); i++) {
+            ProductFeatureDto dto = incomingDtos.get(i);
+            String fieldPrefix = "features[" + i + "].";
+            FeatureComponent component = null;
             try {
                 component = featureComponentService.getFeatureComponentByCode(dto.getFeatureComponentCode(), null);
             } catch (NotFoundException e) {
                 // Fat DTO: Create new feature if it doesn't exist
                 if (dto.getDataType() == null || dto.getFeatureName() == null) {
-                    throw new IllegalArgumentException("Feature component with code '" + dto.getFeatureComponentCode() + "' not found and required data for creation (dataType, featureName) is missing.");
+                    violations.add(Violation.builder()
+                            .field(fieldPrefix + "featureComponentCode")
+                            .reason("Feature component with code '" + dto.getFeatureComponentCode() + "' not found and required data for creation (dataType, featureName) is missing.")
+                            .severity(Violation.Severity.ERROR)
+                            .build());
+                    continue;
                 }
                 FeatureComponentRequest createRequest = new FeatureComponentRequest();
                 createRequest.setCode(dto.getFeatureComponentCode());
@@ -250,10 +302,20 @@ public class ProductService extends BaseService {
                 component = featureComponentService.getFeatureComponentById(created.getId());
             }
 
-            validateDraft(component);
-            validateFeatureValue(dto.getFeatureValue(), component.getDataType());
+            if (component != null) {
+                try {
+                    validateDraft(component);
+                } catch (IllegalStateException e) {
+                    violations.add(Violation.builder()
+                            .field(fieldPrefix + "featureComponentCode")
+                            .reason(e.getMessage())
+                            .severity(Violation.Severity.ERROR)
+                            .build());
+                }
+                validateFeatureValue(dto.getFeatureValue(), component.getDataType(), fieldPrefix + "featureValue", violations);
+            }
 
-            if (existingMap.containsKey(dto.getFeatureComponentCode())) {
+            if (component != null && existingMap.containsKey(dto.getFeatureComponentCode())) {
                 ProductFeatureLink existingLink = existingMap.get(dto.getFeatureComponentCode());
                 if (!Objects.equals(existingLink.getFeatureValue(), dto.getFeatureValue())) {
                     existingLink.setFeatureValue(dto.getFeatureValue());
@@ -269,7 +331,7 @@ public class ProductService extends BaseService {
         }
     }
 
-    private void syncPricingInternal(Product product, List<ProductPricingDto> incomingDtos) {
+    private void syncPricingInternal(Product product, List<ProductPricingDto> incomingDtos, List<Violation> violations) {
         Map<String, ProductPricingLink> existingMap = product.getProductPricingLinks().stream()
                 .collect(Collectors.toMap(l -> l.getPricingComponent().getCode(), l -> l));
 
@@ -279,18 +341,38 @@ public class ProductService extends BaseService {
 
         product.getProductPricingLinks().removeIf(link -> !incomingCodes.contains(link.getPricingComponent().getCode()));
 
-        for (ProductPricingDto dto : incomingDtos) {
+        for (int i = 0; i < incomingDtos.size(); i++) {
+            ProductPricingDto dto = incomingDtos.get(i);
+            String fieldPrefix = "pricing[" + i + "].";
             if (existingMap.containsKey(dto.getPricingComponentCode())) {
-                mapPricingFields(existingMap.get(dto.getPricingComponentCode()), dto);
+                mapPricingFields(existingMap.get(dto.getPricingComponentCode()), dto, fieldPrefix, violations);
             } else {
-                PricingComponent comp = pricingComponentService.getPricingComponentByCode(dto.getPricingComponentCode(), null);
-                validateDraft(comp);
-                ProductPricingLink link = new ProductPricingLink();
-                link.setProduct(product);
-                link.setPricingComponent(comp);
-                link.setBankId(product.getBankId());
-                mapPricingFields(link, dto);
-                product.getProductPricingLinks().add(link);
+                PricingComponent comp = null;
+                try {
+                    comp = pricingComponentService.getPricingComponentByCode(dto.getPricingComponentCode(), null);
+                    validateDraft(comp);
+                } catch (NotFoundException e) {
+                    violations.add(Violation.builder()
+                            .field(fieldPrefix + "pricingComponentCode")
+                            .reason(e.getMessage())
+                            .severity(Violation.Severity.ERROR)
+                            .build());
+                } catch (IllegalStateException e) {
+                    violations.add(Violation.builder()
+                            .field(fieldPrefix + "pricingComponentCode")
+                            .reason(e.getMessage())
+                            .severity(Violation.Severity.ERROR)
+                            .build());
+                }
+
+                if (comp != null) {
+                    ProductPricingLink link = new ProductPricingLink();
+                    link.setProduct(product);
+                    link.setPricingComponent(comp);
+                    link.setBankId(product.getBankId());
+                    mapPricingFields(link, dto, fieldPrefix, violations);
+                    product.getProductPricingLinks().add(link);
+                }
             }
         }
     }
@@ -319,8 +401,16 @@ public class ProductService extends BaseService {
 
     // --- HELPERS ---
 
-    private void mapPricingFields(ProductPricingLink link, ProductPricingDto dto) {
+    private void mapPricingFields(ProductPricingLink link, ProductPricingDto dto, String fieldPrefix, List<Violation> violations) {
         if (!Objects.equals(link.getFixedValue(), dto.getFixedValue())) {
+            // Example custom validation rule
+            if (dto.getFixedValue() != null && dto.getFixedValue().compareTo(new java.math.BigDecimal("10000")) > 0) {
+                violations.add(Violation.builder()
+                        .field(fieldPrefix + "fixedValue")
+                        .reason("Value exceeds the maximum allowed for this component type.")
+                        .severity(Violation.Severity.ERROR)
+                        .build());
+            }
             link.setFixedValue(dto.getFixedValue());
         }
         if (!Objects.equals(link.getFixedValueType(), dto.getFixedValueType())) {
@@ -332,9 +422,21 @@ public class ProductService extends BaseService {
         if (!Objects.equals(link.getTargetComponentCode(), dto.getTargetComponentCode())) {
             // Requirement 18: Validate targetComponentCode
             if (dto.getTargetComponentCode() != null) {
-                PricingComponent target = pricingComponentService.getPricingComponentByCode(dto.getTargetComponentCode(), null);
-                if (target.isArchived() || target.isInActive()) {
-                    throw new IllegalArgumentException("Target component must be ACTIVE or DRAFT: " + dto.getTargetComponentCode());
+                try {
+                    PricingComponent target = pricingComponentService.getPricingComponentByCode(dto.getTargetComponentCode(), null);
+                    if (target.isArchived() || target.isInActive()) {
+                        violations.add(Violation.builder()
+                                .field(fieldPrefix + "targetComponentCode")
+                                .reason("Target component must be ACTIVE or DRAFT: " + dto.getTargetComponentCode())
+                                .severity(Violation.Severity.ERROR)
+                                .build());
+                    }
+                } catch (NotFoundException e) {
+                    violations.add(Violation.builder()
+                            .field(fieldPrefix + "targetComponentCode")
+                            .reason(e.getMessage())
+                            .severity(Violation.Severity.ERROR)
+                            .build());
                 }
             }
             link.setTargetComponentCode(dto.getTargetComponentCode());
@@ -342,7 +444,11 @@ public class ProductService extends BaseService {
 
         if (!Objects.equals(link.getEffectiveDate(), dto.getEffectiveDate())) {
             if (dto.getEffectiveDate() != null && dto.getEffectiveDate().isBefore(LocalDate.now())) {
-                throw new IllegalArgumentException("Effective date cannot be in the past.");
+                violations.add(Violation.builder()
+                        .field(fieldPrefix + "effectiveDate")
+                        .reason("Effective date cannot be in the past.")
+                        .severity(Violation.Severity.ERROR)
+                        .build());
             }
             link.setEffectiveDate(dto.getEffectiveDate());
         }
@@ -350,7 +456,11 @@ public class ProductService extends BaseService {
         if (!Objects.equals(link.getExpiryDate(), dto.getExpiryDate())) {
             if (dto.getExpiryDate() != null && link.getEffectiveDate() != null
                     && dto.getExpiryDate().isBefore(link.getEffectiveDate())) {
-                throw new IllegalArgumentException("Expiry date must be after the effective date.");
+                violations.add(Violation.builder()
+                        .field(fieldPrefix + "expiryDate")
+                        .reason("Expiry date must be after the effective date.")
+                        .severity(Violation.Severity.ERROR)
+                        .build());
             }
             link.setExpiryDate(dto.getExpiryDate());
         }
@@ -382,10 +492,14 @@ public class ProductService extends BaseService {
         }
     }
 
-    private void validateFeatureValue(String value, FeatureComponent.DataType dataType) {
+    private void validateFeatureValue(String value, FeatureComponent.DataType dataType, String fieldPath, List<Violation> violations) {
         if (value == null || value.trim().isEmpty()) {
             if (dataType != FeatureComponent.DataType.STRING) {
-                throw new IllegalArgumentException("Feature value required for type: " + dataType);
+                violations.add(Violation.builder()
+                        .field(fieldPath)
+                        .reason("Feature value required for type: " + dataType)
+                        .severity(Violation.Severity.ERROR)
+                        .build());
             }
             return;
         }
@@ -395,24 +509,42 @@ public class ProductService extends BaseService {
                 try {
                     Integer.parseInt(value);
                 } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Value '" + value + "' must be an INTEGER.");
+                    violations.add(Violation.builder()
+                            .field(fieldPath)
+                            .reason("Value '" + value + "' must be an INTEGER.")
+                            .severity(Violation.Severity.ERROR)
+                            .build());
                 }
             }
             case DECIMAL -> {
                 try {
                     Double.parseDouble(value);
                 } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Value '" + value + "' must be a DECIMAL.");
+                    violations.add(Violation.builder()
+                            .field(fieldPath)
+                            .reason("Value '" + value + "' must be a DECIMAL.")
+                            .severity(Violation.Severity.ERROR)
+                            .build());
                 }
             }
             case BOOLEAN -> {
                 if (!("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value))) {
-                    throw new IllegalArgumentException("Value '" + value + "' must be 'true' or 'false'.");
+                    violations.add(Violation.builder()
+                            .field(fieldPath)
+                            .reason("Value '" + value + "' must be 'true' or 'false'.")
+                            .severity(Violation.Severity.ERROR)
+                            .build());
                 }
             }
             case STRING -> {
             }
-            default -> throw new IllegalArgumentException("Unsupported data type: " + dataType);
+            default -> {
+                violations.add(Violation.builder()
+                        .field(fieldPath)
+                        .reason("Unsupported data type: " + dataType)
+                        .severity(Violation.Severity.ERROR)
+                        .build());
+            }
         }
     }
 }

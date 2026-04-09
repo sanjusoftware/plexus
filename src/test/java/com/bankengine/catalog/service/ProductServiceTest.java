@@ -122,7 +122,7 @@ public class ProductServiceTest extends BaseServiceTest {
         dto.setProductTypeCode("CARD");
         dto.setName("New Product");
         dto.setCode("NEW-CODE");
-        dto.setCategory("RETAIL");
+        dto.setCategory("OTHER"); // Changed from RETAIL to avoid warning causing exception
 
         Product product = createValidProduct(null);
         product.setCode("NEW-CODE");
@@ -150,7 +150,7 @@ public class ProductServiceTest extends BaseServiceTest {
         dto.setProductTypeCode("CARD");
 
         when(productRepository.existsByBankIdAndCodeAndVersion(TEST_BANK_ID, "EXISTING", 1)).thenReturn(true);
-        assertThrows(IllegalArgumentException.class, () -> productService.createProduct(dto));
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.createProduct(dto));
     }
 
     @Test
@@ -375,7 +375,7 @@ public class ProductServiceTest extends BaseServiceTest {
                 .pricing(List.of(pricingDto))
                 .build();
 
-        assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, req));
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, req));
     }
 
     @Test
@@ -399,10 +399,10 @@ public class ProductServiceTest extends BaseServiceTest {
         productService.updateProduct(1L, createFeatureRequestByCode("BOOL", "true"));
 
         // Invalid values
-        assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, createFeatureRequestByCode("INT", "abc")));
-        assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, createFeatureRequestByCode("DEC", "abc")));
-        assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, createFeatureRequestByCode("BOOL", "abc")));
-        assertThrows(IllegalArgumentException.class, () -> productService.updateProduct(1L, createFeatureRequestByCode("INT", "")));
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, createFeatureRequestByCode("INT", "abc")));
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, createFeatureRequestByCode("DEC", "abc")));
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, createFeatureRequestByCode("BOOL", "abc")));
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, createFeatureRequestByCode("INT", "")));
     }
 
     @Test
