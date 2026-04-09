@@ -570,7 +570,7 @@ const OnboardingPage = () => {
           {isAdmin && (
             <button
               type="button"
-              onClick={() => navigate(isMyBank ? '/dashboard' : '/banks')}
+              onClick={() => navigate('/banks')}
               className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]"
             >
               Discard Changes
@@ -599,7 +599,7 @@ const OnboardingPage = () => {
           icon={Building2}
           title={loading ? 'Bank Settings' : isMyBank ? 'My Bank Settings' : isEditing ? (formData.name || formData.bankId || id) : 'New Bank'}
           description={isMyBank ? `Manage your institution's global configuration.` : isEditing ? `Updating configuration for ${formData.name || id}` : 'Fill out the form below to register a new bank in the system.'}
-          onClose={() => navigate(isMyBank ? '/dashboard' : '/banks')}
+          onClose={() => navigate('/banks')}
         />
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 p-8">
           {renderForm()}
