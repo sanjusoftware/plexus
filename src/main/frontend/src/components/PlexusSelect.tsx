@@ -82,7 +82,11 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
         : state.isFocused
           ? '#eff6ff'
           : 'transparent',
-      color: state.isSelected ? 'white' : '#374151',
+      color: state.isSelected
+        ? 'white'
+        : state.data.value === 'CREATE_NEW'
+          ? '#2563eb' // blue-600
+          : '#374151',
       fontWeight: 900,
       fontSize: '0.75rem',
       textTransform: 'uppercase',

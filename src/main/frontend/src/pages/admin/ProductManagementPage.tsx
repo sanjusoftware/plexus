@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info, CheckCircle2, ChevronDown, ChevronUp, Play, RefreshCw, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info, CheckCircle2, ChevronDown, ChevronUp, Play, RefreshCw, Zap } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { AdminDataTableActionButton } from '../../components/AdminDataTable';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { PricingService } from '../../services/PricingService';
+import PlexusSelect from '../../components/PlexusSelect';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -49,7 +50,6 @@ const ProductManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [calculatedPrices, setCalculatedPrices] = useState<Record<number, { price: number; loading: boolean; error?: string }>>({});
-  const [calculatingId, setCalculatingId] = useState<number | null>(null);
   const [calcParams, setCalcParams] = useState({ amount: 1000, segment: 'RETAIL' });
 
   const signal = useAbortSignal();
@@ -224,72 +224,12 @@ const ProductManagementPage = () => {
                     </span>
                   </div>
 
-                  {/* Live Pricing */}
+                  {/* Live Pricing (Placeholder for spacing) */}
                   <div className="lg:col-span-2 flex flex-col items-center justify-center border-l border-gray-100/50" onClick={(e) => e.stopPropagation()}>
-                     {calculatingId === prod.id ? (
-                        <div className="flex flex-col space-y-1.5 p-2 bg-blue-50 rounded-xl border border-blue-100 animate-in fade-in zoom-in-95 min-w-[140px]">
-                           <div className="flex items-center justify-between">
-                             <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Simulation</span>
-                             <button onClick={() => setCalculatingId(null)} className="text-gray-400 hover:text-red-500 transition"><X className="w-3 h-3"/></button>
-                           </div>
-                           <div className="flex items-center space-x-1">
-                              <div className="relative flex-1">
-                                 <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400">$</span>
-                                 <input
-                                    type="number"
-                                    className="w-full p-1 pl-3.5 text-[10px] font-bold border-0 rounded bg-white shadow-sm ring-1 ring-blue-100 focus:ring-blue-400 transition"
-                                    value={calcParams.amount}
-                                    onChange={(e) => setCalcParams({...calcParams, amount: parseFloat(e.target.value) || 0})}
-                                    placeholder="Amount"
-                                 />
-                              </div>
-                              <select
-                                 className="text-[9px] font-black border-0 rounded p-1 bg-white shadow-sm ring-1 ring-blue-100 focus:ring-blue-400 transition appearance-none pr-3"
-                                 value={calcParams.segment}
-                                 onChange={(e) => setCalcParams({...calcParams, segment: e.target.value})}
-                              >
-                                 <option value="RETAIL">RETAIL</option>
-                                 <option value="PREMIUM">PREM</option>
-                                 <option value="CORPORATE">CORP</option>
-                              </select>
-                           </div>
-                           <div className="flex items-center justify-between pt-1 border-t border-blue-100/50">
-                              <button
-                                 onClick={() => handleCalculatePrice(prod)}
-                                 disabled={calculatedPrices[prod.id]?.loading}
-                                 className="bg-blue-600 hover:bg-blue-700 text-white p-1 rounded transition shadow-md shadow-blue-200"
-                                 title="Run Calculation"
-                              >
-                                 {calculatedPrices[prod.id]?.loading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Play className="w-2.5 h-2.5" />}
-                              </button>
-                              <div className="flex-1 text-right pr-1">
-                                {calculatedPrices[prod.id] && !calculatedPrices[prod.id].loading && (
-                                   <div className="flex flex-col leading-none">
-                                      <span className="text-[10px] font-black text-blue-700">{PricingService.formatCurrency(calculatedPrices[prod.id].price)}</span>
-                                      {calculatedPrices[prod.id].error && <span className="text-[8px] font-bold text-red-500 uppercase">{calculatedPrices[prod.id].error}</span>}
-                                   </div>
-                                )}
-                              </div>
-                              {calculatedPrices[prod.id] && !calculatedPrices[prod.id].loading && (
-                                <button
-                                  onClick={() => handleCalculatePrice(prod)}
-                                  className="p-1 text-blue-500 hover:bg-blue-100 rounded transition"
-                                  title="Refresh"
-                                >
-                                  <RefreshCw className="w-2.5 h-2.5" />
-                                </button>
-                              )}
-                           </div>
-                        </div>
-                     ) : (
-                       <button
-                        onClick={() => { setCalculatingId(prod.id); }}
-                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-gray-50 text-gray-500 hover:bg-blue-600 hover:text-white rounded-lg border border-gray-200 hover:border-blue-500 transition-all duration-300 text-[10px] font-bold uppercase tracking-widest shadow-sm"
-                       >
-                         <Play className="w-3 h-3" />
-                         <span>Calculate Price</span>
-                       </button>
-                     )}
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">
+                       <Zap className="w-3.5 h-3.5 mr-1 text-amber-500" />
+                       Click to Expand
+                    </div>
                   </div>
 
                   {/* Actions */}
@@ -332,6 +272,72 @@ const ProductManagementPage = () => {
                 </div>
                 {expandedIds.has(prod.id) && (
                   <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white">
+                    {/* Inline Pricing Simulation Tool */}
+                    <div className="lg:col-span-2 bg-blue-50/50 rounded-2xl p-6 border border-blue-100 mb-2">
+                       <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                             <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
+                                <Zap className="w-4 h-4 text-white" />
+                             </div>
+                             <div>
+                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight">Real-Time Pricing Simulation</h4>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Test this product aggregate with custom parameters</p>
+                             </div>
+                          </div>
+                          {calculatedPrices[prod.id] && !calculatedPrices[prod.id].loading && (
+                             <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-xl border border-blue-200 shadow-sm animate-in fade-in slide-in-from-right-4">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estimated Price:</span>
+                                <span className="text-lg font-black text-blue-600 leading-none">{PricingService.formatCurrency(calculatedPrices[prod.id].price)}</span>
+                                <button
+                                   onClick={() => handleCalculatePrice(prod)}
+                                   className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition"
+                                   title="Refresh Simulation"
+                                >
+                                   <RefreshCw className="w-3.5 h-3.5" />
+                                </button>
+                             </div>
+                          )}
+                       </div>
+
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                          <div>
+                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Amount ($)</label>
+                             <input
+                                type="number"
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold bg-white focus:border-blue-500 transition h-[42px]"
+                                value={calcParams.amount}
+                                onChange={(e) => setCalcParams({...calcParams, amount: parseFloat(e.target.value) || 0})}
+                             />
+                          </div>
+                          <div>
+                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Customer Segment</label>
+                             <PlexusSelect
+                                options={[
+                                   { value: 'RETAIL', label: 'RETAIL' },
+                                   { value: 'PREMIUM', label: 'PREMIUM' },
+                                   { value: 'CORPORATE', label: 'CORPORATE' },
+                                   { value: 'VIP', label: 'VIP' }
+                                ]}
+                                value={{ value: calcParams.segment, label: calcParams.segment }}
+                                onChange={(opt) => setCalcParams({...calcParams, segment: opt ? opt.value : 'RETAIL'})}
+                             />
+                          </div>
+                          <button
+                             onClick={() => handleCalculatePrice(prod)}
+                             disabled={calculatedPrices[prod.id]?.loading}
+                             className="bg-blue-600 text-white rounded-lg h-[42px] font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center space-x-2 disabled:opacity-50"
+                          >
+                             {calculatedPrices[prod.id]?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                             <span>Run Calculation</span>
+                          </button>
+                       </div>
+                       {calculatedPrices[prod.id]?.error && (
+                          <div className="mt-3 text-[10px] font-bold text-red-500 bg-red-50 p-2 rounded-lg border border-red-100 animate-in shake-1">
+                             ⚠️ Simulation Failed: {calculatedPrices[prod.id].error}
+                          </div>
+                       )}
+                    </div>
+
                     <div>
                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-blue-50/50 p-1.5 rounded-lg w-fit">
                         <ShieldCheck className="w-3 h-3 mr-1.5 text-blue-500" /> Linked Feature components
