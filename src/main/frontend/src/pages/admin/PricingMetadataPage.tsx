@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Database, Info } from 'lucide-react';
+import { Plus, Loader2, Database, Info } from 'lucide-react';
 import {
   AdminDataTable,
   AdminDataTableActionButton,
+  AdminDataTableActionContent,
   AdminDataTableActionCell,
   AdminDataTableActionsHeader,
   AdminDataTableEmptyRow,
-  AdminDataTableRow
+  AdminDataTableRow,
+  AuditTimestampCell
 } from '../../components/AdminDataTable';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
-import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface PricingMetadata {
   id: number;
@@ -116,23 +117,17 @@ const PricingMetadataPage = () => {
                     <td className="whitespace-nowrap">
                       <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
                     </td>
-                    <td className="whitespace-nowrap text-xs text-gray-600" title={meta.createdAt || '--'}>
-                      {formatAuditTimestamp(meta.createdAt)}
-                    </td>
-                    <td className="whitespace-nowrap text-xs text-gray-600" title={meta.updatedAt || '--'}>
-                      {formatAuditTimestamp(meta.updatedAt)}
-                    </td>
+                     <AuditTimestampCell value={meta.createdAt} />
+                     <AuditTimestampCell value={meta.updatedAt} />
                     <AdminDataTableActionCell>
                       <HasPermission action="PUT" path="/api/v1/pricing-metadata/*">
                         <AdminDataTableActionButton onClick={() => navigate(`/pricing-metadata/edit/${meta.attributeKey}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${meta.displayName}`}>
-                          <Edit2 className="h-3.5 w-3.5" />
-                          Edit
+                          <AdminDataTableActionContent action="edit" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                       <HasPermission action="DELETE" path="/api/v1/pricing-metadata/*">
                         <AdminDataTableActionButton onClick={() => handleDelete(meta.attributeKey)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${meta.displayName}`}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
+                          <AdminDataTableActionContent action="delete" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                     </AdminDataTableActionCell>

@@ -1,4 +1,6 @@
 import React from 'react';
+import { Archive, CheckCircle2, Clock, Copy, Edit2, History, Trash2, XCircle, type LucideIcon } from 'lucide-react';
+export { AuditTimestampCell } from './AuditTimestampCell';
 
 type Align = 'left' | 'center' | 'right';
 type ActionButtonTone = 'neutral' | 'primary' | 'success' | 'danger';
@@ -33,6 +35,14 @@ interface AdminDataTableActionButtonProps extends React.ButtonHTMLAttributes<HTM
   size?: ActionButtonSize;
 }
 
+type AdminActionKind = 'activate' | 'approve' | 'reactivate' | 'deactivate' | 'edit' | 'delete' | 'archive' | 'copy' | 'version' | 'reject';
+
+interface AdminDataTableActionContentProps {
+  action: AdminActionKind;
+  label?: string;
+  iconClassName?: string;
+}
+
 const joinClasses = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
 
 const alignmentClassNames: Record<Align, string> = {
@@ -51,6 +61,32 @@ const buttonToneClassNames: Record<ActionButtonTone, string> = {
 const buttonSizeClassNames: Record<ActionButtonSize, string> = {
   icon: 'admin-table__action-btn--icon',
   compact: 'admin-table__action-btn--compact'
+};
+
+const actionIconMap: Record<AdminActionKind, LucideIcon> = {
+  activate: CheckCircle2,
+  approve: CheckCircle2,
+  reactivate: CheckCircle2,
+  deactivate: Clock,
+  edit: Edit2,
+  delete: Trash2,
+  archive: Archive,
+  copy: Copy,
+  version: History,
+  reject: XCircle
+};
+
+const actionDefaultLabels: Record<AdminActionKind, string> = {
+  activate: 'Activate',
+  approve: 'Approve',
+  reactivate: 'Re-activate',
+  deactivate: 'Deactivate',
+  edit: 'Edit',
+  delete: 'Delete',
+  archive: 'Archive',
+  copy: 'Copy',
+  version: 'Version',
+  reject: 'Reject'
 };
 
 export const AdminDataTable: React.FC<AdminDataTableProps> = ({
@@ -152,4 +188,19 @@ export const AdminDataTableActionButton: React.FC<AdminDataTableActionButtonProp
     {children}
   </button>
 );
+
+export const AdminDataTableActionContent: React.FC<AdminDataTableActionContentProps> = ({
+  action,
+  label,
+  iconClassName
+}) => {
+  const Icon = actionIconMap[action];
+
+  return (
+    <>
+      <Icon className={joinClasses('h-3.5 w-3.5', iconClassName)} />
+      {label ?? actionDefaultLabels[action]}
+    </>
+  );
+};
 

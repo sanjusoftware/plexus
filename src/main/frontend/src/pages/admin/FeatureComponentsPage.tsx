@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, ShieldCheck, CheckCircle2, Info } from 'lucide-react';
+import { Plus, Loader2, ShieldCheck, Info } from 'lucide-react';
 import {
   AdminDataTable,
   AdminDataTableActionButton,
+  AdminDataTableActionContent,
   AdminDataTableActionCell,
   AdminDataTableActionsHeader,
   AdminDataTableEmptyRow,
-  AdminDataTableRow
+  AdminDataTableRow,
+  AuditTimestampCell
 } from '../../components/AdminDataTable';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
-import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface FeatureComponent {
   id: number;
@@ -132,31 +133,24 @@ const FeatureComponentsPage = () => {
                   <td className="whitespace-nowrap font-bold text-gray-500">
                     v{feat.version}
                   </td>
-                  <td className="whitespace-nowrap text-xs text-gray-600" title={feat.createdAt || '--'}>
-                    {formatAuditTimestamp(feat.createdAt)}
-                  </td>
-                  <td className="whitespace-nowrap text-xs text-gray-600" title={feat.updatedAt || '--'}>
-                    {formatAuditTimestamp(feat.updatedAt)}
-                  </td>
+                   <AuditTimestampCell value={feat.createdAt} />
+                   <AuditTimestampCell value={feat.updatedAt} />
                   <AdminDataTableActionCell>
                     {feat.status === 'DRAFT' && (
                       <>
                         <HasPermission action="POST" path="/api/v1/features/*/activate">
                           <AdminDataTableActionButton onClick={() => handleActivate(feat.id)} tone="success" size="compact" title="Activate" aria-label={`Activate ${feat.name}`}>
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Activate
+                            <AdminDataTableActionContent action="activate" />
                           </AdminDataTableActionButton>
                         </HasPermission>
                         <HasPermission action="PUT" path="/api/v1/features/*">
                           <AdminDataTableActionButton onClick={() => navigate(`/features/edit/${feat.id}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${feat.name}`}>
-                            <Edit2 className="h-3.5 w-3.5" />
-                            Edit
+                            <AdminDataTableActionContent action="edit" />
                           </AdminDataTableActionButton>
                         </HasPermission>
                         <HasPermission action="DELETE" path="/api/v1/features/*">
                           <AdminDataTableActionButton onClick={() => handleDelete(feat.id)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${feat.name}`}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
+                            <AdminDataTableActionContent action="delete" />
                           </AdminDataTableActionButton>
                         </HasPermission>
                       </>
@@ -170,8 +164,7 @@ const FeatureComponentsPage = () => {
                           title="Direct editing is not allowed for active features. Linked products must be versioned to apply feature metadata changes."
                           aria-label={`Edit ${feat.name} (Disabled)`}
                         >
-                          <Edit2 className="h-3.5 w-3.5" />
-                          Edit
+                          <AdminDataTableActionContent action="edit" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                     )}

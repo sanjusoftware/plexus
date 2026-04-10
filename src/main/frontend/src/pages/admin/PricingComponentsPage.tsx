@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, Info, Copy, History, Archive } from 'lucide-react';
+import { Plus, Loader2, Tag, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import {
   AdminDataTable,
   AdminDataTableActionButton,
+  AdminDataTableActionContent,
   AdminDataTableActionCell,
   AdminDataTableActionsHeader,
   AdminDataTableEmptyRow,
-  AdminDataTableRow
+  AdminDataTableRow,
+  AuditTimestampCell
 } from '../../components/AdminDataTable';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
-import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface TierCondition {
   attributeName: string;
@@ -46,6 +47,7 @@ interface PricingComponent {
   id: number;
   code: string;
   name: string;
+  version?: number;
   type: string;
   description: string;
   status: string;
@@ -189,7 +191,7 @@ const PricingComponentsPage = () => {
   };
 
   const handleVersion = async (comp: PricingComponent) => {
-    if (!window.confirm(`Create a new version (v${(comp as any).version + 1}) for ${comp.name}? The new version will be created as a DRAFT.`)) return;
+    if (!window.confirm(`Create a new version (v${(comp.version ?? 1) + 1}) for ${comp.name}? The new version will be created as a DRAFT.`)) return;
     try {
       await axios.post(`/api/v1/pricing-components/${comp.id}/create-new-version`, {
         newName: comp.name
@@ -254,11 +256,11 @@ const PricingComponentsPage = () => {
       {loading ? (
         <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <AdminDataTable aria-label="Pricing components table">
+        <AdminDataTable aria-label="Pricing components table" containerClassName="overflow-x-auto" className="min-w-[1200px]">
             <thead>
               <tr>
-                <th className="w-10"></th>
                 <th>Aggregate Component</th>
+                <th>Version</th>
                 <th>Type</th>
                 <th>Status</th>
                 <th>Segments</th>
@@ -271,15 +273,19 @@ const PricingComponentsPage = () => {
               {components.map((comp) => (
                 <React.Fragment key={comp.id}>
                   <AdminDataTableRow interactive className="group" onClick={() => toggleExpand(comp.id)}>
-                    <td className="text-center">
-                      {expandedRows.has(comp.id) ? <ChevronDown className="w-4 h-4 text-blue-600 font-bold" /> : <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-400" />}
-                    </td>
-                    <td className="whitespace-nowrap max-w-[200px]">
-                      <div className="flex items-center space-x-2">
+                    <td className="max-w-[260px]">
+                      <div className="flex items-center space-x-2 min-w-0">
                         <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={comp.name}>{comp.name}</div>
-                        <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">v{(comp as any).version}</span>
+                        {expandedRows.has(comp.id) ? (
+                          <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        )}
                       </div>
                       <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={comp.code}>{comp.code}</div>
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">v{comp.version ?? 1}</span>
                     </td>
                     <td className="whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${comp.type === 'FEE' ? 'bg-purple-50 text-purple-700 border border-purple-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
@@ -297,31 +303,28 @@ const PricingComponentsPage = () => {
                     <td className="whitespace-nowrap font-bold text-gray-500">
                       {comp.pricingTiers?.length || 0} Tiers
                     </td>
-                    <td className="whitespace-nowrap text-xs text-gray-600" title={comp.createdAt || '--'}>
-                      {formatAuditTimestamp(comp.createdAt)}
+                    <td className="min-w-[140px]" title={comp.createdAt || '--'}>
+                      <AuditTimestampCell value={comp.createdAt} variant="expanded" />
                     </td>
-                    <td className="whitespace-nowrap text-xs text-gray-600" title={comp.updatedAt || '--'}>
-                      {formatAuditTimestamp(comp.updatedAt)}
+                    <td className="min-w-[140px]" title={comp.updatedAt || '--'}>
+                      <AuditTimestampCell value={comp.updatedAt} variant="expanded" />
                     </td>
                     <AdminDataTableActionCell>
                       {comp.status === 'DRAFT' && (
                         <>
                           <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
                             <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} tone="success" size="compact" title="Activate Production Mode" aria-label={`Activate ${comp.name}`}>
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Activate
+                              <AdminDataTableActionContent action="activate" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="PATCH" path="/api/v1/pricing-components/*">
                             <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} tone="primary" size="compact" title="Edit Structure" aria-label={`Edit ${comp.name}`}>
-                              <Edit2 className="h-3.5 w-3.5" />
-                              Edit
+                              <AdminDataTableActionContent action="edit" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/pricing-components/*">
                             <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} tone="danger" size="compact" title="Permanently Delete" aria-label={`Delete ${comp.name}`}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
+                              <AdminDataTableActionContent action="delete" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                         </>
@@ -330,26 +333,22 @@ const PricingComponentsPage = () => {
                         <>
                           <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
                             <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleVersion(comp); }} tone="success" size="compact" title="Create a new draft version of this component" aria-label={`Version ${comp.name}`}>
-                              <History className="h-3.5 w-3.5" />
-                              Version
+                              <AdminDataTableActionContent action="version" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
                             <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleCopy(comp); }} tone="primary" size="compact" title="Copy this component to a new lineage" aria-label={`Copy ${comp.name}`}>
-                              <Copy className="h-3.5 w-3.5" />
-                              Copy
+                              <AdminDataTableActionContent action="copy" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="PATCH" path="/api/v1/pricing-components/*">
                             <AdminDataTableActionButton disabled onClick={(e) => { e.stopPropagation(); }} tone="neutral" size="compact" title="Active components cannot be edited. Create a new version instead." aria-label={`Edit ${comp.name} (Disabled)`}>
-                              <Edit2 className="h-3.5 w-3.5" />
-                              Edit
+                              <AdminDataTableActionContent action="edit" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
                             <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleArchive(comp.id); }} tone="danger" size="compact" title="Archive this component" aria-label={`Archive ${comp.name}`}>
-                              <Archive className="h-3.5 w-3.5" />
-                              Archive
+                              <AdminDataTableActionContent action="archive" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                         </>
@@ -357,8 +356,7 @@ const PricingComponentsPage = () => {
                       {comp.status === 'ARCHIVED' && (
                         <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
                           <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleCopy(comp); }} tone="primary" size="compact" title="Copy this archived component to a new lineage" aria-label={`Copy ${comp.name}`}>
-                            <Copy className="h-3.5 w-3.5" />
-                            Copy
+                            <AdminDataTableActionContent action="copy" />
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}

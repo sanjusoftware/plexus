@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Trash2, Edit2, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
-import { AdminDataTableActionButton } from '../../components/AdminDataTable';
+import { AdminDataTableActionButton, AdminDataTableActionContent } from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
@@ -167,8 +167,7 @@ const RoleManagementPage = () => {
                           tone="primary"
                           size="compact"
                         >
-                          <Edit2 className="h-3.5 w-3.5" />
-                          Edit
+                          <AdminDataTableActionContent action="edit" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                       <HasPermission action="POST" path="/api/v1/roles/mapping">
@@ -177,8 +176,7 @@ const RoleManagementPage = () => {
                           tone="danger"
                           size="compact"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
+                          <AdminDataTableActionContent action="delete" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                     </div>

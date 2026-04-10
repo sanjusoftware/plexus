@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, List, CheckCircle2 } from 'lucide-react';
+import { Plus, Loader2, List } from 'lucide-react';
 import {
   AdminDataTable,
   AdminDataTableActionButton,
+  AdminDataTableActionContent,
   AdminDataTableActionCell,
   AdminDataTableActionsHeader,
   AdminDataTableEmptyRow,
-  AdminDataTableRow
+  AdminDataTableRow,
+  AuditTimestampCell
 } from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
-import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface ProductType {
   id: number;
@@ -147,18 +148,13 @@ const ProductTypesPage = () => {
                         {type.status}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap text-xs text-gray-600" title={type.createdAt || '--'}>
-                      {formatAuditTimestamp(type.createdAt)}
-                    </td>
-                    <td className="whitespace-nowrap text-xs text-gray-600" title={type.updatedAt || '--'}>
-                      {formatAuditTimestamp(type.updatedAt)}
-                    </td>
+                    <AuditTimestampCell value={type.createdAt} />
+                    <AuditTimestampCell value={type.updatedAt} />
                     <AdminDataTableActionCell>
                       {type.status === 'DRAFT' && (
                         <HasPermission action="POST" path="/api/v1/product-types/*/activate">
                           <AdminDataTableActionButton onClick={() => handleAction(type.id, 'activate')} tone="success" size="compact" title="Activate" aria-label={`Activate ${type.name}`}>
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Activate
+                            <AdminDataTableActionContent action="activate" />
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
@@ -166,14 +162,12 @@ const ProductTypesPage = () => {
                         <>
                           <HasPermission action="PUT" path="/api/v1/product-types/*">
                             <AdminDataTableActionButton onClick={() => navigate(`/product-types/edit/${type.id}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${type.name}`}>
-                              <Edit2 className="h-3.5 w-3.5" />
-                              Edit
+                              <AdminDataTableActionContent action="edit" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/product-types/*">
                             <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${type.name}`}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
+                              <AdminDataTableActionContent action="delete" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                         </>
@@ -182,14 +176,12 @@ const ProductTypesPage = () => {
                         <>
                           <HasPermission action="PUT" path="/api/v1/product-types/*">
                             <AdminDataTableActionButton disabled tone="neutral" size="compact" title="Active product types cannot be edited. Archive and create a new draft type instead." aria-label={`Edit ${type.name} (Disabled)`}>
-                              <Edit2 className="h-3.5 w-3.5" />
-                              Edit
+                              <AdminDataTableActionContent action="edit" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="POST" path="/api/v1/product-types/*/archive">
                             <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" size="compact" title="Archive" aria-label={`Archive ${type.name}`}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Archive
+                              <AdminDataTableActionContent action="archive" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                         </>

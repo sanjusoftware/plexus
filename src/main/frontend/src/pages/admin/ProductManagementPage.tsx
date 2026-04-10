@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info, CheckCircle2, ChevronDown, ChevronUp, Play, RefreshCw, Zap, Copy } from 'lucide-react';
+import { Plus, Loader2, Package, ShieldCheck, Tag, Info, ChevronDown, ChevronUp, Play, RefreshCw, Zap } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
-import { AdminDataTableActionButton } from '../../components/AdminDataTable';
+import { AdminDataTableActionButton, AdminDataTableActionContent } from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
@@ -188,13 +188,13 @@ const ProductManagementPage = () => {
         <div className="flex flex-col space-y-4">
           {products.length > 0 && (
             <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-100/50 rounded-t-xl border-x border-t border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              <div className="col-span-3">Product Name & Code</div>
-              <div className="col-span-2">Classification</div>
+              <div className="col-span-3">Product Details</div>
+              <div className="col-span-2">Product Type</div>
               <div className="col-span-1">Category</div>
               <div className="col-span-1 text-center">Status</div>
               <div className="col-span-1">Created At</div>
               <div className="col-span-1">Updated At</div>
-              <div className="col-span-1 text-center">Live Pricing</div>
+              <div className="col-span-1 text-center">Expand</div>
               <div className="col-span-2 text-right">Actions</div>
             </div>
           )}
@@ -228,7 +228,7 @@ const ProductManagementPage = () => {
 
                   {/* Classification */}
                   <div className="lg:col-span-2">
-                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Classification</div>
+                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Product Type</div>
                     {prod.productType ? (
                       <div>
                         <div className="text-[11px] font-bold text-gray-700">{prod.productType.name}</div>
@@ -283,8 +283,7 @@ const ProductManagementPage = () => {
                           size="compact"
                           title="Activate Product"
                         >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Activate
+                          <AdminDataTableActionContent action="activate" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                     )}
@@ -296,8 +295,7 @@ const ProductManagementPage = () => {
                           size="compact"
                           title="Create Revision (v+1)"
                         >
-                          <Copy className="h-3.5 w-3.5" />
-                          Version
+                          <AdminDataTableActionContent action="version" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                     )}
@@ -310,8 +308,7 @@ const ProductManagementPage = () => {
                           disabled={prod.status !== 'DRAFT'}
                           title={prod.status === 'DRAFT' ? "Modify Product" : "Direct editing is not allowed for active products. Create a new version to make changes."}
                         >
-                          <Edit2 className="h-3.5 w-3.5" />
-                          Edit
+                          <AdminDataTableActionContent action="edit" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                     )}
@@ -322,8 +319,7 @@ const ProductManagementPage = () => {
                         size="compact"
                         title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {prod.status === 'ACTIVE' ? "Archive" : "Delete"}
+                        <AdminDataTableActionContent action={prod.status === 'ACTIVE' ? 'archive' : 'delete'} />
                       </AdminDataTableActionButton>
                     </HasPermission>
                   </div>

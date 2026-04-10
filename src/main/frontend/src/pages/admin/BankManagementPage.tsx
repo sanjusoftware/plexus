@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Building2, Loader2, Plus, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit,
+  Building2, Loader2, Plus, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit,
   Layers, AlertTriangle
 } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
@@ -10,10 +10,12 @@ import axios from 'axios';
 import {
   AdminDataTable,
   AdminDataTableActionButton,
+  AdminDataTableActionContent,
   AdminDataTableActionCell,
   AdminDataTableActionsHeader,
   AdminDataTableEmptyRow,
-  AdminDataTableRow
+  AdminDataTableRow,
+  AuditTimestampCell
 } from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import OnboardingSuccessModal from '../../components/OnboardingSuccessModal';
@@ -216,12 +218,8 @@ const BankManagementPage = () => {
                         {item.status}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap text-xs text-gray-600" title={item.createdAt || '--'}>
-                      {formatAuditTimestamp(item.createdAt)}
-                    </td>
-                    <td className="whitespace-nowrap text-xs text-gray-600" title={item.updatedAt || '--'}>
-                      {formatAuditTimestamp(item.updatedAt)}
-                    </td>
+                    <AuditTimestampCell value={item.createdAt} />
+                    <AuditTimestampCell value={item.updatedAt} />
                     <AdminDataTableActionCell>
                       <HasPermission action="PUT" path="/api/v1/banks/*">
                         <AdminDataTableActionButton
@@ -230,7 +228,7 @@ const BankManagementPage = () => {
                           size="compact"
                           title="Edit"
                         >
-                          <Edit className="h-3.5 w-3.5" /> Edit
+                          <AdminDataTableActionContent action="edit" />
                         </AdminDataTableActionButton>
                       </HasPermission>
                       {item.status === 'DRAFT' && (
@@ -242,7 +240,7 @@ const BankManagementPage = () => {
                               size="compact"
                               title="Approve"
                             >
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                              <AdminDataTableActionContent action="approve" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="POST" path="/api/v1/banks/*/reject">
@@ -252,7 +250,7 @@ const BankManagementPage = () => {
                               size="compact"
                               title="Reject"
                             >
-                              <XCircle className="h-3.5 w-3.5" /> Reject
+                              <AdminDataTableActionContent action="reject" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                         </>
@@ -265,7 +263,7 @@ const BankManagementPage = () => {
                             size="compact"
                             title="Deactivate"
                           >
-                            <Clock className="h-3.5 w-3.5" /> Deactivate
+                            <AdminDataTableActionContent action="deactivate" />
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
@@ -277,7 +275,7 @@ const BankManagementPage = () => {
                             size="compact"
                             title="Re-activate"
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Re-activate
+                            <AdminDataTableActionContent action="reactivate" />
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
@@ -334,12 +332,8 @@ const BankManagementPage = () => {
                           {myBank.status}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap text-xs text-gray-600" title={myBank.createdAt || '--'}>
-                        {formatAuditTimestamp(myBank.createdAt)}
-                      </td>
-                      <td className="whitespace-nowrap text-xs text-gray-600" title={myBank.updatedAt || '--'}>
-                        {formatAuditTimestamp(myBank.updatedAt)}
-                      </td>
+                       <AuditTimestampCell value={myBank.createdAt} />
+                       <AuditTimestampCell value={myBank.updatedAt} />
                       <AdminDataTableActionCell>
                         <HasPermission action="PUT" path="/api/v1/banks">
                           <AdminDataTableActionButton
@@ -348,7 +342,7 @@ const BankManagementPage = () => {
                             size="compact"
                             title="Edit My Bank Settings"
                           >
-                            <Edit className="h-3.5 w-3.5" /> Edit
+                            <AdminDataTableActionContent action="edit" />
                           </AdminDataTableActionButton>
                         </HasPermission>
                       </AdminDataTableActionCell>
