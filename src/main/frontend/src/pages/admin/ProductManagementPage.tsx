@@ -3,14 +3,22 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Loader2, Package, ShieldCheck, Tag, Info, ChevronDown, ChevronUp, Play, RefreshCw, Zap } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
-import { AdminDataTableActionButton, AdminDataTableActionContent } from '../../components/AdminDataTable';
+import {
+  AdminDataTable,
+  AdminDataTableActionButton,
+  AdminDataTableActionContent,
+  AdminDataTableActionCell,
+  AdminDataTableActionsHeader,
+  AdminDataTableEmptyRow,
+  AdminDataTableRow,
+  AuditTimestampCell
+} from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { PricingService } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
-import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -185,147 +193,136 @@ const ProductManagementPage = () => {
       {loading ? (
         <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <div className="flex flex-col space-y-4">
-          {products.length > 0 && (
-            <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-100/50 rounded-t-xl border-x border-t border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              <div className="col-span-3">Product Details</div>
-              <div className="col-span-2">Product Type</div>
-              <div className="col-span-1">Category</div>
-              <div className="col-span-1 text-center">Status</div>
-              <div className="col-span-1">Created At</div>
-              <div className="col-span-1">Updated At</div>
-              <div className="col-span-1 text-center">Expand</div>
-              <div className="col-span-2 text-right">Actions</div>
-            </div>
-          )}
-
-          {products.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 bg-white border-2 border-dashed rounded-xl font-bold uppercase tracking-widest text-xs">No active products found. Get started by clicking "Create New Product".</div>
-          ) : (
-            products.map((prod) => (
-              <div key={prod.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition duration-300 group">
-                <div
-                  className="p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-center border-b border-gray-50 bg-gray-50/20 group-hover:bg-blue-50/5 transition duration-300 cursor-pointer"
-                  onClick={() => toggleExpand(prod.id)}
-                >
-                  {/* Product Info */}
-                  <div className="lg:col-span-3 flex items-center space-x-3">
-                    <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:bg-blue-600 group-hover:border-blue-500 transition duration-300 flex-shrink-0">
-                      <Package className="w-4 h-4 text-blue-600 group-hover:text-white transition duration-300" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center space-x-1.5">
-                        <h3 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-900 transition">{prod.name}</h3>
-                        {expandedIds.has(prod.id) ? (
-                          <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        )}
+        <AdminDataTable aria-label="Product management table" containerClassName="overflow-x-auto" className="min-w-[1200px]">
+          <thead>
+            <tr>
+              <th>Product Details</th>
+              <th>Product Type</th>
+              <th>Category</th>
+              <th className="text-center">Status</th>
+              <th>Created At</th>
+              <th>Updated At</th>
+              <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
+            </tr>
+          </thead>
+          <tbody>
+            {products.length === 0 ? (
+              <AdminDataTableEmptyRow colSpan={7}>No active products found. Get started by clicking "Create New Product".</AdminDataTableEmptyRow>
+            ) : (
+              products.map((prod) => (
+                <React.Fragment key={prod.id}>
+                  <AdminDataTableRow
+                    onClick={() => toggleExpand(prod.id)}
+                    interactive
+                    className="group"
+                  >
+                    {/* Product Info */}
+                    <td className="max-w-[300px]">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:bg-blue-600 group-hover:border-blue-500 transition duration-300 flex-shrink-0">
+                          <Package className="w-4 h-4 text-blue-600 group-hover:text-white transition duration-300" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center space-x-1.5">
+                            <h3 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-900 transition leading-tight">{prod.name}</h3>
+                            {expandedIds.has(prod.id) ? (
+                              <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            )}
+                          </div>
+                          <div className="text-[9px] font-mono font-bold text-blue-600 uppercase tracking-tight truncate">{prod.code}</div>
+                        </div>
                       </div>
-                      <div className="text-[9px] font-mono font-bold text-blue-600 uppercase tracking-tight truncate">{prod.code}</div>
-                    </div>
-                  </div>
+                    </td>
 
-                  {/* Classification */}
-                  <div className="lg:col-span-2">
-                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Product Type</div>
-                    {prod.productType ? (
-                      <div>
-                        <div className="text-[11px] font-bold text-gray-700">{prod.productType.name}</div>
-                        <div className="text-[9px] font-mono text-gray-400">{prod.productType.code}</div>
+                    {/* Classification */}
+                    <td className="max-w-[200px]">
+                      {prod.productType ? (
+                        <div className="truncate">
+                          <div className="text-[11px] font-bold text-gray-700 leading-tight truncate" title={prod.productType.name}>{prod.productType.name}</div>
+                          <div className="text-[9px] font-mono text-gray-400 truncate" title={prod.productType.code}>{prod.productType.code}</div>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-gray-300 italic uppercase">None</div>
+                      )}
+                    </td>
+
+                    {/* Category */}
+                    <td>
+                      <div className="text-[11px] font-bold text-gray-600 uppercase truncate">
+                        {prod.category}
                       </div>
-                    ) : (
-                      <div className="text-[10px] text-gray-300 italic">None</div>
-                    )}
-                  </div>
+                    </td>
 
-                  {/* Category */}
-                  <div className="lg:col-span-1">
-                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Category</div>
-                    <div className="text-[11px] font-bold text-gray-600 uppercase">Category: {prod.category}</div>
-                  </div>
+                    {/* Status */}
+                    <td className="text-center">
+                      <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold uppercase tracking-tight ${prod.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                        {prod.status}
+                      </span>
+                    </td>
 
-                  {/* Status */}
-                  <div className="lg:col-span-1 flex lg:justify-center">
-                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mr-2">Status</div>
-                    <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold uppercase tracking-tight ${prod.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                      {prod.status}
-                    </span>
-                  </div>
+                    {/* Created At */}
+                    <AuditTimestampCell value={prod.createdAt} />
 
-                  {/* Created At */}
-                  <div className="lg:col-span-1">
-                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Created At</div>
-                    <div className="text-[11px] font-bold text-gray-600" title={prod.createdAt || '--'}>{formatAuditTimestamp(prod.createdAt)}</div>
-                  </div>
+                    {/* Updated At */}
+                    <AuditTimestampCell value={prod.updatedAt} />
 
-                  {/* Updated At */}
-                  <div className="lg:col-span-1">
-                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Updated At</div>
-                    <div className="text-[11px] font-bold text-gray-600" title={prod.updatedAt || '--'}>{formatAuditTimestamp(prod.updatedAt)}</div>
-                  </div>
-
-                  {/* Live Pricing (Placeholder for spacing) */}
-                  <div className="lg:col-span-1 flex flex-col items-center justify-center border-l border-gray-100/50" onClick={(e) => e.stopPropagation()}>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">
-                       <Zap className="w-3.5 h-3.5 mr-1 text-amber-500" />
-                       Click to Expand
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="lg:col-span-2 flex justify-end space-x-1" onClick={(e) => e.stopPropagation()}>
-                    {prod.status === 'DRAFT' && (
-                      <HasPermission action="POST" path="/api/v1/products/*/activate">
+                    {/* Actions */}
+                    <AdminDataTableActionCell onClick={(e) => e.stopPropagation()}>
+                      {prod.status === 'DRAFT' && (
+                        <HasPermission action="POST" path="/api/v1/products/*/activate">
+                          <AdminDataTableActionButton
+                            onClick={(e) => { e.stopPropagation(); handleStatusAction(prod.id, 'activate'); }}
+                            tone="success"
+                            size="compact"
+                            title="Activate Product"
+                          >
+                            <AdminDataTableActionContent action="activate" />
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                      )}
+                      {prod.status === 'ACTIVE' && (
+                        <HasPermission action="POST" path="/api/v1/products/*/create-new-version">
+                          <AdminDataTableActionButton
+                            onClick={(e) => { e.stopPropagation(); handleVersion(prod.id); }}
+                            tone="success"
+                            size="compact"
+                            title="Create Revision (v+1)"
+                          >
+                            <AdminDataTableActionContent action="version" />
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                      )}
+                      {(prod.status === 'DRAFT' || prod.status === 'ACTIVE') && (
+                        <HasPermission action="PATCH" path="/api/v1/products/*">
+                          <AdminDataTableActionButton
+                            onClick={(e) => { e.stopPropagation(); prod.status === 'DRAFT' && navigate(`/products/edit/${prod.id}`); }}
+                            tone="primary"
+                            size="compact"
+                            disabled={prod.status !== 'DRAFT'}
+                            title={prod.status === 'DRAFT' ? "Modify Product" : "Direct editing is not allowed for active products. Create a new version to make changes."}
+                          >
+                            <AdminDataTableActionContent action="edit" />
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                      )}
+                      <HasPermission action="DELETE" path="/api/v1/products/*">
                         <AdminDataTableActionButton
-                          onClick={() => handleStatusAction(prod.id, 'activate')}
-                          tone="success"
+                          onClick={(e) => { e.stopPropagation(); prod.status === 'ACTIVE' ? setArchiveModal({ isOpen: true, productId: prod.id }) : handleDelete(prod.id); }}
+                          tone="danger"
                           size="compact"
-                          title="Activate Product"
+                          title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
                         >
-                          <AdminDataTableActionContent action="activate" />
+                          <AdminDataTableActionContent action={prod.status === 'ACTIVE' ? 'archive' : 'delete'} />
                         </AdminDataTableActionButton>
                       </HasPermission>
-                    )}
-                    {prod.status === 'ACTIVE' && (
-                      <HasPermission action="POST" path="/api/v1/products/*/create-new-version">
-                        <AdminDataTableActionButton
-                          onClick={() => handleVersion(prod.id)}
-                          tone="success"
-                          size="compact"
-                          title="Create Revision (v+1)"
-                        >
-                          <AdminDataTableActionContent action="version" />
-                        </AdminDataTableActionButton>
-                      </HasPermission>
-                    )}
-                    {(prod.status === 'DRAFT' || prod.status === 'ACTIVE') && (
-                      <HasPermission action="PATCH" path="/api/v1/products/*">
-                        <AdminDataTableActionButton
-                          onClick={() => prod.status === 'DRAFT' && navigate(`/products/edit/${prod.id}`)}
-                          tone="primary"
-                          size="compact"
-                          disabled={prod.status !== 'DRAFT'}
-                          title={prod.status === 'DRAFT' ? "Modify Product" : "Direct editing is not allowed for active products. Create a new version to make changes."}
-                        >
-                          <AdminDataTableActionContent action="edit" />
-                        </AdminDataTableActionButton>
-                      </HasPermission>
-                    )}
-                    <HasPermission action="DELETE" path="/api/v1/products/*">
-                      <AdminDataTableActionButton
-                        onClick={() => prod.status === 'ACTIVE' ? setArchiveModal({ isOpen: true, productId: prod.id }) : handleDelete(prod.id)}
-                        tone="danger"
-                        size="compact"
-                        title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
-                      >
-                        <AdminDataTableActionContent action={prod.status === 'ACTIVE' ? 'archive' : 'delete'} />
-                      </AdminDataTableActionButton>
-                    </HasPermission>
-                  </div>
-                </div>
-                {expandedIds.has(prod.id) && (
-                  <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white">
+                    </AdminDataTableActionCell>
+                  </AdminDataTableRow>
+                  {expandedIds.has(prod.id) && (
+                    <tr className="bg-white">
+                      <td colSpan={7} className="p-0 border-b border-gray-100">
+                        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Inline Pricing Simulation Tool */}
                     <div className="lg:col-span-2 bg-blue-50/50 rounded-2xl p-6 border border-blue-100 mb-2">
                        <div className="flex items-center justify-between mb-4">
@@ -428,12 +425,15 @@ const ProductManagementPage = () => {
                         {(!prod.pricing || prod.pricing.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No pricing rules bound to this product.</p>}
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))
+            )}
+          </tbody>
+        </AdminDataTable>
       )}
 
       <ConfirmationModal
