@@ -39,6 +39,7 @@ interface Product {
   id: number;
   code: string;
   name: string;
+  version?: number;
   productType?: {
     code: string;
     name: string;
@@ -223,8 +224,11 @@ const ProductManagementPage = () => {
                           <Package className="w-4 h-4 text-blue-600 group-hover:text-white transition duration-300" />
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center space-x-1.5">
-                            <h3 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-900 transition leading-tight">{prod.name}</h3>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <h3 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-900 transition leading-tight flex-1" title={prod.name}>{prod.name}</h3>
+                            <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter whitespace-nowrap">
+                              v{prod.version ?? 1}
+                            </span>
                             {expandedIds.has(prod.id) ? (
                               <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0" />
                             ) : (

@@ -260,7 +260,6 @@ const PricingComponentsPage = () => {
             <thead>
               <tr>
                 <th>Aggregate Component</th>
-                <th>Version</th>
                 <th>Type</th>
                 <th>Status</th>
                 <th>Segments</th>
@@ -274,8 +273,11 @@ const PricingComponentsPage = () => {
                 <React.Fragment key={comp.id}>
                   <AdminDataTableRow interactive className="group" onClick={() => toggleExpand(comp.id)}>
                     <td className="max-w-[260px]">
-                      <div className="flex items-center space-x-2 min-w-0">
-                        <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={comp.name}>{comp.name}</div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="text-sm font-bold text-gray-900 leading-tight truncate flex-1" title={comp.name}>{comp.name}</div>
+                        <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter whitespace-nowrap">
+                          v{comp.version ?? 1}
+                        </span>
                         {expandedRows.has(comp.id) ? (
                           <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         ) : (
@@ -283,9 +285,6 @@ const PricingComponentsPage = () => {
                         )}
                       </div>
                       <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={comp.code}>{comp.code}</div>
-                    </td>
-                    <td className="whitespace-nowrap">
-                      <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">v{comp.version ?? 1}</span>
                     </td>
                     <td className="whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${comp.type === 'FEE' ? 'bg-purple-50 text-purple-700 border border-purple-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
@@ -364,7 +363,7 @@ const PricingComponentsPage = () => {
                   </AdminDataTableRow>
                   {expandedRows.has(comp.id) && (
                     <tr className="bg-gray-50/30">
-                      <td colSpan={8} className="border-b border-gray-100 px-8 py-3 bg-gray-50/50">
+                      <td colSpan={7} className="border-b border-gray-100 px-8 py-3 bg-gray-50/50">
                         <div className="text-xs font-medium text-gray-600 mb-4 italic leading-relaxed border-l-2 border-gray-200 pl-3">{comp.description}</div>
                         <div className="space-y-3">
                           {comp.pricingTiers?.map((tier, idx) => (
@@ -420,7 +419,7 @@ const PricingComponentsPage = () => {
                 </React.Fragment>
               ))}
               {components.length === 0 && (
-                <AdminDataTableEmptyRow colSpan={8}>No pricing components found.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={7}>No pricing components found.</AdminDataTableEmptyRow>
               )}
             </tbody>
         </AdminDataTable>
