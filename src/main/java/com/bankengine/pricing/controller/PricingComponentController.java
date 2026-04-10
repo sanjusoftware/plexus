@@ -242,6 +242,16 @@ public class PricingComponentController {
         return ResponseEntity.ok(pricingComponentService.activateComponent(id));
     }
 
+    @Operation(summary = "Archive a pricing component",
+            description = "Transitions an ACTIVE component to ARCHIVED status. This is a terminal state.")
+    @ApiResponse(responseCode = "200", description = "Component successfully archived.")
+    @ApiResponse(responseCode = "400", description = "Archiving failed (e.g., status is not ACTIVE).")
+    @PostMapping("/{id}/archive")
+    @PreAuthorize("hasAuthority('pricing:component:activate')")
+    public ResponseEntity<PricingComponentResponse> archiveComponent(@PathVariable Long id) {
+        return ResponseEntity.ok(pricingComponentService.archiveComponent(id));
+    }
+
     @Operation(summary = "Delete a pricing component (Dependency Checked)",
             description = "Deletes a pricing component. Fails with 409 Conflict if linked to products or if it contains active tiers.")
     @ApiResponse(responseCode = "204", description = "Component successfully deleted.")

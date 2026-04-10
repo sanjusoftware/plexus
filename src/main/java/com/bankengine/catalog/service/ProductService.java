@@ -202,6 +202,18 @@ public class ProductService extends BaseService {
         Product product = getProductEntityById(id);
         validateDraft(product);
 
+        // Archive previous versions if this is a revision (not version 1)
+        if (product.getVersion() > 1) {
+            productRepository.findByBankIdAndCodeAndVersion(
+                    product.getBankId(), product.getCode(), product.getVersion() - 1)
+                    .ifPresent(old -> {
+                        if (old.isActive()) {
+                            old.setStatus(VersionableEntity.EntityStatus.ARCHIVED);
+                            productRepository.save(old);
+                        }
+                    });
+        }
+
         product.setStatus(VersionableEntity.EntityStatus.ACTIVE);
         if (activationDate != null) {
             product.setActivationDate(activationDate);
