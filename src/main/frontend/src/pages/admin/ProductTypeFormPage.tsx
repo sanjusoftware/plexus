@@ -27,11 +27,17 @@ const ProductTypeFormPage = () => {
           const response = await axios.get('/api/v1/product-types', { signal });
           const type = response.data.find((t: any) => t.id.toString() === id);
           if (type) {
+            if (type.status !== 'DRAFT') {
+              setToast({ message: 'Only DRAFT product types can be updated.', type: 'error' });
+              navigate('/product-types');
+              return;
+            }
             setFormData({ name: type.name, code: type.code });
             setEntityName(type.name);
             setIsCodeEdited(true);
           } else {
             setToast({ message: 'Product type not found.', type: 'error' });
+            navigate('/product-types');
           }
         } catch (err: any) {
           if (axios.isCancel(err)) return;
@@ -44,7 +50,7 @@ const ProductTypeFormPage = () => {
       };
       fetchType();
     }
-  }, [id, isEditing, setEntityName, setToast, signal]);
+  }, [id, isEditing, navigate, setEntityName, setToast, signal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

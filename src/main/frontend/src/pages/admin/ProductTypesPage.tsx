@@ -162,7 +162,7 @@ const ProductTypesPage = () => {
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
-                      {type.status !== 'ARCHIVED' && (
+                      {type.status === 'DRAFT' && (
                         <>
                           <HasPermission action="PUT" path="/api/v1/product-types/*">
                             <AdminDataTableActionButton onClick={() => navigate(`/product-types/edit/${type.id}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${type.name}`}>
@@ -171,9 +171,25 @@ const ProductTypesPage = () => {
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/product-types/*">
-                            <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" size="compact" title={type.status === 'DRAFT' ? "Delete" : "Archive"} aria-label={`${type.status === 'DRAFT' ? 'Delete' : 'Archive'} ${type.name}`}>
+                            <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${type.name}`}>
                               <Trash2 className="h-3.5 w-3.5" />
-                              {type.status === 'DRAFT' ? "Delete" : "Archive"}
+                              Delete
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                        </>
+                      )}
+                      {type.status === 'ACTIVE' && (
+                        <>
+                          <HasPermission action="PUT" path="/api/v1/product-types/*">
+                            <AdminDataTableActionButton disabled tone="neutral" size="compact" title="Active product types cannot be edited. Archive and create a new draft type instead." aria-label={`Edit ${type.name} (Disabled)`}>
+                              <Edit2 className="h-3.5 w-3.5" />
+                              Edit
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                          <HasPermission action="POST" path="/api/v1/product-types/*/archive">
+                            <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" size="compact" title="Archive" aria-label={`Archive ${type.name}`}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Archive
                             </AdminDataTableActionButton>
                           </HasPermission>
                         </>

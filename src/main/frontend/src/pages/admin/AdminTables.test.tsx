@@ -114,5 +114,29 @@ describe('Admin table pages', () => {
     expect(within(table).getByTitle('Edit')).toHaveClass('admin-table__action-btn', 'admin-table__action-btn--primary');
     expect(within(table).getByTitle('Delete')).toHaveClass('admin-table__action-btn', 'admin-table__action-btn--danger');
   });
+
+  test('product types disables edit for ACTIVE status and keeps archive action', async () => {
+    mockAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          id: 100,
+          name: 'Auto Loan',
+          code: 'AUTO_LOAN',
+          status: 'ACTIVE',
+          createdAt: '2026-04-10T08:30:00Z',
+          updatedAt: '2026-04-10T09:45:00Z'
+        }
+      ]
+    });
+
+    render(<ProductTypesPage />);
+
+    const table = await screen.findByRole('table', { name: /product types table/i });
+    const editButton = within(table).getByTitle('Active product types cannot be edited. Archive and create a new draft type instead.');
+    const archiveButton = within(table).getByTitle('Archive');
+
+    expect(editButton).toBeDisabled();
+    expect(archiveButton).toHaveClass('admin-table__action-btn', 'admin-table__action-btn--danger');
+  });
 });
 
