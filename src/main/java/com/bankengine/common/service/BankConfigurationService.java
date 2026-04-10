@@ -367,6 +367,8 @@ public class BankConfigurationService extends BaseService {
                         .collect(Collectors.toList()))
                 .currencyCode(config.getCurrencyCode())
                 .status(config.getStatus().name())
+                .createdAt(config.getCreatedAt())
+                .updatedAt(config.getUpdatedAt())
                 .adminName(config.getAdminName())
                 .adminEmail(config.getAdminEmail())
                 .build();

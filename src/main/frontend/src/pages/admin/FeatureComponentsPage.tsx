@@ -14,6 +14,7 @@ import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/Ad
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface FeatureComponent {
   id: number;
@@ -22,6 +23,8 @@ interface FeatureComponent {
   dataType: string;
   status: string;
   version: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const FeatureComponentsPage = () => {
@@ -104,6 +107,8 @@ const FeatureComponentsPage = () => {
                 <th>Data Type</th>
                 <th>Status</th>
                 <th>Version</th>
+                <th>Created At</th>
+                <th>Updated At</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
@@ -126,6 +131,12 @@ const FeatureComponentsPage = () => {
                   </td>
                   <td className="whitespace-nowrap font-bold text-gray-500">
                     v{feat.version}
+                  </td>
+                  <td className="whitespace-nowrap text-xs text-gray-600" title={feat.createdAt || '--'}>
+                    {formatAuditTimestamp(feat.createdAt)}
+                  </td>
+                  <td className="whitespace-nowrap text-xs text-gray-600" title={feat.updatedAt || '--'}>
+                    {formatAuditTimestamp(feat.updatedAt)}
                   </td>
                   <AdminDataTableActionCell>
                     {feat.status === 'DRAFT' && (
@@ -168,7 +179,7 @@ const FeatureComponentsPage = () => {
                 </AdminDataTableRow>
               ))}
               {features.length === 0 && (
-                <AdminDataTableEmptyRow colSpan={5}>No feature components found.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={7}>No feature components found.</AdminDataTableEmptyRow>
               )}
             </tbody>
         </AdminDataTable>

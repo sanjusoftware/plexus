@@ -14,12 +14,15 @@ import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/Ad
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface PricingMetadata {
   id: number;
   attributeKey: string;
   displayName: string;
   dataType: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const PricingMetadataPage = () => {
@@ -95,12 +98,14 @@ const PricingMetadataPage = () => {
               <tr>
                 <th>Attribute Details</th>
                 <th>Type</th>
+                <th>Created At</th>
+                <th>Updated At</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
             <tbody>
               {metadata.length === 0 ? (
-                <AdminDataTableEmptyRow colSpan={3}>No metadata registered. Rules engine will not recognize dynamic inputs.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={5}>No metadata registered. Rules engine will not recognize dynamic inputs.</AdminDataTableEmptyRow>
               ) : (
                 metadata.map((meta) => (
                   <AdminDataTableRow key={meta.id}>
@@ -110,6 +115,12 @@ const PricingMetadataPage = () => {
                     </td>
                     <td className="whitespace-nowrap">
                       <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-600" title={meta.createdAt || '--'}>
+                      {formatAuditTimestamp(meta.createdAt)}
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-600" title={meta.updatedAt || '--'}>
+                      {formatAuditTimestamp(meta.updatedAt)}
                     </td>
                     <AdminDataTableActionCell>
                       <HasPermission action="PUT" path="/api/v1/pricing-metadata/*">

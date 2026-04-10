@@ -14,6 +14,7 @@ import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/Ad
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface TierCondition {
   attributeName: string;
@@ -49,6 +50,8 @@ interface PricingComponent {
   description: string;
   status: string;
   pricingTiers: PricingTier[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const PricingComponentsPage = () => {
@@ -259,6 +262,8 @@ const PricingComponentsPage = () => {
                 <th>Type</th>
                 <th>Status</th>
                 <th>Segments</th>
+                <th>Created At</th>
+                <th>Updated At</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
@@ -291,6 +296,12 @@ const PricingComponentsPage = () => {
                     </td>
                     <td className="whitespace-nowrap font-bold text-gray-500">
                       {comp.pricingTiers?.length || 0} Tiers
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-600" title={comp.createdAt || '--'}>
+                      {formatAuditTimestamp(comp.createdAt)}
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-600" title={comp.updatedAt || '--'}>
+                      {formatAuditTimestamp(comp.updatedAt)}
                     </td>
                     <AdminDataTableActionCell>
                       {comp.status === 'DRAFT' && (
@@ -355,7 +366,7 @@ const PricingComponentsPage = () => {
                   </AdminDataTableRow>
                   {expandedRows.has(comp.id) && (
                     <tr className="bg-gray-50/30">
-                      <td colSpan={6} className="border-b border-gray-100 px-8 py-3 bg-gray-50/50">
+                      <td colSpan={8} className="border-b border-gray-100 px-8 py-3 bg-gray-50/50">
                         <div className="text-xs font-medium text-gray-600 mb-4 italic leading-relaxed border-l-2 border-gray-200 pl-3">{comp.description}</div>
                         <div className="space-y-3">
                           {comp.pricingTiers?.map((tier, idx) => (
@@ -411,7 +422,7 @@ const PricingComponentsPage = () => {
                 </React.Fragment>
               ))}
               {components.length === 0 && (
-                <AdminDataTableEmptyRow colSpan={6}>No pricing components found.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={8}>No pricing components found.</AdminDataTableEmptyRow>
               )}
             </tbody>
         </AdminDataTable>

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Building2, Loader2, Plus, ArrowRight, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit,
+  Building2, Loader2, Plus, CheckCircle2, XCircle, Clock, X, ShieldCheck, Info, Mail, Globe, DollarSign, Edit,
   Layers, AlertTriangle
 } from 'lucide-react';
 import { HasPermission } from '../../components/HasPermission';
@@ -20,6 +20,7 @@ import OnboardingSuccessModal from '../../components/OnboardingSuccessModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
+import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 const BankManagementPage = () => {
   const { user, loading: authLoading, setToast } = useAuth();
@@ -172,15 +173,17 @@ const BankManagementPage = () => {
               <th>Bank Information</th>
               <th>Issuer URL</th>
               <th>Status</th>
+              <th>Created At</th>
+              <th>Updated At</th>
               <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
             </tr>
           </thead>
           <tbody>
             {banks.length === 0 && !myBank ? (
-              <AdminDataTableEmptyRow colSpan={4}>No managed banks found.</AdminDataTableEmptyRow>
+              <AdminDataTableEmptyRow colSpan={6}>No managed banks found.</AdminDataTableEmptyRow>
             ) : (
               <>
-                {banks.map((item, idx) => (
+                {banks.map((item) => (
                   <AdminDataTableRow
                     key={item.bankId}
                     onClick={() => openBankDetails(item)}
@@ -212,6 +215,12 @@ const BankManagementPage = () => {
                       }`}>
                         {item.status}
                       </span>
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-600" title={item.createdAt || '--'}>
+                      {formatAuditTimestamp(item.createdAt)}
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-600" title={item.updatedAt || '--'}>
+                      {formatAuditTimestamp(item.updatedAt)}
                     </td>
                     <AdminDataTableActionCell>
                       <HasPermission action="PUT" path="/api/v1/banks/*">
@@ -272,14 +281,6 @@ const BankManagementPage = () => {
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
-                      <AdminDataTableActionButton
-                        onClick={(e) => { e.stopPropagation(); openBankDetails(item); }}
-                        tone="neutral"
-                        size="compact"
-                        title="View Details"
-                      >
-                        <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
-                      </AdminDataTableActionButton>
                     </AdminDataTableActionCell>
                   </AdminDataTableRow>
                 ))}
@@ -288,7 +289,7 @@ const BankManagementPage = () => {
                   <>
                     {banks.length > 0 && (
                       <tr className="bg-gray-50/30">
-                        <td colSpan={4} className="px-5 py-3">
+                        <td colSpan={6} className="px-5 py-3">
                           <div className="flex items-center gap-3">
                             <div className="h-px flex-1 bg-gray-200"></div>
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">My Bank Settings</span>
@@ -333,6 +334,12 @@ const BankManagementPage = () => {
                           {myBank.status}
                         </span>
                       </td>
+                      <td className="whitespace-nowrap text-xs text-gray-600" title={myBank.createdAt || '--'}>
+                        {formatAuditTimestamp(myBank.createdAt)}
+                      </td>
+                      <td className="whitespace-nowrap text-xs text-gray-600" title={myBank.updatedAt || '--'}>
+                        {formatAuditTimestamp(myBank.updatedAt)}
+                      </td>
                       <AdminDataTableActionCell>
                         <HasPermission action="PUT" path="/api/v1/banks">
                           <AdminDataTableActionButton
@@ -344,14 +351,6 @@ const BankManagementPage = () => {
                             <Edit className="h-3.5 w-3.5" /> Edit
                           </AdminDataTableActionButton>
                         </HasPermission>
-                        <AdminDataTableActionButton
-                          onClick={(e) => { e.stopPropagation(); openBankDetails(myBank); }}
-                          tone="neutral"
-                          size="compact"
-                          title="View Details"
-                        >
-                          <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
-                        </AdminDataTableActionButton>
                       </AdminDataTableActionCell>
                     </AdminDataTableRow>
                   </>
@@ -431,6 +430,20 @@ const BankManagementPage = () => {
                         {selectedBank.allowProductInMultipleBundles ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><Clock className="h-4 w-4 text-blue-600" /></div>
+                  <div>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Created At</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">{formatAuditTimestamp(selectedBank.createdAt)}</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="p-1.5 bg-blue-50 rounded-lg"><Clock className="h-4 w-4 text-blue-600" /></div>
+                  <div>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Updated At</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">{formatAuditTimestamp(selectedBank.updatedAt)}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3 col-span-2">

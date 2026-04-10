@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Schema(description = "DTO representing a Product Type")
 public class ProductTypeDto {
@@ -27,4 +29,12 @@ public class ProductTypeDto {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Schema(accessMode = Schema.AccessMode.READ_ONLY, description = "The status of the product type", example = "DRAFT")
     private String status;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY, description = "When the product type was created")
+    private LocalDateTime createdAt;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY, description = "When the product type was last updated")
+    private LocalDateTime updatedAt;
 }

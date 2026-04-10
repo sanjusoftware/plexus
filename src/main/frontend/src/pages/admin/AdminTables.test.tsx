@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import PricingMetadataPage from './PricingMetadataPage';
 import ProductTypesPage from './ProductTypesPage';
+import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 const mockNavigate = jest.fn();
 const mockSetToast = jest.fn();
@@ -58,7 +59,9 @@ describe('Admin table pages', () => {
           id: 1,
           displayName: 'Customer Segment',
           attributeKey: 'customer_segment',
-          dataType: 'STRING'
+          dataType: 'STRING',
+          createdAt: '2026-04-10T08:30:00Z',
+          updatedAt: '2026-04-10T09:45:00Z'
         }
       ]
     });
@@ -68,9 +71,11 @@ describe('Admin table pages', () => {
     const table = await screen.findByRole('table', { name: /pricing metadata table/i });
     const headers = within(table).getAllByRole('columnheader').map((header) => header.textContent);
 
-    expect(headers).toEqual(['Attribute Details', 'Type', 'Actions']);
+    expect(headers).toEqual(['Attribute Details', 'Type', 'Created At', 'Updated At', 'Actions']);
     expect(within(table).getByText('Customer Segment')).toBeInTheDocument();
     expect(within(table).getByText('customer_segment')).toBeInTheDocument();
+    expect(within(table).getByText(formatAuditTimestamp('2026-04-10T08:30:00Z'))).toBeInTheDocument();
+    expect(within(table).getByText(formatAuditTimestamp('2026-04-10T09:45:00Z'))).toBeInTheDocument();
     expect(within(table).getByText('Actions')).toHaveClass('admin-table__actions-header');
     expect(within(table).getByTitle('Edit')).toHaveClass('admin-table__action-btn', 'admin-table__action-btn--primary');
     expect(within(table).getByTitle('Delete')).toHaveClass('admin-table__action-btn', 'admin-table__action-btn--danger');
@@ -83,7 +88,9 @@ describe('Admin table pages', () => {
           id: 99,
           name: 'Savings Account',
           code: 'SAVINGS',
-          status: 'DRAFT'
+          status: 'DRAFT',
+          createdAt: '2026-04-10T08:30:00Z',
+          updatedAt: '2026-04-10T09:45:00Z'
         }
       ]
     });
@@ -93,9 +100,11 @@ describe('Admin table pages', () => {
     const table = await screen.findByRole('table', { name: /product types table/i });
     const headers = within(table).getAllByRole('columnheader').map((header) => header.textContent);
 
-    expect(headers).toEqual(['Type Details', 'Status', 'Actions']);
+    expect(headers).toEqual(['Type Details', 'Status', 'Created At', 'Updated At', 'Actions']);
     expect(within(table).getByText('Savings Account')).toBeInTheDocument();
     expect(within(table).getByText('SAVINGS')).toBeInTheDocument();
+    expect(within(table).getByText(formatAuditTimestamp('2026-04-10T08:30:00Z'))).toBeInTheDocument();
+    expect(within(table).getByText(formatAuditTimestamp('2026-04-10T09:45:00Z'))).toBeInTheDocument();
     expect(within(table).getByText('Actions')).toHaveClass('admin-table__actions-header');
     expect(within(table).getByTitle('Activate')).toHaveClass(
       'admin-table__action-btn',

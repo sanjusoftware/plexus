@@ -23,6 +23,12 @@ const PricingMetadataFormPage = () => {
   const dataTypes = ['STRING', 'DECIMAL', 'INTEGER', 'BOOLEAN', 'DATE'];
   const signal = useAbortSignal();
 
+  const normalizeAttributeKey = (value: string) => value
+    .toUpperCase()
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Z0-9_-]/g, '');
+
   useEffect(() => {
     if (isEditing) {
       const fetchMetadata = async () => {
@@ -107,7 +113,7 @@ const PricingMetadataFormPage = () => {
                 const name = e.target.value;
                 let key = formData.attributeKey;
                 if (!isEditing && !isKeyEdited) {
-                  key = name.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '');
+                  key = normalizeAttributeKey(name);
                 }
                 setFormData({ ...formData, displayName: name, attributeKey: key });
               }}
@@ -125,9 +131,9 @@ const PricingMetadataFormPage = () => {
               value={formData.attributeKey}
               onChange={(e) => {
                 setIsKeyEdited(true);
-                setFormData({ ...formData, attributeKey: e.target.value.toLowerCase().replace(/\s/g, '_').replace(/[^a-z0-9_-]/g, '') });
+                setFormData({ ...formData, attributeKey: normalizeAttributeKey(e.target.value) });
               }}
-              placeholder="e.g. current_balance"
+              placeholder="e.g. CURRENT_BALANCE"
             />
             {!isEditing && <p className="admin-help">Used by developers in rule definitions. Must be unique.</p>}
           </div>

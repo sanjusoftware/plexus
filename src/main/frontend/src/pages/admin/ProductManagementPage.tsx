@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { PricingService } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
+import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -41,6 +42,8 @@ interface Product {
   features: FeatureLink[];
   pricing: PricingLink[];
   fullDescription: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const ProductManagementPage = () => {
@@ -187,9 +190,11 @@ const ProductManagementPage = () => {
             <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-100/50 rounded-t-xl border-x border-t border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               <div className="col-span-3">Product Name & Code</div>
               <div className="col-span-2">Classification</div>
-              <div className="col-span-2">Category</div>
+              <div className="col-span-1">Category</div>
               <div className="col-span-1 text-center">Status</div>
-              <div className="col-span-2 text-center">Live Pricing</div>
+              <div className="col-span-1">Created At</div>
+              <div className="col-span-1">Updated At</div>
+              <div className="col-span-1 text-center">Live Pricing</div>
               <div className="col-span-2 text-right">Actions</div>
             </div>
           )}
@@ -235,7 +240,7 @@ const ProductManagementPage = () => {
                   </div>
 
                   {/* Category */}
-                  <div className="lg:col-span-2">
+                  <div className="lg:col-span-1">
                     <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Category</div>
                     <div className="text-[11px] font-bold text-gray-600 uppercase">Category: {prod.category}</div>
                   </div>
@@ -248,8 +253,20 @@ const ProductManagementPage = () => {
                     </span>
                   </div>
 
+                  {/* Created At */}
+                  <div className="lg:col-span-1">
+                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Created At</div>
+                    <div className="text-[11px] font-bold text-gray-600" title={prod.createdAt || '--'}>{formatAuditTimestamp(prod.createdAt)}</div>
+                  </div>
+
+                  {/* Updated At */}
+                  <div className="lg:col-span-1">
+                    <div className="text-[10px] lg:hidden font-bold text-gray-400 uppercase tracking-widest mb-1">Updated At</div>
+                    <div className="text-[11px] font-bold text-gray-600" title={prod.updatedAt || '--'}>{formatAuditTimestamp(prod.updatedAt)}</div>
+                  </div>
+
                   {/* Live Pricing (Placeholder for spacing) */}
-                  <div className="lg:col-span-2 flex flex-col items-center justify-center border-l border-gray-100/50" onClick={(e) => e.stopPropagation()}>
+                  <div className="lg:col-span-1 flex flex-col items-center justify-center border-l border-gray-100/50" onClick={(e) => e.stopPropagation()}>
                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">
                        <Zap className="w-3.5 h-3.5 mr-1 text-amber-500" />
                        Click to Expand

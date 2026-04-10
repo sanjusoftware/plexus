@@ -97,7 +97,9 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[?(@.code == 'CASA')].name").value("Current and Savings Account"))
-                .andExpect(jsonPath("$[?(@.code == 'CC')].name").value("Credit Card"));
+                .andExpect(jsonPath("$[?(@.code == 'CC')].name").value("Credit Card"))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$[0].updatedAt").exists());
     }
 
     @Test
@@ -133,7 +135,9 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is("Fixed Deposit")))
                 .andExpect(jsonPath("$.code", is("FD")))
                 .andExpect(jsonPath("$.status", is("DRAFT")))
-                .andExpect(jsonPath("$.id").isNumber());
+                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(jsonPath("$.updatedAt").exists());
     }
 
     @Test

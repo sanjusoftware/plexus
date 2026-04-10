@@ -89,7 +89,9 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.bankId").value("NEW_BANK"));
+                .andExpect(jsonPath("$.bankId").value("NEW_BANK"))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(jsonPath("$.updatedAt").exists());
 
         // System admin can see the bank configuration
         mockMvc.perform(get("/api/v1/banks/NEW_BANK"))
@@ -101,7 +103,9 @@ class BankConfigurationIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/v1/banks"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].bankId").value("NEW_BANK"));
+                .andExpect(jsonPath("$[0].bankId").value("NEW_BANK"))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$[0].updatedAt").exists());
     }
 
     @Test

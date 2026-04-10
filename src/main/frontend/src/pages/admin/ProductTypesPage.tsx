@@ -15,13 +15,17 @@ import { HasPermission } from '../../components/HasPermission';
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { formatAuditTimestamp } from '../../utils/auditTimestamp';
 
 interface ProductType {
   id: number;
   name: string;
   code: string;
   status: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
+
 
 const ProductTypesPage = () => {
   const navigate = useNavigate();
@@ -119,12 +123,14 @@ const ProductTypesPage = () => {
               <tr>
                 <th>Type Details</th>
                 <th>Status</th>
+                <th>Created At</th>
+                <th>Updated At</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
             <tbody>
               {productTypes.length === 0 ? (
-                <AdminDataTableEmptyRow colSpan={3}>No product types found. Get started by creating your first one.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={5}>No product types found. Get started by creating your first one.</AdminDataTableEmptyRow>
               ) : (
                 productTypes.map((type) => (
                   <AdminDataTableRow key={type.id}>
@@ -140,6 +146,12 @@ const ProductTypesPage = () => {
                       }`}>
                         {type.status}
                       </span>
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-600" title={type.createdAt || '--'}>
+                      {formatAuditTimestamp(type.createdAt)}
+                    </td>
+                    <td className="whitespace-nowrap text-xs text-gray-600" title={type.updatedAt || '--'}>
+                      {formatAuditTimestamp(type.updatedAt)}
                     </td>
                     <AdminDataTableActionCell>
                       {type.status === 'DRAFT' && (
