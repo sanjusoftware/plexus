@@ -18,7 +18,7 @@ jest.mock('axios', () => ({
     get: (...args: any[]) => mockAxios.get(...args),
     post: (...args: any[]) => mockAxios.post(...args),
     delete: (...args: any[]) => mockAxios.delete(...args),
-    isCancel: (...args: any[]) => mockAxios.isCancel(...args),
+    isCancel: (val: any) => mockAxios.isCancel(val),
     interceptors: {
       request: { use: jest.fn(), eject: jest.fn() },
       response: { use: jest.fn(), eject: jest.fn() }

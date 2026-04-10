@@ -129,25 +129,41 @@ const FeatureComponentsPage = () => {
                   </td>
                   <AdminDataTableActionCell>
                     {feat.status === 'DRAFT' && (
-                      <HasPermission action="POST" path="/api/v1/features/*/activate">
-                        <AdminDataTableActionButton onClick={() => handleActivate(feat.id)} tone="success" size="compact" title="Activate" aria-label={`Activate ${feat.name}`}>
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Activate
+                      <>
+                        <HasPermission action="POST" path="/api/v1/features/*/activate">
+                          <AdminDataTableActionButton onClick={() => handleActivate(feat.id)} tone="success" size="compact" title="Activate" aria-label={`Activate ${feat.name}`}>
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Activate
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                        <HasPermission action="PUT" path="/api/v1/features/*">
+                          <AdminDataTableActionButton onClick={() => navigate(`/features/edit/${feat.id}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${feat.name}`}>
+                            <Edit2 className="h-3.5 w-3.5" />
+                            Edit
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                        <HasPermission action="DELETE" path="/api/v1/features/*">
+                          <AdminDataTableActionButton onClick={() => handleDelete(feat.id)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${feat.name}`}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                      </>
+                    )}
+                    {feat.status === 'ACTIVE' && (
+                      <HasPermission action="PUT" path="/api/v1/features/*">
+                        <AdminDataTableActionButton
+                          tone="primary"
+                          size="compact"
+                          disabled
+                          title="Direct editing is not allowed for active features. Linked products must be versioned to apply feature metadata changes."
+                          aria-label={`Edit ${feat.name} (Disabled)`}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Edit
                         </AdminDataTableActionButton>
                       </HasPermission>
                     )}
-                    <HasPermission action="PUT" path="/api/v1/features/*">
-                      <AdminDataTableActionButton onClick={() => navigate(`/features/edit/${feat.id}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${feat.name}`}>
-                        <Edit2 className="h-3.5 w-3.5" />
-                        Edit
-                      </AdminDataTableActionButton>
-                    </HasPermission>
-                    <HasPermission action="DELETE" path="/api/v1/features/*">
-                      <AdminDataTableActionButton onClick={() => handleDelete(feat.id)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${feat.name}`}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </AdminDataTableActionButton>
-                    </HasPermission>
                   </AdminDataTableActionCell>
                 </AdminDataTableRow>
               ))}

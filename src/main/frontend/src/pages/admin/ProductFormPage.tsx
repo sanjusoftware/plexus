@@ -79,6 +79,11 @@ const ProductFormPage = () => {
 
         if (isEditing && p.data) {
           const prod = p.data;
+          if (prod.status !== 'DRAFT') {
+            setToast({ message: 'Only products in DRAFT status can be edited.', type: 'error' });
+            navigate('/products');
+            return;
+          }
           setEntityName(prod.name);
           setFormData({
             code: prod.code,
