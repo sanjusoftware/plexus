@@ -558,4 +558,44 @@ public class ProductServiceTest extends BaseServiceTest {
         assertFalse(product.getProductPricingLinks().isEmpty());
         assertEquals(new java.math.BigDecimal("99.99"), product.getProductPricingLinks().getFirst().getFixedValue());
     }
+
+    @Test
+    @DisplayName("Update: Should allow linking ACTIVE features and pricing components")
+    void testUpdateProduct_AllowActiveComponents() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        // Mock ACTIVE Feature
+        FeatureComponent activeFeature = FeatureComponent.builder()
+                .code("ACTIVE_F")
+                .dataType(FeatureComponent.DataType.STRING)
+                .status(VersionableEntity.EntityStatus.ACTIVE)
+                .build();
+        when(featureComponentService.getFeatureComponentByCode(eq("ACTIVE_F"), any())).thenReturn(activeFeature);
+
+        // Mock ACTIVE Pricing
+        PricingComponent activePricing = new PricingComponent();
+        activePricing.setCode("ACTIVE_P");
+        activePricing.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(pricingComponentService.getPricingComponentByCode(eq("ACTIVE_P"), any())).thenReturn(activePricing);
+
+        ProductRequest req = ProductRequest.builder()
+                .features(List.of(ProductFeatureDto.builder()
+                        .featureComponentCode("ACTIVE_F")
+                        .featureValue("Some Value")
+                        .build()))
+                .pricing(List.of(ProductPricingDto.builder()
+                        .pricingComponentCode("ACTIVE_P")
+                        .fixedValue(new java.math.BigDecimal("10.00"))
+                        .build()))
+                .build();
+
+        // This should NOT throw an exception
+        productService.updateProduct(1L, req);
+
+        assertEquals(1, product.getProductFeatureLinks().size());
+        assertEquals(1, product.getProductPricingLinks().size());
+    }
 }

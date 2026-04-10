@@ -66,6 +66,12 @@ public abstract class BaseService {
         }
     }
 
+    protected void validateActiveOrDraft(VersionableEntity entity) {
+        if (entity == null || (!entity.isDraft() && !entity.isActive())) {
+            throw new IllegalStateException("Operation allowed only on DRAFT or ACTIVE status.");
+        }
+    }
+
     /**
      * Creation validation: checks code uniqueness for version 1 within the current bank.
      */
