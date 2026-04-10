@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info, CheckCircle2, ChevronDown, ChevronUp, Play, RefreshCw, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Package, ShieldCheck, Tag, Info, CheckCircle2, ChevronDown, ChevronUp, Play, RefreshCw, Zap, Copy } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { AdminDataTableActionButton } from '../../components/AdminDataTable';
+import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
@@ -52,6 +53,9 @@ const ProductManagementPage = () => {
   const [calculatedPrices, setCalculatedPrices] = useState<Record<number, { price: number; loading: boolean; error?: string }>>({});
   const [calcParams, setCalcParams] = useState({ amount: 1000, segment: 'RETAIL' });
 
+  // Modal states
+  const [archiveModal, setArchiveModal] = useState<{ isOpen: boolean; productId?: number }>({ isOpen: false });
+
   const signal = useAbortSignal();
 
   const toggleExpand = (id: number) => {
@@ -98,13 +102,33 @@ const ProductManagementPage = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Permanently delete this product?')) return;
+    if (!window.confirm('Are you sure you want to permanently delete this draft product?')) return;
     try {
       await axios.delete(`/api/v1/products/${id}`);
       setToast({ message: 'Product deleted successfully.', type: 'success' });
       await fetchInitialData(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
+    }
+  };
+
+  const handleArchive = async (id: number) => {
+    try {
+      await axios.post(`/api/v1/products/${id}/deactivate`);
+      setToast({ message: 'Product archived successfully. It is now terminal and removed from active circulation.', type: 'success' });
+      await fetchInitialData(signal);
+    } catch (err: any) {
+      setToast({ message: err.response?.data?.message || 'Archival failed.', type: 'error' });
+    }
+  };
+
+  const handleVersion = async (id: number) => {
+    try {
+      await axios.post(`/api/v1/products/${id}/create-new-version`, {});
+      setToast({ message: 'New version created in DRAFT status. You can now edit this new version.', type: 'success' });
+      await fetchInitialData(signal);
+    } catch (err: any) {
+      setToast({ message: err.response?.data?.message || 'Versioning failed.', type: 'error' });
     }
   };
 
@@ -240,26 +264,43 @@ const ProductManagementPage = () => {
                           onClick={() => handleStatusAction(prod.id, 'activate')}
                           tone="success"
                           size="compact"
+                          title="Activate Product"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Activate
                         </AdminDataTableActionButton>
                       </HasPermission>
                     )}
-                    <HasPermission action="PATCH" path="/api/v1/products/*">
-                      <AdminDataTableActionButton
-                        onClick={() => navigate(`/products/edit/${prod.id}`)}
-                        tone="primary"
-                        size="compact"
-                        title="Modify Product"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                        Edit
-                      </AdminDataTableActionButton>
-                    </HasPermission>
+                    {prod.status === 'ACTIVE' && (
+                      <HasPermission action="POST" path="/api/v1/products/*/create-new-version">
+                        <AdminDataTableActionButton
+                          onClick={() => handleVersion(prod.id)}
+                          tone="success"
+                          size="compact"
+                          title="Create Revision (v+1)"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Version
+                        </AdminDataTableActionButton>
+                      </HasPermission>
+                    )}
+                    {(prod.status === 'DRAFT' || prod.status === 'ACTIVE') && (
+                      <HasPermission action="PATCH" path="/api/v1/products/*">
+                        <AdminDataTableActionButton
+                          onClick={() => prod.status === 'DRAFT' && navigate(`/products/edit/${prod.id}`)}
+                          tone="primary"
+                          size="compact"
+                          disabled={prod.status !== 'DRAFT'}
+                          title={prod.status === 'DRAFT' ? "Modify Product" : "Direct editing is not allowed for active products. Create a new version to make changes."}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Edit
+                        </AdminDataTableActionButton>
+                      </HasPermission>
+                    )}
                     <HasPermission action="DELETE" path="/api/v1/products/*">
                       <AdminDataTableActionButton
-                        onClick={() => prod.status === 'ACTIVE' ? handleStatusAction(prod.id, 'archive') : handleDelete(prod.id)}
+                        onClick={() => prod.status === 'ACTIVE' ? setArchiveModal({ isOpen: true, productId: prod.id }) : handleDelete(prod.id)}
                         tone="danger"
                         size="compact"
                         title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
@@ -382,6 +423,15 @@ const ProductManagementPage = () => {
         </div>
       )}
 
+      <ConfirmationModal
+        isOpen={archiveModal.isOpen}
+        onClose={() => setArchiveModal({ isOpen: false })}
+        onConfirm={() => archiveModal.productId && handleArchive(archiveModal.productId)}
+        title="Confirm Product Archival"
+        message="Are you sure you want to archive this product? This action is terminal: it will immediately remove the product from active circulation and it cannot be re-activated. Customers currently enrolled will be affected based on bank policy."
+        confirmText="Archive Product"
+        variant="danger"
+      />
     </AdminPage>
   );
 };
