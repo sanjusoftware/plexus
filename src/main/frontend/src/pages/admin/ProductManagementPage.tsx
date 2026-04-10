@@ -37,6 +37,7 @@ interface Product {
   };
   category: string;
   status: string;
+  version?: number;
   activationDate: string;
   tagline: string;
   features: FeatureLink[];
@@ -215,7 +216,8 @@ const ProductManagementPage = () => {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center space-x-1.5">
-                        <h3 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-900 transition">{prod.name}</h3>
+                        <h3 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-900 transition" title={prod.name}>{prod.name}</h3>
+                        <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter flex-shrink-0">v{prod.version ?? 1}</span>
                         {expandedIds.has(prod.id) ? (
                           <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         ) : (

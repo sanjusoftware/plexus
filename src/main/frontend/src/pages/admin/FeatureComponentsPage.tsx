@@ -107,7 +107,6 @@ const FeatureComponentsPage = () => {
                 <th>Feature Component</th>
                 <th>Data Type</th>
                 <th>Status</th>
-                <th>Version</th>
                 <th>Created At</th>
                 <th>Updated At</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
@@ -117,7 +116,10 @@ const FeatureComponentsPage = () => {
               {features.map((feat) => (
                 <AdminDataTableRow key={feat.id}>
                   <td className="whitespace-nowrap max-w-[250px]">
-                    <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={feat.name}>{feat.name}</div>
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={feat.name}>{feat.name}</div>
+                      <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter flex-shrink-0">v{feat.version}</span>
+                    </div>
                     <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={feat.code}>{feat.code}</div>
                   </td>
                   <td className="whitespace-nowrap">
@@ -129,9 +131,6 @@ const FeatureComponentsPage = () => {
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${feat.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-yellow-50 text-yellow-700 border border-yellow-100'}`}>
                       {feat.status}
                     </span>
-                  </td>
-                  <td className="whitespace-nowrap font-bold text-gray-500">
-                    v{feat.version}
                   </td>
                    <AuditTimestampCell value={feat.createdAt} />
                    <AuditTimestampCell value={feat.updatedAt} />
@@ -172,7 +171,7 @@ const FeatureComponentsPage = () => {
                 </AdminDataTableRow>
               ))}
               {features.length === 0 && (
-                <AdminDataTableEmptyRow colSpan={7}>No feature components found.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={6}>No feature components found.</AdminDataTableEmptyRow>
               )}
             </tbody>
         </AdminDataTable>
