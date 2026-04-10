@@ -143,6 +143,11 @@ const PricingComponentFormPage = () => {
         if (isEditing) {
           const comp = compRes.data;
           if (comp) {
+            if (comp.status !== 'DRAFT') {
+              setToast({ message: `Cannot edit ${comp.status} pricing component. Please create a new version.`, type: 'error' });
+              navigate('/pricing-components');
+              return;
+            }
             setFormData({
               code: comp.code,
               name: comp.name,

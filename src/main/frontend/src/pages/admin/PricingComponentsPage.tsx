@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Tag, ChevronDown, ChevronRight, CheckCircle2, Info, Copy, History, Archive } from 'lucide-react';
 import {
   AdminDataTable,
   AdminDataTableActionButton,
@@ -174,6 +174,46 @@ const PricingComponentsPage = () => {
     }
   };
 
+  const handleArchive = async (id: number) => {
+    if (!window.confirm('Are you sure you want to archive this component? This will make it immutable and it will no longer be available for new product links.')) return;
+    try {
+      await axios.post(`/api/v1/pricing-components/${id}/archive`);
+      setToast({ message: 'Component archived successfully.', type: 'success' });
+      await fetchData(signal);
+    } catch (err: any) {
+      setToast({ message: err.response?.data?.message || 'Archiving failed.', type: 'error' });
+    }
+  };
+
+  const handleVersion = async (comp: PricingComponent) => {
+    if (!window.confirm(`Create a new version (v${(comp as any).version + 1}) for ${comp.name}? The new version will be created as a DRAFT.`)) return;
+    try {
+      await axios.post(`/api/v1/pricing-components/${comp.id}/create-new-version`, {
+        newName: comp.name
+      });
+      setToast({ message: 'New version created successfully as DRAFT.', type: 'success' });
+      await fetchData(signal);
+    } catch (err: any) {
+      setToast({ message: err.response?.data?.message || 'Version creation failed.', type: 'error' });
+    }
+  };
+
+  const handleCopy = async (comp: PricingComponent) => {
+    const newCode = window.prompt('Enter a unique code for the new component copy:', `${comp.code}_COPY`);
+    if (!newCode) return;
+
+    try {
+      await axios.post(`/api/v1/pricing-components/${comp.id}/create-new-version`, {
+        newName: `${comp.name} (Copy)`,
+        newCode: newCode
+      });
+      setToast({ message: 'Component copied successfully as DRAFT.', type: 'success' });
+      await fetchData(signal);
+    } catch (err: any) {
+      setToast({ message: err.response?.data?.message || 'Copy failed.', type: 'error' });
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure? Components cannot be deleted if they are linked to active products.')) return;
     try {
@@ -230,7 +270,10 @@ const PricingComponentsPage = () => {
                       {expandedRows.has(comp.id) ? <ChevronDown className="w-4 h-4 text-blue-600 font-bold" /> : <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-400" />}
                     </td>
                     <td className="whitespace-nowrap max-w-[200px]">
-                      <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={comp.name}>{comp.name}</div>
+                      <div className="flex items-center space-x-2">
+                        <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={comp.name}>{comp.name}</div>
+                        <span className="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">v{(comp as any).version}</span>
+                      </div>
                       <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={comp.code}>{comp.code}</div>
                     </td>
                     <td className="whitespace-nowrap">
@@ -239,7 +282,10 @@ const PricingComponentsPage = () => {
                       </span>
                     </td>
                     <td className="whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${comp.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-yellow-50 text-yellow-700 border border-yellow-100'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        comp.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-100' :
+                        comp.status === 'ARCHIVED' ? 'bg-gray-100 text-gray-600 border border-gray-200' :
+                        'bg-yellow-50 text-yellow-700 border border-yellow-100'}`}>
                         {comp.status}
                       </span>
                     </td>
@@ -248,25 +294,63 @@ const PricingComponentsPage = () => {
                     </td>
                     <AdminDataTableActionCell>
                       {comp.status === 'DRAFT' && (
-                        <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
-                          <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} tone="success" size="compact" title="Activate Production Mode" aria-label={`Activate ${comp.name}`}>
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Activate
+                        <>
+                          <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleActivate(comp.id); }} tone="success" size="compact" title="Activate Production Mode" aria-label={`Activate ${comp.name}`}>
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Activate
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                          <HasPermission action="PATCH" path="/api/v1/pricing-components/*">
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} tone="primary" size="compact" title="Edit Structure" aria-label={`Edit ${comp.name}`}>
+                              <Edit2 className="h-3.5 w-3.5" />
+                              Edit
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                          <HasPermission action="DELETE" path="/api/v1/pricing-components/*">
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} tone="danger" size="compact" title="Permanently Delete" aria-label={`Delete ${comp.name}`}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                        </>
+                      )}
+                      {comp.status === 'ACTIVE' && (
+                        <>
+                          <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleVersion(comp); }} tone="success" size="compact" title="Create a new draft version of this component" aria-label={`Version ${comp.name}`}>
+                              <History className="h-3.5 w-3.5" />
+                              Version
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                          <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleCopy(comp); }} tone="primary" size="compact" title="Copy this component to a new lineage" aria-label={`Copy ${comp.name}`}>
+                              <Copy className="h-3.5 w-3.5" />
+                              Copy
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                          <HasPermission action="PATCH" path="/api/v1/pricing-components/*">
+                            <AdminDataTableActionButton disabled onClick={(e) => { e.stopPropagation(); }} tone="neutral" size="compact" title="Active components cannot be edited. Create a new version instead." aria-label={`Edit ${comp.name} (Disabled)`}>
+                              <Edit2 className="h-3.5 w-3.5" />
+                              Edit
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                          <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleArchive(comp.id); }} tone="danger" size="compact" title="Archive this component" aria-label={`Archive ${comp.name}`}>
+                              <Archive className="h-3.5 w-3.5" />
+                              Archive
+                            </AdminDataTableActionButton>
+                          </HasPermission>
+                        </>
+                      )}
+                      {comp.status === 'ARCHIVED' && (
+                        <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
+                          <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleCopy(comp); }} tone="primary" size="compact" title="Copy this archived component to a new lineage" aria-label={`Copy ${comp.name}`}>
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
-                      <HasPermission action="PATCH" path="/api/v1/pricing-components/*">
-                        <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); navigate(`/pricing-components/edit/${comp.id}`); }} tone="primary" size="compact" title="Edit Structure" aria-label={`Edit ${comp.name}`}>
-                          <Edit2 className="h-3.5 w-3.5" />
-                          Edit
-                        </AdminDataTableActionButton>
-                      </HasPermission>
-                      <HasPermission action="DELETE" path="/api/v1/pricing-components/*">
-                        <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} tone="danger" size="compact" title="Permanently Delete" aria-label={`Delete ${comp.name}`}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </AdminDataTableActionButton>
-                      </HasPermission>
                     </AdminDataTableActionCell>
                   </AdminDataTableRow>
                   {expandedRows.has(comp.id) && (

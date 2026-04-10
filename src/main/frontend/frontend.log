@@ -2,9 +2,9 @@
 > frontend@0.1.0 start
 > react-scripts start
 
-(node:18898) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:268738) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:18898) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:268738) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 Starting the development server...
 
 Compiled successfully!
@@ -18,7 +18,7 @@ Note that the development build is not optimized.
 To create a production build, use npm run build.
 
 webpack compiled successfully
+Files successfully emitted, waiting for typecheck results...
+Issues checking in progress...
 No issues found.
-(node:18898) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
-Proxy error: Could not proxy request /api/v1/auth/csrf from localhost:3000 to http://localhost:8080.
-See https://nodejs.org/api/errors.html#errors_common_system_errors for more information (ECONNREFUSED).
+(node:268738) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.

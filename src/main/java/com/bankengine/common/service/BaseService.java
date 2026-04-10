@@ -104,20 +104,12 @@ public abstract class BaseService {
         VersionableEntity.EntityStatus targetStatus;
 
         if (isSameCode) {
-            // --- REQUIREMENT 1: REVISION (Same Code) ---
-            // Versioning an ACTIVE entity makes it ACTIVE (v+1) and archives old.
-            // Versioning a DRAFT entity (copying) makes it DRAFT.
+            // --- REVISION (Same Code) ---
+            // Creating a new version from an existing entity (DRAFT or ACTIVE)
+            // always creates a new DRAFT to allow further editing.
             targetCode = oldEntity.getCode();
             targetVersion = oldEntity.getVersion() + 1;
-
-            if (oldEntity.isActive()) {
-                targetStatus = VersionableEntity.EntityStatus.ACTIVE;
-                oldEntity.setStatus(VersionableEntity.EntityStatus.ARCHIVED);
-            } else {
-                targetStatus = VersionableEntity.EntityStatus.DRAFT;
-                // Old draft remains as is or do we archive it?
-                // Usually multiple drafts of same version aren't allowed, but here version is incremented.
-            }
+            targetStatus = VersionableEntity.EntityStatus.DRAFT;
         } else {
             // --- REQUIREMENT 2: BRANCH (Different Code) ---
             targetCode = request.getNewCode();

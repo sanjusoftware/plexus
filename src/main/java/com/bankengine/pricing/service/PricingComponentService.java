@@ -147,10 +147,36 @@ public class PricingComponentService extends BaseService {
     public PricingComponentResponse activateComponent(Long id, LocalDate activationDate) {
         PricingComponent component = getPricingComponentById(id);
         validateDraft(component);
+
+        // Archive previous versions if this is a revision (not version 1)
+        if (component.getVersion() > 1) {
+            pricingComponentRepository.findByBankIdAndCodeAndVersion(
+                    component.getBankId(), component.getCode(), component.getVersion() - 1)
+                    .ifPresent(old -> {
+                        if (old.isActive()) {
+                            old.setStatus(VersionableEntity.EntityStatus.ARCHIVED);
+                            pricingComponentRepository.save(old);
+                        }
+                    });
+        }
+
         component.setStatus(VersionableEntity.EntityStatus.ACTIVE);
         if (component.getActivationDate() == null) {
             component.setActivationDate(activationDate != null ? activationDate : LocalDate.now());
         }
+        PricingComponent saved = pricingComponentRepository.save(component);
+        reloadService.reloadKieContainer();
+        return pricingComponentMapper.toResponseDto(saved);
+    }
+
+    @Transactional
+    @CacheEvict(value = {"publicCatalog", "productDetails"}, allEntries = true)
+    public PricingComponentResponse archiveComponent(Long id) {
+        PricingComponent component = getPricingComponentById(id);
+        if (!component.isActive()) {
+            throw new IllegalStateException("Only ACTIVE components can be archived.");
+        }
+        component.setStatus(VersionableEntity.EntityStatus.ARCHIVED);
         PricingComponent saved = pricingComponentRepository.save(component);
         reloadService.reloadKieContainer();
         return pricingComponentMapper.toResponseDto(saved);
