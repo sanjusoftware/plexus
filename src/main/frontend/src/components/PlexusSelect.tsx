@@ -8,15 +8,20 @@ export interface PlexusOption {
 
 interface PlexusSelectProps extends Omit<SelectProps<PlexusOption, false, GroupBase<PlexusOption>>, 'styles'> {
   showSearch?: boolean;
+  compact?: boolean;
 }
 
 const PlexusSelect: React.FC<PlexusSelectProps> = ({
   showSearch,
+  compact = false,
   options = [],
   ...props
 }) => {
   // Determine if we should show search based on item count if not explicitly set
   const isSearchable = showSearch !== undefined ? showSearch : options.length > 10;
+
+  const controlHeight = compact ? '36px' : '42px';
+  const valueFontSize = compact ? '0.6875rem' : '0.75rem';
 
   const customStyles: StylesConfig<PlexusOption, false, GroupBase<PlexusOption>> = {
     control: (base, state) => ({
@@ -30,8 +35,8 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
       '&:hover': {
         borderColor: state.isFocused ? '#3b82f6' : '#d1d5db', // gray-300 on hover
       },
-      minHeight: '42px',
-      height: '42px',
+      minHeight: controlHeight,
+      height: controlHeight,
       transition: 'all 0.2s',
     }),
     valueContainer: (base) => ({
@@ -42,7 +47,7 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
       ...base,
       color: '#9ca3af', // gray-400
       fontWeight: 900, // font-black
-      fontSize: '0.75rem', // text-xs
+      fontSize: valueFontSize,
       textTransform: 'uppercase',
       letterSpacing: '0.1em', // tracking-widest
     }),
@@ -50,14 +55,14 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
       ...base,
       color: '#111827', // gray-900
       fontWeight: 900, // font-black
-      fontSize: '0.75rem', // text-xs
+      fontSize: valueFontSize,
       textTransform: 'uppercase',
       letterSpacing: '0.1em', // tracking-widest
     }),
     input: (base) => ({
       ...base,
       fontWeight: 900,
-      fontSize: '0.75rem',
+      fontSize: valueFontSize,
       textTransform: 'uppercase',
       letterSpacing: '0.1em',
     }),
@@ -88,7 +93,7 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
           ? '#2563eb' // blue-600
           : '#374151',
       fontWeight: 900,
-      fontSize: '0.75rem',
+      fontSize: valueFontSize,
       textTransform: 'uppercase',
       letterSpacing: '0.1em',
       padding: '0.75rem 1rem',
