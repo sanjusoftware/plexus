@@ -190,6 +190,35 @@ const ProductFormPage = () => {
       ));
   };
 
+  const formatNameWithCode = (name: string, code: string) => `${name} (${code})`;
+
+  const formatOptionWithCode = (option: { label: string }) => {
+    const match = option.label.match(/^(.*)\s\(([^()]+)\)$/);
+    if (!match) {
+      return <span>{option.label}</span>;
+    }
+
+    const [, name, code] = match;
+    return (
+      <span className="inline-flex items-baseline gap-1">
+        <span>{name}</span>
+        <span className="font-normal text-[10px] tracking-normal opacity-80">({code})</span>
+      </span>
+    );
+  };
+
+  const categoryLabels: Record<string, string> = {
+    RETAIL: 'RETAIL CONSUMER',
+    WEALTH: 'WEALTH MANAGEMENT',
+    CORPORATE: 'CORPORATE BANKING',
+    INVESTMENT: 'INVESTMENT BANKING'
+  };
+
+  const categoryOptions = Object.entries(categoryLabels).map(([value, label]) => ({
+    value,
+    label: `${label} (${value})`
+  }));
+
   return (
     <AdminPage>
       <AdminFormHeader
@@ -243,8 +272,9 @@ const ProductFormPage = () => {
               <PlexusSelect
                 required
                 placeholder="Select Category..."
-                options={productTypes.map(t => ({ value: t.code, label: t.name }))}
-                value={productTypes.find(t => t.code === formData.productTypeCode) ? { value: formData.productTypeCode, label: productTypes.find(t => t.code === formData.productTypeCode)!.name } : null}
+                options={productTypes.map(t => ({ value: t.code, label: formatNameWithCode(t.name, t.code) }))}
+                value={productTypes.find(t => t.code === formData.productTypeCode) ? { value: formData.productTypeCode, label: formatNameWithCode(productTypes.find(t => t.code === formData.productTypeCode)!.name, formData.productTypeCode) } : null}
+                formatOptionLabel={formatOptionWithCode}
                 onChange={(opt) => {
                   setFormData({...formData, productTypeCode: opt ? opt.value : ''});
                   clearViolation('productTypeCode');
@@ -258,21 +288,12 @@ const ProductFormPage = () => {
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Target Market Segment</label>
               <PlexusSelect
                 required
-                options={[
-                  { value: 'RETAIL', label: 'RETAIL CONSUMER' },
-                  { value: 'WEALTH', label: 'WEALTH MANAGEMENT' },
-                  { value: 'CORPORATE', label: 'CORPORATE BANKING' },
-                  { value: 'INVESTMENT', label: 'INVESTMENT BANKING' }
-                ]}
-                value={{
-                  RETAIL: 'RETAIL CONSUMER',
-                  WEALTH: 'WEALTH MANAGEMENT',
-                  CORPORATE: 'CORPORATE BANKING',
-                  INVESTMENT: 'INVESTMENT BANKING'
-                }[formData.category as string] ? {
+                options={categoryOptions}
+                value={categoryLabels[formData.category as string] ? {
                   value: formData.category,
-                  label: ({ RETAIL: 'RETAIL CONSUMER', WEALTH: 'WEALTH MANAGEMENT', CORPORATE: 'CORPORATE BANKING', INVESTMENT: 'INVESTMENT BANKING' } as any)[formData.category]
+                  label: `${categoryLabels[formData.category as string]} (${formData.category})`
                 } : null}
+                formatOptionLabel={formatOptionWithCode}
                 onChange={(opt) => {
                   setFormData({...formData, category: opt ? opt.value : ''});
                   clearViolation('category');
@@ -314,15 +335,16 @@ const ProductFormPage = () => {
                         placeholder="Select Global Component..."
                         options={[
                           { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' },
-                          ...featureComponents.map(fc => ({ value: fc.code, label: `${fc.name} (${fc.dataType})` }))
+                          ...featureComponents.map(fc => ({ value: fc.code, label: formatNameWithCode(fc.name, fc.code) }))
                         ]}
                         value={(() => {
                           if (link.featureComponentCode === 'CREATE_NEW') {
                             return { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' };
                           }
                           const fc = featureComponents.find(f => f.code === link.featureComponentCode);
-                          return fc ? { value: fc.code, label: `${fc.name} (${fc.dataType})` } : null;
+                          return fc ? { value: fc.code, label: formatNameWithCode(fc.name, fc.code) } : null;
                         })()}
+                        formatOptionLabel={formatOptionWithCode}
                         onChange={(opt) => {
                           const newF = [...formData.features];
                           const val = opt ? opt.value : '';
@@ -542,13 +564,24 @@ const ProductFormPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Pricing Aggregate Component</label>
+                      {(() => {
+                        const selectedCodes = formData.pricing
+                          .map((p: any, pIdx: number) => (pIdx === idx ? null : p.pricingComponentCode))
+                          .filter(Boolean);
+                        const pricingOptions = pricingComponents
+                          .filter((pc: any) => pc.code === link.pricingComponentCode || !selectedCodes.includes(pc.code))
+                          .map((pc: any) => ({ value: pc.code, label: formatNameWithCode(pc.name, pc.code) }));
+                        const selectedPricing = pricingComponents.find((pc: any) => pc.code === link.pricingComponentCode);
+
+                        return (
                       <PlexusSelect
                         placeholder="Select Global Pricing..."
-                        options={pricingComponents.map(pc => ({ value: pc.code, label: `${pc.name} (${pc.type})` }))}
-                        value={pricingComponents.find(pc => pc.code === link.pricingComponentCode) ? {
+                        options={pricingOptions}
+                        value={selectedPricing ? {
                           value: link.pricingComponentCode,
-                          label: `${pricingComponents.find(pc => pc.code === link.pricingComponentCode)!.name} (${pricingComponents.find(pc => pc.code === link.pricingComponentCode)!.type})`
+                          label: formatNameWithCode(selectedPricing.name, selectedPricing.code)
                         } : null}
+                        formatOptionLabel={formatOptionWithCode}
                         onChange={(opt) => {
                           const newP = [...formData.pricing];
                           newP[idx].pricingComponentCode = opt ? opt.value : '';
@@ -556,6 +589,8 @@ const ProductFormPage = () => {
                           clearViolation(`pricing[${idx}].pricingComponentCode`);
                         }}
                       />
+                        );
+                      })()}
                       {renderViolations(`pricing[${idx}].pricingComponentCode`)}
                     </div>
                     <div className="flex items-end">
