@@ -316,7 +316,7 @@ public class ProductService extends BaseService {
 
             if (component != null) {
                 try {
-                    validateDraft(component);
+                    validateActiveOrDraft(component);
                 } catch (IllegalStateException e) {
                     violations.add(Violation.builder()
                             .field(fieldPrefix + "featureComponentCode")
@@ -362,7 +362,7 @@ public class ProductService extends BaseService {
                 PricingComponent comp = null;
                 try {
                     comp = pricingComponentService.getPricingComponentByCode(dto.getPricingComponentCode(), null);
-                    validateDraft(comp);
+                    validateActiveOrDraft(comp);
                 } catch (NotFoundException e) {
                     violations.add(Violation.builder()
                             .field(fieldPrefix + "pricingComponentCode")
