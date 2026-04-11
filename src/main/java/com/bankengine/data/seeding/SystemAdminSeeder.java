@@ -13,6 +13,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Component
@@ -109,19 +110,19 @@ public class SystemAdminSeeder implements CommandLineRunner {
             );
 
             // 2. Manage SYSTEM_ADMIN Role
-            Set<String> systemAdminAuthorities = Set.of(
+            Set<String> systemAdminAuthorities = new HashSet<>(Set.of(
                 "system:bank:write",
                 "system:bank:read",
                 "auth:role:write",
                 "auth:role:read",
                 "system:stats:read",
                 "bank:stats:read"
-            );
+            ));
 
             roleRepository.findByNameAndBankId("SYSTEM_ADMIN", systemBankId).ifPresentOrElse(
                 existingRole -> {
                     if (!existingRole.getAuthorities().equals(systemAdminAuthorities)) {
-                        existingRole.setAuthorities(systemAdminAuthorities);
+                        existingRole.setAuthorities(new HashSet<>(systemAdminAuthorities));
                         roleRepository.save(existingRole);
                         System.out.println("Updated SYSTEM_ADMIN authorities for " + systemBankId);
                     }
@@ -130,7 +131,7 @@ public class SystemAdminSeeder implements CommandLineRunner {
                     Role admin = new Role();
                     admin.setName("SYSTEM_ADMIN");
                     admin.setBankId(systemBankId);
-                    admin.setAuthorities(systemAdminAuthorities);
+                    admin.setAuthorities(new HashSet<>(systemAdminAuthorities));
                     roleRepository.save(admin);
                     System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);
                 }

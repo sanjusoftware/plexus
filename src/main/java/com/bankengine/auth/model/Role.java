@@ -9,6 +9,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -37,4 +38,8 @@ public class Role extends AuditableEntity {
     )
     @Column(name = "authority_name", nullable = false, length = 100)
     private Set<String> authorities;
+
+    public void setAuthorities(Set<String> authorities) {
+        this.authorities = (authorities == null) ? new HashSet<>() : new HashSet<>(authorities);
+    }
 }
