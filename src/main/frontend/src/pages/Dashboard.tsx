@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Building2, Package, Loader2, Plus, ShieldCheck, Users, Tag, Layers, X
+  Building2, Package, Loader2, ShieldCheck, Users, Tag, Layers, X
 } from 'lucide-react';
 import axios from 'axios';
-import { HasPermission } from '../components/HasPermission';
 import OnboardingSuccessModal from '../components/OnboardingSuccessModal';
 import { useHasPermission } from '../hooks/useHasPermission';
 import { useAbortSignal } from '../hooks/useAbortSignal';
