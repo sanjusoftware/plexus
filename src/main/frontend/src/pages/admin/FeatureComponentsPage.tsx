@@ -13,6 +13,7 @@ import {
   AuditTimestampCell
 } from '../../components/AdminDataTable';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
+import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
@@ -33,6 +34,7 @@ const FeatureComponentsPage = () => {
   const { setToast } = useAuth();
   const [features, setFeatures] = useState<FeatureComponent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<FeatureComponent | null>(null);
 
   const signal = useAbortSignal();
 
@@ -66,7 +68,6 @@ const FeatureComponentsPage = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure? Features cannot be deleted if they are linked to active products.')) return;
     try {
       await axios.delete(`/api/v1/features/${id}`);
       setToast({ message: 'Feature deleted successfully.', type: 'success' });
@@ -148,7 +149,7 @@ const FeatureComponentsPage = () => {
                           </AdminDataTableActionButton>
                         </HasPermission>
                         <HasPermission action="DELETE" path="/api/v1/features/*">
-                          <AdminDataTableActionButton onClick={() => handleDelete(feat.id)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${feat.name}`}>
+                          <AdminDataTableActionButton onClick={() => setDeleteTarget(feat)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${feat.name}`}>
                             <AdminDataTableActionContent action="delete" />
                           </AdminDataTableActionButton>
                         </HasPermission>
@@ -176,6 +177,16 @@ const FeatureComponentsPage = () => {
             </tbody>
         </AdminDataTable>
       )}
+
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget.id)}
+        title="Confirm Deletion"
+        message={`Are you sure you want to permanently delete feature "${deleteTarget?.name || deleteTarget?.code}"? This action cannot be undone if the feature is not linked to active products.`}
+        confirmText="Confirm & Delete"
+        variant="danger"
+      />
     </AdminPage>
   );
 };

@@ -13,6 +13,7 @@ import {
   AuditTimestampCell
 } from '../../components/AdminDataTable';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
+import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
@@ -63,6 +64,11 @@ const PricingComponentsPage = () => {
   const [metadata, setMetadata] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<PricingComponent | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<PricingComponent | null>(null);
+  const [versionTarget, setVersionTarget] = useState<PricingComponent | null>(null);
+  const [copyTarget, setCopyTarget] = useState<PricingComponent | null>(null);
+  const [copyCode, setCopyCode] = useState('');
 
   const normalizeTier = useCallback((tier: any): PricingTier => {
     const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) && tier.priceValues.length > 0 ? tier.priceValues[0] : null);
@@ -180,7 +186,6 @@ const PricingComponentsPage = () => {
   };
 
   const handleArchive = async (id: number) => {
-    if (!window.confirm('Are you sure you want to archive this component? This will make it immutable and it will no longer be available for new product links.')) return;
     try {
       await axios.post(`/api/v1/pricing-components/${id}/archive`);
       setToast({ message: 'Component archived successfully.', type: 'success' });
@@ -191,7 +196,6 @@ const PricingComponentsPage = () => {
   };
 
   const handleVersion = async (comp: PricingComponent) => {
-    if (!window.confirm(`Create a new version (v${(comp.version ?? 1) + 1}) for ${comp.name}? The new version will be created as a DRAFT.`)) return;
     try {
       await axios.post(`/api/v1/pricing-components/${comp.id}/create-new-version`, {
         newName: comp.name
@@ -203,10 +207,7 @@ const PricingComponentsPage = () => {
     }
   };
 
-  const handleCopy = async (comp: PricingComponent) => {
-    const newCode = window.prompt('Enter a unique code for the new component copy:', `${comp.code}_COPY`);
-    if (!newCode) return;
-
+  const handleCopy = async (comp: PricingComponent, newCode: string) => {
     try {
       await axios.post(`/api/v1/pricing-components/${comp.id}/create-new-version`, {
         newName: `${comp.name} (Copy)`,
@@ -219,8 +220,12 @@ const PricingComponentsPage = () => {
     }
   };
 
+  const openCopyModal = (comp: PricingComponent) => {
+    setCopyTarget(comp);
+    setCopyCode(`${comp.code}_COPY`);
+  };
+
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure? Components cannot be deleted if they are linked to active products.')) return;
     try {
       await axios.delete(`/api/v1/pricing-components/${id}`);
       setToast({ message: 'Component deleted successfully.', type: 'success' });
@@ -318,7 +323,7 @@ const PricingComponentsPage = () => {
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="DELETE" path="/api/v1/pricing-components/*">
-                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleDelete(comp.id); }} tone="danger" size="compact" title="Permanently Delete" aria-label={`Delete ${comp.name}`}>
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); setDeleteTarget(comp); }} tone="danger" size="compact" title="Permanently Delete" aria-label={`Delete ${comp.name}`}>
                               <AdminDataTableActionContent action="delete" />
                             </AdminDataTableActionButton>
                           </HasPermission>
@@ -327,12 +332,12 @@ const PricingComponentsPage = () => {
                       {comp.status === 'ACTIVE' && (
                         <>
                           <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
-                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleVersion(comp); }} tone="success" size="compact" title="Create a new draft version of this component" aria-label={`Version ${comp.name}`}>
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); setVersionTarget(comp); }} tone="success" size="compact" title="Create a new draft version of this component" aria-label={`Version ${comp.name}`}>
                               <AdminDataTableActionContent action="version" />
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
-                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleCopy(comp); }} tone="primary" size="compact" title="Copy this component to a new lineage" aria-label={`Copy ${comp.name}`}>
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); openCopyModal(comp); }} tone="primary" size="compact" title="Copy this component to a new lineage" aria-label={`Copy ${comp.name}`}>
                               <AdminDataTableActionContent action="copy" />
                             </AdminDataTableActionButton>
                           </HasPermission>
@@ -342,7 +347,7 @@ const PricingComponentsPage = () => {
                             </AdminDataTableActionButton>
                           </HasPermission>
                           <HasPermission action="POST" path="/api/v1/pricing-components/*/activate">
-                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleArchive(comp.id); }} tone="danger" size="compact" title="Archive this component" aria-label={`Archive ${comp.name}`}>
+                            <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); setArchiveTarget(comp); }} tone="danger" size="compact" title="Archive this component" aria-label={`Archive ${comp.name}`}>
                               <AdminDataTableActionContent action="archive" />
                             </AdminDataTableActionButton>
                           </HasPermission>
@@ -350,7 +355,7 @@ const PricingComponentsPage = () => {
                       )}
                       {comp.status === 'ARCHIVED' && (
                         <HasPermission action="POST" path="/api/v1/pricing-components/*/create-new-version">
-                          <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); handleCopy(comp); }} tone="primary" size="compact" title="Copy this archived component to a new lineage" aria-label={`Copy ${comp.name}`}>
+                          <AdminDataTableActionButton onClick={(e) => { e.stopPropagation(); openCopyModal(comp); }} tone="primary" size="compact" title="Copy this archived component to a new lineage" aria-label={`Copy ${comp.name}`}>
                             <AdminDataTableActionContent action="copy" />
                           </AdminDataTableActionButton>
                         </HasPermission>
@@ -421,6 +426,60 @@ const PricingComponentsPage = () => {
         </AdminDataTable>
       )}
 
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget.id)}
+        title="Confirm Deletion"
+        message={`Are you sure you want to permanently delete component "${deleteTarget?.name || deleteTarget?.code}"? Components cannot be deleted if they are linked to active products.`}
+        confirmText="Confirm & Delete"
+        variant="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={!!archiveTarget}
+        onClose={() => setArchiveTarget(null)}
+        onConfirm={() => archiveTarget && handleArchive(archiveTarget.id)}
+        title="Confirm Archival"
+        message={`Are you sure you want to archive component "${archiveTarget?.name || archiveTarget?.code}"? This will make it immutable and unavailable for new product links.`}
+        confirmText="Confirm & Archive"
+        variant="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={!!versionTarget}
+        onClose={() => setVersionTarget(null)}
+        onConfirm={() => versionTarget && handleVersion(versionTarget)}
+        title="Confirm Version Creation"
+        message={`Create a new version (v${((versionTarget?.version ?? 1) + 1)}) for "${versionTarget?.name || versionTarget?.code}"? The new version will be created as DRAFT.`}
+        confirmText="Confirm & Create Version"
+        variant="info"
+      />
+
+      <ConfirmationModal
+        isOpen={!!copyTarget}
+        onClose={() => {
+          setCopyTarget(null);
+          setCopyCode('');
+        }}
+        onConfirm={() => copyTarget && handleCopy(copyTarget, copyCode.trim())}
+        title="Confirm Component Copy"
+        message={`Create a DRAFT copy of "${copyTarget?.name || copyTarget?.code}" with a new unique code.`}
+        confirmText="Confirm & Copy"
+        variant="info"
+        confirmDisabled={!copyCode.trim()}
+      >
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">New Component Code</label>
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={copyCode}
+            onChange={(e) => setCopyCode(e.target.value)}
+            placeholder="Enter unique code"
+          />
+        </div>
+      </ConfirmationModal>
     </AdminPage>
   );
 };

@@ -84,6 +84,7 @@ const ProductManagementPage = () => {
 
   // Modal states
   const [archiveModal, setArchiveModal] = useState<{ isOpen: boolean; productId?: number }>({ isOpen: false });
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; productId?: number; productName?: string }>({ isOpen: false });
 
   const signal = useAbortSignal();
 
@@ -248,7 +249,6 @@ const ProductManagementPage = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to permanently delete this draft product?')) return;
     try {
       await axios.delete(`/api/v1/products/${id}`);
       setToast({ message: 'Product deleted successfully.', type: 'success' });
@@ -555,7 +555,7 @@ const ProductManagementPage = () => {
                       )}
                       <HasPermission action="DELETE" path="/api/v1/products/*">
                         <AdminDataTableActionButton
-                          onClick={(e) => { e.stopPropagation(); prod.status === 'ACTIVE' ? setArchiveModal({ isOpen: true, productId: prod.id }) : handleDelete(prod.id); }}
+                          onClick={(e) => { e.stopPropagation(); prod.status === 'ACTIVE' ? setArchiveModal({ isOpen: true, productId: prod.id }) : setDeleteModal({ isOpen: true, productId: prod.id, productName: prod.name }); }}
                           tone="danger"
                           size="compact"
                           title={prod.status === 'ACTIVE' ? "Archive Product" : "Delete Product"}
@@ -695,6 +695,16 @@ const ProductManagementPage = () => {
           </tbody>
         </AdminDataTable>
       )}
+
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={() => deleteModal.productId && handleDelete(deleteModal.productId)}
+        title="Confirm Deletion"
+        message={`Are you sure you want to permanently delete "${deleteModal.productName || 'this product'}"? This action cannot be undone.`}
+        confirmText="Confirm & Delete"
+        variant="danger"
+      />
 
       <ConfirmationModal
         isOpen={archiveModal.isOpen}

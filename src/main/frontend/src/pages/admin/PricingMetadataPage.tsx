@@ -13,6 +13,7 @@ import {
   AuditTimestampCell
 } from '../../components/AdminDataTable';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
+import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
@@ -34,6 +35,7 @@ const PricingMetadataPage = () => {
   const { setToast } = useAuth();
   const [metadata, setMetadata] = useState<PricingMetadata[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<PricingMetadata | null>(null);
 
   const signal = useAbortSignal();
 
@@ -61,7 +63,6 @@ const PricingMetadataPage = () => {
   }, [fetchMetadata, signal, location, setToast, navigate]);
 
   const handleDelete = async (attributeKey: string) => {
-    if (!window.confirm('Are you sure? Deleting metadata might break existing rules that use this attribute.')) return;
     try {
       await axios.delete(`/api/v1/pricing-metadata/${attributeKey}`);
       setToast({ message: 'Metadata deleted successfully.', type: 'success' });
@@ -130,7 +131,7 @@ const PricingMetadataPage = () => {
                         </AdminDataTableActionButton>
                       </HasPermission>
                       <HasPermission action="DELETE" path="/api/v1/pricing-metadata/*">
-                        <AdminDataTableActionButton onClick={() => handleDelete(meta.attributeKey)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${meta.displayName}`}>
+                        <AdminDataTableActionButton onClick={() => setDeleteTarget(meta)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${meta.displayName}`}>
                           <AdminDataTableActionContent action="delete" />
                         </AdminDataTableActionButton>
                       </HasPermission>
@@ -142,6 +143,15 @@ const PricingMetadataPage = () => {
         </AdminDataTable>
       )}
 
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget.attributeKey)}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete metadata "${deleteTarget?.displayName || deleteTarget?.attributeKey}"? This might break existing pricing rules that reference this attribute.`}
+        confirmText="Confirm & Delete"
+        variant="danger"
+      />
     </AdminPage>
   );
 };

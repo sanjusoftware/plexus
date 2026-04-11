@@ -8,9 +8,11 @@ interface ConfirmationModalProps {
   onConfirm: () => void;
   title: string;
   message: string;
+  children?: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'warning' | 'info';
+  confirmDisabled?: boolean;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -19,9 +21,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   onConfirm,
   title,
   message,
+  children,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
-  variant = 'danger'
+  variant = 'danger',
+  confirmDisabled = false
 }) => {
   useEscapeKey(onClose, isOpen);
 
@@ -59,6 +63,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             </p>
           </div>
 
+          {children && <div className="mb-5">{children}</div>}
+
           <div className="flex space-x-3">
             <button
               onClick={onClose}
@@ -68,10 +74,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             </button>
             <button
               onClick={() => {
+                if (confirmDisabled) return;
                 onConfirm();
                 onClose();
               }}
-              className={`flex-1 px-4 py-2 rounded-lg font-bold transition shadow-md ${variantClasses[variant]} text-sm`}
+              disabled={confirmDisabled}
+              className={`flex-1 px-4 py-2 rounded-lg font-bold transition shadow-md text-sm ${confirmDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' : variantClasses[variant]}`}
             >
               {confirmText}
             </button>
