@@ -17,6 +17,7 @@ const FeatureComponentFormPage = () => {
 
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
+  const [violations, setViolations] = useState<any[]>([]);
   const [formData, setFormData] = useState({ code: '', name: '', dataType: 'STRING' });
   const [isCodeEdited, setIsCodeEdited] = useState(false);
 
@@ -45,9 +46,14 @@ const FeatureComponentFormPage = () => {
     }
   }, [id, isEditing, setEntityName, setToast, signal]);
 
+  const clearViolation = (field: string) => {
+    setViolations(prev => prev.filter(v => v.field !== field));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setViolations([]);
     try {
       if (isEditing) {
         await axios.put(`/api/v1/features/${id}`, formData);
@@ -57,6 +63,9 @@ const FeatureComponentFormPage = () => {
       setToast({ message: isEditing ? 'Feature updated successfully.' : 'Feature registered successfully.', type: 'success' });
       navigate('/features');
     } catch (err: any) {
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        setViolations(err.response.data.errors);
+      }
       setToast({ message: err.response?.data?.message || 'An error occurred while saving.', type: 'error' });
     } finally {
       setSubmitting(false);
@@ -74,6 +83,16 @@ const FeatureComponentFormPage = () => {
       </div>
     );
   }
+
+  const renderViolations = (field: string) => {
+    return violations
+      .filter(v => v.field === field)
+      .map((v, i) => (
+        <div key={i} className={v.severity === 'WARNING' ? 'admin-warning-text' : 'admin-error-text'}>
+          {v.reason}
+        </div>
+      ));
+  };
 
   return (
     <AdminPage width="narrow">
@@ -100,9 +119,11 @@ const FeatureComponentFormPage = () => {
                   code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
                 }
                 setFormData({ ...formData, name: name, code: code });
+                clearViolation('name');
               }}
               placeholder="e.g. Airport Lounge Access"
             />
+            {renderViolations('name')}
           </div>
           <div className="admin-field">
             <label className="admin-label">Internal Feature Code</label>
@@ -115,9 +136,11 @@ const FeatureComponentFormPage = () => {
               onChange={(e) => {
                 setIsCodeEdited(true);
                 setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_').replace(/[^A-Z0-9_-]/g, '') });
+                clearViolation('code');
               }}
               placeholder="e.g. LOUNGE_ACCESS"
             />
+            {renderViolations('code')}
             {!isEditing && <p className="admin-help">Unique business code for the feature.</p>}
           </div>
           <div className="admin-field">
@@ -126,8 +149,12 @@ const FeatureComponentFormPage = () => {
               required
               options={dataTypes.map(type => ({ value: type, label: type }))}
               value={{ value: formData.dataType, label: formData.dataType }}
-              onChange={(opt) => setFormData({ ...formData, dataType: opt ? opt.value : 'STRING' })}
+              onChange={(opt) => {
+                setFormData({ ...formData, dataType: opt ? opt.value : 'STRING' });
+                clearViolation('dataType');
+              }}
             />
+            {renderViolations('dataType')}
           </div>
           <div className="admin-actions">
             <button type="button" onClick={handleCancel} className="admin-secondary-btn sm:min-w-[140px]">Cancel</button>

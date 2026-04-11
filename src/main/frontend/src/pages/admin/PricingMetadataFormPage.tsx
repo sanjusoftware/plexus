@@ -17,6 +17,7 @@ const PricingMetadataFormPage = () => {
 
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
+  const [violations, setViolations] = useState<any[]>([]);
   const [formData, setFormData] = useState({ attributeKey: '', displayName: '', dataType: 'STRING' });
   const [isKeyEdited, setIsKeyEdited] = useState(false);
 
@@ -53,9 +54,14 @@ const PricingMetadataFormPage = () => {
     }
   }, [attributeKey, isEditing, setEntityName, setToast, signal]);
 
+  const clearViolation = (field: string) => {
+    setViolations(prev => prev.filter(v => v.field !== field));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setViolations([]);
     try {
       if (isEditing) {
         await axios.put(`/api/v1/pricing-metadata/${attributeKey}`, formData);
@@ -66,6 +72,9 @@ const PricingMetadataFormPage = () => {
         state: { success: isEditing ? 'Metadata updated successfully.' : 'Metadata registered successfully.' }
       });
     } catch (err: any) {
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        setViolations(err.response.data.errors);
+      }
       setToast({ message: err.response?.data?.message || 'An error occurred while saving.', type: 'error' });
     } finally {
       setSubmitting(false);
@@ -90,6 +99,16 @@ const PricingMetadataFormPage = () => {
       </div>
     );
   }
+
+  const renderViolations = (field: string) => {
+    return violations
+      .filter(v => v.field === field)
+      .map((v, i) => (
+        <div key={i} className={v.severity === 'WARNING' ? 'admin-warning-text' : 'admin-error-text'}>
+          {v.reason}
+        </div>
+      ));
+  };
 
   return (
     <AdminPage width="narrow">
@@ -116,9 +135,11 @@ const PricingMetadataFormPage = () => {
                   key = normalizeAttributeKey(name);
                 }
                 setFormData({ ...formData, displayName: name, attributeKey: key });
+                clearViolation('displayName');
               }}
               placeholder="e.g. Account Balance"
             />
+            {renderViolations('displayName')}
             <p className="admin-help">What the business user sees in the pricing dashboard.</p>
           </div>
           <div className="admin-field">
@@ -132,9 +153,11 @@ const PricingMetadataFormPage = () => {
               onChange={(e) => {
                 setIsKeyEdited(true);
                 setFormData({ ...formData, attributeKey: normalizeAttributeKey(e.target.value) });
+                clearViolation('attributeKey');
               }}
               placeholder="e.g. CURRENT_BALANCE"
             />
+            {renderViolations('attributeKey')}
             {!isEditing && <p className="admin-help">Used by developers in rule definitions. Must be unique.</p>}
           </div>
           <div className="admin-field">
@@ -143,8 +166,12 @@ const PricingMetadataFormPage = () => {
               required
               options={dataTypes.map(type => ({ value: type, label: type }))}
               value={dataTypes.includes(formData.dataType) ? { value: formData.dataType, label: formData.dataType } : null}
-              onChange={(opt) => setFormData({ ...formData, dataType: opt ? opt.value : 'STRING' })}
+              onChange={(opt) => {
+                setFormData({ ...formData, dataType: opt ? opt.value : 'STRING' });
+                clearViolation('dataType');
+              }}
             />
+            {renderViolations('dataType')}
             <p className="admin-help">Affects how the rule engine processes and validates values.</p>
           </div>
           <div className="admin-actions">

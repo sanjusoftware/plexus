@@ -23,6 +23,7 @@ const RoleFormPage = () => {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<RoleMapping>({ name: roleName || '', authorities: [] });
   const [submitting, setSubmitting] = useState(false);
+  const [violations, setViolations] = useState<any[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const signal = useAbortSignal();
 
@@ -144,14 +145,22 @@ const RoleFormPage = () => {
     return parts[parts.length - 1].toUpperCase();
   };
 
+  const clearViolation = (field: string) => {
+    setViolations(prev => prev.filter(v => v.field !== field));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setViolations([]);
     try {
       await axios.post('/api/v1/roles/mapping', { roleName: formData.name, authorities: formData.authorities });
       setToast({ message: 'Permissions for the role have been successfully synchronized.', type: 'success' });
       navigate('/roles', { state: { success: 'Permissions for the role have been successfully synchronized.' } });
     } catch (err: any) {
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        setViolations(err.response.data.errors);
+      }
       setToast({ message: err.response?.data?.message || 'Role mapping update failed.', type: 'error' });
     } finally {
       setSubmitting(false);
@@ -165,6 +174,16 @@ const RoleFormPage = () => {
       </div>
     );
   }
+
+  const renderViolations = (field: string) => {
+    return violations
+      .filter(v => v.field === field)
+      .map((v, i) => (
+        <div key={i} className={v.severity === 'WARNING' ? 'admin-warning-text' : 'admin-error-text'}>
+          {v.reason}
+        </div>
+      ));
+  };
 
   return (
     <AdminPage>
@@ -190,10 +209,14 @@ const RoleFormPage = () => {
                     value={formData.name}
                     onChange={(e) => {
                       setFormData({...formData, name: e.target.value.toUpperCase()});
+                      clearViolation('roleName');
+                      clearViolation('name');
                     }}
                     placeholder="e.g. CUSTOMER_SUPPORT"
                   />
                 </div>
+                {renderViolations('roleName')}
+                {renderViolations('name')}
                 <p className="mt-2.5 text-[10px] text-blue-400/80 font-bold italic">This must match the exact string sent by your Identity Provider in the <code>roles</code> claim.</p>
               </div>
             </div>
@@ -201,6 +224,7 @@ const RoleFormPage = () => {
 
           <div>
             <label className="mb-4 block px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Select Authorized Operations</label>
+            {renderViolations('authorities')}
             <div className="space-y-4">
               {Object.entries(groupAuthorities(availableAuthorities)).map(([category, subGroups]) => {
                 const allAuthsInCategory = Object.values(subGroups).flat();

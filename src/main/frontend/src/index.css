@@ -75,6 +75,14 @@
 	@apply text-[10px] font-medium italic text-gray-400;
   }
 
+  .admin-error-text {
+    @apply mt-1 text-[10px] font-bold text-red-600 uppercase tracking-tight;
+  }
+
+  .admin-warning-text {
+    @apply mt-1 text-[10px] font-bold text-amber-600 uppercase tracking-tight;
+  }
+
   .admin-input {
 	@apply block w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-900 shadow-sm transition focus:border-blue-500 focus:outline-none;
   }
