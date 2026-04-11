@@ -17,7 +17,7 @@ interface RoleMapping {
 const RoleManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setToast, refreshAuthState } = useAuth();
+  const { user, setToast, refreshAuthState } = useAuth();
   const [mappings, setMappings] = useState<RoleMapping[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -89,6 +89,12 @@ const RoleManagementPage = () => {
   }, [location, setToast, fetchInitialData, signal, navigate]);
 
   const handleDelete = async (roleName: string) => {
+    const isOwnRole = (user?.roles || []).some(role => role.toLowerCase() === roleName.toLowerCase());
+    if (isOwnRole) {
+      setToast({ message: 'You cannot delete a role currently assigned to your own account.', type: 'error' });
+      return;
+    }
+
     try {
       await axios.delete(`/api/v1/roles/${roleName}`);
       await refreshAuthState();
@@ -100,6 +106,12 @@ const RoleManagementPage = () => {
   };
 
   const confirmDelete = (roleName: string) => {
+    const isOwnRole = (user?.roles || []).some(role => role.toLowerCase() === roleName.toLowerCase());
+    if (isOwnRole) {
+      setToast({ message: 'You cannot delete a role currently assigned to your own account.', type: 'error' });
+      return;
+    }
+
     setRoleToDelete(roleName);
     setShowDeleteConfirm(true);
   };
@@ -133,6 +145,7 @@ const RoleManagementPage = () => {
           {mappings.map((mapping) => {
             const grouped = groupAuthorities(mapping.authorities);
             const isExpanded = expandedRoles.has(mapping.name);
+            const isOwnRole = (user?.roles || []).some(role => role.toLowerCase() === mapping.name.toLowerCase());
 
             return (
               <div key={mapping.name} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition duration-300 group">
@@ -176,6 +189,8 @@ const RoleManagementPage = () => {
                           onClick={(e) => { e.stopPropagation(); confirmDelete(mapping.name); }}
                           tone="danger"
                           size="compact"
+                          disabled={isOwnRole}
+                          title={isOwnRole ? 'You cannot delete a role assigned to your own account.' : 'Delete role'}
                         >
                           <AdminDataTableActionContent action="delete" />
                         </AdminDataTableActionButton>

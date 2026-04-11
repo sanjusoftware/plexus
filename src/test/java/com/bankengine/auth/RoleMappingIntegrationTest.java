@@ -18,7 +18,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -164,5 +164,15 @@ public class RoleMappingIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(deleteWithCsrf(ROLE_API + "/{roleName}", "SYSTEM_ADMIN"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockRole(roles = {"ADMIN"})
+    void shouldNotDeleteOwnRole() throws Exception {
+        mockMvc.perform(deleteWithCsrf(ROLE_API + "/{roleName}", "ADMIN"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get(ROLE_API + "/{roleName}", "ADMIN"))
+                .andExpect(status().isOk());
     }
 }

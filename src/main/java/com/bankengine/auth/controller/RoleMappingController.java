@@ -77,7 +77,7 @@ public class RoleMappingController {
             Authentication authentication,
             HttpServletRequest request
     ) {
-        roleManagementService.deleteRole(roleName);
+        roleManagementService.deleteRole(roleName, authentication);
         // Keep current session in sync when the caller deletes one of their own roles.
         sessionAuthorityRefreshService.refreshCurrentSessionAuthorities(authentication, roleName, request);
         return ResponseEntity.noContent().build();

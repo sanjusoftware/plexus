@@ -13,6 +13,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import java.util.Optional;
 import java.util.Set;
@@ -20,8 +22,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RoleManagementServiceTest {
@@ -114,5 +115,26 @@ class RoleManagementServiceTest {
 
         roleManagementService.saveRoleMapping(roleName, authorities);
         verify(roleRepository).save(any(Role.class));
+    }
+
+    @Test
+    @DisplayName("Security Guardrail: User cannot delete own assigned role")
+    void deleteRole_ShouldThrowException_WhenDeletingOwnRole() {
+        Role existingRole = new Role();
+        existingRole.setName("ADMIN");
+        when(roleRepository.findByName("ADMIN")).thenReturn(Optional.of(existingRole));
+
+        Jwt jwt = Jwt.withTokenValue("mock-token")
+                .header("alg", "none")
+                .claim("roles", java.util.List.of("ADMIN", "OTHER_ROLE"))
+                .build();
+        JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
+
+        assertThatThrownBy(() -> roleManagementService.deleteRole("ADMIN", authentication))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .hasMessageContaining("cannot delete a role assigned to your own account");
+
+        verify(roleRepository, never()).delete(any(Role.class));
+        verify(permissionMappingService, never()).evictAllRolePermissionsCache();
     }
 }
