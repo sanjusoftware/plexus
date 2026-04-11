@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Trash2, Loader2, Save, Tag, Layers, X } from 'lucide-react';
+import { Plus, Trash2, Loader2, Save, Tag, Layers, X, HelpCircle } from 'lucide-react';
 import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import PlexusSelect from '../../components/PlexusSelect';
@@ -81,13 +81,69 @@ const PricingComponentFormPage = () => {
     return discountTypes.includes(componentType) ? 'DISCOUNT_PERCENTAGE' : 'FEE_ABSOLUTE';
   }, []);
 
+  // Backend default for omitted priority. We hide it in UI and treat it as fallback.
+  const LOWEST_PRIORITY_SENTINEL = -2147483648;
+
+  const getUsedPriorities = (tiers: any[], excludeIndex?: number) => {
+    const numeric = (tiers || [])
+      .filter((_: any, idx: number) => idx !== excludeIndex)
+      .map((t: any) => t.priority)
+      .filter((p: any) => p !== '' && p !== null && p !== undefined)
+      .map((p: any) => Number(p))
+      .filter((p: number) => Number.isInteger(p) && p >= 0);
+
+    return Array.from(new Set(numeric)).sort((a, b) => b - a);
+  };
+
+  const getSuggestedPriority = (tiers: any[]) => {
+    const used = getUsedPriorities(tiers);
+    if (used.length === 0) {
+      return 100;
+    }
+    return Math.max(...used) + 10;
+  };
+
+  const normalizePriorityForForm = useCallback((priority: any) => {
+    if (priority === null || priority === undefined || priority === '') {
+      return '';
+    }
+    const numeric = Number(priority);
+    if (!Number.isInteger(numeric) || numeric === LOWEST_PRIORITY_SENTINEL) {
+      return '';
+    }
+    return numeric;
+  }, [LOWEST_PRIORITY_SENTINEL]);
+
+  const sortTiersByPriority = (tiers: any[]) => {
+    const toSortValue = (priority: any) => {
+      if (priority === '' || priority === null || priority === undefined) {
+        return Number.NEGATIVE_INFINITY;
+      }
+      const numeric = Number(priority);
+      return Number.isFinite(numeric) ? numeric : Number.NEGATIVE_INFINITY;
+    };
+
+    return [...tiers].sort((a, b) => toSortValue(b.priority) - toSortValue(a.priority));
+  };
+
+  const getDynamicPriorityChipOptions = (tiers: any[], excludeIndex?: number) => {
+    const existing = getUsedPriorities(tiers, excludeIndex);
+    const suggested = getSuggestedPriority(tiers);
+    const values = Array.from(new Set([suggested, ...existing])).slice(0, 6);
+
+    return values.map((value, idx) => ({
+      label: idx === 0 ? `Suggested (${value})` : `P${value}`,
+      value
+    }));
+  };
+
   const mapTierFromApi = useCallback((tier: any, componentType: string) => {
     const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) ? tier.priceValues[0] : null);
     return {
       id: tier.id,
       code: tier.code || '',
       name: tier.name || '',
-      priority: tier.priority,
+      priority: normalizePriorityForForm(tier.priority),
       minThreshold: tier.minThreshold,
       maxThreshold: tier.maxThreshold,
       applyChargeOnFullBreach: tier.applyChargeOnFullBreach || false,
@@ -103,7 +159,7 @@ const PricingComponentFormPage = () => {
         valueType: firstValue?.valueType || getDefaultValueType(componentType)
       }
     };
-  }, [getDefaultValueType]);
+  }, [getDefaultValueType, normalizePriorityForForm]);
 
   const buildSubmitPayload = (data: any) => ({
     code: data.code,
@@ -113,9 +169,9 @@ const PricingComponentFormPage = () => {
     pricingTiers: (data.pricingTiers || []).map((tier: any) => ({
       code: tier.code,
       name: tier.name,
-      priority: tier.priority,
-      minThreshold: tier.minThreshold,
-      maxThreshold: tier.maxThreshold,
+      priority: tier.priority === '' || tier.priority === null || tier.priority === undefined ? null : Number(tier.priority),
+      minThreshold: tier.minThreshold === '' || tier.minThreshold === null || tier.minThreshold === undefined ? null : Number(tier.minThreshold),
+      maxThreshold: tier.maxThreshold === '' || tier.maxThreshold === null || tier.maxThreshold === undefined ? null : Number(tier.maxThreshold),
       applyChargeOnFullBreach: !!tier.applyChargeOnFullBreach,
       conditions: (tier.conditions || []).map((cond: any, index: number, arr: any[]) => ({
         attributeName: cond.attributeName,
@@ -157,7 +213,7 @@ const PricingComponentFormPage = () => {
               name: comp.name,
               type: comp.type,
               description: comp.description,
-              pricingTiers: (comp.pricingTiers || []).map((t: any) => mapTierFromApi(t, comp.type))
+              pricingTiers: sortTiersByPriority((comp.pricingTiers || []).map((t: any) => mapTierFromApi(t, comp.type)))
             };
             setFormData(loadedFormData);
             resetDirtyBaseline(loadedFormData);
@@ -201,19 +257,28 @@ const PricingComponentFormPage = () => {
     }
 
     newTiers[index] = updatedTier;
-    setFormData({ ...formData, pricingTiers: newTiers });
+    setFormData({
+      ...formData,
+      pricingTiers: field === 'priority' ? sortTiersByPriority(newTiers) : newTiers
+    });
   };
 
   const addTier = () => {
+    const newTier = {
+      code: '',
+      name: '',
+      priority: getSuggestedPriority(formData.pricingTiers),
+      minThreshold: '',
+      maxThreshold: '',
+      applyChargeOnFullBreach: false,
+      isCodeEdited: false,
+      conditions: [],
+      priceValue: { priceAmount: 0, valueType: getDefaultValueType(formData.type) }
+    };
+
     setFormData({
       ...formData,
-      pricingTiers: [...formData.pricingTiers, {
-        code: '',
-        name: '',
-        isCodeEdited: false,
-        conditions: [],
-        priceValue: { priceAmount: 0, valueType: getDefaultValueType(formData.type) }
-      }]
+      pricingTiers: sortTiersByPriority([...formData.pricingTiers, newTier])
     });
   };
 
@@ -270,10 +335,70 @@ const PricingComponentFormPage = () => {
     setViolations(prev => prev.filter(v => v.field !== field));
   };
 
+  const validateTierControls = (data: any) => {
+    const nextViolations: Array<{ field: string; reason: string; severity: 'ERROR' }> = [];
+
+    (data.pricingTiers || []).forEach((tier: any, idx: number) => {
+      const priorityRaw = tier.priority;
+      if (priorityRaw !== '' && priorityRaw !== null && priorityRaw !== undefined) {
+        const parsedPriority = Number(priorityRaw);
+        if (!Number.isInteger(parsedPriority)) {
+          nextViolations.push({
+            field: `pricingTiers[${idx}].priority`,
+            reason: 'Priority must be a whole number.',
+            severity: 'ERROR'
+          });
+        }
+      }
+
+      const minRaw = tier.minThreshold;
+      const maxRaw = tier.maxThreshold;
+      const hasMin = minRaw !== '' && minRaw !== null && minRaw !== undefined;
+      const hasMax = maxRaw !== '' && maxRaw !== null && maxRaw !== undefined;
+      const parsedMin = hasMin ? Number(minRaw) : null;
+      const parsedMax = hasMax ? Number(maxRaw) : null;
+
+      if (hasMin && (Number.isNaN(parsedMin) || parsedMin! < 0)) {
+        nextViolations.push({
+          field: `pricingTiers[${idx}].minThreshold`,
+          reason: 'Minimum threshold must be a number greater than or equal to 0.',
+          severity: 'ERROR'
+        });
+      }
+
+      if (hasMax && (Number.isNaN(parsedMax) || parsedMax! < 0)) {
+        nextViolations.push({
+          field: `pricingTiers[${idx}].maxThreshold`,
+          reason: 'Maximum threshold must be a number greater than or equal to 0.',
+          severity: 'ERROR'
+        });
+      }
+
+      if (parsedMin !== null && parsedMax !== null && !Number.isNaN(parsedMin) && !Number.isNaN(parsedMax) && parsedMin > parsedMax) {
+        nextViolations.push({
+          field: `pricingTiers[${idx}].maxThreshold`,
+          reason: 'Maximum threshold must be greater than or equal to minimum threshold.',
+          severity: 'ERROR'
+        });
+      }
+    });
+
+    return nextViolations;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setViolations([]);
+
+    const tierValidationViolations = validateTierControls(formData);
+    if (tierValidationViolations.length > 0) {
+      setViolations(tierValidationViolations);
+      setToast({ message: 'Please fix tier evaluation fields before saving.', type: 'error' });
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const payload = buildSubmitPayload(formData);
       if (isEditing) {
@@ -314,6 +439,15 @@ const PricingComponentFormPage = () => {
         </div>
       ));
   };
+
+  const renderTierFieldLabel = (title: string, tooltip: string) => (
+    <label className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+      <span>{title}</span>
+      <span title={tooltip} className="text-gray-400 cursor-help inline-flex items-center">
+        <HelpCircle className="w-3.5 h-3.5" />
+      </span>
+    </label>
+  );
 
   return (
     <AdminPage width="medium">
@@ -402,7 +536,11 @@ const PricingComponentFormPage = () => {
             </div>
 
             <div className="space-y-4">
-              {formData.pricingTiers.map((tier: any, idx: number) => (
+              {formData.pricingTiers.map((tier: any, idx: number) => {
+                const existingPriorities = getUsedPriorities(formData.pricingTiers, idx);
+                const dynamicPriorityChipOptions = getDynamicPriorityChipOptions(formData.pricingTiers, idx);
+
+                return (
                 <div key={idx} className="rounded-xl p-6 bg-gray-50/50 border border-gray-100 relative group transition hover:border-blue-200">
                   <button type="button" onClick={() => removeTier(idx)} className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"><Trash2 className="w-4 h-4" /></button>
 
@@ -423,6 +561,116 @@ const PricingComponentFormPage = () => {
                       }} />
                       {renderViolations(`pricingTiers[${idx}].code`)}
                     </div>
+                  </div>
+
+                  <div className="mb-6 bg-white p-4 rounded-xl border border-gray-100">
+                    <p className="mb-3 text-[10px] text-blue-900 leading-relaxed">
+                      <span className="font-bold uppercase tracking-wider">How these controls affect pricing:</span>{' '}
+                      <span className="font-medium">Priority decides which matching tier is applied first. Min/Max threshold restricts when this tier can match by amount. Full-breach controls whether charge applies to the full eligible amount once breached.</span>
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      {renderTierFieldLabel('Priority', 'Controls evaluation order. Higher priority tiers are checked first. If multiple tiers match, higher priority wins.')}
+                      <input
+                        type="number"
+                        step="1"
+                        className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
+                        placeholder="Optional"
+                        value={tier.priority ?? ''}
+                        onChange={(e) => {
+                          handleTierChange(idx, 'priority', e.target.value === '' ? '' : Number(e.target.value));
+                          clearViolation(`pricingTiers[${idx}].priority`);
+                        }}
+                      />
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {dynamicPriorityChipOptions.map((preset) => {
+                          const isSelected = Number(tier.priority) === preset.value;
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                handleTierChange(idx, 'priority', preset.value);
+                                clearViolation(`pricingTiers[${idx}].priority`);
+                              }}
+                              className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border transition ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600'}`}
+                            >
+                              {preset.label}
+                            </button>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleTierChange(idx, 'priority', '');
+                            clearViolation(`pricingTiers[${idx}].priority`);
+                          }}
+                          className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border transition ${tier.priority === '' || tier.priority === null || tier.priority === undefined ? 'bg-gray-700 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700'}`}
+                        >
+                          Fallback
+                        </button>
+                      </div>
+                      <div className="mt-1 text-[9px] text-gray-400 font-semibold">
+                        Existing priorities in this component: {existingPriorities.length > 0 ? existingPriorities.join(', ') : 'none'}
+                      </div>
+                      {renderViolations(`pricingTiers[${idx}].priority`)}
+                    </div>
+
+                    <div>
+                      {renderTierFieldLabel('Minimum Threshold', 'Optional lower bound for amount matching. Tier matches only when amount is greater than or equal to this value.')}
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
+                        placeholder="Optional"
+                        value={tier.minThreshold ?? ''}
+                        onChange={(e) => {
+                          handleTierChange(idx, 'minThreshold', e.target.value === '' ? '' : Number(e.target.value));
+                          clearViolation(`pricingTiers[${idx}].minThreshold`);
+                        }}
+                      />
+                      {renderViolations(`pricingTiers[${idx}].minThreshold`)}
+                    </div>
+
+                    <div>
+                      {renderTierFieldLabel('Maximum Threshold', 'Optional upper bound for amount matching. Tier matches only when amount is less than or equal to this value.')}
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
+                        placeholder="Optional"
+                        value={tier.maxThreshold ?? ''}
+                        onChange={(e) => {
+                          handleTierChange(idx, 'maxThreshold', e.target.value === '' ? '' : Number(e.target.value));
+                          clearViolation(`pricingTiers[${idx}].maxThreshold`);
+                        }}
+                      />
+                      {renderViolations(`pricingTiers[${idx}].maxThreshold`)}
+                    </div>
+
+                    <div>
+                      {renderTierFieldLabel('Apply Charge On Full Breach', 'When enabled, charge applies to the full eligible amount once this tier is breached, not just a partial portion.')}
+                      <div className="h-[42px] flex items-center px-3 bg-white border border-gray-200 rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleTierChange(idx, 'applyChargeOnFullBreach', !tier.applyChargeOnFullBreach);
+                            clearViolation(`pricingTiers[${idx}].applyChargeOnFullBreach`);
+                          }}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${tier.applyChargeOnFullBreach ? 'bg-blue-600' : 'bg-gray-200'}`}
+                        >
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${tier.applyChargeOnFullBreach ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                        <span className="ml-2 text-[9px] font-bold uppercase tracking-widest text-gray-500">
+                          {tier.applyChargeOnFullBreach ? 'ENABLED' : 'DISABLED'}
+                        </span>
+                      </div>
+                      {renderViolations(`pricingTiers[${idx}].applyChargeOnFullBreach`)}
+                    </div>
+                  </div>
                   </div>
 
                   <div className="mb-6">
@@ -605,7 +853,7 @@ const PricingComponentFormPage = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
               {formData.pricingTiers.length === 0 && (
                 <div className="text-center py-16 border-4 border-dashed rounded-[2rem] text-gray-300 font-black uppercase tracking-widest text-xs">
                   No Segment Logic Defined
