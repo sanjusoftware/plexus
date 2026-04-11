@@ -93,14 +93,6 @@ public class ProductService extends BaseService {
                     .build());
         }
 
-        // Example Warning Quota Check
-        if ("RETAIL".equalsIgnoreCase(requestDto.getCategory())) {
-            violations.add(Violation.builder()
-                    .field("category")
-                    .reason("Category 'RETAIL' is approaching its quota for this bank.")
-                    .severity(Violation.Severity.WARNING)
-                    .build());
-        }
 
         ProductType productType = null;
         try {
@@ -124,7 +116,7 @@ public class ProductService extends BaseService {
             if (requestDto.getPricing() != null) syncPricingInternal(product, requestDto.getPricing(), violations);
         }
 
-        if (!violations.isEmpty()) {
+        if (hasBlockingViolations(violations)) {
             throw new ValidationException("BUSINESS_RULE_VIOLATION", "Product creation failed due to multiple conflicts.", violations);
         }
 
@@ -154,7 +146,7 @@ public class ProductService extends BaseService {
         if (dto.getFeatures() != null) syncFeaturesInternal(product, dto.getFeatures(), violations);
         if (dto.getPricing() != null) syncPricingInternal(product, dto.getPricing(), violations);
 
-        if (!violations.isEmpty()) {
+        if (hasBlockingViolations(violations)) {
             throw new ValidationException("BUSINESS_RULE_VIOLATION", "Product update failed due to multiple conflicts.", violations);
         }
 
@@ -476,6 +468,10 @@ public class ProductService extends BaseService {
             }
             link.setExpiryDate(dto.getExpiryDate());
         }
+    }
+
+    private boolean hasBlockingViolations(List<Violation> violations) {
+        return violations.stream().anyMatch(v -> v.getSeverity() == Violation.Severity.ERROR);
     }
 
     public Product getProductEntityById(Long id) {

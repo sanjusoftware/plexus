@@ -53,9 +53,15 @@ public class PricingInputMetadataService extends BaseService {
      * Retrieves metadata for a single attribute, using the cache if available.
      */
     @Transactional(readOnly = true)
-    @Cacheable(value = "pricingMetadata", key = "#attributeKey")
+    @Cacheable(value = "pricingMetadata", key = "#root.target.getCurrentBankId() + '_' + #attributeKey")
     public PricingInputMetadata getMetadataEntityByKey(String attributeKey) {
-        return pricingInputMetadataRepository.findByAttributeKey(attributeKey)
+        return getMetadataEntityByKey(attributeKey, getCurrentBankId());
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "pricingMetadata", key = "#bankId + '_' + #attributeKey")
+    public PricingInputMetadata getMetadataEntityByKey(String attributeKey, String bankId) {
+        return pricingInputMetadataRepository.findByBankIdAndAttributeKey(bankId, attributeKey)
                 .orElseThrow(() -> new IllegalArgumentException(
                         String.format("Invalid rule attribute '%s'. Not found in PricingInputMetadata registry.", attributeKey)));
     }
@@ -66,7 +72,7 @@ public class PricingInputMetadataService extends BaseService {
      */
     @Transactional(readOnly = true)
     public List<PricingInputMetadata> getMetadataEntitiesByKeys(Set<String> attributeKeys) {
-        return pricingInputMetadataRepository.findByAttributeKeyIn(attributeKeys);
+        return pricingInputMetadataRepository.findByBankIdAndAttributeKeyIn(getCurrentBankId(), attributeKeys);
     }
 
     @Transactional(readOnly = true)
@@ -78,16 +84,17 @@ public class PricingInputMetadataService extends BaseService {
 
     @Transactional(readOnly = true)
     public PricingMetadataResponse getMetadataByKey(String attributeKey) {
-        return pricingInputMetadataRepository.findByAttributeKey(attributeKey)
+        return pricingInputMetadataRepository.findByBankIdAndAttributeKey(getCurrentBankId(), attributeKey)
                 .map(mapper::toResponse)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
     }
 
     @Transactional
-    @CacheEvict(value = "pricingMetadata", key = "#dto.attributeKey")
+    @CacheEvict(value = "pricingMetadata", allEntries = true)
     public PricingMetadataResponse createMetadata(PricingMetadataRequest dto) {
         // Business Rule: Key must be unique. Check before attempting save.
-        if (pricingInputMetadataRepository.findByAttributeKey(dto.getAttributeKey()).isPresent()) {
+        String bankId = getCurrentBankId();
+        if (pricingInputMetadataRepository.findByBankIdAndAttributeKey(bankId, dto.getAttributeKey()).isPresent()) {
             throw new DependencyViolationException(
                     "Cannot create Pricing Input Metadata: An attribute with the key '" + dto.getAttributeKey() + "' already exists."
             );
@@ -98,6 +105,7 @@ public class PricingInputMetadataService extends BaseService {
 
         // Map DTO to Entity and save
         PricingInputMetadata entity = mapper.toEntity(dto);
+        entity.setBankId(bankId);
         PricingInputMetadata savedEntity = pricingInputMetadataRepository.save(entity);
 
         reloadService.reloadKieContainer();
@@ -106,9 +114,9 @@ public class PricingInputMetadataService extends BaseService {
     }
 
     @Transactional
-    @CacheEvict(value = "pricingMetadata", key = "#attributeKey")
+    @CacheEvict(value = "pricingMetadata", allEntries = true)
     public PricingMetadataResponse updateMetadata(String attributeKey, PricingMetadataRequest dto) {
-        PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
+        PricingInputMetadata entity = pricingInputMetadataRepository.findByBankIdAndAttributeKey(getCurrentBankId(), attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 
         dto.setAttributeKey(attributeKey);
@@ -153,9 +161,10 @@ public class PricingInputMetadataService extends BaseService {
     }
 
     @Transactional
-    @CacheEvict(value = "pricingMetadata", key = "#attributeKey")
+    @CacheEvict(value = "pricingMetadata", allEntries = true)
     public void deleteMetadata(String attributeKey) {
-        PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
+        String bankId = getCurrentBankId();
+        PricingInputMetadata entity = pricingInputMetadataRepository.findByBankIdAndAttributeKey(bankId, attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 
         if (tierConditionRepository.existsByAttributeName(entity.getAttributeKey())) {
@@ -164,7 +173,7 @@ public class PricingInputMetadataService extends BaseService {
                     "': It is used in one or more active tier conditions."
             );
         }
-        pricingInputMetadataRepository.deleteByAttributeKey(attributeKey);
+        pricingInputMetadataRepository.deleteByBankIdAndAttributeKey(bankId, attributeKey);
         reloadService.reloadKieContainer();
     }
 }

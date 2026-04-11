@@ -36,7 +36,7 @@ public class CoreMetadataSeeder {
         );
 
         for (PricingInputMetadata metadata : metadataList) {
-            pricingInputMetadataRepository.findByAttributeKey(metadata.getAttributeKey())
+            pricingInputMetadataRepository.findByBankIdAndAttributeKey(bankId, metadata.getAttributeKey())
                     .ifPresentOrElse(
                             existing -> {
                                 existing.setDisplayName(metadata.getDisplayName());

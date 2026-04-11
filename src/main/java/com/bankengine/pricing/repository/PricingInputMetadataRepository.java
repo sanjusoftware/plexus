@@ -13,4 +13,8 @@ public interface PricingInputMetadataRepository extends TenantRepository<Pricing
     Optional<PricingInputMetadata> findByAttributeKey(String attributeKey);
     List<PricingInputMetadata> findByAttributeKeyIn(Set<String> attributeKeys);
     void deleteByAttributeKey(String attributeKey);
+
+    Optional<PricingInputMetadata> findByBankIdAndAttributeKey(String bankId, String attributeKey);
+    List<PricingInputMetadata> findByBankIdAndAttributeKeyIn(String bankId, Set<String> attributeKeys);
+    void deleteByBankIdAndAttributeKey(String bankId, String attributeKey);
 }

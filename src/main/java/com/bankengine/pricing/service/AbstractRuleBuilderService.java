@@ -176,7 +176,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
      * @param componentVersion Component Version
      */
     protected String buildLHSCondition(PricingTier tier, String componentCode, Integer componentVersion) {
-        String bankId = getSafeBankIdForDrl();
+        String bankId = tier.getBankId() != null ? tier.getBankId() : getSafeBankIdForDrl();
         String factFqn = getFactType();
         String factName = factFqn.substring(factFqn.lastIndexOf(".") + 1);
 
@@ -212,7 +212,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
             Iterator<TierCondition> it = tier.getConditions().iterator();
             while (it.hasNext()) {
                 TierCondition cond = it.next();
-                PricingInputMetadata metadata = metadataService.getMetadataEntityByKey(cond.getAttributeName());
+                PricingInputMetadata metadata = metadataService.getMetadataEntityByKey(cond.getAttributeName(), bankId);
                 conditionBuilder.append(droolsExpressionBuilder.buildExpression(cond, metadata, factName));
 
                 if (it.hasNext()) {
