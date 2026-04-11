@@ -674,7 +674,7 @@ const ProductManagementPage = () => {
                               </div>
                             )}
                             {!calculatedPrices[prod.id] && (
-                              <div className="h-full min-h-[180px] bg-white rounded-xl border border-gray-200 p-4 text-[10px] text-gray-500 flex items-center">
+                              <div className="h-full min-h-[180px] bg-white rounded-xl border border-gray-200 p-4 text-sm text-gray-500 flex items-center justify-center text-center">
                                 Run calculation to see a receipt-style component breakdown.
                               </div>
                             )}

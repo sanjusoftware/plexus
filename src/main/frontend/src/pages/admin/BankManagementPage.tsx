@@ -434,7 +434,7 @@ const BankManagementPage = () => {
                   <div className="p-1.5 bg-blue-50 rounded-lg"><Clock className="h-4 w-4 text-blue-600" /></div>
                   <div>
                     <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Updated At</p>
-                    <p className="text-xs font-bold text-gray-900 leading-tight">{formatAuditTimestamp(selectedBank.updatedAt)}</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">{formatAuditTimestamp(selectedBank.updatedAt || selectedBank.createdAt)}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3 col-span-2">
