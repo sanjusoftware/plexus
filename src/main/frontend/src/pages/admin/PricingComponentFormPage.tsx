@@ -66,6 +66,7 @@ const PricingComponentFormPage = () => {
       case 'STRING':
         return allOps.filter(op => op.value === 'EQ');
       case 'INTEGER':
+      case 'LONG':
       case 'DECIMAL':
       case 'DATE':
         return allOps;
@@ -173,7 +174,7 @@ const PricingComponentFormPage = () => {
     };
 
     fetchData();
-  }, [id, isEditing, setEntityName, setToast, mapTierFromApi, signal]);
+  }, [id, isEditing, navigate, setEntityName, setToast, mapTierFromApi, signal]);
 
   const handleTierChange = (index: number, field: string, value: any) => {
     const newTiers = [...formData.pricingTiers];
@@ -482,11 +483,12 @@ const PricingComponentFormPage = () => {
                                       />
                                     );
                                   case 'INTEGER':
+                                  case 'LONG':
                                   case 'DECIMAL':
                                     return (
                                       <input
                                         type="number"
-                                        step={dataType === 'INTEGER' ? '1' : 'any'}
+                                        step={dataType === 'INTEGER' || dataType === 'LONG' ? '1' : 'any'}
                                         className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
                                         placeholder="Value..."
                                         value={cond.attributeValue}

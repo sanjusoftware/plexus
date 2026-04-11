@@ -207,7 +207,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(comp));
 
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
-        assertTrue(drl.contains("transactionAmount <= new java.math.BigDecimal(\"1000.00\")"));
+        assertTrue(drl.contains("((java.math.BigDecimal) customAttributes[\"transactionAmount\"]) <= new java.math.BigDecimal(\"1000.00\")"));
     }
 
     @Test

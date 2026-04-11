@@ -289,7 +289,13 @@ public class TestTransactionHelper {
     @Transactional
     public PricingInputMetadata createAndSaveMetadata(String key, String dataType) {
         return metadataRepository.findByAttributeKey(key).orElseGet(() -> {
-            return metadataRepository.save(PricingInputMetadata.builder().attributeKey(key).dataType(dataType).displayName(key).build());
+            return metadataRepository.save(PricingInputMetadata.builder()
+                    .attributeKey(key)
+                    .dataType(dataType)
+                    .displayName(key)
+                    .sourceType(PricingInputMetadata.AttributeSourceType.CUSTOM_ATTRIBUTE)
+                    .sourceField(key)
+                    .build());
         });
     }
 

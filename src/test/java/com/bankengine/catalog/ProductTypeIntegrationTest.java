@@ -20,8 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Map;
 import java.util.Set;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -267,7 +266,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.details.name").value("Product Type name is required."));
+                .andExpect(jsonPath("$.errors[*].reason", hasItem("Product Type name is required.")));
     }
 
     @Test
@@ -280,7 +279,7 @@ class ProductTypeIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.details.name").value("Name must be between 3 and 100 characters."));
+                .andExpect(jsonPath("$.errors[*].reason", hasItem("Name must be between 3 and 100 characters.")));
     }
 
 

@@ -416,7 +416,7 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
     // --- 6. VERSIONING TESTS ---
 
     @Test
-    @DisplayName("Versioning - Should create new ACTIVE version from ACTIVE feature")
+    @DisplayName("Versioning - Should create new DRAFT version from ACTIVE feature")
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldVersionFeatureSuccessfully() throws Exception {
         FeatureComponent source = createFeatureComponentInDb("BaseFeature");
@@ -442,18 +442,18 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.code", is(code)))
                 .andExpect(jsonPath("$.version", is(2)))
-                .andExpect(jsonPath("$.status", is("ACTIVE")))
+                .andExpect(jsonPath("$.status", is("DRAFT")))
                 .andExpect(jsonPath("$.activationDate", is(newActivationDate.toString())))
                 .andExpect(jsonPath("$.expiryDate", is(newExpiryDate.toString())));
 
         txHelper.doInTransaction(() -> {
             FeatureComponent v2 = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 2).orElseThrow();
-            assertThat(v2.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ACTIVE);
+            assertThat(v2.getStatus()).isEqualTo(VersionableEntity.EntityStatus.DRAFT);
             assertThat(v2.getActivationDate()).isEqualTo(newActivationDate);
             assertThat(v2.getExpiryDate()).isEqualTo(newExpiryDate);
 
             FeatureComponent v1 = featureComponentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, code, 1).orElseThrow();
-            assertThat(v1.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ARCHIVED);
+            assertThat(v1.getStatus()).isEqualTo(VersionableEntity.EntityStatus.ACTIVE);
         });
     }
 

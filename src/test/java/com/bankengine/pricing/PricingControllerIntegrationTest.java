@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.startsWith;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -122,10 +121,10 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
-        request.setCustomerSegment("RETAIL");
-        request.setTransactionAmount(BigDecimal.valueOf(1000.0));
-        request.setEffectiveDate(LocalDate.now());
-        request.setCustomAttributes(Map.of("transactionAmount", new BigDecimal("1000")));
+        request.setCustomAttributes(Map.of(
+                "customerSegment", "RETAIL",
+                "transactionAmount", BigDecimal.valueOf(1000.0),
+                "effectiveDate", LocalDate.now()));
 
         mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -159,7 +158,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         BundlePriceRequest request = new BundlePriceRequest();
         request.setProductBundleId(ids.get("bundle"));
-        request.setCustomerSegment("RETAIL");
+        request.setCustomAttributes(Map.of("customerSegment", "RETAIL"));
 
         BundlePriceRequest.BundleProductItem pr1 = new BundlePriceRequest.BundleProductItem(ids.get("p1"), BigDecimal.valueOf(1000));
         BundlePriceRequest.BundleProductItem pr2 = new BundlePriceRequest.BundleProductItem(ids.get("p2"), BigDecimal.valueOf(1000));
@@ -206,7 +205,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         BundlePriceRequest request = new BundlePriceRequest();
         request.setProductBundleId(ids.get("bundle"));
-        request.setCustomerSegment("RETAIL");
+        request.setCustomAttributes(Map.of("customerSegment", "RETAIL"));
         request.setProducts(List.of(
                 new BundlePriceRequest.BundleProductItem(ids.get("p1"), BigDecimal.valueOf(1000)),
                 new BundlePriceRequest.BundleProductItem(ids.get("p2"), BigDecimal.valueOf(1000))
@@ -262,9 +261,10 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
-        request.setCustomerSegment("RETAIL");
-        request.setTransactionAmount(new BigDecimal("1000.00"));
-        request.setEffectiveDate(LocalDate.now());
+        request.setCustomAttributes(Map.of(
+                "customerSegment", "RETAIL",
+                "transactionAmount", new BigDecimal("1000.00"),
+                "effectiveDate", LocalDate.now()));
 
         // 2. ACT & ASSERT
         mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
@@ -313,8 +313,10 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
-        request.setCustomerSegment("DEFAULT_SEGMENT");
-        request.setTransactionAmount(new BigDecimal("1000.00"));
+        request.setCustomAttributes(Map.of(
+                "customerSegment", "DEFAULT_SEGMENT",
+                "transactionAmount", new BigDecimal("1000.00"),
+                "effectiveDate", LocalDate.now()));
 
         mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -361,9 +363,10 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
-        request.setCustomerSegment("RETAIL");
-        request.setTransactionAmount(BigDecimal.ZERO);
-        request.setEffectiveDate(LocalDate.now());
+        request.setCustomAttributes(Map.of(
+                "customerSegment", "RETAIL",
+                "transactionAmount", BigDecimal.ZERO,
+                "effectiveDate", LocalDate.now()));
 
         mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)

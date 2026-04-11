@@ -22,10 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -50,6 +48,7 @@ public class BundlePricingService extends BaseService {
     public BundlePriceResponse calculateTotalBundlePrice(BundlePriceRequest bundlePriceRequest) {
         // 0. Fail Fast: Validate input presence
         validateRequest(bundlePriceRequest);
+        LocalDate effectiveDate = resolveEffectiveDate(bundlePriceRequest);
 
         // 1. Calculate Individual Product Prices (The Base Fee Pool)
         List<ProductPricingResult> productPricingResults = calculateIndividualProductFee(bundlePriceRequest);
@@ -58,7 +57,7 @@ public class BundlePricingService extends BaseService {
         // 2. Fetch Bundle and Active Temporal Links
         verifyBundleExists(bundlePriceRequest.getProductBundleId());
         List<BundlePricingLink> activeLinks = bundlePricingLinkRepository
-                .findByBundleIdAndDate(bundlePriceRequest.getProductBundleId(), bundlePriceRequest.getEffectiveDate());
+                .findByBundleIdAndDate(bundlePriceRequest.getProductBundleId(), effectiveDate);
 
         // 3. Assemble Components (Fixed from DB + Dynamic from Rules)
         List<PriceComponentDetail> bundleAdjustments = assembleBundleComponents(bundlePriceRequest, activeLinks, existingFeePool);
@@ -70,7 +69,7 @@ public class BundlePricingService extends BaseService {
                 BigDecimal.ZERO,
                 existingFeePool,
                 bundlePriceRequest.getEnrollmentDate(),
-                bundlePriceRequest.getEffectiveDate());
+                effectiveDate);
 
         // 5. Build Final Response
         return buildResponse(bundlePriceRequest, productPricingResults, bundleAdjustments,
@@ -89,13 +88,20 @@ public class BundlePricingService extends BaseService {
 
     private List<ProductPricingResult> calculateIndividualProductFee(BundlePriceRequest request) {
         List<ProductPricingResult> results = new ArrayList<>();
+        LocalDate effectiveDate = resolveEffectiveDate(request);
 
         for (BundlePriceRequest.BundleProductItem productReq : request.getProducts()) {
+            Map<String, Object> productAttributes = new HashMap<>();
+            if (request.getCustomAttributes() != null) {
+                productAttributes.putAll(request.getCustomAttributes());
+            }
+            productAttributes.put("productId", productReq.getProductId());
+            productAttributes.put("transactionAmount", productReq.getTransactionAmount() != null ? productReq.getTransactionAmount() : BigDecimal.ZERO);
+            productAttributes.put("effectiveDate", effectiveDate);
+
             ProductPriceRequest singlePricingRequest = ProductPriceRequest.builder()
                     .productId(productReq.getProductId())
-                    .transactionAmount(productReq.getTransactionAmount()) // Base amount for product-specific rules
-                    .customerSegment(request.getCustomerSegment())
-                    .effectiveDate(request.getEffectiveDate())
+                    .customAttributes(productAttributes)
                     .build();
 
             ProductPricingCalculationResult calcResult = productPricingService.getProductPricing(singlePricingRequest);
@@ -167,11 +173,10 @@ public class BundlePricingService extends BaseService {
     }
 
     private BundlePricingInput fireRulesEngine(BundlePriceRequest request, List<BundlePricingLink> activeLinks, BigDecimal productBaseFee) {
+        Map<String, Object> normalizedAttributes = buildNormalizedCustomAttributes(request, productBaseFee);
+
         BundlePricingInput inputFact = new BundlePricingInput();
-        inputFact.setGrossTotalAmount(productBaseFee);
         inputFact.setBankId(getCurrentBankId());
-        inputFact.setCustomerSegment(request.getCustomerSegment());
-        inputFact.setReferenceDate(request.getEffectiveDate());
 
         // 1. Filter links that require the Rules Engine
         List<BundlePricingLink> ruleLinks = activeLinks.stream()
@@ -192,14 +197,38 @@ public class BundlePricingService extends BaseService {
         inputFact.setActivePricingTierCodes(activeTierCodes);
 
         // 4. Populate Context Attributes for custom DRL expressions
-        inputFact.getCustomAttributes().put("customerSegment", request.getCustomerSegment());
-        inputFact.getCustomAttributes().put("effectiveDate", request.getEffectiveDate());
 
-        if (request.getCustomAttributes() != null) {
-            inputFact.getCustomAttributes().putAll(request.getCustomAttributes());
-        }
+        inputFact.getCustomAttributes().putAll(normalizedAttributes);
 
         return bundleRulesEngineService.determineBundleAdjustments(inputFact);
+    }
+
+    private Map<String, Object> buildNormalizedCustomAttributes(BundlePriceRequest request, BigDecimal grossTotalAmount) {
+        Map<String, Object> attributes = new HashMap<>();
+        if (request.getCustomAttributes() != null) {
+            attributes.putAll(request.getCustomAttributes());
+        }
+
+        attributes.putIfAbsent("productBundleId", request.getProductBundleId());
+        attributes.putIfAbsent("effectiveDate", LocalDate.now());
+        attributes.putIfAbsent("grossTotalAmount", grossTotalAmount);
+        attributes.putIfAbsent("bankId", getCurrentBankId());
+        return attributes;
+    }
+
+    private LocalDate resolveEffectiveDate(BundlePriceRequest request) {
+        Object fromCustom = request.getCustomAttributes() != null ? request.getCustomAttributes().get("effectiveDate") : null;
+        return extractLocalDate(fromCustom, LocalDate.now());
+    }
+
+    private LocalDate extractLocalDate(Object value, LocalDate defaultValue) {
+        if (value == null) return defaultValue;
+        if (value instanceof LocalDate date) return date;
+        try {
+            return LocalDate.parse(value.toString());
+        } catch (Exception ex) {
+            return defaultValue;
+        }
     }
 
     private List<PriceComponentDetail> convertRulesToDetail(Map<String, BundlePricingInput.BundleAdjustment> adjustments) {

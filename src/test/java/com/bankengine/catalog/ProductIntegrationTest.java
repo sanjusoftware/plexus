@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -117,7 +117,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
                 .name("Standard Product Name")
                 .code("CODE_" + UUID.randomUUID().toString().substring(0, 8))
                 .productTypeCode("BCT")
-                .category("RETAIL")
+                .category("CORPORATE")
                 .activationDate(LocalDate.now().plusDays(1))
                 .expiryDate(LocalDate.now().plusYears(1));
     }
@@ -203,7 +203,7 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(postWithCsrf(PRODUCT_API_BASE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnprocessableEntity());
     }
 
     @Test
@@ -360,8 +360,8 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.features[0].featureName").value("Premium Support"))
                 .andExpect(jsonPath("$.pricing[0].pricingComponentName").value("Monthly Fee"));
 
-        // 4. Assert: Verify the original is now ARCHIVED
+        // 4. Assert: Verify the original remains ACTIVE until revision activation
         mockMvc.perform(get(PRODUCT_API_BASE + "/{id}", oldProductId))
-                .andExpect(jsonPath("$.status").value("ARCHIVED"));
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 }

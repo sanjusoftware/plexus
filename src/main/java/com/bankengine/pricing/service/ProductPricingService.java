@@ -22,10 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -46,15 +43,18 @@ public class ProductPricingService extends BaseService {
         // 0. Validation & Security
         verifyProductAccess(request.getProductId());
 
+        Map<String, Object> normalizedAttributes = buildNormalizedCustomAttributes(request);
+        LocalDate effectiveDate = extractLocalDate(normalizedAttributes.get("effectiveDate"), LocalDate.now());
+
         // 1. Data Retrieval: Fetch active pricing links (Fixed and Rule-based definitions)
-        List<ProductPricingLink> activePricingLinks = getActivePricingLinks(request);
+        List<ProductPricingLink> activePricingLinks = getActivePricingLinks(request.getProductId(), effectiveDate);
 
         // 2. Component Assembly: Combine Static (DB) and Dynamic (Drools) components
-        List<PriceComponentDetail> priceComponentDetails = assemblePricingComponents(request, activePricingLinks);
+        List<PriceComponentDetail> priceComponentDetails = assemblePricingComponents(activePricingLinks, normalizedAttributes);
 
         // 3. Calculation: Delegate to the Pure Calculation Engine (PriceAggregator)
         // Here, the 'transactionAmount' in request is treated as the 'productFeeCalculationBaseAmount' for this specific product
-        BigDecimal productFeeCalculationBaseAmount = (request.getTransactionAmount() != null) ? request.getTransactionAmount() : BigDecimal.ZERO;
+        BigDecimal productFeeCalculationBaseAmount = extractBigDecimal(normalizedAttributes.get("transactionAmount"), BigDecimal.ZERO);
 
         // Note: For a single product, the 'netImpact' is the sum of its fees and discounts
         BigDecimal netImpact = priceAggregator.calculateBundleImpact(
@@ -62,7 +62,7 @@ public class ProductPricingService extends BaseService {
                 productFeeCalculationBaseAmount,
                 BigDecimal.ZERO,
                 request.getEnrollmentDate(),
-                request.getEffectiveDate());
+                effectiveDate);
 
         // 4. Build Final Result
         // The PRICE of the product is the sum of the fees, NOT the transaction amount
@@ -80,11 +80,11 @@ public class ProductPricingService extends BaseService {
         getByIdSecurely(productRepository, productId, "Product");
     }
 
-    private List<ProductPricingLink> getActivePricingLinks(ProductPriceRequest request) {
-        List<ProductPricingLink> links = getCachedLinks(request.getProductId(), request.getEffectiveDate());
+    private List<ProductPricingLink> getActivePricingLinks(Long productId, LocalDate effectiveDate) {
+        List<ProductPricingLink> links = getCachedLinks(productId, effectiveDate);
         if (links.isEmpty()) {
             throw new NotFoundException("No active pricing configuration found for product: "
-                    + request.getProductId() + " on date: " + request.getEffectiveDate());
+                    + productId + " on date: " + effectiveDate);
         }
         return links;
     }
@@ -92,7 +92,8 @@ public class ProductPricingService extends BaseService {
     /**
      * Gathers all definitions (Fixed from DB and Tiers from Rules).
      */
-    private List<PriceComponentDetail> assemblePricingComponents(ProductPriceRequest request, List<ProductPricingLink> links) {
+    private List<PriceComponentDetail> assemblePricingComponents(List<ProductPricingLink> links,
+                                                                 Map<String, Object> normalizedAttributes) {
         List<PriceComponentDetail> components = new ArrayList<>();
 
         // Process Static Fixed Values
@@ -106,13 +107,14 @@ public class ProductPricingService extends BaseService {
                 .filter(ProductPricingLink::isUseRulesEngine).toList();
 
         if (!ruleBasedLinks.isEmpty()) {
-            components.addAll(retrieveDynamicComponents(request, ruleBasedLinks));
+            components.addAll(retrieveDynamicComponents(ruleBasedLinks, normalizedAttributes));
         }
 
         return components;
     }
 
-    private List<PriceComponentDetail> retrieveDynamicComponents(ProductPriceRequest request, List<ProductPricingLink> ruleLinks) {
+    private List<PriceComponentDetail> retrieveDynamicComponents(List<ProductPricingLink> ruleLinks,
+                                                                 Map<String, Object> normalizedAttributes) {
         // 1. Identify Target Component Codes and Versions
         Set<String> componentCodes = ruleLinks.stream()
                 .map(l -> l.getPricingComponent().getCode() + ":" + l.getPricingComponent().getVersion())
@@ -125,34 +127,24 @@ public class ProductPricingService extends BaseService {
                 .collect(Collectors.toSet());
 
         // 3. Execute Rules with fully populated code sets
-        return determinePriceWithDrools(request, componentCodes, activeTierCodes).stream()
+        return determinePriceWithDrools(componentCodes, activeTierCodes, normalizedAttributes).stream()
                 .map(this::mapFactToDetail)
                 .toList();
     }
 
-    private Collection<PriceValue> determinePriceWithDrools(ProductPriceRequest request, Set<String> componentCodes, Set<String> activeTierCodes) {
+    private Collection<PriceValue> determinePriceWithDrools(Set<String> componentCodes,
+                                                            Set<String> activeTierCodes,
+                                                            Map<String, Object> normalizedAttributes) {
         KieSession kieSession = kieContainerReloadService.getKieContainer().newKieSession();
         try {
             PricingInput input = new PricingInput();
             input.setBankId(getCurrentBankId());
             input.setTargetPricingComponentCodes(componentCodes);
             input.setActivePricingTierCodes(activeTierCodes);
-            input.setReferenceDate(request.getEffectiveDate());
-
-            // CRITICAL: Set the top-level field so the DRL 'amountField' logic works
-            input.setTransactionAmount(request.getTransactionAmount() != null ?
-                    request.getTransactionAmount() : BigDecimal.ZERO);
-            input.setCustomerSegment(request.getCustomerSegment());
 
             input.setRuleFired(false);
 
-            // Populate Context Attributes for custom DRL expressions
-            if (request.getCustomAttributes() != null) {
-                input.getCustomAttributes().putAll(request.getCustomAttributes());
-            }
-            input.getCustomAttributes().put("productId", request.getProductId());
-            input.getCustomAttributes().put("customerSegment", request.getCustomerSegment());
-            input.getCustomAttributes().put("transactionAmount", input.getTransactionAmount());
+            input.getCustomAttributes().putAll(normalizedAttributes);
 
             kieSession.setGlobal("log", log);
             kieSession.insert(input);
@@ -162,6 +154,40 @@ public class ProductPricingService extends BaseService {
                     .stream().map(PriceValue.class::cast).toList();
         } finally {
             kieSession.dispose();
+        }
+    }
+
+    private Map<String, Object> buildNormalizedCustomAttributes(ProductPriceRequest request) {
+        Map<String, Object> attributes = new HashMap<>();
+        if (request.getCustomAttributes() != null) {
+            attributes.putAll(request.getCustomAttributes());
+        }
+
+        attributes.putIfAbsent("productId", request.getProductId());
+        attributes.putIfAbsent("transactionAmount", BigDecimal.ZERO);
+        attributes.putIfAbsent("effectiveDate", LocalDate.now());
+        attributes.putIfAbsent("bankId", getCurrentBankId());
+        return attributes;
+    }
+
+    private BigDecimal extractBigDecimal(Object value, BigDecimal defaultValue) {
+        if (value == null) return defaultValue;
+        if (value instanceof BigDecimal decimal) return decimal;
+        if (value instanceof Number number) return BigDecimal.valueOf(number.doubleValue());
+        try {
+            return new BigDecimal(value.toString());
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
+    }
+
+    private LocalDate extractLocalDate(Object value, LocalDate defaultValue) {
+        if (value == null) return defaultValue;
+        if (value instanceof LocalDate date) return date;
+        try {
+            return LocalDate.parse(value.toString());
+        } catch (Exception ex) {
+            return defaultValue;
         }
     }
 

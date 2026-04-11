@@ -28,6 +28,11 @@ import lombok.experimental.SuperBuilder;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PricingInputMetadata extends AuditableEntity {
 
+    public enum AttributeSourceType {
+        FACT_FIELD,
+        CUSTOM_ATTRIBUTE
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -40,6 +45,18 @@ public class PricingInputMetadata extends AuditableEntity {
 
     @Column(name = "display_name")
     private String displayName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_type", nullable = false, length = 30)
+    private AttributeSourceType sourceType = AttributeSourceType.CUSTOM_ATTRIBUTE;
+
+    @Column(name = "source_field", nullable = false)
+    private String sourceField;
+
+    @JsonIgnore
+    public String getResolvedSourceField() {
+        return (sourceField == null || sourceField.isBlank()) ? attributeKey : sourceField;
+    }
 
     @JsonIgnore
     public String getFqnType() {

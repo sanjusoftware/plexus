@@ -140,7 +140,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
     }
 
     @Test
-    @DisplayName("Versioning: Revision (Same Code) should increment version, maintain ACTIVE status, apply new date, and archive source")
+    @DisplayName("Versioning: Revision (Same Code) should increment version and create DRAFT revision")
     void versionBundle_Revision_Success() {
         // Arrange: Source is ACTIVE with an old date
         LocalDate oldDate = LocalDate.now().minusMonths(6);
@@ -165,8 +165,8 @@ class ProductBundleServiceTest extends BaseServiceTest {
 
         // Assert: Lineage & Status
         assertEquals(2, newVersion.getVersion());
-        assertEquals(VersionableEntity.EntityStatus.ACTIVE, newVersion.getStatus());
-        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, source.getStatus(), "Source must be archived for same-code revisions");
+        assertEquals(VersionableEntity.EntityStatus.DRAFT, newVersion.getStatus());
+        assertEquals(VersionableEntity.EntityStatus.ACTIVE, source.getStatus(), "Source remains unchanged until revision activation");
 
         // Assert: Metadata & Temporal
         // assertEquals(newActivationDate, newVersion.getActivationDate());

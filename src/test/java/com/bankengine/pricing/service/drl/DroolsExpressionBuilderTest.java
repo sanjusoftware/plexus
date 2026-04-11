@@ -1,6 +1,7 @@
 package com.bankengine.pricing.service.drl;
 
 import com.bankengine.pricing.model.PricingInputMetadata;
+import com.bankengine.pricing.model.PricingInputMetadata.AttributeSourceType;
 import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.model.TierCondition.Operator;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,24 +87,32 @@ class DroolsExpressionBuilderTest {
     }
 
     @Test
-    @DisplayName("Branch: BundlePricingInput alias mapping")
-    void testBuildExpression_BundlePricingInput_Alias() {
-        TierCondition condition = createCondition("transactionAmount", Operator.EQ, "100.00");
-        PricingInputMetadata metadata = createMetadata("DECIMAL");
+    @DisplayName("Branch: BundlePricingInput fact-field mapping")
+    void testBuildExpression_BundlePricingInput_FactField() {
+        TierCondition condition = createCondition("grossTotalAmount", Operator.EQ, "100.00");
+        PricingInputMetadata metadata = createMetadata("DECIMAL", AttributeSourceType.FACT_FIELD, "grossTotalAmount");
         String result = builder.buildExpression(condition, metadata, "BundlePricingInput");
-        // transactionAmount should be mapped to grossTotalAmount
-        assertTrue(result.contains("grossTotalAmount"));
+        assertEquals("grossTotalAmount.compareTo(new java.math.BigDecimal(\"100.00\")) == 0", result);
     }
 
     @Test
-    @DisplayName("Branch: Special attribute names (transactionAmount, customerSegment, etc)")
-    void testBuildExpression_SpecialAttributes() {
-        PricingInputMetadata metadata = createMetadata("STRING");
+    @DisplayName("Branch: Fact field attributes are resolved from metadata")
+    void testBuildExpression_FactFieldAttributes() {
+        PricingInputMetadata metadata = createMetadata("STRING", AttributeSourceType.FACT_FIELD, "customerSegment");
 
         String result = builder.buildExpression(createCondition("customerSegment", Operator.EQ, "RETAIL"), metadata, "PricingInput");
         assertEquals("customerSegment == \"RETAIL\"", result);
 
-        result = builder.buildExpression(createCondition("referenceDate", Operator.EQ, "2026-01-01"), createMetadata("DATE"), "PricingInput");
+        result = builder.buildExpression(
+                createCondition("effectiveDate", Operator.EQ, "2026-01-01"),
+                createMetadata("DATE", AttributeSourceType.FACT_FIELD, "effectiveDate"),
+                "PricingInput");
+        assertTrue(result.startsWith("effectiveDate.isEqual("));
+
+        result = builder.buildExpression(
+                createCondition("referenceDate", Operator.EQ, "2026-01-01"),
+                createMetadata("DATE", AttributeSourceType.FACT_FIELD, "referenceDate"),
+                "PricingInput");
         assertTrue(result.startsWith("referenceDate.isEqual("));
     }
 
@@ -284,8 +293,14 @@ class DroolsExpressionBuilderTest {
     }
 
     private PricingInputMetadata createMetadata(String type) {
+        return createMetadata(type, AttributeSourceType.CUSTOM_ATTRIBUTE, null);
+    }
+
+    private PricingInputMetadata createMetadata(String type, AttributeSourceType sourceType, String sourceField) {
         PricingInputMetadata m = new PricingInputMetadata();
         m.setDataType(type);
+        m.setSourceType(sourceType);
+        m.setSourceField(sourceField);
         return m;
     }
 }

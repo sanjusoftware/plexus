@@ -6,9 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,13 +14,8 @@ import java.util.Set;
 @NoArgsConstructor
 public class BundlePricingInput {
     private String bankId;
-    private String customerSegment;
-    private LocalDate referenceDate = LocalDate.now();
-
     private Set<String> targetPricingComponentCodes;
     private Set<String> activePricingTierCodes;
-    private List<Long> containedProductIds;
-    private BigDecimal grossTotalAmount;
 
     private Map<String, Object> customAttributes = new HashMap<>();
     private Map<String, BundleAdjustment> adjustments = new HashMap<>();

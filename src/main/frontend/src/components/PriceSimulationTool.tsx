@@ -71,10 +71,12 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
 
         const request: ProductPriceRequest = {
           productId: scenario.productId,
-          transactionAmount: scenario.transactionAmount,
-          customerSegment: scenario.customerSegment,
-          effectiveDate: new Date().toISOString().split('T')[0],
           enrollmentDate: scenario.enrollmentDate,
+          customAttributes: {
+            transactionAmount: scenario.transactionAmount,
+            customerSegment: scenario.customerSegment,
+            effectiveDate: new Date().toISOString().split('T')[0],
+          }
         };
 
         const result = await PricingService.calculateProductPrice(request);

@@ -3,7 +3,6 @@ package com.bankengine.rules.model;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -11,9 +10,6 @@ import java.util.Set;
 @Data
 public class PricingInput {
     private String bankId;
-    private String customerSegment;
-    private LocalDate referenceDate = LocalDate.now();
-    private BigDecimal transactionAmount;
     private Set<String> targetPricingComponentCodes;
     private Set<String> activePricingTierCodes;
     private Map<String, Object> customAttributes = new HashMap<>();

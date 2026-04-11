@@ -34,7 +34,6 @@ import java.util.Set;
 
 import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WithMockRole(roles = {"PRICING_ADMIN"})
@@ -159,7 +158,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     void testStandardRuleExecution_Success() {
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT).transactionAmount(TEST_AMOUNT).build();
+                .customAttributes(Map.of(
+                        "customerSegment", TEST_SEGMENT,
+                        "transactionAmount", TEST_AMOUNT,
+                        "effectiveDate", LocalDate.now()))
+                .build();
 
         ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
         assertEquals(EXPECTED_PRICE_INITIAL, result.getComponentBreakdown().getFirst().getRawValue());
@@ -202,8 +205,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         // 3. Requesting pricing for TODAY
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT)
-                .effectiveDate(LocalDate.now()).build();
+                .customAttributes(Map.of(
+                        "customerSegment", TEST_SEGMENT,
+                        "effectiveDate", LocalDate.now(),
+                        "transactionAmount", TEST_AMOUNT))
+                .build();
 
         List<PriceComponentDetail> results = productPricingService.getProductPricing(request).getComponentBreakdown();
 
@@ -230,8 +236,11 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .effectiveDate(LocalDate.now())
-                .customerSegment(TEST_SEGMENT).build();
+                .customAttributes(Map.of(
+                        "customerSegment", TEST_SEGMENT,
+                        "effectiveDate", LocalDate.now(),
+                        "transactionAmount", TEST_AMOUNT))
+                .build();
 
         assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
     }
@@ -249,7 +258,12 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         });
         reloadRules();
         ProductPriceRequest request = ProductPriceRequest.builder()
-                .productId(this.persistedProduct.getId()).customerSegment(TEST_SEGMENT).build();
+                .productId(this.persistedProduct.getId())
+                .customAttributes(Map.of(
+                        "customerSegment", TEST_SEGMENT,
+                        "effectiveDate", LocalDate.now(),
+                        "transactionAmount", TEST_AMOUNT))
+                .build();
 
         assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
     }
@@ -293,9 +307,10 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
 
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
-                .customerSegment(TEST_SEGMENT)
-                .transactionAmount(TEST_AMOUNT)
-                .effectiveDate(LocalDate.now().plusDays(1))
+                .customAttributes(Map.of(
+                        "customerSegment", TEST_SEGMENT,
+                        "transactionAmount", TEST_AMOUNT,
+                        "effectiveDate", LocalDate.now().plusDays(1)))
                 .build();
 
         List<PriceComponentDetail> results = productPricingService.getProductPricing(request).getComponentBreakdown();

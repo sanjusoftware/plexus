@@ -149,10 +149,12 @@ const ProductManagementPage = () => {
     try {
       const request = {
         productId: prod.id,
-        transactionAmount: calcParams.amount,
-        customerSegment: calcParams.segment,
-        effectiveDate: new Date().toISOString().split('T')[0],
         enrollmentDate: new Date().toISOString().split('T')[0],
+        customAttributes: {
+          transactionAmount: calcParams.amount,
+          customerSegment: calcParams.segment,
+          effectiveDate: new Date().toISOString().split('T')[0],
+        }
       };
 
       const result = await PricingService.calculateProductPrice(request);

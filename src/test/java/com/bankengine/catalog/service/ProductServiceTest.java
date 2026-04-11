@@ -9,9 +9,9 @@ import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductFeatureLink;
 import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductRepository;
-import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.VersionableEntity;
+import com.bankengine.pricing.model.PriceValue;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.PricingComponentService;
@@ -183,7 +183,7 @@ public class ProductServiceTest extends BaseServiceTest {
     // --- VERSIONING ---
 
     @Test
-    @DisplayName("Clone: Revision (Same Code) should increment version, maintain ACTIVE status, and archive source")
+    @DisplayName("Clone: Revision (Same Code) should increment version and create DRAFT revision")
     void testCloneProduct_Revision_Success() {
         Product source = createValidProduct(VersionableEntity.EntityStatus.ACTIVE);
         source.setCode("PROD-001");
@@ -201,9 +201,9 @@ public class ProductServiceTest extends BaseServiceTest {
 
         productService.cloneProduct(1L, request);
 
-        assertEquals(VersionableEntity.EntityStatus.ACTIVE, clone.getStatus());
+        assertEquals(VersionableEntity.EntityStatus.DRAFT, clone.getStatus());
         assertEquals(2, clone.getVersion());
-        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, source.getStatus());
+        assertEquals(VersionableEntity.EntityStatus.ACTIVE, source.getStatus());
         // assertEquals(futureDate, clone.getActivationDate());
 
         verify(productRepository).flush();

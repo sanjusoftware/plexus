@@ -2,13 +2,13 @@ package com.bankengine.pricing.service.drl;
 
 import com.bankengine.pricing.model.PricingDataType;
 import com.bankengine.pricing.model.PricingInputMetadata;
+import com.bankengine.pricing.model.PricingInputMetadata.AttributeSourceType;
 import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.model.TierCondition.Operator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
@@ -25,21 +25,17 @@ public class DroolsExpressionBuilder {
         String fqn = type.getFqn();
         boolean quoted = type.isQuoted();
 
-        String access;
-        String path;
-
-        String attributeName = condition.getAttributeName();
-        if ("transactionAmount".equals(attributeName) && "BundlePricingInput".equals(factName)) {
-            attributeName = "grossTotalAmount";
+        String sourceField = metadata.getResolvedSourceField();
+        if (sourceField == null || sourceField.isBlank()) {
+            sourceField = condition.getAttributeName();
         }
 
-        if (List.of("transactionAmount", "grossTotalAmount", "customerSegment", "referenceDate").contains(attributeName)) {
-            access = attributeName;
-            path = access;
-        } else {
-            access = String.format("customAttributes[\"%s\"]", condition.getAttributeName());
-            path = (type != PricingDataType.STRING) ? String.format("((%s) %s)", fqn, access) : access;
-        }
+        String access = metadata.getSourceType() == AttributeSourceType.FACT_FIELD
+                ? sourceField
+                : String.format("customAttributes[\"%s\"]", sourceField);
+        String path = (type != PricingDataType.STRING && metadata.getSourceType() == AttributeSourceType.CUSTOM_ATTRIBUTE)
+                ? String.format("((%s) %s)", fqn, access)
+                : access;
 
 
 

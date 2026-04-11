@@ -23,6 +23,10 @@ public class PricingMetadataResponse {
 
     private String dataType;
 
+    private String sourceType;
+
+    private String sourceField;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

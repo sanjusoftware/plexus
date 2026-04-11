@@ -18,17 +18,24 @@ const PricingMetadataFormPage = () => {
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [violations, setViolations] = useState<any[]>([]);
-  const [formData, setFormData] = useState({ attributeKey: '', displayName: '', dataType: 'STRING' });
+  const [formData, setFormData] = useState({
+    attributeKey: '',
+    displayName: '',
+    dataType: 'STRING',
+    sourceType: 'CUSTOM_ATTRIBUTE',
+    sourceField: ''
+  });
   const [isKeyEdited, setIsKeyEdited] = useState(false);
 
-  const dataTypes = ['STRING', 'DECIMAL', 'INTEGER', 'BOOLEAN', 'DATE'];
+  const dataTypes = ['STRING', 'DECIMAL', 'INTEGER', 'LONG', 'BOOLEAN', 'DATE'];
+  const sourceTypes = ['CUSTOM_ATTRIBUTE', 'FACT_FIELD'];
   const signal = useAbortSignal();
 
-  const normalizeAttributeKey = (value: string) => value
-    .toUpperCase()
+  const normalizeIdentifier = (value: string) => value
     .trim()
-    .replace(/\s+/g, '_')
-    .replace(/[^A-Z0-9_-]/g, '');
+    .replace(/\s+(.)/g, (_, char: string) => char.toUpperCase())
+    .replace(/\s+/g, '')
+    .replace(/[^a-zA-Z0-9_]/g, '');
 
   useEffect(() => {
     if (isEditing) {
@@ -37,7 +44,13 @@ const PricingMetadataFormPage = () => {
           const response = await axios.get('/api/v1/pricing-metadata', { signal });
           const meta = response.data.find((m: any) => m.attributeKey === attributeKey);
           if (meta) {
-            setFormData({ attributeKey: meta.attributeKey, displayName: meta.displayName, dataType: meta.dataType });
+            setFormData({
+              attributeKey: meta.attributeKey,
+              displayName: meta.displayName,
+              dataType: meta.dataType,
+              sourceType: meta.sourceType || 'CUSTOM_ATTRIBUTE',
+              sourceField: meta.sourceField || meta.attributeKey
+            });
             setEntityName(meta.displayName);
             setIsKeyEdited(true);
           }
@@ -83,8 +96,8 @@ const PricingMetadataFormPage = () => {
 
   const handleCancel = () => {
     const isDirty = isEditing
-      ? formData.displayName !== '' // simplified dirty check
-      : formData.attributeKey !== '' || formData.displayName !== '' || formData.dataType !== 'STRING';
+      ? formData.displayName !== ''
+      : formData.attributeKey !== '' || formData.displayName !== '' || formData.dataType !== 'STRING' || formData.sourceType !== 'CUSTOM_ATTRIBUTE' || formData.sourceField !== '';
 
     if (isDirty && !window.confirm('You will lose unsaved changes. Are you sure?')) {
       return;
@@ -132,10 +145,15 @@ const PricingMetadataFormPage = () => {
                 const name = e.target.value;
                 let key = formData.attributeKey;
                 if (!isEditing && !isKeyEdited) {
-                  key = normalizeAttributeKey(name);
+                  key = normalizeIdentifier(name);
                 }
-                setFormData({ ...formData, displayName: name, attributeKey: key });
-                clearViolation('displayName');
+                setFormData({
+                  ...formData,
+                  displayName: name,
+                  attributeKey: key,
+                  sourceField: formData.sourceType === 'CUSTOM_ATTRIBUTE' && !isKeyEdited ? key : formData.sourceField
+                });
+                    clearViolation('displayName');
               }}
               placeholder="e.g. Account Balance"
             />
@@ -151,14 +169,19 @@ const PricingMetadataFormPage = () => {
               className={`admin-input admin-input-mono ${isEditing ? 'cursor-not-allowed bg-gray-50' : ''}`}
               value={formData.attributeKey}
               onChange={(e) => {
+                const normalizedKey = normalizeIdentifier(e.target.value);
                 setIsKeyEdited(true);
-                setFormData({ ...formData, attributeKey: normalizeAttributeKey(e.target.value) });
+                setFormData({
+                  ...formData,
+                  attributeKey: normalizedKey,
+                  sourceField: formData.sourceType === 'CUSTOM_ATTRIBUTE' ? normalizedKey : formData.sourceField
+                });
                 clearViolation('attributeKey');
               }}
-              placeholder="e.g. CURRENT_BALANCE"
+              placeholder="e.g. customerSegment or available_balance"
             />
             {renderViolations('attributeKey')}
-            {!isEditing && <p className="admin-help">Used by developers in rule definitions. Must be unique.</p>}
+            {!isEditing && <p className="admin-help">This is the exact attribute key business users will select in pricing rules. Must be unique.</p>}
           </div>
           <div className="admin-field">
             <label className="admin-label">Attribute Data Type</label>
@@ -173,6 +196,41 @@ const PricingMetadataFormPage = () => {
             />
             {renderViolations('dataType')}
             <p className="admin-help">Affects how the rule engine processes and validates values.</p>
+          </div>
+          <div className="admin-field">
+            <label className="admin-label">Attribute Source</label>
+            <PlexusSelect
+              required
+              options={sourceTypes.map(type => ({ value: type, label: type === 'FACT_FIELD' ? 'Request / Fact Field' : 'Custom Attribute' }))}
+              value={sourceTypes.includes(formData.sourceType) ? { value: formData.sourceType, label: formData.sourceType === 'FACT_FIELD' ? 'Request / Fact Field' : 'Custom Attribute' } : null}
+              onChange={(opt) => {
+                const sourceType = opt ? opt.value : 'CUSTOM_ATTRIBUTE';
+                setFormData({
+                  ...formData,
+                  sourceType,
+                  sourceField: sourceType === 'CUSTOM_ATTRIBUTE' ? (formData.sourceField || formData.attributeKey) : formData.sourceField
+                });
+                clearViolation('sourceType');
+              }}
+            />
+            {renderViolations('sourceType')}
+            <p className="admin-help">Choose whether this attribute reads from a top-level pricing request field or from customAttributes.</p>
+          </div>
+          <div className="admin-field">
+            <label className="admin-label">Underlying Source Field</label>
+            <input
+              type="text"
+              required
+              className="admin-input admin-input-mono"
+              value={formData.sourceField}
+              onChange={(e) => {
+                setFormData({ ...formData, sourceField: normalizeIdentifier(e.target.value) });
+                clearViolation('sourceField');
+              }}
+              placeholder={formData.sourceType === 'FACT_FIELD' ? 'e.g. customerSegment' : 'Defaults to attribute key if blank'}
+            />
+            {renderViolations('sourceField')}
+            <p className="admin-help">For request fields, use the exact pricing fact field name. For custom attributes, this is usually the same as the attribute key.</p>
           </div>
           <div className="admin-actions">
             <button type="button" onClick={handleCancel} className="admin-secondary-btn sm:min-w-[140px]">Cancel</button>

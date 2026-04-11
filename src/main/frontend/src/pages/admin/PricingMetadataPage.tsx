@@ -22,6 +22,8 @@ interface PricingMetadata {
   attributeKey: string;
   displayName: string;
   dataType: string;
+  sourceType?: string;
+  sourceField?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -88,7 +90,7 @@ const PricingMetadataPage = () => {
       />
 
       <AdminInfoBanner icon={Info} title="Pro Tip" tone="amber">
-        <span className="italic">The <strong>Attribute Key</strong> is critical. It must exactly match the key used in your Drools rules (for example <code>customer_segment</code>). The data type ensures the rule engine can correctly compare values.</span>
+        <span className="italic">Tier conditions now resolve entirely through registered metadata. Define the business-facing <strong>Attribute Key</strong>, then map it to either a request field or a custom attribute source.</span>
       </AdminInfoBanner>
 
       {loading ? (
@@ -113,6 +115,10 @@ const PricingMetadataPage = () => {
                     <td className="whitespace-nowrap max-w-[250px]">
                       <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={meta.displayName}>{meta.displayName}</div>
                       <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={meta.attributeKey}>{meta.attributeKey}</div>
+                      <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                        <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-gray-500">{meta.sourceType === 'FACT_FIELD' ? 'Fact Field' : 'Custom Attribute'}</span>
+                        <span className="font-mono normal-case tracking-normal text-gray-400">→ {meta.sourceField || meta.attributeKey}</span>
+                      </div>
                     </td>
                     <td className="whitespace-nowrap">
                       <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>

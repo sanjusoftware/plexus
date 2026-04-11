@@ -35,6 +35,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static com.bankengine.common.model.VersionableEntity.EntityStatus.ACTIVE;
 import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
@@ -119,8 +120,9 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
 
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
-                .effectiveDate(LocalDate.now())
-                .customerSegment("RETAIL")
+                .customAttributes(Map.of(
+                        "effectiveDate", LocalDate.now(),
+                        "customerSegment", "RETAIL"))
                 .products(List.of(new BundlePriceRequest.BundleProductItem(productId, new BigDecimal("1000.00"))))
                 .build();
 
@@ -163,7 +165,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
 
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
-                .customerSegment("RETAIL")
+                .customAttributes(Map.of("customerSegment", "RETAIL"))
                 .products(List.of(new BundlePriceRequest.BundleProductItem(productId, productFee)))
                 .build();
 

@@ -6,6 +6,7 @@ import com.bankengine.pricing.dto.PricingMetadataRequest;
 import com.bankengine.pricing.dto.PricingMetadataResponse;
 import com.bankengine.pricing.model.PricingDataType;
 import com.bankengine.pricing.model.PricingInputMetadata;
+import com.bankengine.pricing.model.PricingInputMetadata.AttributeSourceType;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.TierConditionRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
@@ -93,6 +94,7 @@ public class PricingInputMetadataService extends BaseService {
         }
 
         dto.setDataType(normalizeDataType(dto.getDataType()));
+        normalizeSourceConfiguration(dto);
 
         // Map DTO to Entity and save
         PricingInputMetadata entity = mapper.toEntity(dto);
@@ -109,8 +111,12 @@ public class PricingInputMetadataService extends BaseService {
         PricingInputMetadata entity = pricingInputMetadataRepository.findByAttributeKey(attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 
+        dto.setAttributeKey(attributeKey);
+        normalizeSourceConfiguration(dto);
         entity.setDisplayName(dto.getDisplayName());
         entity.setDataType(normalizeDataType(dto.getDataType()));
+        entity.setSourceType(normalizeSourceType(dto.getSourceType()));
+        entity.setSourceField(resolveSourceField(dto.getAttributeKey(), dto.getSourceField()));
 
         PricingInputMetadata updatedEntity = pricingInputMetadataRepository.save(entity);
         reloadService.reloadKieContainer();
@@ -124,6 +130,26 @@ public class PricingInputMetadataService extends BaseService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(e.getMessage());
         }
+    }
+
+    private void normalizeSourceConfiguration(PricingMetadataRequest dto) {
+        AttributeSourceType sourceType = normalizeSourceType(dto.getSourceType());
+        dto.setSourceType(sourceType.name());
+        dto.setSourceField(resolveSourceField(dto.getAttributeKey(), dto.getSourceField()));
+    }
+
+    private AttributeSourceType normalizeSourceType(String sourceType) {
+        if (sourceType == null || sourceType.isBlank()) {
+            return AttributeSourceType.CUSTOM_ATTRIBUTE;
+        }
+        return AttributeSourceType.valueOf(sourceType.trim().toUpperCase());
+    }
+
+    private String resolveSourceField(String attributeKey, String sourceField) {
+        if (sourceField != null && !sourceField.isBlank()) {
+            return sourceField.trim();
+        }
+        return attributeKey;
     }
 
     @Transactional

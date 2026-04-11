@@ -270,8 +270,8 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(badRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("Feature component with code 'INVALID_CODE' not found")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].reason", containsString("Feature component with code 'INVALID_CODE' not found")));
     }
 
     @Test
@@ -296,7 +296,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(patchWithCsrf(PRODUCT_API_BASE + "/{id}", product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest()) // 400
-                .andExpect(jsonPath("$.message").value("Effective date cannot be in the past."));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].reason").value("Effective date cannot be in the past."));
     }
 }
