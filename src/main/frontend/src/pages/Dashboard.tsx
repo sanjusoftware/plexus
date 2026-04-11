@@ -219,16 +219,6 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h1>
           <p className="text-gray-500 text-xs mt-0.5 font-medium">Real-time metrics and platform health.</p>
         </div>
-        <div className="flex space-x-2">
-          <HasPermission action="POST" path="/api/v1/products">
-            <button
-              onClick={() => navigate('/products/create')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-md hover:shadow-lg flex items-center text-sm"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> New Product
-            </button>
-          </HasPermission>
-        </div>
       </div>
 
       {globalStats && (

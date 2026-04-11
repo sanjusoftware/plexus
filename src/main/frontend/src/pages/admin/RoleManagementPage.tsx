@@ -17,7 +17,7 @@ interface RoleMapping {
 const RoleManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setToast } = useAuth();
+  const { setToast, refreshAuthState } = useAuth();
   const [mappings, setMappings] = useState<RoleMapping[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -91,6 +91,7 @@ const RoleManagementPage = () => {
   const handleDelete = async (roleName: string) => {
     try {
       await axios.delete(`/api/v1/roles/${roleName}`);
+      await refreshAuthState();
       setToast({ message: 'Role deleted successfully.', type: 'success' });
       await fetchInitialData(signal);
     } catch (err: any) {
@@ -115,7 +116,7 @@ const RoleManagementPage = () => {
               onClick={() => navigate('/roles/register')}
               className="admin-primary-btn"
             >
-              <Plus className="h-4 w-4" /> Register New Role
+              <Plus className="h-4 w-4" /> New Role
             </button>
           </HasPermission>
         }

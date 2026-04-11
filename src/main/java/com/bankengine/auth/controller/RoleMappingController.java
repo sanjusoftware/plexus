@@ -4,17 +4,20 @@ import com.bankengine.auth.dto.RoleAuthorityMappingDto;
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.RoleManagementService;
+import com.bankengine.auth.service.SessionAuthorityRefreshService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +33,7 @@ public class RoleMappingController {
 
     private final RoleManagementService roleManagementService;
     private final AuthorityDiscoveryService authorityDiscoveryService;
+    private final SessionAuthorityRefreshService sessionAuthorityRefreshService;
 
     // --- Role Management Endpoints ---
 
@@ -46,8 +50,12 @@ public class RoleMappingController {
     )
     @PostMapping("/mapping")
     @PreAuthorize("hasAuthority('auth:role:write')")
-    public ResponseEntity<Role> mapAuthoritiesToRole(@Valid @RequestBody RoleAuthorityMappingDto dto) {
+    public ResponseEntity<Role> mapAuthoritiesToRole(@Valid @RequestBody RoleAuthorityMappingDto dto,
+                                                     Authentication authentication,
+                                                     HttpServletRequest request) {
         Role savedRole = roleManagementService.saveRoleMapping(dto.getRoleName(), dto.getAuthorities());
+        // Keep current session in sync when the caller updates one of their own roles.
+        sessionAuthorityRefreshService.refreshCurrentSessionAuthorities(authentication, dto.getRoleName(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedRole);
     }
 
@@ -65,9 +73,13 @@ public class RoleMappingController {
     @PreAuthorize("hasAuthority('auth:role:write')")
     public ResponseEntity<Void> deleteRoleMapping(
             @Parameter(description = "The unique name of the role to delete")
-            @PathVariable String roleName
+            @PathVariable String roleName,
+            Authentication authentication,
+            HttpServletRequest request
     ) {
         roleManagementService.deleteRole(roleName);
+        // Keep current session in sync when the caller deletes one of their own roles.
+        sessionAuthorityRefreshService.refreshCurrentSessionAuthorities(authentication, roleName, request);
         return ResponseEntity.noContent().build();
     }
 

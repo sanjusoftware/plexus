@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   login: (bankId: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshAuthState: () => Promise<void>;
   isAuthenticated: boolean;
   bankId: string | null;
   permissionsMap: Record<string, string[]>;
@@ -51,6 +52,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signal = useAbortSignal();
 
+  const refreshAuthState = useCallback(async () => {
+    const currentUser = await authService.getUser();
+    setUser(currentUser);
+
+    if (currentUser) {
+      const map = await authService.getPermissionsMap();
+      setPermissionsMap(map);
+    } else {
+      setPermissionsMap({});
+    }
+  }, []);
+
   useEffect(() => {
     axios.defaults.withCredentials = true;
 
@@ -68,11 +81,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // 1. Initialize CSRF token
         await axios.get('/api/v1/auth/csrf', { signal });
 
-        // 2. Fetch User Profile
+        // 2. Fetch User Profile + permissions map
         const currentUser = await authService.getUser(signal);
         setUser(currentUser);
-
-        // 3. Fetch Permissions Map if authenticated
         if (currentUser) {
           const map = await authService.getPermissionsMap(signal);
           setPermissionsMap(map);
@@ -100,6 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // If we get a 401, clear user state
         if (status === 401) {
           setUser(null);
+          setPermissionsMap({});
         }
 
         // Handle 403 Access Denied
@@ -144,6 +156,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loading,
       login,
       logout,
+      refreshAuthState,
       isAuthenticated: !!user,
       bankId: user?.bank_id || null,
       permissionsMap,

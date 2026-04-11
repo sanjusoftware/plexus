@@ -110,7 +110,7 @@ const ProductTypesPage = () => {
               className="admin-primary-btn"
             >
               <Plus className="h-4 w-4" />
-              Add New Type
+              New Type
             </button>
           </HasPermission>
         }

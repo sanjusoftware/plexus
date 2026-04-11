@@ -16,7 +16,7 @@ const RoleFormPage = () => {
   const { roleName } = useParams<{ roleName?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
-  const { setToast } = useAuth();
+  const { setToast, refreshAuthState } = useAuth();
   const isEditing = !!roleName;
 
   const [availableAuthorities, setAvailableAuthorities] = useState<string[]>([]);
@@ -155,6 +155,7 @@ const RoleFormPage = () => {
     setViolations([]);
     try {
       await axios.post('/api/v1/roles/mapping', { roleName: formData.name, authorities: formData.authorities });
+      await refreshAuthState();
       setToast({ message: 'Permissions for the role have been successfully synchronized.', type: 'success' });
       navigate('/roles', { state: { success: 'Permissions for the role have been successfully synchronized.' } });
     } catch (err: any) {
@@ -197,28 +198,26 @@ const RoleFormPage = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <form onSubmit={handleSubmit} className="space-y-6 p-5">
           {!isEditing && (
-            <div className="relative overflow-hidden rounded-xl border border-blue-100/50 bg-blue-50/50 p-5">
-              <div className="relative">
-                <label className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-3">Role Name (Key)</label>
-                <div className="relative max-w-xl">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-300" />
-                  <input
-                    type="text"
-                    required
-                    className="w-full border border-white rounded-xl p-3 pl-10 font-mono font-bold text-lg text-blue-700 transition focus:border-blue-500 shadow-sm uppercase placeholder:text-blue-100 bg-white"
-                    value={formData.name}
-                    onChange={(e) => {
-                      setFormData({...formData, name: e.target.value.toUpperCase()});
-                      clearViolation('roleName');
-                      clearViolation('name');
-                    }}
-                    placeholder="e.g. CUSTOMER_SUPPORT"
-                  />
-                </div>
-                {renderViolations('roleName')}
-                {renderViolations('name')}
-                <p className="mt-2.5 text-[10px] text-blue-400/80 font-bold italic">This must match the exact string sent by your Identity Provider in the <code>roles</code> claim.</p>
+            <div className="admin-field">
+              <label className="admin-label">Role Name (Key)</label>
+              <div className="relative max-w-xl">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  required
+                  className="admin-input admin-input-mono pl-10 uppercase"
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value.toUpperCase() });
+                    clearViolation('roleName');
+                    clearViolation('name');
+                  }}
+                  placeholder="e.g. CUSTOMER_SUPPORT"
+                />
               </div>
+              {renderViolations('roleName')}
+              {renderViolations('name')}
+              <p className="admin-help">This must match the exact string sent by your Identity Provider in the <code>roles</code> claim.</p>
             </div>
           )}
 

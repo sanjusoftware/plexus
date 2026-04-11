@@ -183,7 +183,7 @@ const ProductManagementPage = () => {
               onClick={() => navigate('/products/create')}
               className="admin-primary-btn"
             >
-              <Plus className="h-4 w-4" /> Create New Product
+              <Plus className="h-4 w-4" /> New Product
             </button>
           </HasPermission>
         }

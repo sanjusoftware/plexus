@@ -163,7 +163,7 @@ const BankManagementPage = () => {
                 className="admin-primary-btn"
               >
                 <Plus className="h-4 w-4" />
-                Add Bank
+                Onboard New Bank
               </button>
             </HasPermission>
           }
