@@ -17,7 +17,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
-import { PricingService } from '../../services/PricingService';
+import { PricingMetadata, PricingService } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
 
 interface FeatureLink {
@@ -55,6 +55,8 @@ interface Product {
   updatedAt?: string;
 }
 
+const HIDDEN_METADATA_KEYS = new Set(['bankId', 'productId', 'productBundleId']);
+
 const ProductManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,12 +65,20 @@ const ProductManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [calculatedPrices, setCalculatedPrices] = useState<Record<number, { price: number; loading: boolean; error?: string }>>({});
-  const [calcParams, setCalcParams] = useState({ amount: 1000, segment: 'RETAIL' });
+  const [calcMetadata, setCalcMetadata] = useState<PricingMetadata[]>([]);
+  const [calcInputs, setCalcInputs] = useState<Record<string, any>>({
+    transactionAmount: 1000,
+    customerSegment: 'RETAIL',
+    effectiveDate: new Date().toISOString().split('T')[0],
+    loyalty_score: 0,
+    isSalaryAccount: false,
+  });
 
   // Modal states
   const [archiveModal, setArchiveModal] = useState<{ isOpen: boolean; productId?: number }>({ isOpen: false });
 
   const signal = useAbortSignal();
+
 
   const toggleExpand = (id: number) => {
     const newExpanded = new Set(expandedIds);
@@ -83,8 +93,39 @@ const ProductManagementPage = () => {
   const fetchInitialData = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
     try {
-      const p = await axios.get('/api/v1/products', { signal: abortSignal });
+      const [p, metadata] = await Promise.all([
+        axios.get('/api/v1/products', { signal: abortSignal }),
+        PricingService.getPricingMetadata(abortSignal).catch(() => []),
+      ]);
       setProducts(p.data.content || []);
+
+      const dynamicFields = (metadata || [])
+        .filter((m: PricingMetadata) => (m.sourceType || 'CUSTOM_ATTRIBUTE') === 'CUSTOM_ATTRIBUTE')
+        .filter((m: PricingMetadata) => !HIDDEN_METADATA_KEYS.has(m.attributeKey));
+      setCalcMetadata(dynamicFields);
+
+      setCalcInputs(prev => {
+        const next = { ...prev };
+        dynamicFields.forEach((m: PricingMetadata) => {
+          if (next[m.attributeKey] !== undefined) return;
+          switch ((m.dataType || '').toUpperCase()) {
+            case 'DECIMAL':
+            case 'INTEGER':
+            case 'LONG':
+              next[m.attributeKey] = m.attributeKey === 'transactionAmount' ? 1000 : 0;
+              break;
+            case 'BOOLEAN':
+              next[m.attributeKey] = false;
+              break;
+            case 'DATE':
+              next[m.attributeKey] = new Date().toISOString().split('T')[0];
+              break;
+            default:
+              next[m.attributeKey] = m.attributeKey === 'customerSegment' ? 'RETAIL' : '';
+          }
+        });
+        return next;
+      });
     } catch (err: any) {
       if (axios.isCancel(err)) return;
       setToast({ message: 'Failed to fetch products. Please check your role permissions.', type: 'error' });
@@ -94,6 +135,72 @@ const ProductManagementPage = () => {
       }
     }
   }, [setToast]);
+
+  const parseInputValue = (dataType: string, rawValue: any) => {
+    const normalizedType = (dataType || '').toUpperCase();
+    if (rawValue === '' || rawValue === undefined || rawValue === null) return undefined;
+
+    if (normalizedType === 'DECIMAL') return Number(rawValue);
+    if (normalizedType === 'INTEGER' || normalizedType === 'LONG') return parseInt(rawValue, 10);
+    if (normalizedType === 'BOOLEAN') return rawValue === true || rawValue === 'true';
+    return rawValue;
+  };
+
+  const renderDynamicField = (meta: PricingMetadata) => {
+    const key = meta.attributeKey;
+    const value = calcInputs[key] ?? '';
+    const dataType = (meta.dataType || '').toUpperCase();
+    const label = (meta.displayName || key).toUpperCase();
+
+    if (dataType === 'BOOLEAN') {
+      return (
+        <div key={key}>
+          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</label>
+          <PlexusSelect
+            options={[{ value: 'true', label: 'TRUE' }, { value: 'false', label: 'FALSE' }]}
+            value={{ value: String(value), label: String(value).toUpperCase() }}
+            onChange={(opt) => setCalcInputs(prev => ({ ...prev, [key]: opt ? opt.value === 'true' : false }))}
+          />
+        </div>
+      );
+    }
+
+    if (key === 'customerSegment') {
+      return (
+        <div key={key}>
+          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</label>
+          <PlexusSelect
+            options={[
+              { value: 'RETAIL', label: 'RETAIL' },
+              { value: 'PREMIUM', label: 'PREMIUM' },
+              { value: 'CORPORATE', label: 'CORPORATE' },
+              { value: 'VIP', label: 'VIP' }
+            ]}
+            value={{ value: String(value || 'RETAIL'), label: String(value || 'RETAIL') }}
+            onChange={(opt) => setCalcInputs(prev => ({ ...prev, [key]: opt ? opt.value : 'RETAIL' }))}
+          />
+        </div>
+      );
+    }
+
+    const inputType = dataType === 'DATE'
+      ? 'date'
+      : (dataType === 'DECIMAL' || dataType === 'INTEGER' || dataType === 'LONG')
+        ? 'number'
+        : 'text';
+
+    return (
+      <div key={key}>
+        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</label>
+        <input
+          type={inputType}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold bg-white focus:border-blue-500 transition h-[42px]"
+          value={value}
+          onChange={(e) => setCalcInputs(prev => ({ ...prev, [key]: e.target.value }))}
+        />
+      </div>
+    );
+  };
 
   useEffect(() => {
     fetchInitialData(signal);
@@ -147,14 +254,22 @@ const ProductManagementPage = () => {
   const handleCalculatePrice = async (prod: Product) => {
     setCalculatedPrices(prev => ({ ...prev, [prod.id]: { price: 0, loading: true } }));
     try {
+      const attributesFromMetadata: Record<string, any> = {};
+      calcMetadata.forEach(meta => {
+        const parsed = parseInputValue(meta.dataType, calcInputs[meta.attributeKey]);
+        if (parsed !== undefined && !Number.isNaN(parsed)) {
+          attributesFromMetadata[meta.attributeKey] = parsed;
+        }
+      });
+
+      if (!attributesFromMetadata.effectiveDate) {
+        attributesFromMetadata.effectiveDate = new Date().toISOString().split('T')[0];
+      }
+
       const request = {
         productId: prod.id,
         enrollmentDate: new Date().toISOString().split('T')[0],
-        customAttributes: {
-          transactionAmount: calcParams.amount,
-          customerSegment: calcParams.segment,
-          effectiveDate: new Date().toISOString().split('T')[0],
-        }
+        customAttributes: attributesFromMetadata
       };
 
       const result = await PricingService.calculateProductPrice(request);
@@ -357,28 +472,13 @@ const ProductManagementPage = () => {
                        </div>
 
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                          <div>
-                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Amount ($)</label>
-                             <input
-                                type="number"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold bg-white focus:border-blue-500 transition h-[42px]"
-                                value={calcParams.amount}
-                                onChange={(e) => setCalcParams({...calcParams, amount: parseFloat(e.target.value) || 0})}
-                             />
-                          </div>
-                          <div>
-                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Customer Segment</label>
-                             <PlexusSelect
-                                options={[
-                                   { value: 'RETAIL', label: 'RETAIL' },
-                                   { value: 'PREMIUM', label: 'PREMIUM' },
-                                   { value: 'CORPORATE', label: 'CORPORATE' },
-                                   { value: 'VIP', label: 'VIP' }
-                                ]}
-                                value={{ value: calcParams.segment, label: calcParams.segment }}
-                                onChange={(opt) => setCalcParams({...calcParams, segment: opt ? opt.value : 'RETAIL'})}
-                             />
-                          </div>
+                          {calcMetadata.length > 0
+                            ? calcMetadata.map(renderDynamicField)
+                            : (
+                              <div className="md:col-span-2 text-[10px] font-bold text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                                Pricing metadata not available. Ensure `pricing:metadata:read` is granted to load dynamic inputs.
+                              </div>
+                            )}
                           <button
                              onClick={() => handleCalculatePrice(prod)}
                              disabled={calculatedPrices[prod.id]?.loading}

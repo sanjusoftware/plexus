@@ -6,6 +6,15 @@ export interface ProductPriceRequest {
   customAttributes?: Record<string, any>;
 }
 
+export interface PricingMetadata {
+  id?: number;
+  attributeKey: string;
+  displayName?: string;
+  dataType: string;
+  sourceType?: string;
+  sourceField?: string;
+}
+
 export interface PriceComponentDetail {
   componentCode: string;
   targetComponentCode?: string;
@@ -37,6 +46,17 @@ export interface BundlePriceResponse {
 }
 
 class PricingServiceClass {
+  async getPricingMetadata(signal?: AbortSignal): Promise<PricingMetadata[]> {
+    try {
+      const response = await axios.get('/api/v1/pricing-metadata', { signal });
+      return response.data || [];
+    } catch (error) {
+      if (axios.isCancel(error)) throw error;
+      console.error('Failed to fetch pricing metadata:', error);
+      throw error;
+    }
+  }
+
   /**
    * Calculate pricing for a single product
    */
