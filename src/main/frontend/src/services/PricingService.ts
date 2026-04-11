@@ -2,11 +2,7 @@ import axios from 'axios';
 
 export interface ProductPriceRequest {
   productId: number;
-  productBundleId?: number;
-  transactionAmount?: number;
-  effectiveDate?: string;
   enrollmentDate?: string;
-  customerSegment: string;
   customAttributes?: Record<string, any>;
 }
 
@@ -30,10 +26,8 @@ export interface ProductPricingCalculationResult {
 
 export interface BundlePriceRequest {
   productBundleId: number;
-  transactionAmount?: number;
-  effectiveDate?: string;
   enrollmentDate?: string;
-  customerSegment: string;
+  products: Array<{ productId: number; transactionAmount: number }>;
   customAttributes?: Record<string, any>;
 }
 

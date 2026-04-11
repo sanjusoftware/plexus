@@ -36,10 +36,12 @@ const LivePricePreview: React.FC<LivePricePreviewProps> = ({ productId, currentF
     try {
       const request: ProductPriceRequest = {
         productId,
-        transactionAmount,
-        customerSegment,
-        effectiveDate: new Date().toISOString().split('T')[0],
         enrollmentDate,
+        customAttributes: {
+          transactionAmount,
+          customerSegment,
+          effectiveDate: new Date().toISOString().split('T')[0],
+        }
       };
 
       const pricing = await PricingService.calculateProductPrice(request, abortSignal);

@@ -58,6 +58,8 @@ class PricingInputMetadataServiceTest {
         dto.setAttributeKey("new_key");
         dto.setDisplayName("New Key");
         dto.setDataType("DECIMAL");
+        dto.setSourceType("FACT_FIELD");
+        dto.setSourceField("transactionAmount");
         PricingInputMetadata entity = new PricingInputMetadata();
 
         when(pricingInputMetadataRepository.findByAttributeKey("new_key")).thenReturn(Optional.empty());
@@ -66,6 +68,8 @@ class PricingInputMetadataServiceTest {
 
         metadataService.createMetadata(dto);
 
+        assertThat(dto.getSourceType()).isEqualTo("FACT_FIELD");
+        assertThat(dto.getSourceField()).isEqualTo("transactionAmount");
         verify(pricingInputMetadataRepository).save(entity);
         verify(reloadService).reloadKieContainer();
         verify(mapper).toResponse(any());
@@ -77,6 +81,7 @@ class PricingInputMetadataServiceTest {
         dto.setAttributeKey("new_key_case");
         dto.setDisplayName("New Key Case");
         dto.setDataType("string");
+        dto.setSourceField("new_key_case");
         PricingInputMetadata entity = new PricingInputMetadata();
 
         when(pricingInputMetadataRepository.findByAttributeKey("new_key_case")).thenReturn(Optional.empty());
@@ -86,6 +91,7 @@ class PricingInputMetadataServiceTest {
         metadataService.createMetadata(dto);
 
         assertThat(dto.getDataType()).isEqualTo("STRING");
+        assertThat(dto.getSourceType()).isEqualTo("CUSTOM_ATTRIBUTE");
         verify(pricingInputMetadataRepository).save(entity);
         verify(reloadService).reloadKieContainer();
     }
@@ -109,6 +115,8 @@ class PricingInputMetadataServiceTest {
         PricingMetadataRequest dto = new PricingMetadataRequest();
         dto.setDisplayName("New Display");
         dto.setDataType("boolean");
+        dto.setSourceType("FACT_FIELD");
+        dto.setSourceField("customerSegment");
         PricingInputMetadata existing = new PricingInputMetadata();
 
         when(pricingInputMetadataRepository.findByAttributeKey(key)).thenReturn(Optional.of(existing));
@@ -118,6 +126,7 @@ class PricingInputMetadataServiceTest {
 
         assertThat(existing.getDisplayName()).isEqualTo("New Display");
         assertThat(existing.getDataType()).isEqualTo("BOOLEAN");
+        assertThat(existing.getSourceField()).isEqualTo("customerSegment");
         verify(reloadService).reloadKieContainer();
     }
 

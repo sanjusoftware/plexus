@@ -53,9 +53,10 @@ class ProductPricingServiceTest extends BaseServiceTest {
 
         request = ProductPriceRequest.builder()
                 .productId(1L)
-                .transactionAmount(new BigDecimal("1000.00"))
-                .effectiveDate(LocalDate.now())
-                .customerSegment("RETAIL")
+                .customAttributes(new HashMap<>(Map.of(
+                        "transactionAmount", new BigDecimal("1000.00"),
+                        "effectiveDate", LocalDate.now(),
+                        "customerSegment", "RETAIL")))
                 .build();
 
         Product mockProduct = new Product();
@@ -91,7 +92,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
                 eq(new BigDecimal("1000.00")),
                 eq(BigDecimal.ZERO),
                 isNull(),
-                eq(request.getEffectiveDate()));
+                eq((LocalDate) request.getCustomAttributes().get("effectiveDate")));
     }
 
     @Test
@@ -213,7 +214,6 @@ class ProductPricingServiceTest extends BaseServiceTest {
 
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(1L)
-                .customerSegment("RETAIL")
                 .customAttributes(customAttrs)
                 .build();
 
@@ -248,7 +248,12 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Branch: Should handle null transactionAmount by treating as ZERO")
     void getProductPricing_shouldHandleNullTransactionAmount() {
-        request.setTransactionAmount(null);
+        request = ProductPriceRequest.builder()
+                .productId(1L)
+                .customAttributes(new HashMap<>(Map.of(
+                        "effectiveDate", LocalDate.now(),
+                        "customerSegment", "RETAIL")))
+                .build();
         ProductPricingLink fixedLink = createPricingLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
         when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(fixedLink));
         when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(new BigDecimal("10.00"));

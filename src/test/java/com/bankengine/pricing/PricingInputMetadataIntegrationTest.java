@@ -20,8 +20,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Map;
 import java.util.Set;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.Mockito.doNothing;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -80,6 +81,8 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
             metadata.setAttributeKey(key);
             metadata.setDataType("STRING");
             metadata.setDisplayName(key + " Display");
+            metadata.setSourceType(PricingInputMetadata.AttributeSourceType.CUSTOM_ATTRIBUTE);
+            metadata.setSourceField(key);
             return metadataRepository.save(metadata);
         });
     }
@@ -165,7 +168,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Input validation failed: One or more fields contain invalid data."))
-                .andExpect(jsonPath("$.details.dataType").value("Data type must be one of: STRING, DECIMAL, INTEGER, LONG, BOOLEAN, DATE."));
+                .andExpect(jsonPath("$.errors[*].reason", hasItem("Data type must be one of: STRING, DECIMAL, INTEGER, LONG, BOOLEAN, DATE.")));
     }
 
     // --- UPDATE OPERATIONS ---
@@ -186,7 +189,7 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Input validation failed: One or more fields contain invalid data."))
-                .andExpect(jsonPath("$.details.dataType").value("Data type must be one of: STRING, DECIMAL, INTEGER, LONG, BOOLEAN, DATE."));
+                .andExpect(jsonPath("$.errors[*].reason", hasItem("Data type must be one of: STRING, DECIMAL, INTEGER, LONG, BOOLEAN, DATE.")));
     }
 
     @Test

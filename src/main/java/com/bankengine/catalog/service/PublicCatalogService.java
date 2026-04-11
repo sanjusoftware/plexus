@@ -149,9 +149,10 @@ public class PublicCatalogService extends BaseService {
                     if (estimatedMonthlyBalance != null) {
                         ProductPriceRequest request = ProductPriceRequest.builder()
                                 .productId(product.getId())
-                                .transactionAmount(estimatedMonthlyBalance)
-                                .customerSegment(customerSegment)
-                                .effectiveDate(LocalDate.now())
+                                .customAttributes(Map.of(
+                                        "transactionAmount", estimatedMonthlyBalance,
+                                        "customerSegment", customerSegment,
+                                        "effectiveDate", LocalDate.now()))
                                 .build();
 
                         try {
@@ -176,8 +177,9 @@ public class PublicCatalogService extends BaseService {
 
         BundlePriceRequest pricingRequest = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
-                .customerSegment(segment)
-                .effectiveDate(LocalDate.now())
+                .customAttributes(Map.of(
+                        "customerSegment", segment,
+                        "effectiveDate", LocalDate.now()))
                 .products(bundle.getContainedProducts().stream()
                         .map(link -> new BundlePriceRequest.BundleProductItem(link.getProduct().getId(), BigDecimal.ZERO))
                         .toList())

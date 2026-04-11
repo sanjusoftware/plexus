@@ -25,11 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -72,7 +68,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                     BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build(),
                     BundlePriceRequest.BundleProductItem.builder().productId(11L).transactionAmount(BigDecimal.ZERO).build()
                 ))
-                .customerSegment("GOLD")
+                .customAttributes(Map.of("customerSegment", "GOLD"))
                 .build();
 
         // Each product returns $100.00
@@ -188,7 +184,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
                 .enrollmentDate(midMonth)
-                .effectiveDate(midMonth)
+                .customAttributes(Map.of("effectiveDate", midMonth))
                 .products(List.of(BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .build();
 

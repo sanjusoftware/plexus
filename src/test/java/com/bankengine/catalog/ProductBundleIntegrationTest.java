@@ -31,7 +31,7 @@ import java.util.*;
 import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -179,7 +179,7 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {BUNDLE_ADMIN, BUNDLE_ACTIVATOR})
-    @DisplayName("versionBundle - Should increment version to 2 and maintain ACTIVE status")
+    @DisplayName("versionBundle - Should increment version to 2 and create DRAFT revision")
     void versionBundle_ShouldIncrementVersion() throws Exception {
         // 1. Fetch the bundle and ACTIVATE it first
         txHelper.doInTransaction(() -> {
@@ -206,11 +206,11 @@ class ProductBundleIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.version").value(2))
                 .andExpect(jsonPath("$.code").value(originalCode))
-                .andExpect(jsonPath("$.status").value("ACTIVE"));
+                .andExpect(jsonPath("$.status").value("DRAFT"));
 
-        // 3. Verify original is archived
+        // 3. Verify original remains active until the revision is activated
         mockMvc.perform(get("/api/v1/bundles/{id}", existingBundleId))
-                .andExpect(jsonPath("$.status").value("ARCHIVED"));
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 
     // --- 4. LIFECYCLE OPERATIONS (ACTIVATE/ARCHIVE) ---

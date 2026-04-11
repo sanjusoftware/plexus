@@ -13,7 +13,7 @@ import lombok.Setter;
 public class TierConditionDto {
 
     @NotBlank(message = "Attribute name is required.")
-    @Schema(description = "Registered pricing input attribute to evaluate.", example = "customerSegment")
+    @Schema(description = "Registered pricing metadata attribute key selected by the user.", example = "customerSegment")
     private String attributeName;
 
     @NotNull(message = "Operator is required.")

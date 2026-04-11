@@ -193,15 +193,17 @@ public abstract class AbstractRuleBuilderService extends BaseService {
         }
 
         // 2. Automatic Threshold Logic (Min/Max)
-        String amountField = factName.equals("BundlePricingInput") ? "grossTotalAmount" : "transactionAmount";
+        String amountExpression = factName.equals("BundlePricingInput")
+                ? "((java.math.BigDecimal) customAttributes[\"grossTotalAmount\"])"
+                : "((java.math.BigDecimal) customAttributes[\"transactionAmount\"])";
 
         if (tier.getMinThreshold() != null) {
             conditionBuilder.append(String.format(", %s >= new java.math.BigDecimal(\"%s\")",
-                    amountField, tier.getMinThreshold().toPlainString()));
+                    amountExpression, tier.getMinThreshold().toPlainString()));
         }
         if (tier.getMaxThreshold() != null) {
             conditionBuilder.append(String.format(", %s <= new java.math.BigDecimal(\"%s\")",
-                    amountField, tier.getMaxThreshold().toPlainString()));
+                    amountExpression, tier.getMaxThreshold().toPlainString()));
         }
 
         // 3. Custom Attributes (Segments, etc.) via DroolsExpressionBuilder

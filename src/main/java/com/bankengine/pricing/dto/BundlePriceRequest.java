@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -22,13 +21,7 @@ public class BundlePriceRequest {
     @NotNull(message = "A list of products is mandatory for bundle calculation.")
     private List<BundleProductItem> products;
 
-    @NotNull(message = "Customer Segment is mandatory for pricing rule matching.")
-    private String customerSegment;
-
-    @Builder.Default
-    private LocalDate effectiveDate = LocalDate.now();
-
-    private LocalDate enrollmentDate; // For pro-rata calculation
+    private java.time.LocalDate enrollmentDate; // For pro-rata calculation
 
     private Map<String, Object> customAttributes;
 
