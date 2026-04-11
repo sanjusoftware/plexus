@@ -7,6 +7,7 @@ import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 const PricingComponentFormPage = () => {
   const { user, setToast } = useAuth();
@@ -130,6 +131,7 @@ const PricingComponentFormPage = () => {
   });
 
   const signal = useAbortSignal();
+  const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(formData);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,13 +152,15 @@ const PricingComponentFormPage = () => {
               navigate('/pricing-components');
               return;
             }
-            setFormData({
+            const loadedFormData = {
               code: comp.code,
               name: comp.name,
               type: comp.type,
               description: comp.description,
               pricingTiers: (comp.pricingTiers || []).map((t: any) => mapTierFromApi(t, comp.type))
-            });
+            };
+            setFormData(loadedFormData);
+            resetDirtyBaseline(loadedFormData);
             setEntityName(comp.name);
             setIsCodeEdited(true);
           } else {
@@ -174,7 +178,14 @@ const PricingComponentFormPage = () => {
     };
 
     fetchData();
-  }, [id, isEditing, navigate, setEntityName, setToast, mapTierFromApi, signal]);
+  }, [id, isEditing, navigate, setEntityName, setToast, mapTierFromApi, signal, resetDirtyBaseline]);
+
+  const handleCancel = () => {
+    if (!confirmDiscardChanges()) {
+      return;
+    }
+    navigate('/pricing-components');
+  };
 
   const handleTierChange = (index: number, field: string, value: any) => {
     const newTiers = [...formData.pricingTiers];
@@ -311,7 +322,7 @@ const PricingComponentFormPage = () => {
         tone="purple"
         title={isEditing ? 'Update Pricing' : 'New Pricing'}
         description="Configure the core identity and tiered logic in one atomic operation."
-        onClose={() => navigate('/pricing-components')}
+        onClose={handleCancel}
       />
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
@@ -604,7 +615,7 @@ const PricingComponentFormPage = () => {
           </div>
 
           <div className="flex space-x-4 border-t border-gray-100 pt-6">
-            <button type="button" onClick={() => navigate('/pricing-components')} className="flex-1 px-6 py-3 border border-gray-200 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
+            <button type="button" onClick={handleCancel} className="flex-1 px-6 py-3 border border-gray-200 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
             <button type="submit" disabled={submitting} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50">
               {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
               Commit Structure

@@ -7,6 +7,7 @@ import PlexusSelect from '../../components/PlexusSelect';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 const PricingMetadataFormPage = () => {
   const { attributeKey } = useParams<{ attributeKey?: string }>();
@@ -30,6 +31,7 @@ const PricingMetadataFormPage = () => {
   const dataTypes = ['STRING', 'DECIMAL', 'INTEGER', 'LONG', 'BOOLEAN', 'DATE'];
   const sourceTypes = ['CUSTOM_ATTRIBUTE', 'FACT_FIELD'];
   const signal = useAbortSignal();
+  const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(formData);
 
   const normalizeIdentifier = (value: string) => value
     .trim()
@@ -51,6 +53,13 @@ const PricingMetadataFormPage = () => {
               sourceType: meta.sourceType || 'CUSTOM_ATTRIBUTE',
               sourceField: meta.sourceField || meta.attributeKey
             });
+            resetDirtyBaseline({
+              attributeKey: meta.attributeKey,
+              displayName: meta.displayName,
+              dataType: meta.dataType,
+              sourceType: meta.sourceType || 'CUSTOM_ATTRIBUTE',
+              sourceField: meta.sourceField || meta.attributeKey
+            });
             setEntityName(meta.displayName);
             setIsKeyEdited(true);
           }
@@ -65,7 +74,7 @@ const PricingMetadataFormPage = () => {
       };
       fetchMetadata();
     }
-  }, [attributeKey, isEditing, setEntityName, setToast, signal]);
+  }, [attributeKey, isEditing, setEntityName, setToast, signal, resetDirtyBaseline]);
 
   const clearViolation = (field: string) => {
     setViolations(prev => prev.filter(v => v.field !== field));
@@ -95,11 +104,7 @@ const PricingMetadataFormPage = () => {
   };
 
   const handleCancel = () => {
-    const isDirty = isEditing
-      ? formData.displayName !== ''
-      : formData.attributeKey !== '' || formData.displayName !== '' || formData.dataType !== 'STRING' || formData.sourceType !== 'CUSTOM_ATTRIBUTE' || formData.sourceField !== '';
-
-    if (isDirty && !window.confirm('You will lose unsaved changes. Are you sure?')) {
+    if (!confirmDiscardChanges()) {
       return;
     }
     navigate('/pricing-metadata');

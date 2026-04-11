@@ -7,6 +7,7 @@ import PlexusSelect from '../../components/PlexusSelect';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 const FeatureComponentFormPage = () => {
   const { id } = useParams<{ id?: string }>();
@@ -23,6 +24,7 @@ const FeatureComponentFormPage = () => {
 
   const dataTypes = ['STRING', 'INTEGER', 'BOOLEAN', 'DECIMAL', 'DATE'];
   const signal = useAbortSignal();
+  const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(formData);
 
   useEffect(() => {
     if (isEditing) {
@@ -31,6 +33,7 @@ const FeatureComponentFormPage = () => {
           const response = await axios.get(`/api/v1/features/${id}`, { signal });
           const feat = response.data;
           setFormData({ code: feat.code, name: feat.name, dataType: feat.dataType });
+          resetDirtyBaseline({ code: feat.code, name: feat.name, dataType: feat.dataType });
           setEntityName(feat.name);
           setIsCodeEdited(true);
         } catch (err: any) {
@@ -44,7 +47,7 @@ const FeatureComponentFormPage = () => {
       };
       fetchFeature();
     }
-  }, [id, isEditing, setEntityName, setToast, signal]);
+  }, [id, isEditing, setEntityName, setToast, signal, resetDirtyBaseline]);
 
   const clearViolation = (field: string) => {
     setViolations(prev => prev.filter(v => v.field !== field));
@@ -73,6 +76,9 @@ const FeatureComponentFormPage = () => {
   };
 
   const handleCancel = () => {
+    if (!confirmDiscardChanges()) {
+      return;
+    }
     navigate('/features');
   };
 

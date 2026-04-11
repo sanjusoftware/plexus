@@ -7,6 +7,7 @@ import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import LivePricePreview from '../../components/LivePricePreview';
 import PriceSimulationTool from '../../components/PriceSimulationTool';
 
@@ -52,6 +53,7 @@ const ProductFormPage = () => {
   });
 
   const signal = useAbortSignal();
+  const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(formData);
 
   const getDefaultValueForType = (type: string) => {
     switch (type) {
@@ -86,7 +88,7 @@ const ProductFormPage = () => {
             return;
           }
           setEntityName(prod.name);
-          setFormData({
+          const loadedFormData = {
             code: prod.code,
             name: prod.name,
             productTypeCode: prod.productType?.code || '',
@@ -95,7 +97,9 @@ const ProductFormPage = () => {
             fullDescription: prod.fullDescription || '',
             features: prod.features || [],
             pricing: prod.pricing || []
-          });
+          };
+          setFormData(loadedFormData);
+          resetDirtyBaseline(loadedFormData);
           setIsCodeEdited(true);
         }
       } catch (err: any) {
@@ -109,7 +113,14 @@ const ProductFormPage = () => {
     };
 
     fetchData();
-  }, [id, isEditing, setEntityName, setToast, signal]);
+  }, [id, isEditing, navigate, setEntityName, setToast, signal, resetDirtyBaseline]);
+
+  const handleCancel = () => {
+    if (!confirmDiscardChanges()) {
+      return;
+    }
+    navigate('/products');
+  };
 
   const addFeatureLink = () => {
     setFormData({
@@ -225,7 +236,7 @@ const ProductFormPage = () => {
         icon={Package}
         title={isEditing ? 'Update Product' : 'New Product'}
         description="Unified configuration of basic data, reusable features, and pricing bindings."
-        onClose={() => navigate('/products')}
+        onClose={handleCancel}
       />
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
@@ -717,7 +728,7 @@ const ProductFormPage = () => {
           </div>
 
            <div className="flex space-x-4 border-t border-gray-100 pt-6">
-             <button type="button" onClick={() => navigate('/products')} className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
+             <button type="button" onClick={handleCancel} className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
              {!isEditing && (
                <button
                  type="button"

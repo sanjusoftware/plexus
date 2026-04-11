@@ -6,6 +6,7 @@ import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 const ProductTypeFormPage = () => {
   const { id } = useParams<{ id?: string }>();
@@ -20,6 +21,7 @@ const ProductTypeFormPage = () => {
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [isCodeEdited, setIsCodeEdited] = useState(false);
   const signal = useAbortSignal();
+  const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(formData);
 
   useEffect(() => {
     if (isEditing) {
@@ -34,6 +36,7 @@ const ProductTypeFormPage = () => {
               return;
             }
             setFormData({ name: type.name, code: type.code });
+            resetDirtyBaseline({ name: type.name, code: type.code });
             setEntityName(type.name);
             setIsCodeEdited(true);
           } else {
@@ -51,7 +54,7 @@ const ProductTypeFormPage = () => {
       };
       fetchType();
     }
-  }, [id, isEditing, navigate, setEntityName, setToast, signal]);
+  }, [id, isEditing, navigate, setEntityName, setToast, signal, resetDirtyBaseline]);
 
   const clearViolation = (field: string) => {
     setViolations(prev => prev.filter(v => v.field !== field));
@@ -81,11 +84,7 @@ const ProductTypeFormPage = () => {
   };
 
   const handleCancel = () => {
-    const isDirty = isEditing
-      ? formData.name !== '' // simplified dirty check for now
-      : formData.name !== '' || formData.code !== '';
-
-    if (isDirty && !window.confirm('You will lose unsaved changes. Are you sure?')) {
+    if (!confirmDiscardChanges()) {
       return;
     }
     navigate('/product-types');

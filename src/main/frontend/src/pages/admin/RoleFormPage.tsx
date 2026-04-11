@@ -6,6 +6,7 @@ import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 interface RoleMapping {
   name: string;
@@ -26,6 +27,11 @@ const RoleFormPage = () => {
   const [violations, setViolations] = useState<any[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const signal = useAbortSignal();
+  const normalizedFormData = {
+    ...formData,
+    authorities: [...formData.authorities].sort()
+  };
+  const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(normalizedFormData);
 
   useEffect(() => {
     const categories = Array.from(new Set(
@@ -54,7 +60,9 @@ const RoleFormPage = () => {
           const mappings = mappingsRes.data as RoleMapping[];
           const mapping = mappings.find(m => m.name === roleName);
           if (mapping) {
-            setFormData({ name: mapping.name, authorities: [...mapping.authorities] });
+            const loadedFormData = { name: mapping.name, authorities: [...mapping.authorities] };
+            setFormData(loadedFormData);
+            resetDirtyBaseline({ ...loadedFormData, authorities: [...loadedFormData.authorities].sort() });
             setEntityName(mapping.name);
           } else {
             setToast({ message: `Role "${roleName}" not found.`, type: 'error' });
@@ -71,7 +79,7 @@ const RoleFormPage = () => {
     };
 
     fetchData();
-  }, [roleName, isEditing, setEntityName, setToast, signal]);
+  }, [roleName, isEditing, setEntityName, setToast, signal, resetDirtyBaseline]);
 
   const toggleAuthority = (auth: string) => {
     const newAuths = new Set(formData.authorities);
@@ -186,13 +194,20 @@ const RoleFormPage = () => {
       ));
   };
 
+  const handleCancel = () => {
+    if (!confirmDiscardChanges()) {
+      return;
+    }
+    navigate('/roles');
+  };
+
   return (
     <AdminPage>
       <AdminFormHeader
         icon={Shield}
         title={isEditing ? 'Authority Configuration' : 'Register New Role'}
         description={isEditing ? <span>Modifying system permissions for role <strong className="text-gray-900">{roleName}</strong></span> : 'Define a new role and select its system permissions'}
-        onClose={() => navigate('/roles')}
+        onClose={handleCancel}
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -359,7 +374,7 @@ const RoleFormPage = () => {
           </div>
 
           <div className="flex space-x-4 border-t border-gray-50 pt-6">
-            <button type="button" onClick={() => navigate('/roles')} className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard</button>
+            <button type="button" onClick={handleCancel} className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard</button>
             <button
               type="submit"
               disabled={submitting}
