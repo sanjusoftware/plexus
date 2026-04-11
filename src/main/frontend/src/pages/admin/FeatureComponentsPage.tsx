@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Loader2, ShieldCheck, Info } from 'lucide-react';
 import {
@@ -31,10 +31,12 @@ interface FeatureComponent {
 
 const FeatureComponentsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setToast } = useAuth();
   const [features, setFeatures] = useState<FeatureComponent[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<FeatureComponent | null>(null);
+  const consumedSuccessKeyRef = useRef<string | null>(null);
 
   const signal = useAbortSignal();
 
@@ -56,6 +58,16 @@ const FeatureComponentsPage = () => {
   useEffect(() => {
     fetchFeatures(signal);
   }, [fetchFeatures, signal]);
+
+  useEffect(() => {
+    const successMessage = (location.state as { success?: string } | null)?.success;
+    if (!successMessage || consumedSuccessKeyRef.current === location.key) {
+      return;
+    }
+
+    consumedSuccessKeyRef.current = location.key;
+    setToast({ message: successMessage, type: 'success' });
+  }, [location.key, location.state, setToast]);
 
   const handleActivate = async (id: number) => {
     try {

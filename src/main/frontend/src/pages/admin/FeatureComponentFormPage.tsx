@@ -63,8 +63,11 @@ const FeatureComponentFormPage = () => {
       } else {
         await axios.post('/api/v1/features', formData);
       }
-      setToast({ message: isEditing ? 'Feature updated successfully.' : 'Feature registered successfully.', type: 'success' });
-      navigate('/features');
+      navigate('/features', {
+        state: {
+          success: isEditing ? 'Feature updated successfully.' : 'Feature registered successfully.'
+        }
+      });
     } catch (err: any) {
       if (err.response?.status === 422 && err.response?.data?.errors) {
         setViolations(err.response.data.errors);

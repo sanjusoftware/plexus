@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
@@ -23,6 +23,7 @@ const RoleManagementPage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
   const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
+  const consumedSuccessKeyRef = useRef<string | null>(null);
 
   const toggleExpand = (roleName: string) => {
     const newExpanded = new Set(expandedRoles);
@@ -82,11 +83,12 @@ const RoleManagementPage = () => {
 
   useEffect(() => {
     fetchInitialData(signal);
-    if (location.state?.success) {
-      setToast({ message: location.state.success, type: 'success' });
-      navigate(location.pathname, { replace: true, state: {} });
+    const successMessage = (location.state as { success?: string } | null)?.success;
+    if (successMessage && consumedSuccessKeyRef.current !== location.key) {
+      consumedSuccessKeyRef.current = location.key;
+      setToast({ message: successMessage, type: 'success' });
     }
-  }, [location, setToast, fetchInitialData, signal, navigate]);
+  }, [location, setToast, fetchInitialData, signal]);
 
   const handleDelete = async (roleName: string) => {
     const isOwnRole = (user?.roles || []).some(role => role.toLowerCase() === roleName.toLowerCase());

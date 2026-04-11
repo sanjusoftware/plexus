@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Loader2, Package, ShieldCheck, Tag, Info, ChevronDown, ChevronUp, Play, RefreshCw, Zap } from 'lucide-react';
@@ -85,6 +85,7 @@ const ProductManagementPage = () => {
   // Modal states
   const [archiveModal, setArchiveModal] = useState<{ isOpen: boolean; productId?: number }>({ isOpen: false });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; productId?: number; productName?: string }>({ isOpen: false });
+  const consumedSuccessKeyRef = useRef<string | null>(null);
 
   const signal = useAbortSignal();
 
@@ -232,11 +233,12 @@ const ProductManagementPage = () => {
 
   useEffect(() => {
     fetchInitialData(signal);
-    if (location.state?.success) {
-      setToast({ message: location.state.success, type: 'success' });
-      navigate(location.pathname, { replace: true, state: {} });
+    const successMessage = (location.state as { success?: string } | null)?.success;
+    if (successMessage && consumedSuccessKeyRef.current !== location.key) {
+      consumedSuccessKeyRef.current = location.key;
+      setToast({ message: successMessage, type: 'success' });
     }
-  }, [location, setToast, fetchInitialData, signal, navigate]);
+  }, [location, setToast, fetchInitialData, signal]);
 
   const handleStatusAction = async (id: number, action: string) => {
     try {

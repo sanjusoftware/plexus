@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Loader2, Tag, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import {
@@ -59,6 +59,7 @@ interface PricingComponent {
 
 const PricingComponentsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, setToast } = useAuth();
   const [components, setComponents] = useState<PricingComponent[]>([]);
   const [metadata, setMetadata] = useState<any[]>([]);
@@ -69,6 +70,7 @@ const PricingComponentsPage = () => {
   const [versionTarget, setVersionTarget] = useState<PricingComponent | null>(null);
   const [copyTarget, setCopyTarget] = useState<PricingComponent | null>(null);
   const [copyCode, setCopyCode] = useState('');
+  const consumedSuccessKeyRef = useRef<string | null>(null);
 
   const normalizeTier = useCallback((tier: any): PricingTier => {
     const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) && tier.priceValues.length > 0 ? tier.priceValues[0] : null);
@@ -114,6 +116,16 @@ const PricingComponentsPage = () => {
   useEffect(() => {
     fetchData(signal);
   }, [fetchData, signal]);
+
+  useEffect(() => {
+    const successMessage = (location.state as { success?: string } | null)?.success;
+    if (!successMessage || consumedSuccessKeyRef.current === location.key) {
+      return;
+    }
+
+    consumedSuccessKeyRef.current = location.key;
+    setToast({ message: successMessage, type: 'success' });
+  }, [location.key, location.state, setToast]);
 
   const formatCondition = (condition: TierCondition, currency: string) => {
     const meta = metadata.find(m => m.attributeKey === condition.attributeName);

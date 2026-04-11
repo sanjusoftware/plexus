@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Loader2, List } from 'lucide-react';
@@ -36,6 +36,7 @@ const ProductTypesPage = () => {
   const [loading, setLoading] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [typeToActOn, setTypeToActOn] = useState<ProductType | null>(null);
+  const consumedSuccessKeyRef = useRef<string | null>(null);
 
   const signal = useAbortSignal();
 
@@ -56,11 +57,12 @@ const ProductTypesPage = () => {
 
   useEffect(() => {
     fetchProductTypes(signal);
-    if (location.state?.success) {
-      setToast({ message: location.state.success, type: 'success' });
-      navigate(location.pathname, { replace: true, state: {} });
+    const successMessage = (location.state as { success?: string } | null)?.success;
+    if (successMessage && consumedSuccessKeyRef.current !== location.key) {
+      consumedSuccessKeyRef.current = location.key;
+      setToast({ message: successMessage, type: 'success' });
     }
-  }, [fetchProductTypes, signal, location, setToast, navigate]);
+  }, [fetchProductTypes, signal, location, setToast]);
 
   const handleAction = async (id: number, action: string) => {
     try {
