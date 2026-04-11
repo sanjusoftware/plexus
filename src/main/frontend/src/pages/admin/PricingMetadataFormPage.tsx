@@ -17,6 +17,7 @@ const PricingMetadataFormPage = () => {
 
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
+  const [violations, setViolations] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     attributeKey: '',
     displayName: '',
@@ -66,9 +67,14 @@ const PricingMetadataFormPage = () => {
     }
   }, [attributeKey, isEditing, setEntityName, setToast, signal]);
 
+  const clearViolation = (field: string) => {
+    setViolations(prev => prev.filter(v => v.field !== field));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setViolations([]);
     try {
       if (isEditing) {
         await axios.put(`/api/v1/pricing-metadata/${attributeKey}`, formData);
@@ -79,6 +85,9 @@ const PricingMetadataFormPage = () => {
         state: { success: isEditing ? 'Metadata updated successfully.' : 'Metadata registered successfully.' }
       });
     } catch (err: any) {
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        setViolations(err.response.data.errors);
+      }
       setToast({ message: err.response?.data?.message || 'An error occurred while saving.', type: 'error' });
     } finally {
       setSubmitting(false);
@@ -103,6 +112,16 @@ const PricingMetadataFormPage = () => {
       </div>
     );
   }
+
+  const renderViolations = (field: string) => {
+    return violations
+      .filter(v => v.field === field)
+      .map((v, i) => (
+        <div key={i} className={v.severity === 'WARNING' ? 'admin-warning-text' : 'admin-error-text'}>
+          {v.reason}
+        </div>
+      ));
+  };
 
   return (
     <AdminPage width="narrow">
@@ -134,9 +153,11 @@ const PricingMetadataFormPage = () => {
                   attributeKey: key,
                   sourceField: formData.sourceType === 'CUSTOM_ATTRIBUTE' && !isKeyEdited ? key : formData.sourceField
                 });
+                    clearViolation('displayName');
               }}
               placeholder="e.g. Account Balance"
             />
+            {renderViolations('displayName')}
             <p className="admin-help">What the business user sees in the pricing dashboard.</p>
           </div>
           <div className="admin-field">
@@ -155,10 +176,12 @@ const PricingMetadataFormPage = () => {
                   attributeKey: normalizedKey,
                   sourceField: formData.sourceType === 'CUSTOM_ATTRIBUTE' ? normalizedKey : formData.sourceField
                 });
+                clearViolation('attributeKey');
               }}
               placeholder="e.g. customerSegment or available_balance"
             />
-            {!isEditing && <p className="admin-help">This is the exact attribute key business users will select in pricing rules.</p>}
+            {renderViolations('attributeKey')}
+            {!isEditing && <p className="admin-help">This is the exact attribute key business users will select in pricing rules. Must be unique.</p>}
           </div>
           <div className="admin-field">
             <label className="admin-label">Attribute Data Type</label>
@@ -166,8 +189,12 @@ const PricingMetadataFormPage = () => {
               required
               options={dataTypes.map(type => ({ value: type, label: type }))}
               value={dataTypes.includes(formData.dataType) ? { value: formData.dataType, label: formData.dataType } : null}
-              onChange={(opt) => setFormData({ ...formData, dataType: opt ? opt.value : 'STRING' })}
+              onChange={(opt) => {
+                setFormData({ ...formData, dataType: opt ? opt.value : 'STRING' });
+                clearViolation('dataType');
+              }}
             />
+            {renderViolations('dataType')}
             <p className="admin-help">Affects how the rule engine processes and validates values.</p>
           </div>
           <div className="admin-field">
@@ -183,8 +210,10 @@ const PricingMetadataFormPage = () => {
                   sourceType,
                   sourceField: sourceType === 'CUSTOM_ATTRIBUTE' ? (formData.sourceField || formData.attributeKey) : formData.sourceField
                 });
+                clearViolation('sourceType');
               }}
             />
+            {renderViolations('sourceType')}
             <p className="admin-help">Choose whether this attribute reads from a top-level pricing request field or from customAttributes.</p>
           </div>
           <div className="admin-field">
@@ -194,9 +223,13 @@ const PricingMetadataFormPage = () => {
               required
               className="admin-input admin-input-mono"
               value={formData.sourceField}
-              onChange={(e) => setFormData({ ...formData, sourceField: normalizeIdentifier(e.target.value) })}
+              onChange={(e) => {
+                setFormData({ ...formData, sourceField: normalizeIdentifier(e.target.value) });
+                clearViolation('sourceField');
+              }}
               placeholder={formData.sourceType === 'FACT_FIELD' ? 'e.g. customerSegment' : 'Defaults to attribute key if blank'}
             />
+            {renderViolations('sourceField')}
             <p className="admin-help">For request fields, use the exact pricing fact field name. For custom attributes, this is usually the same as the attribute key.</p>
           </div>
           <div className="admin-actions">

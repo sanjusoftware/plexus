@@ -32,6 +32,7 @@ const ProductFormPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [violations, setViolations] = useState<any[]>([]);
   const [featureComponents, setFeatureComponents] = useState<FeatureComponent[]>([]);
   const [pricingComponents, setPricingComponents] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
@@ -124,9 +125,14 @@ const ProductFormPage = () => {
     });
   };
 
+  const clearViolation = (field: string) => {
+    setViolations(prev => prev.filter(v => v.field !== field));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setViolations([]);
 
     // Prepare payload for Fat DTO
     const payload = {
@@ -157,6 +163,9 @@ const ProductFormPage = () => {
       }
       navigate('/products', { state: { success: isEditing ? 'Product successfully synced.' : 'Product created successfully.' } });
     } catch (err: any) {
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        setViolations(err.response.data.errors);
+      }
       setToast({ message: err.response?.data?.message || 'Operation failed.', type: 'error' });
     } finally {
       setSubmitting(false);
@@ -170,6 +179,16 @@ const ProductFormPage = () => {
       </div>
     );
   }
+
+  const renderViolations = (field: string) => {
+    return violations
+      .filter(v => v.field === field)
+      .map((v, i) => (
+        <div key={i} className={v.severity === 'WARNING' ? 'admin-warning-text' : 'admin-error-text'}>
+          {v.reason}
+        </div>
+      ));
+  };
 
   return (
     <AdminPage>
@@ -197,9 +216,11 @@ const ProductFormPage = () => {
                     code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
                   }
                   setFormData({ ...formData, name, code });
+                  clearViolation('name');
                 }}
                 placeholder="e.g. Ultra Savings"
               />
+              {renderViolations('name')}
             </div>
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Business Code (ID)</label>
@@ -211,9 +232,11 @@ const ProductFormPage = () => {
                 onChange={(e) => {
                   setIsCodeEdited(true);
                   setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
+                  clearViolation('code');
                 }}
                 placeholder="e.g. SAV-PREM"
               />
+              {renderViolations('code')}
             </div>
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Product Classification</label>
@@ -222,8 +245,14 @@ const ProductFormPage = () => {
                 placeholder="Select Category..."
                 options={productTypes.map(t => ({ value: t.code, label: t.name }))}
                 value={productTypes.find(t => t.code === formData.productTypeCode) ? { value: formData.productTypeCode, label: productTypes.find(t => t.code === formData.productTypeCode)!.name } : null}
-                onChange={(opt) => setFormData({...formData, productTypeCode: opt ? opt.value : ''})}
+                onChange={(opt) => {
+                  setFormData({...formData, productTypeCode: opt ? opt.value : ''});
+                  clearViolation('productTypeCode');
+                  clearViolation('product_type_code');
+                }}
               />
+              {renderViolations('productTypeCode')}
+              {renderViolations('product_type_code')}
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Target Market Segment</label>
@@ -244,12 +273,20 @@ const ProductFormPage = () => {
                   value: formData.category,
                   label: ({ RETAIL: 'RETAIL CONSUMER', WEALTH: 'WEALTH MANAGEMENT', CORPORATE: 'CORPORATE BANKING', INVESTMENT: 'INVESTMENT BANKING' } as any)[formData.category]
                 } : null}
-                onChange={(opt) => setFormData({...formData, category: opt ? opt.value : ''})}
+                onChange={(opt) => {
+                  setFormData({...formData, category: opt ? opt.value : ''});
+                  clearViolation('category');
+                }}
               />
+              {renderViolations('category')}
             </div>
             <div className="md:col-span-2">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Short Marketing Tagline</label>
-              <input type="text" className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 text-sm transition focus:border-blue-500 shadow-sm" value={formData.tagline} onChange={(e) => setFormData({...formData, tagline: e.target.value})} placeholder="e.g. Grow your wealth with zero maintenance fees." />
+              <input type="text" className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 text-sm transition focus:border-blue-500 shadow-sm" value={formData.tagline} onChange={(e) => {
+                setFormData({...formData, tagline: e.target.value});
+                clearViolation('tagline');
+              }} placeholder="e.g. Grow your wealth with zero maintenance fees." />
+              {renderViolations('tagline')}
             </div>
           </div>
 
@@ -307,8 +344,10 @@ const ProductFormPage = () => {
                             }
                           }
                           setFormData({...formData, features: newF});
+                          clearViolation(`features[${idx}].featureComponentCode`);
                         }}
                       />
+                      {renderViolations(`features[${idx}].featureComponentCode`)}
                     </div>
 
                     <div>
@@ -324,6 +363,7 @@ const ProductFormPage = () => {
                                   const newF = [...formData.features];
                                   newF[idx].featureValue = link.featureValue === 'true' ? 'false' : 'true';
                                   setFormData({...formData, features: newF});
+                                  clearViolation(`features[${idx}].featureValue`);
                                 }}
                               >
                                 <button
@@ -347,6 +387,7 @@ const ProductFormPage = () => {
                                   const newF = [...formData.features];
                                   newF[idx].featureValue = e.target.value;
                                   setFormData({...formData, features: newF});
+                                  clearViolation(`features[${idx}].featureValue`);
                                 }}
                               />
                             );
@@ -363,6 +404,7 @@ const ProductFormPage = () => {
                                   const newF = [...formData.features];
                                   newF[idx].featureValue = e.target.value;
                                   setFormData({...formData, features: newF});
+                                  clearViolation(`features[${idx}].featureValue`);
                                 }}
                               />
                             );
@@ -377,11 +419,13 @@ const ProductFormPage = () => {
                                   const newF = [...formData.features];
                                   newF[idx].featureValue = e.target.value;
                                   setFormData({...formData, features: newF});
+                                  clearViolation(`features[${idx}].featureValue`);
                                 }}
                               />
                             );
                         }
                       })()}
+                      {renderViolations(`features[${idx}].featureValue`)}
                     </div>
 
                     {link.featureComponentCode === 'CREATE_NEW' && (
@@ -394,7 +438,9 @@ const ProductFormPage = () => {
                               // Auto-gen code from name if it's new
                               newF[idx].tempCode = e.target.value.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
                               setFormData({...formData, features: newF});
+                              clearViolation(`features[${idx}].featureName`);
                             }} />
+                            {renderViolations(`features[${idx}].featureName`)}
                          </div>
                          <div className="grid grid-cols-2 gap-3">
                             <div>
@@ -403,7 +449,9 @@ const ProductFormPage = () => {
                                 const newF = [...formData.features];
                                 newF[idx].tempCode = e.target.value.toUpperCase().replace(/\s/g, '_');
                                 setFormData({...formData, features: newF});
+                                clearViolation(`features[${idx}].featureComponentCode`);
                               }} />
+                              {renderViolations(`features[${idx}].featureComponentCode`)}
                             </div>
                             <div>
                               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Data Type</label>
@@ -505,8 +553,10 @@ const ProductFormPage = () => {
                           const newP = [...formData.pricing];
                           newP[idx].pricingComponentCode = opt ? opt.value : '';
                           setFormData({...formData, pricing: newP});
+                          clearViolation(`pricing[${idx}].pricingComponentCode`);
                         }}
                       />
+                      {renderViolations(`pricing[${idx}].pricingComponentCode`)}
                     </div>
                     <div className="flex items-end">
                       <div className="flex items-center justify-between px-4 bg-white rounded-lg border border-gray-200 transition w-full shadow-sm h-[42px]">
@@ -540,8 +590,10 @@ const ProductFormPage = () => {
                           const newP = [...formData.pricing];
                           newP[idx].effectiveDate = e.target.value;
                           setFormData({...formData, pricing: newP});
+                          clearViolation(`pricing[${idx}].effectiveDate`);
                         }}
                       />
+                      {renderViolations(`pricing[${idx}].effectiveDate`)}
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Expiry Date</label>
@@ -553,8 +605,11 @@ const ProductFormPage = () => {
                           const newP = [...formData.pricing];
                           newP[idx].expiryDate = e.target.value;
                           setFormData({...formData, pricing: newP});
+                          clearViolation(`pricing[${idx}].expiryDate`);
                         }}
                       />
+                      {renderViolations(`pricing[${idx}].expiryDate`)}
+                      {renderViolations(`pricing[${idx}].expiry_date`)}
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Target Component Code</label>
@@ -566,8 +621,10 @@ const ProductFormPage = () => {
                           const newP = [...formData.pricing];
                           newP[idx].targetComponentCode = opt ? opt.value : '';
                           setFormData({...formData, pricing: newP});
+                          clearViolation(`pricing[${idx}].targetComponentCode`);
                         }}
                       />
+                      {renderViolations(`pricing[${idx}].targetComponentCode`)}
                     </div>
                   </div>
 
@@ -584,8 +641,10 @@ const ProductFormPage = () => {
                             const newP = [...formData.pricing];
                             newP[idx].fixedValue = parseFloat(e.target.value);
                             setFormData({...formData, pricing: newP});
+                            clearViolation(`pricing[${idx}].fixedValue`);
                           }}
                         />
+                        {renderViolations(`pricing[${idx}].fixedValue`)}
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Amount Type</label>
@@ -607,8 +666,12 @@ const ProductFormPage = () => {
                             const newP = [...formData.pricing];
                             newP[idx].fixedValueType = opt ? opt.value : '';
                             setFormData({...formData, pricing: newP});
+                            clearViolation(`pricing[${idx}].fixedValueType`);
+                            clearViolation(`pricing[${idx}].fixed_value_type`);
                           }}
                         />
+                        {renderViolations(`pricing[${idx}].fixedValueType`)}
+                        {renderViolations(`pricing[${idx}].fixed_value_type`)}
                       </div>
                     </div>
                   )}

@@ -40,6 +40,7 @@ const PricingComponentFormPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [violations, setViolations] = useState<any[]>([]);
   const [metadata, setMetadata] = useState<any[]>([]);
   const [isCodeEdited, setIsCodeEdited] = useState(false);
 
@@ -254,9 +255,14 @@ const PricingComponentFormPage = () => {
     setFormData({ ...formData, pricingTiers: newTiers });
   };
 
+  const clearViolation = (field: string) => {
+    setViolations(prev => prev.filter(v => v.field !== field));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setViolations([]);
     try {
       const payload = buildSubmitPayload(formData);
       if (isEditing) {
@@ -270,6 +276,9 @@ const PricingComponentFormPage = () => {
       });
       navigate('/pricing-components', { state: { success: isEditing ? 'Pricing component updated successfully.' : 'Pricing component created successfully.' } });
     } catch (err: any) {
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        setViolations(err.response.data.errors);
+      }
       const message = err.response?.data?.message || 'An error occurred while saving the component.';
       setToast({ message, type: 'error' });
     } finally {
@@ -284,6 +293,16 @@ const PricingComponentFormPage = () => {
       </div>
     );
   }
+
+  const renderViolations = (field: string) => {
+    return violations
+      .filter(v => v.field === field)
+      .map((v, i) => (
+        <div key={i} className={v.severity === 'WARNING' ? 'admin-warning-text' : 'admin-error-text'}>
+          {v.reason}
+        </div>
+      ));
+  };
 
   return (
     <AdminPage width="medium">
@@ -312,9 +331,11 @@ const PricingComponentFormPage = () => {
                     code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
                   }
                   setFormData({ ...formData, name, code });
+                  clearViolation('name');
                 }}
                 placeholder="e.g. Monthly Maintenance Fee"
               />
+              {renderViolations('name')}
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Immutable Component Code</label>
@@ -326,9 +347,11 @@ const PricingComponentFormPage = () => {
                 onChange={(e) => {
                   setIsCodeEdited(true);
                   setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
+                  clearViolation('code');
                 }}
                 placeholder="e.g. MAINTENANCE_FEE"
               />
+              {renderViolations('code')}
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Financial Type</label>
@@ -338,13 +361,21 @@ const PricingComponentFormPage = () => {
                   { value: 'INTEREST_RATE', label: 'RATE' },
                   { value: 'DISCOUNT', label: 'DISCOUNT' }
                 ].map(t => (
-                  <button key={t.value} type="button" onClick={() => setFormData({...formData, type: t.value})} className={`flex-1 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition border ${formData.type === t.value ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100' : 'border-gray-200 text-gray-400 hover:border-gray-300'}`}>{t.label}</button>
+                  <button key={t.value} type="button" onClick={() => {
+                    setFormData({...formData, type: t.value});
+                    clearViolation('type');
+                  }} className={`flex-1 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition border ${formData.type === t.value ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100' : 'border-gray-200 text-gray-400 hover:border-gray-300'}`}>{t.label}</button>
                 ))}
               </div>
+              {renderViolations('type')}
             </div>
             <div className="md:col-span-2">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Business Description</label>
-              <textarea className="w-full border border-gray-200 rounded-xl p-3 h-20 font-medium text-sm transition focus:border-blue-500 shadow-sm" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Describe the purpose and lifecycle of this pricing component..." />
+              <textarea className="w-full border border-gray-200 rounded-xl p-3 h-20 font-medium text-sm transition focus:border-blue-500 shadow-sm" value={formData.description} onChange={(e) => {
+                setFormData({...formData, description: e.target.value});
+                clearViolation('description');
+              }} placeholder="Describe the purpose and lifecycle of this pricing component..." />
+              {renderViolations('description')}
             </div>
           </div>
 
@@ -367,11 +398,19 @@ const PricingComponentFormPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Display Label</label>
-                      <input type="text" required className="w-full border border-white rounded-lg p-2.5 font-bold text-[11px] bg-white shadow-sm focus:border-blue-500 transition" value={tier.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} />
+                      <input type="text" required className="w-full border border-white rounded-lg p-2.5 font-bold text-[11px] bg-white shadow-sm focus:border-blue-500 transition" value={tier.name} onChange={(e) => {
+                        handleTierChange(idx, 'name', e.target.value);
+                        clearViolation(`pricingTiers[${idx}].name`);
+                      }} />
+                      {renderViolations(`pricingTiers[${idx}].name`)}
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Tier ID Code</label>
-                      <input type="text" required className="w-full border border-white rounded-lg p-2.5 font-mono font-bold text-[11px] bg-white shadow-sm focus:border-blue-500 transition" value={tier.code} onChange={(e) => handleTierChange(idx, 'code', e.target.value)} />
+                      <input type="text" required className="w-full border border-white rounded-lg p-2.5 font-mono font-bold text-[11px] bg-white shadow-sm focus:border-blue-500 transition" value={tier.code} onChange={(e) => {
+                        handleTierChange(idx, 'code', e.target.value);
+                        clearViolation(`pricingTiers[${idx}].code`);
+                      }} />
+                      {renderViolations(`pricingTiers[${idx}].code`)}
                     </div>
                   </div>
 
@@ -389,17 +428,25 @@ const PricingComponentFormPage = () => {
                                 placeholder="Attribute..."
                                 options={metadata.map(m => ({ value: m.attributeKey, label: m.displayName }))}
                                 value={metadata.find(m => m.attributeKey === cond.attributeName) ? { value: cond.attributeName, label: metadata.find(m => m.attributeKey === cond.attributeName).displayName } : null}
-                                onChange={(opt) => handleConditionChange(idx, cidx, 'attributeName', opt ? opt.value : '')}
+                                onChange={(opt) => {
+                                  handleConditionChange(idx, cidx, 'attributeName', opt ? opt.value : '');
+                                  clearViolation(`pricingTiers[${idx}].conditions[${cidx}].attributeName`);
+                                }}
                                 menuPlacement="auto"
                               />
+                              {renderViolations(`pricingTiers[${idx}].conditions[${cidx}].attributeName`)}
                             </div>
                             <div className="col-span-2">
                               <PlexusSelect
                                 options={getOperatorsForDataType(metadata.find(m => m.attributeKey === cond.attributeName)?.dataType || 'STRING')}
                                 value={{ EQ: '=', GT: '>', LT: '<', GE: '>=', LE: '<=' }[cond.operator as string] ? { value: cond.operator, label: ({ EQ: '=', GT: '>', LT: '<', GE: '>=', LE: '<=' } as any)[cond.operator] } : null}
-                                onChange={(opt) => handleConditionChange(idx, cidx, 'operator', opt ? opt.value : 'EQ')}
+                                onChange={(opt) => {
+                                  handleConditionChange(idx, cidx, 'operator', opt ? opt.value : 'EQ');
+                                  clearViolation(`pricingTiers[${idx}].conditions[${cidx}].operator`);
+                                }}
                                 menuPlacement="auto"
                               />
+                              {renderViolations(`pricingTiers[${idx}].conditions[${cidx}].operator`)}
                             </div>
                             <div className="col-span-3">
                               {(() => {
@@ -410,7 +457,10 @@ const PricingComponentFormPage = () => {
                                       <div className="h-[42px] flex items-center px-3 bg-white border border-gray-200 rounded-lg">
                                         <button
                                           type="button"
-                                          onClick={() => handleConditionChange(idx, cidx, 'attributeValue', cond.attributeValue === 'true' ? 'false' : 'true')}
+                                          onClick={() => {
+                                            handleConditionChange(idx, cidx, 'attributeValue', cond.attributeValue === 'true' ? 'false' : 'true');
+                                            clearViolation(`pricingTiers[${idx}].conditions[${cidx}].attributeValue`);
+                                          }}
                                           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${cond.attributeValue === 'true' ? 'bg-blue-600' : 'bg-gray-200'}`}
                                         >
                                           <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${cond.attributeValue === 'true' ? 'translate-x-5' : 'translate-x-1'}`} />
@@ -426,7 +476,10 @@ const PricingComponentFormPage = () => {
                                         type="date"
                                         className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
                                         value={cond.attributeValue}
-                                        onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
+                                        onChange={(e) => {
+                                          handleConditionChange(idx, cidx, 'attributeValue', e.target.value);
+                                          clearViolation(`pricingTiers[${idx}].conditions[${cidx}].attributeValue`);
+                                        }}
                                       />
                                     );
                                   case 'INTEGER':
@@ -439,7 +492,10 @@ const PricingComponentFormPage = () => {
                                         className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
                                         placeholder="Value..."
                                         value={cond.attributeValue}
-                                        onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
+                                        onChange={(e) => {
+                                          handleConditionChange(idx, cidx, 'attributeValue', e.target.value);
+                                          clearViolation(`pricingTiers[${idx}].conditions[${cidx}].attributeValue`);
+                                        }}
                                       />
                                     );
                                   default:
@@ -449,11 +505,15 @@ const PricingComponentFormPage = () => {
                                         className="w-full border border-gray-200 rounded-lg p-2.5 text-[11px] bg-white font-bold shadow-sm focus:border-blue-500 transition h-[42px]"
                                         placeholder="Value..."
                                         value={cond.attributeValue}
-                                        onChange={(e) => handleConditionChange(idx, cidx, 'attributeValue', e.target.value)}
+                                        onChange={(e) => {
+                                          handleConditionChange(idx, cidx, 'attributeValue', e.target.value);
+                                          clearViolation(`pricingTiers[${idx}].conditions[${cidx}].attributeValue`);
+                                        }}
                                       />
                                     );
                                 }
                               })()}
+                              {renderViolations(`pricingTiers[${idx}].conditions[${cidx}].attributeValue`)}
                             </div>
                             <div className="col-span-2">
                               {cidx < tier.conditions.length - 1 ? (
@@ -463,10 +523,14 @@ const PricingComponentFormPage = () => {
                                     { value: 'OR', label: 'OR' }
                                   ]}
                                   value={{ AND: 'AND', OR: 'OR' }[cond.connector as string] ? { value: cond.connector, label: cond.connector } : null}
-                                  onChange={(opt) => handleConditionChange(idx, cidx, 'connector', opt ? opt.value : 'AND')}
+                                  onChange={(opt) => {
+                                    handleConditionChange(idx, cidx, 'connector', opt ? opt.value : 'AND');
+                                    clearViolation(`pricingTiers[${idx}].conditions[${cidx}].connector`);
+                                  }}
                                   menuPlacement="auto"
                                 />
                               ) : <div className="w-full p-2.5"></div>}
+                              {cidx < tier.conditions.length - 1 && renderViolations(`pricingTiers[${idx}].conditions[${cidx}].connector`)}
                             </div>
                           </div>
                           <button type="button" onClick={() => removeCondition(idx, cidx)} className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition"><X className="w-4 h-4" /></button>
@@ -487,8 +551,12 @@ const PricingComponentFormPage = () => {
                           const newTiers = [...formData.pricingTiers];
                           newTiers[idx].priceValue = { ...newTiers[idx].priceValue, priceAmount: parseFloat(e.target.value) };
                           setFormData({...formData, pricingTiers: newTiers});
+                          clearViolation(`pricingTiers[${idx}].priceValue.priceAmount`);
+                          clearViolation(`pricingTiers[${idx}].priceValue.price_amount`);
                         }} />
                       </div>
+                      {renderViolations(`pricingTiers[${idx}].priceValue.priceAmount`)}
+                      {renderViolations(`pricingTiers[${idx}].priceValue.price_amount`)}
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Financial Value Type</label>
@@ -517,8 +585,12 @@ const PricingComponentFormPage = () => {
                           const newTiers = [...formData.pricingTiers];
                           newTiers[idx].priceValue = { ...newTiers[idx].priceValue, valueType: opt ? opt.value : getDefaultValueType(formData.type) };
                           setFormData({...formData, pricingTiers: newTiers});
+                          clearViolation(`pricingTiers[${idx}].priceValue.valueType`);
+                          clearViolation(`pricingTiers[${idx}].priceValue.value_type`);
                         }}
                       />
+                      {renderViolations(`pricingTiers[${idx}].priceValue.valueType`)}
+                      {renderViolations(`pricingTiers[${idx}].priceValue.value_type`)}
                     </div>
                   </div>
                 </div>

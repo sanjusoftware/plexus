@@ -16,6 +16,7 @@ const ProductTypeFormPage = () => {
 
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
+  const [violations, setViolations] = useState<any[]>([]);
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [isCodeEdited, setIsCodeEdited] = useState(false);
   const signal = useAbortSignal();
@@ -52,9 +53,14 @@ const ProductTypeFormPage = () => {
     }
   }, [id, isEditing, navigate, setEntityName, setToast, signal]);
 
+  const clearViolation = (field: string) => {
+    setViolations(prev => prev.filter(v => v.field !== field));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setViolations([]);
     try {
       if (isEditing) {
         await axios.put(`/api/v1/product-types/${id}`, formData);
@@ -65,6 +71,9 @@ const ProductTypeFormPage = () => {
         state: { success: isEditing ? 'Product type updated successfully.' : 'Product type created successfully.' }
       });
     } catch (err: any) {
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        setViolations(err.response.data.errors);
+      }
       setToast({ message: err.response?.data?.message || 'An error occurred while saving.', type: 'error' });
     } finally {
       setSubmitting(false);
@@ -89,6 +98,16 @@ const ProductTypeFormPage = () => {
       </div>
     );
   }
+
+  const renderViolations = (field: string) => {
+    return violations
+      .filter(v => v.field === field)
+      .map((v, i) => (
+        <div key={i} className={v.severity === 'WARNING' ? 'admin-warning-text' : 'admin-error-text'}>
+          {v.reason}
+        </div>
+      ));
+  };
 
   return (
     <AdminPage width="narrow">
@@ -115,9 +134,11 @@ const ProductTypeFormPage = () => {
                   code = name.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
                 }
                 setFormData({ ...formData, name, code });
+                clearViolation('name');
               }}
               placeholder="e.g. Savings Accounts"
             />
+            {renderViolations('name')}
             <p className="admin-help">The user-friendly name displayed in reports and customer interfaces.</p>
           </div>
           <div className="admin-field">
@@ -130,9 +151,11 @@ const ProductTypeFormPage = () => {
               onChange={(e) => {
                 setIsCodeEdited(true);
                 setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '_') });
+                clearViolation('code');
               }}
               placeholder="e.g. SAVINGS"
             />
+            {renderViolations('code')}
             <p className="admin-help">The immutable identifier used for API calls and system logic.</p>
           </div>
           <div className="admin-actions">
