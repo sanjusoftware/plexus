@@ -74,7 +74,7 @@ describe('Product Management Page Table', () => {
     const table = await screen.findByRole('table', { name: /product management table/i });
     const headers = within(table).getAllByRole('columnheader').map((header) => header.textContent);
 
-    expect(headers).toEqual(['Product Details', 'Product Type', 'Category', 'Status', 'Created At', 'Updated At', 'Actions']);
+    expect(headers).toEqual(['Product Details', 'Product Type', 'Category', 'Status', 'Updated At', 'Actions']);
     expect(within(table).getByText('Premium Credit Cards')).toBeInTheDocument();
     expect(within(table).getByText('PREMIUM_CREDIT_CARDS')).toBeInTheDocument();
     expect(within(table).getByText('Credit Card')).toBeInTheDocument();

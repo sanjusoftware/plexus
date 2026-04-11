@@ -124,14 +124,13 @@ const ProductTypesPage = () => {
               <tr>
                 <th>Type Details</th>
                 <th>Status</th>
-                <th>Created At</th>
                 <th>Updated At</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
             </thead>
             <tbody>
               {productTypes.length === 0 ? (
-                <AdminDataTableEmptyRow colSpan={5}>No product types found. Get started by creating your first one.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={4}>No product types found. Get started by creating your first one.</AdminDataTableEmptyRow>
               ) : (
                 productTypes.map((type) => (
                   <AdminDataTableRow key={type.id}>
@@ -148,8 +147,7 @@ const ProductTypesPage = () => {
                         {type.status}
                       </span>
                     </td>
-                    <AuditTimestampCell value={type.createdAt} />
-                    <AuditTimestampCell value={type.updatedAt} />
+                    <AuditTimestampCell value={type.updatedAt || type.createdAt} />
                     <AdminDataTableActionCell>
                       {type.status === 'DRAFT' && (
                         <HasPermission action="POST" path="/api/v1/product-types/*/activate">

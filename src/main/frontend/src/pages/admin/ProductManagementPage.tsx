@@ -447,14 +447,13 @@ const ProductManagementPage = () => {
               <th>Product Type</th>
               <th>Category</th>
               <th className="text-center">Status</th>
-              <th>Created At</th>
               <th>Updated At</th>
               <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
             </tr>
           </thead>
           <tbody>
             {products.length === 0 ? (
-              <AdminDataTableEmptyRow colSpan={7}>No active products found. Get started by clicking "Create New Product".</AdminDataTableEmptyRow>
+              <AdminDataTableEmptyRow colSpan={6}>No active products found. Get started by clicking "Create New Product".</AdminDataTableEmptyRow>
             ) : (
               products.map((prod) => (
                 <React.Fragment key={prod.id}>
@@ -512,11 +511,8 @@ const ProductManagementPage = () => {
                       </span>
                     </td>
 
-                    {/* Created At */}
-                    <AuditTimestampCell value={prod.createdAt} />
-
                     {/* Updated At */}
-                    <AuditTimestampCell value={prod.updatedAt} />
+                    <AuditTimestampCell value={prod.updatedAt || prod.createdAt} />
 
                     {/* Actions */}
                     <AdminDataTableActionCell onClick={(e) => e.stopPropagation()}>
@@ -571,7 +567,7 @@ const ProductManagementPage = () => {
                   </AdminDataTableRow>
                   {expandedIds.has(prod.id) && (
                     <tr className="bg-white">
-                      <td colSpan={7} className="p-0 border-b border-gray-100">
+                      <td colSpan={6} className="p-0 border-b border-gray-100">
                         <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-blue-50/50 p-1.5 rounded-lg w-fit">

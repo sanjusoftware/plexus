@@ -107,7 +107,6 @@ const FeatureComponentsPage = () => {
                 <th>Feature Component</th>
                 <th>Data Type</th>
                 <th>Status</th>
-                <th>Created At</th>
                 <th>Updated At</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
@@ -134,8 +133,7 @@ const FeatureComponentsPage = () => {
                       {feat.status}
                     </span>
                   </td>
-                   <AuditTimestampCell value={feat.createdAt} />
-                   <AuditTimestampCell value={feat.updatedAt} />
+                   <AuditTimestampCell value={feat.updatedAt || feat.createdAt} />
                   <AdminDataTableActionCell>
                     {feat.status === 'DRAFT' && (
                       <>
@@ -173,7 +171,7 @@ const FeatureComponentsPage = () => {
                 </AdminDataTableRow>
               ))}
               {features.length === 0 && (
-                <AdminDataTableEmptyRow colSpan={6}>No feature components found.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={5}>No feature components found.</AdminDataTableEmptyRow>
               )}
             </tbody>
         </AdminDataTable>

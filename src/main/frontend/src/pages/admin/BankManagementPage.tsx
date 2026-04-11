@@ -175,14 +175,13 @@ const BankManagementPage = () => {
               <th>Bank Information</th>
               <th>Issuer URL</th>
               <th>Status</th>
-              <th>Created At</th>
               <th>Updated At</th>
               <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
             </tr>
           </thead>
           <tbody>
             {banks.length === 0 && !myBank ? (
-              <AdminDataTableEmptyRow colSpan={6}>No managed banks found.</AdminDataTableEmptyRow>
+              <AdminDataTableEmptyRow colSpan={5}>No managed banks found.</AdminDataTableEmptyRow>
             ) : (
               <>
                 {banks.map((item) => (
@@ -218,8 +217,7 @@ const BankManagementPage = () => {
                         {item.status}
                       </span>
                     </td>
-                    <AuditTimestampCell value={item.createdAt} />
-                    <AuditTimestampCell value={item.updatedAt} />
+                    <AuditTimestampCell value={item.updatedAt || item.createdAt} />
                     <AdminDataTableActionCell>
                       <HasPermission action="PUT" path="/api/v1/banks/*">
                         <AdminDataTableActionButton
@@ -287,7 +285,7 @@ const BankManagementPage = () => {
                   <>
                     {banks.length > 0 && (
                       <tr className="bg-gray-50/30">
-                        <td colSpan={6} className="px-5 py-3">
+                        <td colSpan={5} className="px-5 py-3">
                           <div className="flex items-center gap-3">
                             <div className="h-px flex-1 bg-gray-200"></div>
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">My Bank Settings</span>
@@ -332,8 +330,7 @@ const BankManagementPage = () => {
                           {myBank.status}
                         </span>
                       </td>
-                       <AuditTimestampCell value={myBank.createdAt} />
-                       <AuditTimestampCell value={myBank.updatedAt} />
+                       <AuditTimestampCell value={myBank.updatedAt || myBank.createdAt} />
                       <AdminDataTableActionCell>
                         <HasPermission action="PUT" path="/api/v1/banks">
                           <AdminDataTableActionButton

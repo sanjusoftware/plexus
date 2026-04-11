@@ -263,7 +263,6 @@ const PricingComponentsPage = () => {
                 <th>Type</th>
                 <th>Status</th>
                 <th>Segments</th>
-                <th>Created At</th>
                 <th>Updated At</th>
                 <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
               </tr>
@@ -302,11 +301,8 @@ const PricingComponentsPage = () => {
                     <td className="whitespace-nowrap font-bold text-gray-500">
                       {comp.pricingTiers?.length || 0} Tiers
                     </td>
-                    <td className="min-w-[140px]" title={comp.createdAt || '--'}>
-                      <AuditTimestampCell value={comp.createdAt} variant="expanded" />
-                    </td>
-                    <td className="min-w-[140px]" title={comp.updatedAt || '--'}>
-                      <AuditTimestampCell value={comp.updatedAt} variant="expanded" />
+                    <td className="min-w-[140px]" title={(comp.updatedAt || comp.createdAt) || '--'}>
+                      <AuditTimestampCell value={comp.updatedAt || comp.createdAt} variant="expanded" />
                     </td>
                     <AdminDataTableActionCell>
                       {comp.status === 'DRAFT' && (
@@ -363,7 +359,7 @@ const PricingComponentsPage = () => {
                   </AdminDataTableRow>
                   {expandedRows.has(comp.id) && (
                     <tr className="bg-gray-50/30">
-                      <td colSpan={7} className="border-b border-gray-100 px-8 py-3 bg-gray-50/50">
+                      <td colSpan={6} className="border-b border-gray-100 px-8 py-3 bg-gray-50/50">
                         <div className="text-xs font-medium text-gray-600 mb-4 italic leading-relaxed border-l-2 border-gray-200 pl-3">{comp.description}</div>
                         <div className="space-y-3">
                           {comp.pricingTiers?.map((tier, idx) => (
@@ -419,7 +415,7 @@ const PricingComponentsPage = () => {
                 </React.Fragment>
               ))}
               {components.length === 0 && (
-                <AdminDataTableEmptyRow colSpan={7}>No pricing components found.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={6}>No pricing components found.</AdminDataTableEmptyRow>
               )}
             </tbody>
         </AdminDataTable>
