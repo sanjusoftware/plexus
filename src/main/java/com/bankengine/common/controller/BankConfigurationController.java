@@ -3,6 +3,7 @@ package com.bankengine.common.controller;
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.dto.BankConfigurationResponse;
+import com.bankengine.common.dto.BankProductCategoryOptionsResponse;
 import com.bankengine.common.service.BankConfigurationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -75,5 +76,12 @@ public class BankConfigurationController {
     @Operation(summary = "Get bank configuration details")
     public ResponseEntity<BankConfigurationResponse> getBank(@PathVariable String bankId) {
         return ResponseEntity.ok(bankConfigurationService.getBank(bankId));
+    }
+
+    @GetMapping("/{bankId}/product-categories")
+    @PreAuthorize("hasAuthority('system:bank:read') or hasAuthority('bank:config:read') or hasAuthority('catalog:product:read')")
+    @Operation(summary = "Get bank product category options", description = "Returns existing categories aggregated from products and conflict rules, plus starter examples.")
+    public ResponseEntity<BankProductCategoryOptionsResponse> getProductCategories(@PathVariable String bankId) {
+        return ResponseEntity.ok(bankConfigurationService.getProductCategoryOptions(bankId));
     }
 }

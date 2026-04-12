@@ -49,6 +49,12 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
       show: hasPermission({ action: 'GET', path: '/api/v1/product-types' })
     },
     {
+      label: 'Product Categories',
+      icon: Tag,
+      path: '/product-categories',
+      show: hasPermission({ action: 'GET', path: '/api/v1/product-categories' })
+    },
+    {
       label: 'Pricing Metadata',
       icon: Database,
       path: '/pricing-metadata',

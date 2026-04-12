@@ -4,12 +4,18 @@ import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.PermissionMappingService;
+import com.bankengine.catalog.model.BundleProductLink;
+import com.bankengine.catalog.repository.BundleProductLinkRepository;
+import com.bankengine.catalog.repository.ProductCategoryRepository;
+import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.annotation.SystemAdminBypass;
 import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.dto.BankConfigurationResponse;
+import com.bankengine.common.dto.BankProductCategoryOptionsResponse;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.model.CategoryConflictRule;
+import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.common.util.CodeGeneratorUtil;
 import com.bankengine.web.exception.NotFoundException;
@@ -20,8 +26,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,12 +35,24 @@ import java.util.stream.Collectors;
 public class BankConfigurationService extends BaseService {
 
     private final BankConfigurationRepository bankConfigurationRepository;
+    private final ProductRepository productRepository;
+    private final ProductCategoryRepository productCategoryRepository;
+    private final BundleProductLinkRepository bundleProductLinkRepository;
     private final RoleRepository roleRepository;
     private final AuthorityDiscoveryService authorityDiscoveryService;
     private final PermissionMappingService permissionMappingService;
 
     @Value("${springdoc.swagger-ui.oauth.client-id:}")
     private String defaultClientId;
+
+    private static final List<String> DEFAULT_CATEGORY_EXAMPLES = List.of(
+            "RETAIL",
+            "WEALTH",
+            "CORPORATE",
+            "INVESTMENT",
+            "ISLAMIC",
+            "SME"
+    );
 
     private String getSystemClientId() {
         return bankConfigurationRepository.findByBankIdUnfiltered(getSystemBankId())
@@ -73,7 +90,7 @@ public class BankConfigurationService extends BaseService {
 
         if (request.getCategoryConflictRules() != null) {
             config.setCategoryConflictRules(request.getCategoryConflictRules().stream()
-                    .map(dto -> new CategoryConflictRule(dto.getCategoryA(), dto.getCategoryB()))
+                    .map(dto -> new CategoryConflictRule(normalizeCategory(dto.getCategoryA()), normalizeCategory(dto.getCategoryB())))
                     .collect(Collectors.toList()));
         }
 
@@ -95,6 +112,7 @@ public class BankConfigurationService extends BaseService {
     @Transactional
     @SystemAdminBypass
     public BankConfigurationResponse submitOnboarding(BankConfigurationRequest request) {
+        validateOnboardingRequest(request);
         validateRequest(request);
         String bankId = deriveBankId(request);
 
@@ -106,12 +124,13 @@ public class BankConfigurationService extends BaseService {
                 .bankId(bankId)
                 .name(request.getName())
                 .issuerUrl(request.getIssuerUrl() != null ? request.getIssuerUrl().replaceAll("/$", "") : null)
-                .clientId(request.getClientId())
+                .clientId(request.getClientId().trim())
                 .currencyCode(request.getCurrencyCode())
                 .adminName(request.getAdminName())
                 .adminEmail(request.getAdminEmail())
                 .status(BankStatus.DRAFT)
                 .allowProductInMultipleBundles(true)
+                .categoryConflictRules(toConflictRules(request.getCategoryConflictRules()))
                 .build();
 
         bankConfigurationRepository.save(config);
@@ -160,14 +179,43 @@ public class BankConfigurationService extends BaseService {
         }
 
         if (request.getCategoryConflictRules() != null) {
-            config.getCategoryConflictRules().clear();
-            config.getCategoryConflictRules().addAll(request.getCategoryConflictRules().stream()
-                    .map(dto -> new CategoryConflictRule(dto.getCategoryA(), dto.getCategoryB()))
-                    .toList());
+            validateConflictRulesAgainstExistingBundles(config.getBankId(), request.getCategoryConflictRules());
+            replaceCategoryConflictRules(config, request.getCategoryConflictRules());
+        }
+
+    }
+
+    private void validateOnboardingRequest(BankConfigurationRequest request) {
+        if (request == null) {
+            throw new ValidationException("Request body is required.");
+        }
+
+        if ((request.getBankId() == null || request.getBankId().isBlank())
+                && (request.getName() == null || request.getName().isBlank())) {
+            throw new ValidationException("Bank ID or Name is required.");
+        }
+        if (request.getIssuerUrl() == null || request.getIssuerUrl().isBlank()) {
+            throw new ValidationException("Issuer URL is required for onboarding.");
+        }
+        if (request.getClientId() == null || request.getClientId().isBlank()) {
+            throw new ValidationException("Client ID is required for onboarding.");
+        }
+        if (request.getCurrencyCode() == null || request.getCurrencyCode().isBlank()) {
+            throw new ValidationException("Currency code is required for onboarding.");
+        }
+        if (request.getAdminName() == null || request.getAdminName().isBlank()) {
+            throw new ValidationException("Admin name is required for onboarding.");
+        }
+        if (request.getAdminEmail() == null || request.getAdminEmail().isBlank()) {
+            throw new ValidationException("Admin email is required for onboarding.");
         }
     }
 
     private void validateRequest(BankConfigurationRequest request) {
+        if (request == null) {
+            throw new ValidationException("Request body is required.");
+        }
+
         if (request.getCategoryConflictRules() != null) {
             java.util.Set<String> seenPairs = new HashSet<>();
             for (BankConfigurationRequest.CategoryConflictDto rule : request.getCategoryConflictRules()) {
@@ -226,10 +274,8 @@ public class BankConfigurationService extends BaseService {
         }
 
         if (request.getCategoryConflictRules() != null) {
-            config.getCategoryConflictRules().clear();
-            config.getCategoryConflictRules().addAll(request.getCategoryConflictRules().stream()
-                    .map(dto -> new CategoryConflictRule(dto.getCategoryA(), dto.getCategoryB()))
-                    .toList());
+            validateConflictRulesAgainstExistingBundles(config.getBankId(), request.getCategoryConflictRules());
+            replaceCategoryConflictRules(config, request.getCategoryConflictRules());
         }
     }
 
@@ -238,6 +284,13 @@ public class BankConfigurationService extends BaseService {
     public BankConfigurationResponse activateBank(String bankId) {
         BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
                 .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+        if (config.getStatus() == BankStatus.REJECTED) {
+            throw new IllegalStateException("Rejected banks cannot be activated.");
+        }
+        if (config.getStatus() != BankStatus.DRAFT && config.getStatus() != BankStatus.INACTIVE) {
+            throw new IllegalStateException("Only DRAFT or INACTIVE banks can be activated.");
+        }
+
         config.setStatus(BankStatus.ACTIVE);
         bankConfigurationRepository.save(config);
 
@@ -322,6 +375,108 @@ public class BankConfigurationService extends BaseService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    @SystemAdminBypass
+    public BankProductCategoryOptionsResponse getProductCategoryOptions(String bankId) {
+        validateTenantAccess(bankId);
+
+        BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                .orElseThrow(() -> new NotFoundException("Bank not found: " + bankId));
+
+        Set<String> categories = new TreeSet<>();
+
+        categories.addAll(productCategoryRepository.findActiveCategoryCodesByBankId(bankId).stream()
+                .map(this::normalizeCategory)
+                .filter(value -> !value.isBlank())
+                .toList());
+
+        categories.addAll(productRepository.findDistinctCategoriesByBankId(bankId).stream()
+                .map(this::normalizeCategory)
+                .filter(value -> !value.isBlank())
+                .toList());
+
+        if (config.getCategoryConflictRules() != null) {
+            for (CategoryConflictRule rule : config.getCategoryConflictRules()) {
+                if (rule.getCategoryA() != null && !rule.getCategoryA().isBlank()) {
+                    categories.add(normalizeCategory(rule.getCategoryA()));
+                }
+                if (rule.getCategoryB() != null && !rule.getCategoryB().isBlank()) {
+                    categories.add(normalizeCategory(rule.getCategoryB()));
+                }
+            }
+        }
+
+        return BankProductCategoryOptionsResponse.builder()
+                .categories(categories.stream().toList())
+                .examples(DEFAULT_CATEGORY_EXAMPLES)
+                .build();
+    }
+
+    private String normalizeCategory(String value) {
+        return value == null ? "" : value.trim().toUpperCase();
+    }
+
+    private void validateConflictRulesAgainstExistingBundles(String bankId,
+                                                             List<BankConfigurationRequest.CategoryConflictDto> conflictRules) {
+        if (conflictRules == null || conflictRules.isEmpty()) {
+            return;
+        }
+
+        Set<String> conflictPairs = new HashSet<>();
+        for (BankConfigurationRequest.CategoryConflictDto rule : conflictRules) {
+            String catA = normalizeCategory(rule.getCategoryA());
+            String catB = normalizeCategory(rule.getCategoryB());
+            if (catA.isBlank() || catB.isBlank() || catA.equals(catB)) {
+                continue;
+            }
+            conflictPairs.add(toPairKey(catA, catB));
+        }
+
+        if (conflictPairs.isEmpty()) {
+            return;
+        }
+
+        Set<VersionableEntity.EntityStatus> bundleStatuses = Set.of(
+                VersionableEntity.EntityStatus.DRAFT,
+                VersionableEntity.EntityStatus.ACTIVE
+        );
+        List<BundleProductLink> links = bundleProductLinkRepository.findAllByBankIdAndBundleStatuses(bankId, bundleStatuses);
+
+        Map<Long, Set<String>> bundleCategories = new HashMap<>();
+        Map<Long, String> bundleCodeById = new HashMap<>();
+
+        for (BundleProductLink link : links) {
+            if (link.getProduct() == null || link.getProductBundle() == null) {
+                continue;
+            }
+            String category = normalizeCategory(link.getProduct().getCategory());
+            if (category.isBlank()) {
+                continue;
+            }
+            Long bundleId = link.getProductBundle().getId();
+            bundleCategories.computeIfAbsent(bundleId, ignored -> new HashSet<>()).add(category);
+            bundleCodeById.putIfAbsent(bundleId, link.getProductBundle().getCode());
+        }
+
+        for (Map.Entry<Long, Set<String>> entry : bundleCategories.entrySet()) {
+            List<String> categories = entry.getValue().stream().sorted().toList();
+            for (int i = 0; i < categories.size(); i++) {
+                for (int j = i + 1; j < categories.size(); j++) {
+                    String pair = toPairKey(categories.get(i), categories.get(j));
+                    if (conflictPairs.contains(pair)) {
+                        String bundleCode = bundleCodeById.getOrDefault(entry.getKey(), "UNKNOWN");
+                        throw new ValidationException("Conflict rule " + pair.replace("|", " <-> ")
+                                + " cannot be added because existing bundle '" + bundleCode + "' already contains both categories.");
+                    }
+                }
+            }
+        }
+    }
+
+    private String toPairKey(String a, String b) {
+        return a.compareTo(b) < 0 ? a + "|" + b : b + "|" + a;
+    }
+
     private void validateTenantAccess(String requestedBankId) {
         String currentBankId = getCurrentBankId();
         // If not SYSTEM and not the owner, it's a 404
@@ -355,6 +510,10 @@ public class BankConfigurationService extends BaseService {
     }
 
     private BankConfigurationResponse mapToResponse(BankConfiguration config) {
+        List<CategoryConflictRule> conflictRules = config.getCategoryConflictRules() == null
+                ? List.of()
+                : config.getCategoryConflictRules();
+
         return BankConfigurationResponse.builder()
                 .bankId(config.getBankId())
                 .name(config.getName())
@@ -362,7 +521,7 @@ public class BankConfigurationService extends BaseService {
                 .issuerUrl(config.getIssuerUrl())
                 .clientId(config.getClientId())
                 .hasClientSecret(config.getClientSecret() != null && !config.getClientSecret().isBlank())
-                .categoryConflictRules(config.getCategoryConflictRules().stream()
+                .categoryConflictRules(conflictRules.stream()
                         .map(r -> new BankConfigurationRequest.CategoryConflictDto(r.getCategoryA(), r.getCategoryB()))
                         .collect(Collectors.toList()))
                 .currencyCode(config.getCurrencyCode())
@@ -372,5 +531,20 @@ public class BankConfigurationService extends BaseService {
                 .adminName(config.getAdminName())
                 .adminEmail(config.getAdminEmail())
                 .build();
+    }
+
+    private List<CategoryConflictRule> toConflictRules(List<BankConfigurationRequest.CategoryConflictDto> dtoRules) {
+        if (dtoRules == null || dtoRules.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return dtoRules.stream()
+                .map(dto -> new CategoryConflictRule(normalizeCategory(dto.getCategoryA()), normalizeCategory(dto.getCategoryB())))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private void replaceCategoryConflictRules(BankConfiguration config,
+                                              List<BankConfigurationRequest.CategoryConflictDto> dtoRules) {
+        config.setCategoryConflictRules(toConflictRules(dtoRules));
     }
 }

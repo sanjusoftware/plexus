@@ -24,11 +24,14 @@ interface ProductType {
   name: string;
 }
 
+const CATEGORY_EXAMPLES = ['RETAIL', 'WEALTH', 'CORPORATE', 'INVESTMENT', 'ISLAMIC', 'SME'];
+const CREATE_NEW_CATEGORY = 'CREATE_NEW';
+
 const ProductFormPage = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
-  const { setToast } = useAuth();
+  const { user, setToast } = useAuth();
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(true);
@@ -37,6 +40,9 @@ const ProductFormPage = () => {
   const [featureComponents, setFeatureComponents] = useState<FeatureComponent[]>([]);
   const [pricingComponents, setPricingComponents] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [categoryExamples, setCategoryExamples] = useState<string[]>(CATEGORY_EXAMPLES);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
   const [isCodeEdited, setIsCodeEdited] = useState(false);
   const [showPriceSimulation, setShowPriceSimulation] = useState(false);
   const [showPricingHelp, setShowPricingHelp] = useState(false);
@@ -45,7 +51,7 @@ const ProductFormPage = () => {
     code: '',
     name: '',
     productTypeCode: '',
-    category: 'RETAIL',
+    category: '',
     tagline: '',
     fullDescription: '',
     features: [],
@@ -69,16 +75,35 @@ const ProductFormPage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [fc, pc, pt, p] = await Promise.all([
+        const [fc, pc, pt, p, categoryMasterRes, categoryRes] = await Promise.all([
           axios.get('/api/v1/features', { signal }),
           axios.get('/api/v1/pricing-components', { signal }),
           axios.get('/api/v1/product-types', { signal }),
-          isEditing ? axios.get(`/api/v1/products/${id}`, { signal }) : Promise.resolve({ data: null })
+          isEditing ? axios.get(`/api/v1/products/${id}`, { signal }) : Promise.resolve({ data: null }),
+          axios.get('/api/v1/product-categories', { signal }).catch(() => null),
+          user?.bank_id
+            ? axios.get(`/api/v1/banks/${user.bank_id}/product-categories`, { signal }).catch(() => null)
+            : Promise.resolve(null)
         ]);
 
         setFeatureComponents(fc.data || []);
         setPricingComponents(pc.data || []);
         setProductTypes(pt.data || []);
+
+        const masterCategoryRows: any[] = Array.isArray(categoryMasterRes?.data) ? (categoryMasterRes?.data as any[]) : [];
+        const activeMasterCategories = masterCategoryRows
+          .filter((c: any) => !c.archived)
+          .map((c: any) => `${c.code || ''}`.toUpperCase().trim())
+          .filter((c: string) => !!c);
+        const categoriesFromBank = Array.isArray(categoryRes?.data?.categories)
+          ? categoryRes?.data?.categories
+          : [];
+        const examplesFromBank = Array.isArray(categoryRes?.data?.examples)
+          ? categoryRes?.data?.examples
+          : CATEGORY_EXAMPLES;
+
+        setCategoryOptions(activeMasterCategories.length > 0 ? activeMasterCategories : categoriesFromBank);
+        setCategoryExamples(examplesFromBank);
 
         if (isEditing && p.data) {
           const prod = p.data;
@@ -99,9 +124,11 @@ const ProductFormPage = () => {
             pricing: prod.pricing || []
           };
           setFormData(loadedFormData);
+          setCustomCategoryInput(prod.category || '');
           resetDirtyBaseline(loadedFormData);
           setIsCodeEdited(true);
         }
+
       } catch (err: any) {
         if (axios.isCancel(err)) return;
         setToast({ message: 'Failed to fetch required data.', type: 'error' });
@@ -113,7 +140,7 @@ const ProductFormPage = () => {
     };
 
     fetchData();
-  }, [id, isEditing, navigate, setEntityName, setToast, signal, resetDirtyBaseline]);
+  }, [id, isEditing, navigate, setEntityName, setToast, signal, resetDirtyBaseline, user?.bank_id]);
 
   const handleCancel = () => {
     if (!confirmDiscardChanges()) {
@@ -218,17 +245,16 @@ const ProductFormPage = () => {
     );
   };
 
-  const categoryLabels: Record<string, string> = {
-    RETAIL: 'RETAIL CONSUMER',
-    WEALTH: 'WEALTH MANAGEMENT',
-    CORPORATE: 'CORPORATE BANKING',
-    INVESTMENT: 'INVESTMENT BANKING'
-  };
-
-  const categoryOptions = Object.entries(categoryLabels).map(([value, label]) => ({
-    value,
-    label: `${label} (${value})`
+  const categorySelectOptions = categoryOptions.map((category) => ({
+    value: category,
+    label: category
   }));
+
+  const showCustomCategoryInput = !!formData.category && !categoryOptions.includes(formData.category);
+  const categoryDropdownOptions = [
+    ...categorySelectOptions,
+    { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }
+  ];
 
   return (
     <AdminPage>
@@ -299,17 +325,51 @@ const ProductFormPage = () => {
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Target Market Segment</label>
               <PlexusSelect
                 required
-                options={categoryOptions}
-                value={categoryLabels[formData.category as string] ? {
-                  value: formData.category,
-                  label: `${categoryLabels[formData.category as string]} (${formData.category})`
-                } : null}
-                formatOptionLabel={formatOptionWithCode}
+                placeholder={categorySelectOptions.length > 0 ? 'Select Existing Category...' : 'Create your first category...'}
+                options={categoryDropdownOptions}
+                value={showCustomCategoryInput
+                  ? { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }
+                  : (categorySelectOptions.find((opt) => opt.value === formData.category) || null)}
                 onChange={(opt) => {
-                  setFormData({...formData, category: opt ? opt.value : ''});
+                  if (!opt) {
+                    setFormData({ ...formData, category: '' });
+                    setCustomCategoryInput('');
+                    clearViolation('category');
+                    return;
+                  }
+
+                  if (opt.value === CREATE_NEW_CATEGORY) {
+                    const seedValue = showCustomCategoryInput ? customCategoryInput : '';
+                    setCustomCategoryInput(seedValue);
+                    setFormData({ ...formData, category: seedValue.toUpperCase().trim().replace(/\s+/g, '_') });
+                    clearViolation('category');
+                    return;
+                  }
+
+                  setFormData({...formData, category: opt.value});
+                  setCustomCategoryInput('');
                   clearViolation('category');
                 }}
               />
+              {showCustomCategoryInput && (
+                <input
+                  type="text"
+                  className="mt-2 w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 text-sm transition focus:border-blue-500 shadow-sm"
+                  placeholder={`Define a new category (examples: ${categoryExamples.slice(0, 3).join(', ')})`}
+                  value={customCategoryInput}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.toUpperCase().replace(/\s+/g, '_');
+                    setCustomCategoryInput(rawValue);
+                    setFormData({ ...formData, category: rawValue.trim() });
+                    clearViolation('category');
+                  }}
+                />
+              )}
+              <p className="mt-1 text-[10px] text-gray-500 font-medium">
+                {categorySelectOptions.length > 0
+                  ? 'Master category list is preferred. Use "Create New Category" if needed.'
+                  : `No master categories found yet. Starter examples: ${categoryExamples.join(', ')}.`}
+              </p>
               {renderViolations('category')}
             </div>
             <div className="md:col-span-2">

@@ -10,6 +10,9 @@ import { useAbortSignal } from '../hooks/useAbortSignal';
 import { AdminPage, AdminFormHeader } from '../components/AdminPageLayout';
 import { Building2 } from 'lucide-react';
 
+const CATEGORY_EXAMPLES = ['RETAIL', 'WEALTH', 'CORPORATE', 'INVESTMENT', 'ISLAMIC', 'SME'];
+const CREATE_NEW_CATEGORY = 'CREATE_NEW';
+
 const OnboardingPage = () => {
   const { user, setToast } = useAuth();
   const { id } = useParams<{ id?: string }>();
@@ -45,6 +48,9 @@ const OnboardingPage = () => {
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSecret, setShowSecret] = useState(false);
+  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
+  const [hasExistingCategories, setHasExistingCategories] = useState(false);
+  const [customConflictInputs, setCustomConflictInputs] = useState<Record<string, string>>({});
   const signal = useAbortSignal();
 
   const fetchBankData = useCallback(async (abortSignal: AbortSignal) => {
@@ -68,12 +74,30 @@ const OnboardingPage = () => {
         allowProductInMultipleBundles: data.allowProductInMultipleBundles || false,
         categoryConflictRules: data.categoryConflictRules || []
       });
+
+      try {
+        const categoryResponse = await axios.get(`/api/v1/banks/${targetId}/product-categories`, { signal: abortSignal });
+        const existing = Array.isArray(categoryResponse.data?.categories) ? categoryResponse.data.categories : [];
+        const examples = Array.isArray(categoryResponse.data?.examples) ? categoryResponse.data.examples : CATEGORY_EXAMPLES;
+        const merged = Array.from(new Set([...existing, ...examples]));
+        setCategorySuggestions(merged);
+        setHasExistingCategories(existing.length > 0);
+      } catch (_ignored) {
+        setCategorySuggestions([]);
+        setHasExistingCategories(false);
+      }
+
       setEntityName(data.name);
       setIsBankIdEdited(true);
       const isCustom = data.currencyCode && !['USD', 'EUR', 'GBP', 'JPY'].includes(data.currencyCode);
       setIsCustomCurrency(isCustom);
       if (isCustom) {
         setCustomCurrency(data.currencyCode);
+      }
+
+      if (!isEditing) {
+        setCategorySuggestions([]);
+        setHasExistingCategories(false);
       }
     } catch (err) {
       if (axios.isCancel(err)) return;
@@ -84,7 +108,7 @@ const OnboardingPage = () => {
         setLoading(false);
       }
     }
-  }, [id, isMyBank, user?.bank_id, setEntityName, setToast]);
+  }, [id, isMyBank, user?.bank_id, setEntityName, setToast, isEditing]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -226,16 +250,76 @@ const OnboardingPage = () => {
     });
   };
 
+  const getCustomConflictKey = (index: number, field: 'categoryA' | 'categoryB') => `${index}_${field}`;
+
+  const buildCategoryOptions = (excluded?: string) => {
+    const normalizedExcluded = excluded?.toUpperCase();
+    const base = categorySuggestions
+      .map((category) => category.toUpperCase())
+      .filter((category) => category && category !== normalizedExcluded);
+    return [...base, CREATE_NEW_CATEGORY];
+  };
+
+  const buildCategorySelectOptions = (excluded?: string) => {
+    return buildCategoryOptions(excluded).map((value) => ({ value, label: value }));
+  };
+
+  const isCustomCategory = (value: string, excluded?: string) => {
+    if (!value) return false;
+    return !buildCategoryOptions(excluded).includes(value.toUpperCase());
+  };
+
+
   const removeConflictRule = (index: number) => {
     const newRules = [...formData.categoryConflictRules];
     newRules.splice(index, 1);
+    setCustomConflictInputs((prev) => {
+      const updated = { ...prev };
+      delete updated[getCustomConflictKey(index, 'categoryA')];
+      delete updated[getCustomConflictKey(index, 'categoryB')];
+      return updated;
+    });
     setFormData({ ...formData, categoryConflictRules: newRules });
   };
 
   const updateConflictRule = (index: number, field: 'categoryA' | 'categoryB', value: string) => {
     const newRules = [...formData.categoryConflictRules];
-    newRules[index] = { ...newRules[index], [field]: value.toUpperCase().trim() };
+    const normalized = value.toUpperCase().trim().replace(/\s+/g, '_');
+    newRules[index] = { ...newRules[index], [field]: normalized };
+
+    // Keep rule coherent: if one side changes to same value as the other, clear the other side.
+    const otherField = field === 'categoryA' ? 'categoryB' : 'categoryA';
+    if (normalized && newRules[index][otherField] === normalized) {
+      newRules[index][otherField] = '';
+    }
+
     setFormData({ ...formData, categoryConflictRules: newRules });
+  };
+
+  const onConflictCategorySelect = (index: number, field: 'categoryA' | 'categoryB', selected?: { value: string } | null) => {
+    const selectedValue = selected?.value || '';
+    const customKey = getCustomConflictKey(index, field);
+
+    if (selectedValue === CREATE_NEW_CATEGORY) {
+      const current = formData.categoryConflictRules[index]?.[field] || '';
+      setCustomConflictInputs((prev) => ({ ...prev, [customKey]: current }));
+      updateConflictRule(index, field, current);
+      return;
+    }
+
+    setCustomConflictInputs((prev) => {
+      const updated = { ...prev };
+      delete updated[customKey];
+      return updated;
+    });
+    updateConflictRule(index, field, selectedValue);
+  };
+
+  const onConflictCustomInputChange = (index: number, field: 'categoryA' | 'categoryB', rawValue: string) => {
+    const customKey = getCustomConflictKey(index, field);
+    const normalized = rawValue.toUpperCase().replace(/\s+/g, '_');
+    setCustomConflictInputs((prev) => ({ ...prev, [customKey]: normalized }));
+    updateConflictRule(index, field, normalized);
   };
 
   const renderForm = () => (
@@ -482,6 +566,11 @@ const OnboardingPage = () => {
                 <div>
                   <label className="block text-xs font-bold text-gray-900">Category Conflict Rules</label>
                   <p className="text-[10px] text-gray-500 font-medium">Define pairs of product categories that cannot be bundled together.</p>
+                  <p className="text-[10px] text-blue-700 font-medium mt-1">
+                    {hasExistingCategories
+                      ? 'Suggestions include categories already used in products and existing conflict rules.'
+                      : `No categories defined yet. Starter examples: ${CATEGORY_EXAMPLES.join(', ')}.`}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -497,29 +586,55 @@ const OnboardingPage = () => {
                   <div key={idx} className="space-y-1">
                     <div className={`flex items-center space-x-3 bg-white p-3 rounded-lg border shadow-sm animate-in fade-in slide-in-from-top-1 ${fieldErrors[`conflictRule_${idx}`] ? 'border-red-500' : 'border-gray-200'}`}>
                       <div className="flex-1">
-                        <input
-                          type="text"
-                          placeholder="CATEGORY A"
-                          className="w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
-                          value={rule.categoryA}
-                          onChange={(e) => {
-                            updateConflictRule(idx, 'categoryA', e.target.value);
+                        <PlexusSelect
+                          placeholder="Category A"
+                          options={buildCategorySelectOptions(rule.categoryB)}
+                          value={isCustomCategory(rule.categoryA, rule.categoryB)
+                            ? { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }
+                            : (rule.categoryA ? { value: rule.categoryA, label: rule.categoryA } : null)}
+                          onChange={(opt) => {
+                            onConflictCategorySelect(idx, 'categoryA', opt);
                             if (fieldErrors[`conflictRule_${idx}`]) setFieldErrors({ ...fieldErrors, [`conflictRule_${idx}`]: '' });
                           }}
                         />
+                        {isCustomCategory(rule.categoryA, rule.categoryB) && (
+                          <input
+                            type="text"
+                            placeholder="New category code"
+                            className="mt-2 w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
+                            value={customConflictInputs[getCustomConflictKey(idx, 'categoryA')] ?? rule.categoryA}
+                            onChange={(e) => {
+                              onConflictCustomInputChange(idx, 'categoryA', e.target.value);
+                              if (fieldErrors[`conflictRule_${idx}`]) setFieldErrors({ ...fieldErrors, [`conflictRule_${idx}`]: '' });
+                            }}
+                          />
+                        )}
                       </div>
                       <div className="text-gray-400 font-bold text-[10px]">CONFLICTS WITH</div>
                       <div className="flex-1">
-                        <input
-                          type="text"
-                          placeholder="CATEGORY B"
-                          className="w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
-                          value={rule.categoryB}
-                          onChange={(e) => {
-                            updateConflictRule(idx, 'categoryB', e.target.value);
+                        <PlexusSelect
+                          placeholder="Category B"
+                          options={buildCategorySelectOptions(rule.categoryA)}
+                          value={isCustomCategory(rule.categoryB, rule.categoryA)
+                            ? { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }
+                            : (rule.categoryB ? { value: rule.categoryB, label: rule.categoryB } : null)}
+                          onChange={(opt) => {
+                            onConflictCategorySelect(idx, 'categoryB', opt);
                             if (fieldErrors[`conflictRule_${idx}`]) setFieldErrors({ ...fieldErrors, [`conflictRule_${idx}`]: '' });
                           }}
                         />
+                        {isCustomCategory(rule.categoryB, rule.categoryA) && (
+                          <input
+                            type="text"
+                            placeholder="New category code"
+                            className="mt-2 w-full px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-bold uppercase focus:ring-1 focus:ring-blue-500 outline-none"
+                            value={customConflictInputs[getCustomConflictKey(idx, 'categoryB')] ?? rule.categoryB}
+                            onChange={(e) => {
+                              onConflictCustomInputChange(idx, 'categoryB', e.target.value);
+                              if (fieldErrors[`conflictRule_${idx}`]) setFieldErrors({ ...fieldErrors, [`conflictRule_${idx}`]: '' });
+                            }}
+                          />
+                        )}
                       </div>
                       <button
                         type="button"

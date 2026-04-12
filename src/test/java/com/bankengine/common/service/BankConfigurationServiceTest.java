@@ -5,9 +5,13 @@ import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.PermissionMappingService;
+import com.bankengine.catalog.repository.BundleProductLinkRepository;
+import com.bankengine.catalog.repository.ProductCategoryRepository;
+import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.dto.BankConfigurationRequest;
 import com.bankengine.common.dto.BankConfigurationResponse;
 import com.bankengine.common.model.BankConfiguration;
+import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
@@ -27,7 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +39,12 @@ class BankConfigurationServiceTest extends BaseServiceTest {
 
     @Mock
     private BankConfigurationRepository bankConfigurationRepository;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private ProductCategoryRepository productCategoryRepository;
+    @Mock
+    private BundleProductLinkRepository bundleProductLinkRepository;
     @Mock
     private RoleRepository roleRepository;
     @Mock
@@ -57,6 +67,13 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         standardRequest.setCategoryConflictRules(new ArrayList<>(List.of(
                 new BankConfigurationRequest.CategoryConflictDto("RETAIL", "CORPORATE")
         )));
+        lenient().when(bundleProductLinkRepository.findAllByBankIdAndBundleStatuses(anyString(), anySet())).thenReturn(List.of());
+    }
+
+    @Test
+    @DisplayName("CreateBank should reject null request body")
+    void createBank_WithNullRequest_ShouldThrowValidationException() {
+        assertThrows(ValidationException.class, () -> bankConfigurationService.createBank(null));
     }
 
     @Test
@@ -172,6 +189,112 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         assertTrue(savedRole.getAuthorities().contains("bank:config:write"));
 
         verify(permissionMappingService).evictAllRolePermissionsCache();
+    }
+
+    @Test
+    @DisplayName("ActivateBank should reject REJECTED bank")
+    void activateBank_RejectedBank_ShouldThrowException() {
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId(TEST_BANK_ID);
+        config.setStatus(BankStatus.REJECTED);
+        when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.of(config));
+
+        assertThrows(IllegalStateException.class, () -> bankConfigurationService.activateBank(TEST_BANK_ID));
+        verify(bankConfigurationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("ActivateBank should allow INACTIVE bank reactivation")
+    void activateBank_InactiveBank_ShouldReactivate() {
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId(TEST_BANK_ID);
+        config.setStatus(BankStatus.INACTIVE);
+        config.setCategoryConflictRules(new ArrayList<>());
+        when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.of(config));
+        when(roleRepository.findByNameAndBankId("BANK_ADMIN", TEST_BANK_ID)).thenReturn(Optional.of(new Role()));
+
+        BankConfigurationResponse response = bankConfigurationService.activateBank(TEST_BANK_ID);
+
+        assertEquals("ACTIVE", response.getStatus());
+        verify(bankConfigurationRepository).save(config);
+        verify(roleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("ActivateBank should reject ACTIVE bank")
+    void activateBank_ActiveBank_ShouldThrowException() {
+        BankConfiguration config = new BankConfiguration();
+        config.setBankId(TEST_BANK_ID);
+        config.setStatus(BankStatus.ACTIVE);
+        config.setCategoryConflictRules(new ArrayList<>());
+        when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.of(config));
+
+        assertThrows(IllegalStateException.class, () -> bankConfigurationService.activateBank(TEST_BANK_ID));
+        verify(bankConfigurationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("SubmitOnboarding should require explicit client and map options")
+    void submitOnboarding_ShouldRequireExplicitClientAndMapOptions() {
+        standardRequest.setName("Test Bank");
+        standardRequest.setClientId("client-onboarding");
+        standardRequest.setCurrencyCode("INR");
+        standardRequest.setAdminName("Admin User");
+        standardRequest.setAdminEmail("admin@test.com");
+        standardRequest.setCategoryConflictRules(List.of(new BankConfigurationRequest.CategoryConflictDto("retail", " wealth ")));
+
+        when(bankConfigurationRepository.findByBankIdUnfiltered(TEST_BANK_ID)).thenReturn(Optional.empty());
+
+        bankConfigurationService.submitOnboarding(standardRequest);
+
+        ArgumentCaptor<BankConfiguration> configCaptor = ArgumentCaptor.forClass(BankConfiguration.class);
+        verify(bankConfigurationRepository).save(configCaptor.capture());
+        BankConfiguration saved = configCaptor.getValue();
+
+        assertEquals("client-onboarding", saved.getClientId());
+        assertEquals(1, saved.getCategoryConflictRules().size());
+        assertEquals("RETAIL", saved.getCategoryConflictRules().get(0).getCategoryA());
+        assertEquals("WEALTH", saved.getCategoryConflictRules().get(0).getCategoryB());
+        verify(bankConfigurationRepository, never()).findByBankIdUnfiltered("SYSTEM");
+    }
+
+    @Test
+    @DisplayName("SubmitOnboarding should throw ValidationException when clientId is missing")
+    void submitOnboarding_WhenClientIdMissing_ShouldThrowValidationException() {
+        standardRequest.setName("Test Bank");
+        standardRequest.setClientId("   ");
+        standardRequest.setCurrencyCode("INR");
+        standardRequest.setAdminName("Admin User");
+        standardRequest.setAdminEmail("admin@test.com");
+
+        assertThrows(ValidationException.class, () -> bankConfigurationService.submitOnboarding(standardRequest));
+        verify(bankConfigurationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("SubmitOnboarding should throw ValidationException when adminName is missing")
+    void submitOnboarding_WhenAdminNameMissing_ShouldThrowValidationException() {
+        standardRequest.setName("Test Bank");
+        standardRequest.setClientId("client-onboarding");
+        standardRequest.setCurrencyCode("INR");
+        standardRequest.setAdminName(" ");
+        standardRequest.setAdminEmail("admin@test.com");
+
+        assertThrows(ValidationException.class, () -> bankConfigurationService.submitOnboarding(standardRequest));
+        verify(bankConfigurationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("SubmitOnboarding should throw ValidationException when currencyCode is missing")
+    void submitOnboarding_WhenCurrencyMissing_ShouldThrowValidationException() {
+        standardRequest.setName("Test Bank");
+        standardRequest.setClientId("client-onboarding");
+        standardRequest.setCurrencyCode(" ");
+        standardRequest.setAdminName("Admin User");
+        standardRequest.setAdminEmail("admin@test.com");
+
+        assertThrows(ValidationException.class, () -> bankConfigurationService.submitOnboarding(standardRequest));
+        verify(bankConfigurationRepository, never()).save(any());
     }
 
     @Test

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import OnboardingPage from './pages/OnboardingPage';
 import BankManagementPage from './pages/admin/BankManagementPage';
 import ProductTypesPage from './pages/admin/ProductTypesPage';
+import ProductCategoriesPage from './pages/admin/ProductCategoriesPage';
 import PricingMetadataPage from './pages/admin/PricingMetadataPage';
 import PricingMetadataFormPage from './pages/admin/PricingMetadataFormPage';
 import PricingComponentsPage from './pages/admin/PricingComponentsPage';
@@ -100,6 +101,11 @@ function App() {
               <Route path="/product-types" element={
                 <PermissionElement permission="catalog:product-type:read">
                   <ProductTypesPage />
+                </PermissionElement>
+              } />
+              <Route path="/product-categories" element={
+                <PermissionElement action="GET" path="/api/v1/product-categories">
+                  <ProductCategoriesPage />
                 </PermissionElement>
               } />
               <Route path="/product-types/create" element={
