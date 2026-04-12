@@ -108,7 +108,15 @@ public class ProductService extends BaseService {
         if (productType != null) {
             product = productMapper.toEntity(requestDto, productType);
             product.setBankId(getCurrentBankId());
-            product.setCategory(ensureCategoryExists(product.getBankId(), product.getCategory()));
+            String category = ensureCategoryExists(product.getBankId(), requestDto.getCategory());
+            if (category == null) {
+                violations.add(Violation.builder()
+                        .field("category")
+                        .reason("Product category is required.")
+                        .severity(Violation.Severity.ERROR)
+                        .build());
+            }
+            product.setCategory(category);
             product.setStatus(VersionableEntity.EntityStatus.DRAFT);
             product.setVersion(1);
 
@@ -138,7 +146,15 @@ public class ProductService extends BaseService {
 
         if (dto.getName() != null) product.setName(dto.getName());
         if (dto.getCategory() != null) {
-            product.setCategory(ensureCategoryExists(product.getBankId(), dto.getCategory()));
+            String category = ensureCategoryExists(product.getBankId(), dto.getCategory());
+            if (category == null) {
+                violations.add(Violation.builder()
+                        .field("category")
+                        .reason("Product category is required.")
+                        .severity(Violation.Severity.ERROR)
+                        .build());
+            }
+            product.setCategory(category);
         }
 
         if (dto.getExpiryDate() != null) {
@@ -285,9 +301,21 @@ public class ProductService extends BaseService {
 
         product.getProductFeatureLinks().removeIf(link -> !incomingCodes.contains(link.getFeatureComponent().getCode()));
 
+        Set<String> processedCodes = new java.util.HashSet<>();
+
         for (int i = 0; i < incomingDtos.size(); i++) {
             ProductFeatureDto dto = incomingDtos.get(i);
             String fieldPrefix = "features[" + i + "].";
+
+            if (dto.getFeatureComponentCode() != null && !dto.getFeatureComponentCode().isBlank() && !processedCodes.add(dto.getFeatureComponentCode())) {
+                violations.add(Violation.builder()
+                        .field(fieldPrefix + "featureComponentCode")
+                        .reason("Duplicate feature component link: " + dto.getFeatureComponentCode())
+                        .severity(Violation.Severity.ERROR)
+                        .build());
+                continue;
+            }
+
             FeatureComponent component = null;
             try {
                 component = featureComponentService.getFeatureComponentByCode(dto.getFeatureComponentCode(), null);
@@ -497,7 +525,7 @@ public class ProductService extends BaseService {
     private String ensureCategoryExists(String bankId, String categoryCode) {
         String normalizedCode = CodeGeneratorUtil.sanitizeAsCode(categoryCode);
         if (normalizedCode == null || normalizedCode.isBlank()) {
-            throw new ValidationException("Product category is required.");
+            return null;
         }
 
         productCategoryRepository.findByBankIdAndCode(bankId, normalizedCode)
