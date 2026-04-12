@@ -34,10 +34,10 @@ const PricingMetadataFormPage = () => {
   const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(formData);
 
   const normalizeIdentifier = (value: string) => value
+    .toUpperCase()
     .trim()
-    .replace(/\s+(.)/g, (_, char: string) => char.toUpperCase())
-    .replace(/\s+/g, '')
-    .replace(/[^a-zA-Z0-9_]/g, '');
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Z0-9_]/g, '');
 
   useEffect(() => {
     if (isEditing) {
@@ -183,10 +183,10 @@ const PricingMetadataFormPage = () => {
                 });
                 clearViolation('attributeKey');
               }}
-              placeholder="e.g. customerSegment or available_balance"
+              placeholder="e.g. CUSTOMER_SEGMENT"
             />
             {renderViolations('attributeKey')}
-            {!isEditing && <p className="admin-help">This is the exact attribute key business users will select in pricing rules. Must be unique.</p>}
+            {!isEditing && <p className="admin-help">This is the exact key business users will select in pricing rules (for example: CUSTOMER_SEGMENT). Must be unique.</p>}
           </div>
           <div className="admin-field">
             <label className="admin-label">Attribute Data Type</label>
@@ -232,7 +232,7 @@ const PricingMetadataFormPage = () => {
                 setFormData({ ...formData, sourceField: normalizeIdentifier(e.target.value) });
                 clearViolation('sourceField');
               }}
-              placeholder={formData.sourceType === 'FACT_FIELD' ? 'e.g. customerSegment' : 'Defaults to attribute key if blank'}
+              placeholder={formData.sourceType === 'FACT_FIELD' ? 'e.g. CUSTOMER_SEGMENT' : 'Defaults to attribute key if blank'}
             />
             {renderViolations('sourceField')}
             <p className="admin-help">For request fields, use the exact pricing fact field name. For custom attributes, this is usually the same as the attribute key.</p>

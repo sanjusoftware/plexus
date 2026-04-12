@@ -12,6 +12,7 @@ import com.bankengine.pricing.repository.ProductPricingLinkRepository;
 import com.bankengine.rules.model.PricingInput;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.NotFoundException;
+import com.bankengine.web.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kie.api.runtime.ClassObjectFilter;
@@ -30,6 +31,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductPricingService extends BaseService {
 
+    private static final String ATTR_TRANSACTION_AMOUNT = PricingAttributeKeys.TRANSACTION_AMOUNT;
+    private static final String ATTR_EFFECTIVE_DATE = PricingAttributeKeys.EFFECTIVE_DATE;
+    private static final String ATTR_PRODUCT_ID = PricingAttributeKeys.PRODUCT_ID;
+    private static final String ATTR_BANK_ID = PricingAttributeKeys.BANK_ID;
+
     private final KieContainerReloadService kieContainerReloadService;
     private final ProductRepository productRepository;
     private final ProductPricingLinkRepository productPricingLinkRepository;
@@ -44,7 +50,7 @@ public class ProductPricingService extends BaseService {
         verifyProductAccess(request.getProductId());
 
         Map<String, Object> normalizedAttributes = buildNormalizedCustomAttributes(request);
-        LocalDate effectiveDate = extractLocalDate(normalizedAttributes.get("effectiveDate"), LocalDate.now());
+        LocalDate effectiveDate = extractLocalDate(normalizedAttributes.get(ATTR_EFFECTIVE_DATE), LocalDate.now());
 
         // 1. Data Retrieval: Fetch active pricing links (Fixed and Rule-based definitions)
         List<ProductPricingLink> activePricingLinks = getActivePricingLinks(request.getProductId(), effectiveDate);
@@ -53,8 +59,8 @@ public class ProductPricingService extends BaseService {
         List<PriceComponentDetail> priceComponentDetails = assemblePricingComponents(activePricingLinks, normalizedAttributes);
 
         // 3. Calculation: Delegate to the Pure Calculation Engine (PriceAggregator)
-        // Here, the 'transactionAmount' in request is treated as the 'productFeeCalculationBaseAmount' for this specific product
-        BigDecimal productFeeCalculationBaseAmount = extractBigDecimal(normalizedAttributes.get("transactionAmount"), BigDecimal.ZERO);
+        // TRANSACTION_AMOUNT is the canonical base for percentage fee math.
+        BigDecimal productFeeCalculationBaseAmount = extractBigDecimal(normalizedAttributes.get(ATTR_TRANSACTION_AMOUNT), BigDecimal.ZERO);
 
         // Note: For a single product, the 'netImpact' is the sum of its fees and discounts
         BigDecimal netImpact = priceAggregator.calculateBundleImpact(
@@ -160,15 +166,30 @@ public class ProductPricingService extends BaseService {
     private Map<String, Object> buildNormalizedCustomAttributes(ProductPriceRequest request) {
         Map<String, Object> attributes = new HashMap<>();
         if (request.getCustomAttributes() != null) {
+            rejectLegacySystemAliases(request.getCustomAttributes());
             attributes.putAll(request.getCustomAttributes());
         }
 
-        attributes.putIfAbsent("productId", request.getProductId());
-        attributes.putIfAbsent("transactionAmount", BigDecimal.ZERO);
-        attributes.putIfAbsent("effectiveDate", LocalDate.now());
-        attributes.putIfAbsent("bankId", getCurrentBankId());
+        attributes.putIfAbsent(ATTR_TRANSACTION_AMOUNT, BigDecimal.ZERO);
+        attributes.putIfAbsent(ATTR_EFFECTIVE_DATE, LocalDate.now());
+        attributes.putIfAbsent(ATTR_PRODUCT_ID, request.getProductId());
+        attributes.putIfAbsent(ATTR_BANK_ID, getCurrentBankId());
         return attributes;
     }
+
+    private void rejectLegacySystemAliases(Map<String, Object> incomingAttributes) {
+        List<String> legacyKeys = incomingAttributes.keySet().stream()
+                .filter(PricingAttributeKeys.LEGACY_ALIASES::contains)
+                .sorted()
+                .toList();
+        if (!legacyKeys.isEmpty()) {
+            throw new ValidationException("Legacy pricing attribute keys are not supported: "
+                    + String.join(", ", legacyKeys)
+                    + ". Use canonical keys: "
+                    + String.join(", ", PricingAttributeKeys.SYSTEM_KEYS));
+        }
+    }
+
 
     private BigDecimal extractBigDecimal(Object value, BigDecimal defaultValue) {
         if (value == null) return defaultValue;

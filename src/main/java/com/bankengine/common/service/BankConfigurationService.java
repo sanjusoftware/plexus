@@ -19,6 +19,7 @@ import com.bankengine.common.model.CategoryConflictRule;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.common.util.CodeGeneratorUtil;
+import com.bankengine.data.seeding.CoreMetadataSeeder;
 import com.bankengine.web.exception.NotFoundException;
 import com.bankengine.web.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class BankConfigurationService extends BaseService {
     private final RoleRepository roleRepository;
     private final AuthorityDiscoveryService authorityDiscoveryService;
     private final PermissionMappingService permissionMappingService;
+    private final CoreMetadataSeeder coreMetadataSeeder;
 
     @Value("${springdoc.swagger-ui.oauth.client-id:}")
     private String defaultClientId;
@@ -94,6 +96,7 @@ public class BankConfigurationService extends BaseService {
         }
 
         bankConfigurationRepository.save(config);
+        coreMetadataSeeder.seedCorePricingInputMetadata(bankId);
 
         return mapToResponse(config);
     }
@@ -133,6 +136,7 @@ public class BankConfigurationService extends BaseService {
                 .build();
 
         bankConfigurationRepository.save(config);
+        coreMetadataSeeder.seedCorePricingInputMetadata(bankId);
         return mapToResponse(config);
     }
 
@@ -168,6 +172,7 @@ public class BankConfigurationService extends BaseService {
         }
 
         bankConfigurationRepository.save(config);
+        coreMetadataSeeder.seedCorePricingInputMetadata(config.getBankId());
         return mapToResponse(config);
     }
 
@@ -292,6 +297,7 @@ public class BankConfigurationService extends BaseService {
 
         config.setStatus(BankStatus.ACTIVE);
         bankConfigurationRepository.save(config);
+        coreMetadataSeeder.seedCorePricingInputMetadata(bankId);
 
         if (roleRepository.findByNameAndBankId("BANK_ADMIN", bankId).isEmpty()) {
             createBankAdminRole(bankId);

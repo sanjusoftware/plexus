@@ -54,9 +54,9 @@ class ProductPricingServiceTest extends BaseServiceTest {
         request = ProductPriceRequest.builder()
                 .productId(1L)
                 .customAttributes(new HashMap<>(Map.of(
-                        "transactionAmount", new BigDecimal("1000.00"),
-                        "effectiveDate", LocalDate.now(),
-                        "customerSegment", "RETAIL")))
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("1000.00"),
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now(),
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL")))
                 .build();
 
         Product mockProduct = new Product();
@@ -92,7 +92,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
                 eq(new BigDecimal("1000.00")),
                 eq(BigDecimal.ZERO),
                 isNull(),
-                eq((LocalDate) request.getCustomAttributes().get("effectiveDate")));
+                eq((LocalDate) request.getCustomAttributes().get(PricingAttributeKeys.EFFECTIVE_DATE)));
     }
 
     @Test
@@ -251,8 +251,8 @@ class ProductPricingServiceTest extends BaseServiceTest {
         request = ProductPriceRequest.builder()
                 .productId(1L)
                 .customAttributes(new HashMap<>(Map.of(
-                        "effectiveDate", LocalDate.now(),
-                        "customerSegment", "RETAIL")))
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now(),
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL")))
                 .build();
         ProductPricingLink fixedLink = createPricingLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
         when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(fixedLink));
@@ -262,6 +262,33 @@ class ProductPricingServiceTest extends BaseServiceTest {
 
         verify(priceAggregator).calculateBundleImpact(anyList(), eq(BigDecimal.ZERO), eq(BigDecimal.ZERO), any(), any());
         assertEquals(new BigDecimal("10.00"), result.getFinalChargeablePrice());
+    }
+
+    @Test
+    @DisplayName("Should normalize UPPER_SNAKE_CASE custom attributes for pricing base and effective date")
+    void getProductPricing_shouldNormalizeUpperSnakeCaseCoreInputs() {
+        LocalDate requestedDate = LocalDate.of(2026, 4, 12);
+        request = ProductPriceRequest.builder()
+                .productId(1L)
+                .customAttributes(new HashMap<>(Map.of(
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, 60000,
+                        PricingAttributeKeys.EFFECTIVE_DATE, requestedDate,
+                        "LOYALTY_SCORE", 20
+                )))
+                .build();
+
+        ProductPricingLink fixedLink = createPricingLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
+        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), eq(requestedDate))).thenReturn(List.of(fixedLink));
+        when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(new BigDecimal("10.00"));
+
+        productPricingService.getProductPricing(request);
+
+        verify(priceAggregator).calculateBundleImpact(
+                anyList(),
+                argThat(amount -> amount != null && amount.compareTo(new BigDecimal("60000")) == 0),
+                eq(BigDecimal.ZERO),
+                isNull(),
+                eq(requestedDate));
     }
 
     @Test
@@ -281,7 +308,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
         PricingInput input = inputCaptor.getValue();
 
         assertEquals(5, input.getCustomAttributes().get("yearsOfService"));
-        assertEquals(1L, input.getCustomAttributes().get("productId"));
+        assertEquals(1L, input.getCustomAttributes().get(PricingAttributeKeys.PRODUCT_ID));
     }
 
     @Test

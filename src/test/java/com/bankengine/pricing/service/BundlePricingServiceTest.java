@@ -68,7 +68,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                     BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build(),
                     BundlePriceRequest.BundleProductItem.builder().productId(11L).transactionAmount(BigDecimal.ZERO).build()
                 ))
-                .customAttributes(Map.of("customerSegment", "GOLD"))
+                .customAttributes(Map.of(PricingAttributeKeys.CUSTOMER_SEGMENT, "GOLD"))
                 .build();
 
         // Each product returns $100.00
@@ -184,7 +184,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(1L)
                 .enrollmentDate(midMonth)
-                .customAttributes(Map.of("effectiveDate", midMonth))
+                .customAttributes(Map.of(PricingAttributeKeys.EFFECTIVE_DATE, midMonth))
                 .products(List.of(BundlePriceRequest.BundleProductItem.builder().productId(10L).transactionAmount(BigDecimal.ZERO).build()))
                 .build();
 

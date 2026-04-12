@@ -52,6 +52,15 @@ public class PricingInputMetadataController {
         return ResponseEntity.ok(metadataList);
     }
 
+    @Operation(summary = "Retrieve canonical system pricing attribute keys",
+            description = "Returns server-defined canonical keys used by pricing runtime for system inputs.")
+    @ApiResponse(responseCode = "200", description = "System pricing keys successfully retrieved.")
+    @GetMapping("/system-attributes")
+    @PreAuthorize("hasAuthority('pricing:metadata:read')")
+    public ResponseEntity<List<String>> getSystemAttributes() {
+        return ResponseEntity.ok(metadataService.getSystemAttributeKeys());
+    }
+
     // --- GET: Retrieve Metadata by Key ---
     @Operation(summary = "Retrieve pricing input metadata by key",
                description = "Returns a single pricing attribute definition by its unique attribute key.")

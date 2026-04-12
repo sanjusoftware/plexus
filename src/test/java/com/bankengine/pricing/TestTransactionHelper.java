@@ -16,6 +16,7 @@ import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.*;
+import com.bankengine.pricing.service.PricingAttributeKeys;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -70,9 +71,9 @@ public class TestTransactionHelper {
 
     @Transactional
     public void cleanupCommittedMetadata() {
-        metadataRepository.findByAttributeKey("customerSegment")
+        metadataRepository.findByAttributeKey(PricingAttributeKeys.CUSTOMER_SEGMENT)
                 .ifPresent(metadataRepository::delete);
-        metadataRepository.findByAttributeKey("transactionAmount")
+        metadataRepository.findByAttributeKey(PricingAttributeKeys.TRANSACTION_AMOUNT)
                 .ifPresent(metadataRepository::delete);
         flushAndClear();
     }
@@ -197,7 +198,7 @@ public class TestTransactionHelper {
 
         TierCondition condition = new TierCondition();
         condition.setPricingTier(tier);
-        condition.setAttributeName("customerSegment");
+        condition.setAttributeName(PricingAttributeKeys.CUSTOMER_SEGMENT);
         condition.setOperator(TierCondition.Operator.EQ);
         condition.setAttributeValue("DEFAULT_SEGMENT");
         tier.setConditions(new HashSet<>(Set.of(condition)));
@@ -281,8 +282,8 @@ public class TestTransactionHelper {
 
     @Transactional
     public void setupCommittedMetadata() {
-        createAndSaveMetadata("customerSegment", "STRING");
-        createAndSaveMetadata("transactionAmount", "DECIMAL");
+        createAndSaveMetadata(PricingAttributeKeys.CUSTOMER_SEGMENT, "STRING");
+        createAndSaveMetadata(PricingAttributeKeys.TRANSACTION_AMOUNT, "DECIMAL");
         flushAndClear();
     }
 

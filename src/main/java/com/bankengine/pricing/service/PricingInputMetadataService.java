@@ -12,6 +12,7 @@ import com.bankengine.pricing.repository.TierConditionRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.web.exception.DependencyViolationException;
 import com.bankengine.web.exception.NotFoundException;
+import com.bankengine.web.exception.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -87,6 +88,11 @@ public class PricingInputMetadataService extends BaseService {
         return pricingInputMetadataRepository.findByBankIdAndAttributeKey(getCurrentBankId(), attributeKey)
                 .map(mapper::toResponse)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getSystemAttributeKeys() {
+        return PricingAttributeKeys.SYSTEM_KEYS.stream().sorted().toList();
     }
 
     @Transactional
@@ -166,6 +172,10 @@ public class PricingInputMetadataService extends BaseService {
         String bankId = getCurrentBankId();
         PricingInputMetadata entity = pricingInputMetadataRepository.findByBankIdAndAttributeKey(bankId, attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
+
+        if (PricingAttributeKeys.SYSTEM_KEYS.contains(entity.getAttributeKey())) {
+            throw new ValidationException("Cannot delete protected system pricing attribute: " + entity.getAttributeKey());
+        }
 
         if (tierConditionRepository.existsByAttributeName(entity.getAttributeKey())) {
             throw new DependencyViolationException(

@@ -142,11 +142,15 @@ All versionable masters (`Product`, `ProductBundle`, `FeatureComponent`, `Pricin
 Pricing retrieval is request-body driven (not query-string driven):
 
 - **Product calculation:** `POST /api/v1/pricing/calculate/product`
-  - Request includes `productId`, `customerSegment`, optional `transactionAmount`, `effectiveDate`, `enrollmentDate`, and `customAttributes`.
+  - Request includes `productId`, optional `enrollmentDate`, and `customAttributes`.
+  - Canonical system keys in `customAttributes` are: `CUSTOMER_SEGMENT`, `TRANSACTION_AMOUNT`, `EFFECTIVE_DATE`, `PRODUCT_ID`, `BANK_ID`.
+  - Legacy aliases (for example `customerSegment`, `transactionAmount`, `effectiveDate`) are rejected with validation errors.
   - Response: `ProductPricingCalculationResult` with `finalChargeablePrice` and `componentBreakdown`.
 
 - **Bundle calculation:** `POST /api/v1/pricing/calculate/bundle`
-  - Request includes `productBundleId`, line items (`productId` + `transactionAmount`), `customerSegment`, and optional date/attributes.
+  - Request includes `productBundleId`, line items (`productId` + `transactionAmount`), and optional `customAttributes`.
+  - Canonical bundle system keys in `customAttributes` are: `PRODUCT_BUNDLE_ID`, `EFFECTIVE_DATE`, `GROSS_TOTAL_AMOUNT`, `BANK_ID`.
+  - Legacy aliases are rejected with validation errors.
   - Response: `BundlePriceResponse` with gross/net totals, bundle adjustments, and per-product pricing results.
 
 ***
@@ -531,14 +535,34 @@ The Bank Admin for `GLOBAL-BANK-001` can then define other custom roles and map 
 Define the foundation for products.
 
 ### 0. Register Pricing Input Metadata (Mandatory)
-Before creating a **Pricing Component**, any attribute used in the rules (e.g., `income`, `customerSegment`) must be registered in the metadata registry. Failure to do so will result in errors like:
+Before creating a **Pricing Component**, any attribute used in rules (for example `INCOME`, `LOYALTY_SCORE`) must be registered in the metadata registry. Failure to do so will result in errors like:
 `"Invalid rule attribute 'income'. Not found in PricingInputMetadata registry."`
+
+The platform also seeds protected system metadata for every tenant automatically (`CUSTOMER_SEGMENT`, `TRANSACTION_AMOUNT`, `EFFECTIVE_DATE`, `PRODUCT_ID`, `PRODUCT_BUNDLE_ID`, `GROSS_TOTAL_AMOUNT`, `BANK_ID`). These system rows are available in UI dropdowns and cannot be deleted.
+
+To avoid hardcoded UI drift, the frontend can fetch canonical system keys from:
+
+**Request:** `GET /api/v1/pricing-metadata/system-attributes`
+**Authority:** `pricing:metadata:read`
+
+Example response:
+```json
+[
+  "BANK_ID",
+  "CUSTOMER_SEGMENT",
+  "EFFECTIVE_DATE",
+  "GROSS_TOTAL_AMOUNT",
+  "PRODUCT_BUNDLE_ID",
+  "PRODUCT_ID",
+  "TRANSACTION_AMOUNT"
+]
+```
 
 **Request:** `POST /api/v1/pricing-metadata`
 **Authority:** `pricing:metadata:create`
 ```json
 {
-  "attributeKey": "income",
+  "attributeKey": "INCOME",
   "displayName": "Annual Income",
   "dataType": "DECIMAL"
 }
@@ -547,12 +571,12 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
 **Response:** `201 Created`
 ```json
 {
-  "attributeKey": "income",
+  "attributeKey": "INCOME",
   "displayName": "Annual Income",
   "dataType": "DECIMAL"
 }
 ```
-* **attributeKey**: The internal key used in rules (typically snake_case).
+* **attributeKey**: The internal key used in rules (canonical format: `UPPER_SNAKE_CASE`).
 * **displayName**: User-friendly label for the UI.
 * **dataType**: Used for validation and rule generation. Allowed: `STRING`, `DECIMAL`, `INTEGER`, `BOOLEAN`, `DATE`.
 
@@ -622,7 +646,7 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
       "maxThreshold": 100000,
       "applyChargeOnFullBreach": false,
       "conditions": [
-        { "attributeName": "customerSegment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" }
+        { "attributeName": "CUSTOMER_SEGMENT", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" }
       ],
       "priceValue": {
         "priceAmount": 5.00,
@@ -633,7 +657,7 @@ Before creating a **Pricing Component**, any attribute used in the rules (e.g., 
       "name": "Fallback Tier",
       "code": "FALLBACK_TIER",
       "conditions": [
-        { "attributeName": "customerSegment", "operator": "EQ", "attributeValue": "RETAIL" }
+        { "attributeName": "CUSTOMER_SEGMENT", "operator": "EQ", "attributeValue": "RETAIL" }
       ],
       "priceValue": {
         "priceAmount": 15.00,
@@ -672,7 +696,7 @@ Notes:
       "minThreshold": 0,
       "maxThreshold": 100000,
       "conditions": [
-        { "attributeName": "customerSegment", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" }
+        { "attributeName": "CUSTOMER_SEGMENT", "operator": "EQ", "attributeValue": "PREMIUM", "connector": "AND" }
       ],
       "priceValues": [
         {
@@ -693,7 +717,7 @@ Notes:
       "code": "FALLBACK_TIER",
       "priority": -2147483648,
       "conditions": [
-        { "attributeName": "customerSegment", "operator": "EQ", "attributeValue": "RETAIL", "connector": null }
+        { "attributeName": "CUSTOMER_SEGMENT", "operator": "EQ", "attributeValue": "RETAIL", "connector": null }
       ],
       "priceValues": [
         {
@@ -1004,9 +1028,11 @@ The bundle is archived and no longer available for new enrollments.
 ```json
 {
   "productId": 500,
-  "customerSegment": "RETAIL",
-  "transactionAmount": 5000,
+  "enrollmentDate": "2026-03-01",
   "customAttributes": {
+    "CUSTOMER_SEGMENT": "RETAIL",
+    "TRANSACTION_AMOUNT": 5000,
+    "EFFECTIVE_DATE": "2026-03-01",
     "atm_count": 3,
     "spending_total": 1500
   }

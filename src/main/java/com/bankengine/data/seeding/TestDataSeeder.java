@@ -286,7 +286,7 @@ public class TestDataSeeder implements CommandLineRunner {
 
         // Update conditions
         tier.getConditions().clear();
-        tier.getConditions().add(createCondition(tier, "customerSegment", Operator.EQ, "STANDARD", bankId));
+        tier.getConditions().add(createCondition(tier, "CUSTOMER_SEGMENT", Operator.EQ, "STANDARD", bankId));
 
         // Update price values
         tier.getPriceValues().clear();

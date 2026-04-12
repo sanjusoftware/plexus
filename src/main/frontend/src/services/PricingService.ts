@@ -46,6 +46,33 @@ export interface BundlePriceResponse {
 }
 
 class PricingServiceClass {
+  private systemKeysCache: string[] | null = null;
+  private systemKeysInFlight: Promise<string[]> | null = null;
+
+  async getSystemPricingAttributeKeys(signal?: AbortSignal): Promise<string[]> {
+    if (this.systemKeysCache) {
+      return this.systemKeysCache;
+    }
+    if (this.systemKeysInFlight) {
+      return this.systemKeysInFlight;
+    }
+    this.systemKeysInFlight = axios.get('/api/v1/pricing-metadata/system-attributes', { signal })
+      .then((response) => {
+        const keys: string[] = response.data || [];
+        this.systemKeysCache = keys;
+        return keys;
+      })
+      .finally(() => {
+        this.systemKeysInFlight = null;
+      });
+    return this.systemKeysInFlight!;
+  }
+
+  clearSystemPricingAttributeKeysCache() {
+    this.systemKeysCache = null;
+    this.systemKeysInFlight = null;
+  }
+
   async getPricingMetadata(signal?: AbortSignal): Promise<PricingMetadata[]> {
     try {
       const response = await axios.get('/api/v1/pricing-metadata', { signal });

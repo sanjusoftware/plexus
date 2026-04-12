@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { authService, UserProfile } from '../services/AuthService';
+import { PricingService } from '../services/PricingService';
 import axios from 'axios';
 import { useAbortSignal } from '../hooks/useAbortSignal';
 
@@ -13,6 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   bankId: string | null;
   permissionsMap: Record<string, string[]>;
+  systemPricingKeys: string[];
   toast: { message: string; type: 'error' | 'success' } | null;
   setToast: (toast: { message: string; type: 'error' | 'success' } | null) => void;
 }
@@ -22,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [permissionsMap, setPermissionsMap] = useState<Record<string, string[]>>({});
+  const [systemPricingKeys, setSystemPricingKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const location = useLocation();
@@ -59,8 +62,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (currentUser) {
       const map = await authService.getPermissionsMap();
       setPermissionsMap(map);
+      try {
+        const systemKeys = await PricingService.getSystemPricingAttributeKeys();
+        setSystemPricingKeys(systemKeys || []);
+      } catch {
+        setSystemPricingKeys([]);
+      }
     } else {
       setPermissionsMap({});
+      setSystemPricingKeys([]);
+      PricingService.clearSystemPricingAttributeKeysCache();
     }
   }, []);
 
@@ -87,6 +98,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (currentUser) {
           const map = await authService.getPermissionsMap(signal);
           setPermissionsMap(map);
+          try {
+            const systemKeys = await PricingService.getSystemPricingAttributeKeys(signal);
+            setSystemPricingKeys(systemKeys || []);
+          } catch {
+            setSystemPricingKeys([]);
+          }
+        } else {
+          setSystemPricingKeys([]);
+          PricingService.clearSystemPricingAttributeKeysCache();
         }
       } catch (err) {
         if (axios.isCancel(err)) return;
@@ -112,6 +132,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (status === 401) {
           setUser(null);
           setPermissionsMap({});
+          setSystemPricingKeys([]);
+          PricingService.clearSystemPricingAttributeKeysCache();
         }
 
         // Handle 403 Access Denied
@@ -146,6 +168,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     await authService.logout();
     setUser(null);
+    setSystemPricingKeys([]);
+    PricingService.clearSystemPricingAttributeKeysCache();
     // Force redirect to login page after state is cleared
     window.location.href = '/login';
   };
@@ -160,6 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isAuthenticated: !!user,
       bankId: user?.bank_id || null,
       permissionsMap,
+      systemPricingKeys,
       toast,
       setToast: setInternalToast
     }}>

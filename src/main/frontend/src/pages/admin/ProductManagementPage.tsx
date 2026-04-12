@@ -17,6 +17,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { useSystemPricingKeys } from '../../hooks/useSystemPricingKeys';
 import { PriceComponentDetail, PricingMetadata, PricingService } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
 
@@ -62,12 +63,26 @@ interface SimulationResult {
   breakdown?: PriceComponentDetail[];
 }
 
-const HIDDEN_METADATA_KEYS = new Set(['bankId', 'productId', 'productBundleId']);
+const toTitleFromCode = (value: string) =>
+  (value || '')
+    .toLowerCase()
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 
 const ProductManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setToast } = useAuth();
+  const {
+    keys,
+    hasSystemPricingKey,
+    isHiddenSystemKey,
+    isSystemAmountKey,
+    isSystemDateKey,
+    isSystemCustomerSegmentKey,
+  } = useSystemPricingKeys();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
@@ -75,11 +90,9 @@ const ProductManagementPage = () => {
   const [calculatedPrices, setCalculatedPrices] = useState<Record<number, SimulationResult>>({});
   const [calcMetadata, setCalcMetadata] = useState<PricingMetadata[]>([]);
   const [calcInputs, setCalcInputs] = useState<Record<string, any>>({
-    transactionAmount: 1000,
-    customerSegment: 'RETAIL',
-    effectiveDate: new Date().toISOString().split('T')[0],
-    loyalty_score: 0,
-    isSalaryAccount: false,
+    [keys.TRANSACTION_AMOUNT]: 1000,
+    [keys.CUSTOMER_SEGMENT]: 'RETAIL',
+    [keys.EFFECTIVE_DATE]: new Date().toISOString().split('T')[0],
   });
 
   // Modal states
@@ -128,7 +141,7 @@ const ProductManagementPage = () => {
 
       const dynamicFields = (metadata || [])
         .filter((m: PricingMetadata) => (m.sourceType || 'CUSTOM_ATTRIBUTE') === 'CUSTOM_ATTRIBUTE')
-        .filter((m: PricingMetadata) => !HIDDEN_METADATA_KEYS.has(m.attributeKey));
+        .filter((m: PricingMetadata) => !isHiddenSystemKey(m.attributeKey || ''));
       setCalcMetadata(dynamicFields);
 
       setCalcInputs(prev => {
@@ -139,7 +152,7 @@ const ProductManagementPage = () => {
             case 'DECIMAL':
             case 'INTEGER':
             case 'LONG':
-              next[m.attributeKey] = m.attributeKey === 'transactionAmount' ? 1000 : 0;
+              next[m.attributeKey] = isSystemAmountKey(m.attributeKey || '') ? 1000 : 0;
               break;
             case 'BOOLEAN':
               next[m.attributeKey] = false;
@@ -148,7 +161,7 @@ const ProductManagementPage = () => {
               next[m.attributeKey] = new Date().toISOString().split('T')[0];
               break;
             default:
-              next[m.attributeKey] = m.attributeKey === 'customerSegment' ? 'RETAIL' : '';
+              next[m.attributeKey] = isSystemCustomerSegmentKey(m.attributeKey || '') ? 'RETAIL' : '';
           }
         });
         return next;
@@ -161,7 +174,7 @@ const ProductManagementPage = () => {
         setLoading(false);
       }
     }
-  }, [setToast]);
+  }, [setToast, isHiddenSystemKey, isSystemAmountKey, isSystemCustomerSegmentKey]);
 
   const parseInputValue = (dataType: string, rawValue: any) => {
     const normalizedType = (dataType || '').toUpperCase();
@@ -193,7 +206,7 @@ const ProductManagementPage = () => {
       );
     }
 
-    if (key === 'customerSegment') {
+    if (isSystemCustomerSegmentKey(key)) {
       return (
         <div key={key}>
           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</label>
@@ -298,8 +311,14 @@ const ProductManagementPage = () => {
         }
       });
 
-      if (!attributesFromMetadata.effectiveDate) {
-        attributesFromMetadata.effectiveDate = new Date().toISOString().split('T')[0];
+      const metadataEffectiveDateKey = calcMetadata.find((meta) => isSystemDateKey(meta.attributeKey || ''))?.attributeKey;
+      const effectiveDateKey = metadataEffectiveDateKey || keys.EFFECTIVE_DATE;
+
+      if (!attributesFromMetadata[effectiveDateKey]) {
+        attributesFromMetadata[effectiveDateKey] = new Date().toISOString().split('T')[0];
+      }
+      if (hasSystemPricingKey(keys.TRANSACTION_AMOUNT) && attributesFromMetadata[keys.TRANSACTION_AMOUNT] === undefined) {
+        attributesFromMetadata[keys.TRANSACTION_AMOUNT] = 0;
       }
 
       const request = {
@@ -326,8 +345,8 @@ const ProductManagementPage = () => {
     }
   };
 
-  const renderBreakdown = (productId: number, onRefresh?: () => void) => {
-    const simulation = calculatedPrices[productId];
+  const renderBreakdown = (prod: Product, onRefresh?: () => void) => {
+    const simulation = calculatedPrices[prod.id];
     if (!simulation || simulation.loading || simulation.error) return null;
 
     const breakdown = simulation.breakdown || [];
@@ -335,6 +354,29 @@ const ProductManagementPage = () => {
     const discounts = breakdown.filter(item => item.valueType?.startsWith('DISCOUNT'));
     const totalCharges = charges.reduce((sum, item) => sum + Math.abs(Number(item.calculatedAmount ?? item.rawValue ?? 0)), 0);
     const totalDiscounts = discounts.reduce((sum, item) => sum + Math.abs(Number(item.calculatedAmount ?? item.rawValue ?? 0)), 0);
+
+    const nameByCode: Record<string, string> = {};
+    (prod.pricing || []).forEach((link) => {
+      if (link.pricingComponentCode) {
+        nameByCode[link.pricingComponentCode] = link.pricingComponentName || toTitleFromCode(link.pricingComponentCode);
+      }
+    });
+
+    const getDisplayName = (componentCode: string) => {
+      return nameByCode[componentCode] || toTitleFromCode(componentCode);
+    };
+
+    const getPercentageHint = (item: PriceComponentDetail, isDiscount: boolean) => {
+      if (!item.valueType?.includes('PERCENTAGE')) return null;
+      const raw = Math.abs(Number(item.rawValue ?? 0));
+      const calculated = Math.abs(Number(item.calculatedAmount ?? 0));
+      if (!raw || !calculated) return null;
+      const inferredBase = (calculated * 100) / raw;
+      if (isDiscount && !item.targetComponentCode) {
+        return `${raw}% of total charges (${PricingService.formatCurrency(inferredBase)})`;
+      }
+      return `${raw}% of ${PricingService.formatCurrency(inferredBase)}`;
+    };
 
     if (breakdown.length === 0) {
       return (
@@ -356,9 +398,12 @@ const ProductManagementPage = () => {
             return (
               <div key={`charge-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-blue-100 bg-blue-50/30">
                 <div className="min-w-0 pr-3">
-                  <div className="text-[11px] font-bold text-gray-800 truncate">{item.componentCode}</div>
+                  <div className="text-[11px] font-bold text-gray-800 truncate">
+                    {getDisplayName(item.componentCode)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
+                  </div>
                   <div className="text-[9px] text-gray-500 uppercase tracking-wider">
                     {item.valueType}{item.matchedTierCode ? ` | Tier: ${item.matchedTierCode}` : ''}
+                    {getPercentageHint(item, false) ? ` | ${getPercentageHint(item, false)}` : ''}
                   </div>
                 </div>
                 <div className="text-xs font-black whitespace-nowrap text-blue-600">
@@ -373,9 +418,12 @@ const ProductManagementPage = () => {
             return (
               <div key={`discount-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-green-100 bg-green-50/30">
                 <div className="min-w-0 pr-3">
-                  <div className="text-[11px] font-bold text-gray-800 truncate">{item.componentCode}</div>
+                  <div className="text-[11px] font-bold text-gray-800 truncate">
+                    {getDisplayName(item.componentCode)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
+                  </div>
                   <div className="text-[9px] text-gray-500 uppercase tracking-wider">
                     {item.valueType}{item.matchedTierCode ? ` | Tier: ${item.matchedTierCode}` : ''}
+                    {getPercentageHint(item, true) ? ` | ${getPercentageHint(item, true)}` : ''}
                   </div>
                 </div>
                 <div className="text-xs font-black whitespace-nowrap text-green-600">
@@ -681,7 +729,7 @@ const ProductManagementPage = () => {
                               </div>
                             )}
                             {calculatedPrices[prod.id] && !calculatedPrices[prod.id].loading && !calculatedPrices[prod.id].error && (
-                              renderBreakdown(prod.id, () => handleCalculatePrice(prod))
+                              renderBreakdown(prod, () => handleCalculatePrice(prod))
                             )}
                           </div>
                         </div>

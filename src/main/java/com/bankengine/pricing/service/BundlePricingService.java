@@ -84,6 +84,18 @@ public class BundlePricingService extends BaseService {
         if (request.getProducts() == null || request.getProducts().isEmpty()) {
             throw new ValidationException("Bundle has no products.");
         }
+        if (request.getCustomAttributes() != null) {
+            List<String> legacyKeys = request.getCustomAttributes().keySet().stream()
+                    .filter(PricingAttributeKeys.LEGACY_ALIASES::contains)
+                    .sorted()
+                    .toList();
+            if (!legacyKeys.isEmpty()) {
+                throw new ValidationException("Legacy pricing attribute keys are not supported: "
+                        + String.join(", ", legacyKeys)
+                        + ". Use canonical keys: "
+                        + String.join(", ", PricingAttributeKeys.SYSTEM_KEYS));
+            }
+        }
     }
 
     private List<ProductPricingResult> calculateIndividualProductFee(BundlePriceRequest request) {
@@ -95,9 +107,10 @@ public class BundlePricingService extends BaseService {
             if (request.getCustomAttributes() != null) {
                 productAttributes.putAll(request.getCustomAttributes());
             }
-            productAttributes.put("productId", productReq.getProductId());
-            productAttributes.put("transactionAmount", productReq.getTransactionAmount() != null ? productReq.getTransactionAmount() : BigDecimal.ZERO);
-            productAttributes.put("effectiveDate", effectiveDate);
+            productAttributes.put(PricingAttributeKeys.PRODUCT_ID, productReq.getProductId());
+            productAttributes.put(PricingAttributeKeys.TRANSACTION_AMOUNT,
+                    productReq.getTransactionAmount() != null ? productReq.getTransactionAmount() : BigDecimal.ZERO);
+            productAttributes.put(PricingAttributeKeys.EFFECTIVE_DATE, effectiveDate);
 
             ProductPriceRequest singlePricingRequest = ProductPriceRequest.builder()
                     .productId(productReq.getProductId())
@@ -209,15 +222,17 @@ public class BundlePricingService extends BaseService {
             attributes.putAll(request.getCustomAttributes());
         }
 
-        attributes.putIfAbsent("productBundleId", request.getProductBundleId());
-        attributes.putIfAbsent("effectiveDate", LocalDate.now());
-        attributes.putIfAbsent("grossTotalAmount", grossTotalAmount);
-        attributes.putIfAbsent("bankId", getCurrentBankId());
+        attributes.putIfAbsent(PricingAttributeKeys.PRODUCT_BUNDLE_ID, request.getProductBundleId());
+        attributes.putIfAbsent(PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now());
+        attributes.putIfAbsent(PricingAttributeKeys.GROSS_TOTAL_AMOUNT, grossTotalAmount);
+        attributes.putIfAbsent(PricingAttributeKeys.BANK_ID, getCurrentBankId());
         return attributes;
     }
 
     private LocalDate resolveEffectiveDate(BundlePriceRequest request) {
-        Object fromCustom = request.getCustomAttributes() != null ? request.getCustomAttributes().get("effectiveDate") : null;
+        Object fromCustom = request.getCustomAttributes() != null
+                ? request.getCustomAttributes().get(PricingAttributeKeys.EFFECTIVE_DATE)
+                : null;
         return extractLocalDate(fromCustom, LocalDate.now());
     }
 
