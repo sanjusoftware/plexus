@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumbs from './Breadcrumbs';
 import GlobalToast from './GlobalToast';
 import {
-  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Tag, Layers, Shield, ChevronLeft, ChevronRight, ShieldCheck, ExternalLink
+  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Bookmark, Puzzle, CircleDollarSign, Layers, ChevronLeft, ChevronRight, ShieldCheck, ExternalLink
 } from 'lucide-react';
 
 interface LoggedInUserLayoutProps {
@@ -29,66 +29,86 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
 
   const roles = (user?.roles as string[]) || [];
 
-  const navItems = [
+  const menuGroups = [
     {
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-      path: '/dashboard',
-      show: true
+      title: '',
+      items: [
+        {
+          label: 'Dashboard',
+          icon: LayoutDashboard,
+          path: '/dashboard',
+          show: true
+        }
+      ]
     },
     {
-      label: 'Bank Management',
-      icon: Building2,
-      path: '/banks',
-      show: hasPermission({ action: 'GET', path: '/api/v1/banks' }) || hasPermission('bank:config:read')
+      title: 'PRODUCT SETUP',
+      items: [
+        {
+          label: 'Product Types',
+          icon: List,
+          path: '/product-types',
+          show: hasPermission({ action: 'GET', path: '/api/v1/product-types' })
+        },
+        {
+          label: 'Product Categories',
+          icon: Bookmark,
+          path: '/product-categories',
+          show: hasPermission({ action: 'GET', path: '/api/v1/product-categories' })
+        },
+        {
+          label: 'Product Features',
+          icon: Puzzle,
+          path: '/features',
+          show: hasPermission({ action: 'GET', path: '/api/v1/features' })
+        },
+        {
+          label: 'Product Catalog',
+          icon: Package,
+          path: '/products',
+          show: hasPermission({ action: 'GET', path: '/api/v1/products' })
+        }
+      ]
     },
     {
-      label: 'Product Types',
-      icon: List,
-      path: '/product-types',
-      show: hasPermission({ action: 'GET', path: '/api/v1/product-types' })
+      title: 'PRICING',
+      items: [
+        {
+          label: 'Pricing Metadata',
+          icon: Database,
+          path: '/pricing-metadata',
+          show: hasPermission({ action: 'GET', path: '/api/v1/pricing-metadata' })
+        },
+        {
+          label: 'Pricing Components',
+          icon: CircleDollarSign,
+          path: '/pricing-components',
+          show: hasPermission({ action: 'GET', path: '/api/v1/pricing-components' })
+        },
+        {
+          label: 'Pricing Tiers',
+          icon: Layers,
+          path: '/pricing-tiers',
+          show: hasPermission({ action: 'GET', path: '/api/v1/pricing-tiers' })
+        }
+      ]
     },
     {
-      label: 'Product Categories',
-      icon: Tag,
-      path: '/product-categories',
-      show: hasPermission({ action: 'GET', path: '/api/v1/product-categories' })
-    },
-    {
-      label: 'Pricing Metadata',
-      icon: Database,
-      path: '/pricing-metadata',
-      show: hasPermission({ action: 'GET', path: '/api/v1/pricing-metadata' })
-    },
-    {
-      label: 'Pricing Components',
-      icon: Tag,
-      path: '/pricing-components',
-      show: hasPermission({ action: 'GET', path: '/api/v1/pricing-components' })
-    },
-    {
-      label: 'Feature Components',
-      icon: ShieldCheck,
-      path: '/features',
-      show: hasPermission({ action: 'GET', path: '/api/v1/features' })
-    },
-    {
-      label: 'Pricing Tiers',
-      icon: Layers,
-      path: '/pricing-tiers',
-      show: hasPermission({ action: 'GET', path: '/api/v1/pricing-tiers' })
-    },
-    {
-      label: 'Product Catalog',
-      icon: Package,
-      path: '/products',
-      show: hasPermission({ action: 'GET', path: '/api/v1/products' })
-    },
-    {
-      label: 'Roles & Permissions',
-      icon: Shield,
-      path: '/roles',
-      show: hasPermission({ action: 'GET', path: '/api/v1/roles' })
+      title: 'ADMINISTRATION',
+      items: [
+        {
+          label: 'Bank Management',
+          icon: Building2,
+          path: '/banks',
+          show: hasPermission({ action: 'GET', path: '/api/v1/banks' }) || hasPermission('bank:config:read')
+        },
+        {
+          label: 'Roles & Permissions',
+          icon: ShieldCheck,
+          path: '/roles',
+          show: hasPermission({ action: 'GET', path: '/api/v1/roles' })
+        }
+      ]
     }
   ];
 
@@ -108,20 +128,37 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
             {isCollapsed ? <ChevronRight className="h-4 w-4 text-blue-300" /> : <ChevronLeft className="h-4 w-4 text-blue-300" />}
           </button>
         </div>
-        <nav className="mt-4 px-3 space-y-1 flex-1">
-          {navItems.filter(item => item.show).map((item) => (
-            <button
-              key={item.label}
-              onClick={() => navigate(item.path)}
-              title={isCollapsed ? item.label : undefined}
-              className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-2.5'} w-full p-2.5 rounded-lg transition ${
-                location.pathname === item.path ? 'bg-blue-800' : 'hover:bg-blue-800'
-              }`}
-            >
-              <item.icon className={`h-4 w-4 flex-shrink-0 ${location.pathname === item.path ? 'text-blue-300' : 'text-blue-300'}`} />
-              {!isCollapsed && <span className={`${location.pathname === item.path ? 'font-medium' : ''} text-sm whitespace-nowrap`}>{item.label}</span>}
-            </button>
-          ))}
+        <nav className="mt-4 px-3 flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
+          {menuGroups.map((group, groupIdx) => {
+            const visibleItems = group.items.filter(item => item.show);
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div key={group.title || groupIdx} className="space-y-1">
+                {groupIdx > 0 && <div className="border-t border-blue-800/50 my-4 mx-2" />}
+                {!isCollapsed && group.title && (
+                  <div className="px-3 mb-2">
+                    <span className="text-[10px] font-bold text-blue-400/80 tracking-widest uppercase">
+                      {group.title}
+                    </span>
+                  </div>
+                )}
+                {visibleItems.map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => navigate(item.path)}
+                    title={isCollapsed ? item.label : undefined}
+                    className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-2.5'} w-full p-2.5 rounded-lg transition ${
+                      location.pathname === item.path ? 'bg-blue-800' : 'hover:bg-blue-800'
+                    }`}
+                  >
+                    <item.icon className={`h-4 w-4 flex-shrink-0 ${location.pathname === item.path ? 'text-blue-300' : 'text-blue-300'}`} />
+                    {!isCollapsed && <span className={`${location.pathname === item.path ? 'font-medium' : ''} text-sm whitespace-nowrap`}>{item.label}</span>}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Bottom Menu Item with Divider */}
