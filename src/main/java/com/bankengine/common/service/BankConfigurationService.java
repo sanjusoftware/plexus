@@ -5,6 +5,7 @@ import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.PermissionMappingService;
 import com.bankengine.catalog.model.BundleProductLink;
+import com.bankengine.catalog.model.ProductCategory;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductCategoryRepository;
 import com.bankengine.catalog.repository.ProductRepository;
@@ -89,9 +90,7 @@ public class BankConfigurationService extends BaseService {
         }
 
         if (request.getCategoryConflictRules() != null) {
-            config.setCategoryConflictRules(request.getCategoryConflictRules().stream()
-                    .map(dto -> new CategoryConflictRule(normalizeCategory(dto.getCategoryA()), normalizeCategory(dto.getCategoryB())))
-                    .collect(Collectors.toList()));
+            config.setCategoryConflictRules(toConflictRules(bankId, request.getCategoryConflictRules()));
         }
 
         bankConfigurationRepository.save(config);
@@ -130,7 +129,7 @@ public class BankConfigurationService extends BaseService {
                 .adminEmail(request.getAdminEmail())
                 .status(BankStatus.DRAFT)
                 .allowProductInMultipleBundles(true)
-                .categoryConflictRules(toConflictRules(request.getCategoryConflictRules()))
+                .categoryConflictRules(toConflictRules(bankId, request.getCategoryConflictRules()))
                 .build();
 
         bankConfigurationRepository.save(config);
@@ -385,7 +384,8 @@ public class BankConfigurationService extends BaseService {
 
         Set<String> categories = new TreeSet<>();
 
-        categories.addAll(productCategoryRepository.findActiveCategoryCodesByBankId(bankId).stream()
+
+        categories.addAll(productCategoryRepository.findCategoryCodesByBankId(bankId).stream()
                 .map(this::normalizeCategory)
                 .filter(value -> !value.isBlank())
                 .toList());
@@ -533,18 +533,41 @@ public class BankConfigurationService extends BaseService {
                 .build();
     }
 
-    private List<CategoryConflictRule> toConflictRules(List<BankConfigurationRequest.CategoryConflictDto> dtoRules) {
+    private List<CategoryConflictRule> toConflictRules(String bankId,
+                                                       List<BankConfigurationRequest.CategoryConflictDto> dtoRules) {
         if (dtoRules == null || dtoRules.isEmpty()) {
             return new ArrayList<>();
         }
 
         return dtoRules.stream()
-                .map(dto -> new CategoryConflictRule(normalizeCategory(dto.getCategoryA()), normalizeCategory(dto.getCategoryB())))
+                .map(dto -> {
+                    String categoryA = normalizeCategory(dto.getCategoryA());
+                    String categoryB = normalizeCategory(dto.getCategoryB());
+
+                    // Auto-upsert keeps conflict categories aligned with the tenant master list.
+                    ensureCategoryExists(bankId, categoryA);
+                    ensureCategoryExists(bankId, categoryB);
+
+                    return new CategoryConflictRule(categoryA, categoryB);
+                })
                 .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private void ensureCategoryExists(String bankId, String normalizedCode) {
+        if (normalizedCode == null || normalizedCode.isBlank()) {
+            throw new ValidationException("Category code is required.");
+        }
+
+        productCategoryRepository.findByBankIdAndCode(bankId, normalizedCode)
+                .orElseGet(() -> productCategoryRepository.save(ProductCategory.builder()
+                        .bankId(bankId)
+                        .code(normalizedCode)
+                        .name(normalizedCode)
+                        .build()));
     }
 
     private void replaceCategoryConflictRules(BankConfiguration config,
                                               List<BankConfigurationRequest.CategoryConflictDto> dtoRules) {
-        config.setCategoryConflictRules(toConflictRules(dtoRules));
+        config.setCategoryConflictRules(toConflictRules(config.getBankId(), dtoRules));
     }
 }

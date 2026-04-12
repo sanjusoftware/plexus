@@ -3,16 +3,11 @@ import axios from 'axios';
 import { FolderTree, Loader2, Plus } from 'lucide-react';
 import {
   AdminDataTable,
-  AdminDataTableActionButton,
-  AdminDataTableActionCell,
-  AdminDataTableActionContent,
-  AdminDataTableActionsHeader,
   AdminDataTableEmptyRow,
   AdminDataTableRow,
   AuditTimestampCell
 } from '../../components/AdminDataTable';
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
-import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
@@ -21,7 +16,6 @@ interface ProductCategory {
   id: number;
   code: string;
   name: string;
-  archived: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -34,7 +28,6 @@ const ProductCategoriesPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [newCategory, setNewCategory] = useState({ code: '', name: '' });
-  const [archiveTarget, setArchiveTarget] = useState<ProductCategory | null>(null);
 
   const fetchCategories = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
@@ -76,19 +69,6 @@ const ProductCategoriesPage = () => {
       setToast({ message: err.response?.data?.message || 'Failed to create product category.', type: 'error' });
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleArchive = async () => {
-    if (!archiveTarget) return;
-    try {
-      await axios.post(`/api/v1/product-categories/${archiveTarget.id}/archive`);
-      setToast({ message: `Category ${archiveTarget.code} archived successfully.`, type: 'success' });
-      await fetchCategories(signal);
-    } catch (err: any) {
-      setToast({ message: err.response?.data?.message || 'Failed to archive category.', type: 'error' });
-    } finally {
-      setArchiveTarget(null);
     }
   };
 
@@ -137,14 +117,12 @@ const ProductCategoriesPage = () => {
           <thead>
             <tr>
               <th>Category</th>
-              <th>Status</th>
               <th>Updated At</th>
-              <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
             </tr>
           </thead>
           <tbody>
             {categories.length === 0 ? (
-              <AdminDataTableEmptyRow colSpan={4}>No product categories found. Create your first category above.</AdminDataTableEmptyRow>
+              <AdminDataTableEmptyRow colSpan={2}>No product categories found. Create your first category above.</AdminDataTableEmptyRow>
             ) : (
               categories.map((category) => (
                 <AdminDataTableRow key={category.id}>
@@ -152,45 +130,13 @@ const ProductCategoriesPage = () => {
                     <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={category.name}>{category.name}</div>
                     <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={category.code}>{category.code}</div>
                   </td>
-                  <td className="whitespace-nowrap">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      category.archived ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                    }`}>
-                      {category.archived ? 'ARCHIVED' : 'ACTIVE'}
-                    </span>
-                  </td>
                   <AuditTimestampCell value={category.updatedAt || category.createdAt} />
-                  <AdminDataTableActionCell>
-                    {!category.archived && (
-                      <HasPermission action="POST" path="/api/v1/product-categories/*/archive">
-                        <AdminDataTableActionButton
-                          onClick={() => setArchiveTarget(category)}
-                          tone="danger"
-                          size="compact"
-                          title="Archive"
-                          aria-label={`Archive ${category.code}`}
-                        >
-                          <AdminDataTableActionContent action="archive" />
-                        </AdminDataTableActionButton>
-                      </HasPermission>
-                    )}
-                  </AdminDataTableActionCell>
                 </AdminDataTableRow>
               ))
             )}
           </tbody>
         </AdminDataTable>
       )}
-
-      <ConfirmationModal
-        isOpen={!!archiveTarget}
-        onClose={() => setArchiveTarget(null)}
-        onConfirm={handleArchive}
-        title="Confirm Archival"
-        message={archiveTarget ? `Archive category ${archiveTarget.code}?` : ''}
-        confirmText="Confirm & Archive"
-        variant="danger"
-      />
     </AdminPage>
   );
 };

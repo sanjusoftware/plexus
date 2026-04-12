@@ -4,10 +4,8 @@ import com.bankengine.catalog.converter.FeatureLinkMapper;
 import com.bankengine.catalog.converter.PricingLinkMapper;
 import com.bankengine.catalog.converter.ProductMapper;
 import com.bankengine.catalog.dto.*;
-import com.bankengine.catalog.model.FeatureComponent;
-import com.bankengine.catalog.model.Product;
-import com.bankengine.catalog.model.ProductFeatureLink;
-import com.bankengine.catalog.model.ProductType;
+import com.bankengine.catalog.model.*;
+import com.bankengine.catalog.repository.ProductCategoryRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.catalog.specification.ProductSpecification;
@@ -42,6 +40,7 @@ import java.util.stream.Collectors;
 public class ProductService extends BaseService {
 
     private final ProductRepository productRepository;
+    private final ProductCategoryRepository productCategoryRepository;
     private final ProductTypeRepository productTypeRepository;
     private final FeatureComponentService featureComponentService;
     private final PricingComponentService pricingComponentService;
@@ -109,6 +108,7 @@ public class ProductService extends BaseService {
         if (productType != null) {
             product = productMapper.toEntity(requestDto, productType);
             product.setBankId(getCurrentBankId());
+            product.setCategory(ensureCategoryExists(product.getBankId(), product.getCategory()));
             product.setStatus(VersionableEntity.EntityStatus.DRAFT);
             product.setVersion(1);
 
@@ -125,6 +125,7 @@ public class ProductService extends BaseService {
 
     private void sanitizeRequest(ProductRequest requestDto) {
         requestDto.setCode(CodeGeneratorUtil.sanitizeAsCode(requestDto.getCode()));
+        requestDto.setCategory(CodeGeneratorUtil.sanitizeAsCode(requestDto.getCategory()));
     }
 
     @Transactional
@@ -136,7 +137,9 @@ public class ProductService extends BaseService {
         List<Violation> violations = new java.util.ArrayList<>();
 
         if (dto.getName() != null) product.setName(dto.getName());
-        if (dto.getCategory() != null) product.setCategory(dto.getCategory());
+        if (dto.getCategory() != null) {
+            product.setCategory(ensureCategoryExists(product.getBankId(), dto.getCategory()));
+        }
 
         if (dto.getExpiryDate() != null) {
             validateExpirationDate(product, dto.getExpiryDate());
@@ -489,6 +492,22 @@ public class ProductService extends BaseService {
     private ProductType getProductTypeByCode(String code) {
         return productTypeRepository.findByBankIdAndCode(getCurrentBankId(), code)
                 .orElseThrow(() -> new NotFoundException("Product Type not found with code: " + code));
+    }
+
+    private String ensureCategoryExists(String bankId, String categoryCode) {
+        String normalizedCode = CodeGeneratorUtil.sanitizeAsCode(categoryCode);
+        if (normalizedCode == null || normalizedCode.isBlank()) {
+            throw new ValidationException("Product category is required.");
+        }
+
+        productCategoryRepository.findByBankIdAndCode(bankId, normalizedCode)
+                .orElseGet(() -> productCategoryRepository.save(ProductCategory.builder()
+                        .bankId(bankId)
+                        .code(normalizedCode)
+                        .name(normalizedCode)
+                        .build()));
+
+        return normalizedCode;
     }
 
     private void validateExpirationDate(Product product, LocalDate newDate) {

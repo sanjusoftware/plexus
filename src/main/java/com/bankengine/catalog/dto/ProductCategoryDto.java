@@ -15,7 +15,6 @@ public class ProductCategoryDto {
     private Long id;
     private String code;
     private String name;
-    private boolean archived;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

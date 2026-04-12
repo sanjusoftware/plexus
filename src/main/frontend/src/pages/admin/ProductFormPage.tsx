@@ -92,7 +92,6 @@ const ProductFormPage = () => {
 
         const masterCategoryRows: any[] = Array.isArray(categoryMasterRes?.data) ? (categoryMasterRes?.data as any[]) : [];
         const activeMasterCategories = masterCategoryRows
-          .filter((c: any) => !c.archived)
           .map((c: any) => `${c.code || ''}`.toUpperCase().trim())
           .filter((c: string) => !!c);
         const categoriesFromBank = Array.isArray(categoryRes?.data?.categories)

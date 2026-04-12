@@ -8,7 +8,6 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +31,14 @@ public class Product extends VersionableEntity {
     @Column(name = "category", nullable = false)
     @NotBlank(message = "Product category is mandatory for compatibility validation.")
     private String category; // e.g., "RETAIL", "WEALTH", "ISLAMIC"
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumns(value = {
+            @JoinColumn(name = "bank_id", referencedColumnName = "bank_id", insertable = false, updatable = false),
+            @JoinColumn(name = "category", referencedColumnName = "code", insertable = false, updatable = false,
+                    foreignKey = @ForeignKey(name = "fk_product_category_master"))
+    })
+    private ProductCategory categoryMaster;
 
     @ManyToOne
     @JoinColumn(name = "product_type_id", nullable = false)

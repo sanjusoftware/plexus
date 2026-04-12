@@ -4,10 +4,8 @@ import com.bankengine.catalog.converter.FeatureLinkMapper;
 import com.bankengine.catalog.converter.PricingLinkMapper;
 import com.bankengine.catalog.converter.ProductMapper;
 import com.bankengine.catalog.dto.*;
-import com.bankengine.catalog.model.FeatureComponent;
-import com.bankengine.catalog.model.Product;
-import com.bankengine.catalog.model.ProductFeatureLink;
-import com.bankengine.catalog.model.ProductType;
+import com.bankengine.catalog.model.*;
+import com.bankengine.catalog.repository.ProductCategoryRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.VersionableEntity;
@@ -18,6 +16,7 @@ import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,12 +36,14 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class ProductServiceTest extends BaseServiceTest {
 
     @Mock private ProductRepository productRepository;
+    @Mock private ProductCategoryRepository productCategoryRepository;
     @Mock private ProductTypeRepository productTypeRepository;
     @Mock private FeatureComponentService featureComponentService;
     @Mock private PricingComponentService pricingComponentService;
@@ -54,6 +55,12 @@ public class ProductServiceTest extends BaseServiceTest {
 
     @InjectMocks
     private ProductService productService;
+
+    @BeforeEach
+    void setupCategoryRepository() {
+        lenient().when(productCategoryRepository.findByBankIdAndCode(anyString(), anyString())).thenReturn(Optional.empty());
+        lenient().when(productCategoryRepository.save(any(ProductCategory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    }
 
     // --- HELPERS ---
 

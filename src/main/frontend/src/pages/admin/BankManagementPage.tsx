@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -37,6 +37,7 @@ const BankManagementPage = () => {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const [bankToDeactivate, setBankToDeactivate] = useState<string | null>(null);
   const [bankToReject, setBankToReject] = useState<string | null>(null);
+  const consumedSuccessKeyRef = useRef<string | null>(null);
   const signal = useAbortSignal();
 
   const fetchBanks = useCallback(async (abortSignal: AbortSignal) => {
@@ -87,15 +88,36 @@ const BankManagementPage = () => {
   }, [user, authLoading, fetchBanks, signal]);
 
   useEffect(() => {
-    if (location.state?.onboardingSuccess) {
+    const navState = location.state as {
+      onboardingSuccess?: boolean;
+      title?: string;
+      message?: string;
+      success?: string;
+    } | null;
+
+    if (!navState) return;
+
+    let shouldClearState = false;
+
+    if (navState.onboardingSuccess) {
       setSuccessState({
-        title: location.state.title,
-        message: location.state.message
+        title: navState.title || '',
+        message: navState.message || ''
       });
-      // Clear navigation state to prevent modal from re-appearing on refresh
+      shouldClearState = true;
+    }
+
+    if (navState.success && consumedSuccessKeyRef.current !== location.key) {
+      consumedSuccessKeyRef.current = location.key;
+      setToast({ message: navState.success, type: 'success' });
+      shouldClearState = true;
+    }
+
+    if (shouldClearState) {
+      // Clear navigation state so back/refresh does not replay success feedback.
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, location.pathname, navigate]);
+  }, [location, navigate, setToast]);
 
   const handleStatusUpdate = async (targetBankId: string, action: 'activate' | 'deactivate' | 'reject') => {
     try {

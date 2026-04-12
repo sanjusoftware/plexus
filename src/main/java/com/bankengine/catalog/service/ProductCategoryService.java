@@ -3,10 +3,8 @@ package com.bankengine.catalog.service;
 import com.bankengine.catalog.dto.ProductCategoryDto;
 import com.bankengine.catalog.model.ProductCategory;
 import com.bankengine.catalog.repository.ProductCategoryRepository;
-import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.service.BaseService;
 import com.bankengine.common.util.CodeGeneratorUtil;
-import com.bankengine.web.exception.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,18 +14,15 @@ import java.util.List;
 public class ProductCategoryService extends BaseService {
 
     private final ProductCategoryRepository productCategoryRepository;
-    private final ProductRepository productRepository;
 
-    public ProductCategoryService(ProductCategoryRepository productCategoryRepository,
-                                  ProductRepository productRepository) {
+    public ProductCategoryService(ProductCategoryRepository productCategoryRepository) {
         this.productCategoryRepository = productCategoryRepository;
-        this.productRepository = productRepository;
     }
 
     @Transactional(readOnly = true)
     public List<ProductCategoryDto> listCategories() {
         String bankId = getCurrentBankId();
-        return productCategoryRepository.findAllByBankIdOrderByArchivedThenName(bankId).stream()
+        return productCategoryRepository.findAllByBankIdOrderByName(bankId).stream()
                 .map(this::toDto)
                 .toList();
     }
@@ -54,25 +49,9 @@ public class ProductCategoryService extends BaseService {
                 .bankId(bankId)
                 .code(code)
                 .name(name)
-                .archived(false)
                 .build());
 
         return toDto(saved);
-    }
-
-    @Transactional
-    public ProductCategoryDto archiveCategory(Long id) {
-        ProductCategory category = getByIdSecurely(productCategoryRepository, id, "Product Category");
-
-        String normalizedCode = category.getCode() == null ? "" : category.getCode().trim().toUpperCase();
-        boolean linkedToProducts = productRepository.existsByBankIdAndNormalizedCategory(category.getBankId(), normalizedCode);
-        if (linkedToProducts) {
-            throw new ValidationException("Category '" + category.getCode()
-                    + "' cannot be archived because it is linked to existing products.");
-        }
-
-        category.setArchived(true);
-        return toDto(productCategoryRepository.save(category));
     }
 
     private ProductCategoryDto toDto(ProductCategory category) {
@@ -80,7 +59,6 @@ public class ProductCategoryService extends BaseService {
                 .id(category.getId())
                 .code(category.getCode())
                 .name(category.getName())
-                .archived(category.isArchived())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .build();

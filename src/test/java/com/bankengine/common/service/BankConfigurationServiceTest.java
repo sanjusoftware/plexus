@@ -5,6 +5,7 @@ import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.security.TenantContextHolder;
 import com.bankengine.auth.service.AuthorityDiscoveryService;
 import com.bankengine.auth.service.PermissionMappingService;
+import com.bankengine.catalog.model.ProductCategory;
 import com.bankengine.catalog.repository.BundleProductLinkRepository;
 import com.bankengine.catalog.repository.ProductCategoryRepository;
 import com.bankengine.catalog.repository.ProductRepository;
@@ -68,6 +69,8 @@ class BankConfigurationServiceTest extends BaseServiceTest {
                 new BankConfigurationRequest.CategoryConflictDto("RETAIL", "CORPORATE")
         )));
         lenient().when(bundleProductLinkRepository.findAllByBankIdAndBundleStatuses(anyString(), anySet())).thenReturn(List.of());
+        lenient().when(productCategoryRepository.findByBankIdAndCode(anyString(), anyString())).thenReturn(Optional.empty());
+        lenient().when(productCategoryRepository.save(any(ProductCategory.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test

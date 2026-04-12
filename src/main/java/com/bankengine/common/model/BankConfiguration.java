@@ -43,7 +43,10 @@ public class BankConfiguration extends AuditableEntity {
     private boolean allowProductInMultipleBundles = false;
 
     @ElementCollection
-    @CollectionTable(name = "bank_category_conflicts", joinColumns = @JoinColumn(name = "config_id"))
+    @CollectionTable(name = "bank_category_conflicts", joinColumns = {
+            @JoinColumn(name = "config_id", referencedColumnName = "id"),
+            @JoinColumn(name = "bank_id", referencedColumnName = "bank_id")
+    })
     @Builder.Default
     private List<CategoryConflictRule> categoryConflictRules = new ArrayList<>();
 

@@ -13,9 +13,9 @@ import java.util.Optional;
 public interface ProductCategoryRepository extends TenantRepository<ProductCategory, Long> {
     Optional<ProductCategory> findByBankIdAndCode(String bankId, String code);
 
-    @Query("select c from ProductCategory c where c.bankId = :bankId order by c.archived asc, c.name asc")
-    List<ProductCategory> findAllByBankIdOrderByArchivedThenName(@Param("bankId") String bankId);
+    @Query("select c from ProductCategory c where c.bankId = :bankId order by c.name asc")
+    List<ProductCategory> findAllByBankIdOrderByName(@Param("bankId") String bankId);
 
-    @Query("select upper(trim(c.code)) from ProductCategory c where c.bankId = :bankId and c.archived = false")
-    List<String> findActiveCategoryCodesByBankId(@Param("bankId") String bankId);
+    @Query("select upper(trim(c.code)) from ProductCategory c where c.bankId = :bankId")
+    List<String> findCategoryCodesByBankId(@Param("bankId") String bankId);
 }

@@ -36,11 +36,4 @@ public class ProductCategoryController {
     public ResponseEntity<ProductCategoryDto> createCategory(@Valid @RequestBody ProductCategoryDto request) {
         return new ResponseEntity<>(productCategoryService.createCategory(request), HttpStatus.CREATED);
     }
-
-    @PostMapping("/{id}/archive")
-    @PreAuthorize("hasAuthority('catalog:product:update')")
-    @Operation(summary = "Archive product category")
-    public ResponseEntity<ProductCategoryDto> archiveCategory(@PathVariable Long id) {
-        return ResponseEntity.ok(productCategoryService.archiveCategory(id));
-    }
 }

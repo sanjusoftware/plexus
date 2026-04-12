@@ -4,7 +4,10 @@ import com.bankengine.common.annotation.TenantEntity;
 import com.bankengine.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @Entity
@@ -30,8 +33,4 @@ public class ProductCategory extends AuditableEntity {
     @NotBlank
     @Column(nullable = false, length = 200)
     private String name;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean archived = false;
 }

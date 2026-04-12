@@ -12,6 +12,7 @@ import { Building2 } from 'lucide-react';
 
 const CATEGORY_EXAMPLES = ['RETAIL', 'WEALTH', 'CORPORATE', 'INVESTMENT', 'ISLAMIC', 'SME'];
 const CREATE_NEW_CATEGORY = 'CREATE_NEW';
+const ADD_NEW_CATEGORY_LABEL = '+ Add New Category';
 
 const OnboardingPage = () => {
   const { user, setToast } = useAuth();
@@ -225,14 +226,24 @@ const OnboardingPage = () => {
 
       const successTitle = isEditing ? 'Update Successful!' : isAdmin ? 'Bank Created!' : 'Request Submitted!';
 
-      setToast({ message: successMsg, type: 'success' });
-      navigate(isAdmin ? '/banks' : '/', {
-        state: {
-          onboardingSuccess: true,
-          title: successTitle,
-          message: successMsg
-        }
-      });
+      if (isAdmin) {
+        // AuthContext clears toasts on route changes, so pass success state to /banks and toast there.
+        navigate('/banks', {
+          state: {
+            success: successMsg
+          }
+        });
+      } else {
+        setToast({ message: successMsg, type: 'success' });
+        // Public onboarding keeps the success modal on landing page.
+        navigate('/', {
+          state: {
+            onboardingSuccess: true,
+            title: successTitle,
+            message: successMsg
+          }
+        });
+      }
     } catch (err: any) {
       const errorDetail = err.response?.data?.message || err.response?.data || 'Failed to submit request. Please check your inputs and captcha.';
       const finalError = typeof errorDetail === 'string' ? (errorDetail || 'Unknown error occurred.') : JSON.stringify(errorDetail);
@@ -261,12 +272,20 @@ const OnboardingPage = () => {
   };
 
   const buildCategorySelectOptions = (excluded?: string) => {
-    return buildCategoryOptions(excluded).map((value) => ({ value, label: value }));
+    return buildCategoryOptions(excluded).map((value) => ({
+      value,
+      label: value === CREATE_NEW_CATEGORY ? ADD_NEW_CATEGORY_LABEL : value
+    }));
   };
 
   const isCustomCategory = (value: string, excluded?: string) => {
     if (!value) return false;
     return !buildCategoryOptions(excluded).includes(value.toUpperCase());
+  };
+
+  const isCreateMode = (index: number, field: 'categoryA' | 'categoryB', value: string, excluded?: string) => {
+    const key = getCustomConflictKey(index, field);
+    return Object.prototype.hasOwnProperty.call(customConflictInputs, key) || isCustomCategory(value, excluded);
   };
 
 
@@ -286,12 +305,6 @@ const OnboardingPage = () => {
     const newRules = [...formData.categoryConflictRules];
     const normalized = value.toUpperCase().trim().replace(/\s+/g, '_');
     newRules[index] = { ...newRules[index], [field]: normalized };
-
-    // Keep rule coherent: if one side changes to same value as the other, clear the other side.
-    const otherField = field === 'categoryA' ? 'categoryB' : 'categoryA';
-    if (normalized && newRules[index][otherField] === normalized) {
-      newRules[index][otherField] = '';
-    }
 
     setFormData({ ...formData, categoryConflictRules: newRules });
   };
@@ -589,15 +602,17 @@ const OnboardingPage = () => {
                         <PlexusSelect
                           placeholder="Category A"
                           options={buildCategorySelectOptions(rule.categoryB)}
-                          value={isCustomCategory(rule.categoryA, rule.categoryB)
-                            ? { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }
+                          value={isCreateMode(idx, 'categoryA', rule.categoryA, rule.categoryB)
+                            ? { value: CREATE_NEW_CATEGORY, label: ADD_NEW_CATEGORY_LABEL }
                             : (rule.categoryA ? { value: rule.categoryA, label: rule.categoryA } : null)}
+                          menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+                          menuPosition="fixed"
                           onChange={(opt) => {
                             onConflictCategorySelect(idx, 'categoryA', opt);
                             if (fieldErrors[`conflictRule_${idx}`]) setFieldErrors({ ...fieldErrors, [`conflictRule_${idx}`]: '' });
                           }}
                         />
-                        {isCustomCategory(rule.categoryA, rule.categoryB) && (
+                        {isCreateMode(idx, 'categoryA', rule.categoryA, rule.categoryB) && (
                           <input
                             type="text"
                             placeholder="New category code"
@@ -615,15 +630,17 @@ const OnboardingPage = () => {
                         <PlexusSelect
                           placeholder="Category B"
                           options={buildCategorySelectOptions(rule.categoryA)}
-                          value={isCustomCategory(rule.categoryB, rule.categoryA)
-                            ? { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }
+                          value={isCreateMode(idx, 'categoryB', rule.categoryB, rule.categoryA)
+                            ? { value: CREATE_NEW_CATEGORY, label: ADD_NEW_CATEGORY_LABEL }
                             : (rule.categoryB ? { value: rule.categoryB, label: rule.categoryB } : null)}
+                          menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+                          menuPosition="fixed"
                           onChange={(opt) => {
                             onConflictCategorySelect(idx, 'categoryB', opt);
                             if (fieldErrors[`conflictRule_${idx}`]) setFieldErrors({ ...fieldErrors, [`conflictRule_${idx}`]: '' });
                           }}
                         />
-                        {isCustomCategory(rule.categoryB, rule.categoryA) && (
+                        {isCreateMode(idx, 'categoryB', rule.categoryB, rule.categoryA) && (
                           <input
                             type="text"
                             placeholder="New category code"
@@ -716,7 +733,7 @@ const OnboardingPage = () => {
           description={isMyBank ? `Manage your institution's global configuration.` : isEditing ? `Updating configuration for ${formData.name || id}` : 'Fill out the form below to register a new bank in the system.'}
           onClose={() => navigate('/banks')}
         />
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 p-8">
+        <div className="bg-white rounded-xl shadow-sm overflow-visible border border-gray-100 p-8">
           {renderForm()}
         </div>
       </AdminPage>

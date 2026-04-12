@@ -36,9 +36,11 @@ import static com.bankengine.common.util.CodeGeneratorUtil.generateValidCode;
 public class TestDataSeeder implements CommandLineRunner {
 
     private static final String BANK_A = "GLOBAL-BANK-001";
+    private static final String BANK_A_NAME = "Global Bank";
     private static final String ISSUER_A = "https://dev-identity.bankengine.com/GLOBAL-BANK-001";
 
     private static final String BANK_B = "LOCAL-BANK-002";
+    private static final String BANK_B_NAME = "Local Bank";
     private static final String ISSUER_B = "https://dev-identity.bankengine.com/LOCAL-BANK-002";
 
     private final ProductTypeRepository productTypeRepository;
@@ -52,6 +54,7 @@ public class TestDataSeeder implements CommandLineRunner {
     private final TierConditionRepository tierConditionRepository;
     private final RoleRepository roleRepository;
     private final BankConfigurationRepository bankConfigurationRepository;
+    private final ProductCategoryRepository productCategoryRepository;
     private final ProductBundleRepository productBundleRepository;
     private final ApplicationContext applicationContext;
     private final CoreMetadataSeeder coreMetadataSeeder;
@@ -69,6 +72,7 @@ public class TestDataSeeder implements CommandLineRunner {
             TierConditionRepository tierConditionRepository,
             RoleRepository roleRepository,
             BankConfigurationRepository bankConfigurationRepository,
+            ProductCategoryRepository productCategoryRepository,
             ProductBundleRepository productBundleRepository,
             ApplicationContext applicationContext, CoreMetadataSeeder coreMetadataSeeder,
             AuthorityDiscoveryService authorityDiscoveryService) {
@@ -83,6 +87,7 @@ public class TestDataSeeder implements CommandLineRunner {
         this.tierConditionRepository = tierConditionRepository;
         this.roleRepository = roleRepository;
         this.bankConfigurationRepository = bankConfigurationRepository;
+        this.productCategoryRepository = productCategoryRepository;
         this.productBundleRepository = productBundleRepository;
         this.applicationContext = applicationContext;
         this.coreMetadataSeeder = coreMetadataSeeder;
@@ -95,19 +100,20 @@ public class TestDataSeeder implements CommandLineRunner {
         TestDataSeeder proxy = applicationContext.getBean(TestDataSeeder.class);
 
         // Define a mapping to pass the correct issuer to the seeder
-        proxy.seedBank(BANK_A, ISSUER_A);
-        proxy.seedBank(BANK_B, ISSUER_B);
+        proxy.seedBank(BANK_A, BANK_A_NAME, ISSUER_A);
+        proxy.seedBank(BANK_B, BANK_B_NAME, ISSUER_B);
 
         System.out.println("\n--- Seeding Complete ---");
     }
 
     @Transactional
-    public void seedBank(String bankId, String issuerUrl) {
+    public void seedBank(String bankId, String bankName, String issuerUrl) {
         TenantContextHolder.setSystemMode(true);
         TenantContextHolder.setBankId(bankId);
         System.out.println("\n--- Seeding Tenant: " + bankId + " ---");
 
-        seedBankConfiguration(bankId, issuerUrl);
+        seedProductCategories(bankId);
+        seedBankConfiguration(bankId, bankName, issuerUrl);
         seedTestRoles(bankId);
         seedPricingInputMetadata(bankId);
         seedProductTypes(bankId);
@@ -119,24 +125,46 @@ public class TestDataSeeder implements CommandLineRunner {
     }
 
     @Transactional
-    public void seedBankConfiguration(String bankId, String issuerUrl) {
-        if (bankConfigurationRepository.findByBankIdUnfiltered(bankId).isEmpty()) {
-            BankConfiguration config = new BankConfiguration();
-            config.setBankId(bankId);
-            config.setIssuerUrl(issuerUrl);
-            config.setClientId("dev-client-id-" + bankId);
-            config.setAllowProductInMultipleBundles(bankId.equals(BANK_A));
-            config.setStatus(BankStatus.ACTIVE);
-            config.setAdminName("Dev Admin " + bankId);
-            config.setAdminEmail("admin@" + bankId.toLowerCase() + ".com");
+    public void seedBankConfiguration(String bankId, String bankName, String issuerUrl) {
+        BankConfiguration config = bankConfigurationRepository.findByBankIdUnfiltered(bankId)
+                .orElseGet(BankConfiguration::new);
 
-            List<CategoryConflictRule> rules = new ArrayList<>();
-            rules.add(new CategoryConflictRule("RETAIL", "WEALTH"));
-            config.setCategoryConflictRules(rules);
+        config.setBankId(bankId);
+        config.setName(bankName);
+        config.setIssuerUrl(issuerUrl);
+        config.setClientId("dev-client-id-" + bankId);
+        config.setCurrencyCode("USD");
+        config.setAllowProductInMultipleBundles(bankId.equals(BANK_A));
+        config.setStatus(BankStatus.ACTIVE);
+        config.setAdminName("Dev Admin " + bankId);
+        config.setAdminEmail("admin@" + bankId.toLowerCase() + ".com");
 
-            bankConfigurationRepository.save(config);
-            System.out.println("Seeded Bank Configuration for " + bankId + " with Issuer: " + issuerUrl);
-        }
+        List<CategoryConflictRule> rules = new ArrayList<>();
+        rules.add(new CategoryConflictRule("RETAIL", "WEALTH"));
+        config.setCategoryConflictRules(rules);
+
+        bankConfigurationRepository.save(config);
+        System.out.println("Seeded Bank Configuration for " + bankId + " with Issuer: " + issuerUrl);
+    }
+
+    @Transactional
+    public void seedProductCategories(String bankId) {
+        upsertCategory(bankId, "RETAIL", "Retail");
+        upsertCategory(bankId, "WEALTH", "Wealth");
+    }
+
+    private void upsertCategory(String bankId, String code, String name) {
+        productCategoryRepository.findByBankIdAndCode(bankId, code)
+                .ifPresentOrElse(existing -> {
+                    existing.setName(name);
+                    productCategoryRepository.save(existing);
+                }, () -> {
+                    ProductCategory category = new ProductCategory();
+                    category.setBankId(bankId);
+                    category.setCode(code);
+                    category.setName(name);
+                    productCategoryRepository.save(category);
+                });
     }
 
     @Transactional

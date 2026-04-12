@@ -5,10 +5,7 @@ import com.bankengine.common.model.AuditableEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 /**
@@ -48,6 +45,7 @@ public class PricingInputMetadata extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "source_type", nullable = false, length = 30)
+    @Builder.Default
     private AttributeSourceType sourceType = AttributeSourceType.CUSTOM_ATTRIBUTE;
 
     @Column(name = "source_field", nullable = false)

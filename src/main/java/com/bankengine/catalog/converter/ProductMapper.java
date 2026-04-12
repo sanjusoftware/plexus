@@ -33,6 +33,7 @@ public interface ProductMapper {
     @Mapping(target = "name", source = "dto.name")
     @Mapping(target = "code", source = "dto.code")
     @Mapping(target = "productType", source = "productType")
+    @Mapping(target = "categoryMaster", ignore = true)
     @Mapping(target = "productFeatureLinks", ignore = true)
     @Mapping(target = "productPricingLinks", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)
@@ -41,6 +42,7 @@ public interface ProductMapper {
     @ToVersionableEntity
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "productType", ignore = true)
+    @Mapping(target = "categoryMaster", ignore = true)
     @Mapping(target = "productFeatureLinks", ignore = true)
     @Mapping(target = "productPricingLinks", ignore = true)
     @Mapping(target = "bundleLinks", ignore = true)
