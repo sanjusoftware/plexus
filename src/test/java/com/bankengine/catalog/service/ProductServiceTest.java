@@ -524,6 +524,22 @@ public class ProductServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Sync Features: Should reject duplicate codes")
+    void testSyncFeatures_duplicateCodes() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        FeatureComponent comp = FeatureComponent.builder().code("F1").dataType(FeatureComponent.DataType.STRING).status(VersionableEntity.EntityStatus.DRAFT).build();
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+        ProductFeatureDto f1 = ProductFeatureDto.builder().featureComponentCode("F1").featureValue("V1").build();
+        ProductFeatureDto f2 = ProductFeatureDto.builder().featureComponentCode("F1").featureValue("V2").build();
+
+        ProductRequest req = ProductRequest.builder().features(List.of(f1, f2)).build();
+
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, req));
+    }
+
+    @Test
     @DisplayName("Sync Features: Should update value if changed")
     void testSyncFeatures_smartUpdate() {
         Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
