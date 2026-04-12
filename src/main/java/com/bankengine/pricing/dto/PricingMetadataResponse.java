@@ -30,4 +30,6 @@ public class PricingMetadataResponse {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private boolean system;
 }

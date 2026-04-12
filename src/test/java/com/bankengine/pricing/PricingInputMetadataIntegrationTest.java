@@ -1,7 +1,7 @@
 package com.bankengine.pricing;
 
 import com.bankengine.pricing.dto.PricingMetadataRequest;
-import com.bankengine.pricing.model.PricingInputMetadata;
+import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.test.config.AbstractIntegrationTest;
@@ -17,6 +17,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
 
     private static final String API_PATH = "/api/v1/pricing-metadata";
-    private static final int SEEDED_METADATA_COUNT = 2; // customerSegment, transactionAmount
+    private static final int SEEDED_METADATA_COUNT = 2; // CUSTOMER_SEGMENT, TRANSACTION_AMOUNT
 
     private static final String ROLE_PREFIX = "PIMT_";
     private static final String ADMIN_ROLE = ROLE_PREFIX + "TEST_ADMIN";
@@ -99,7 +101,9 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(get(API_PATH))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(expectedCount));
+                .andExpect(jsonPath("$.length()").value(expectedCount))
+                .andExpect(jsonPath("$[?(@.attributeKey == 'CUSTOMER_SEGMENT')].system").value(true))
+                .andExpect(jsonPath("$[?(@.attributeKey == 'Segment')].system").value(false));
     }
 
     @Test
@@ -212,6 +216,21 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
+    void shouldReturn422WhenUpdatingSystemMetadata() throws Exception {
+        PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
+                .attributeKey("CUSTOMER_SEGMENT")
+                .displayName("Illegal Update")
+                .dataType("STRING").build();
+
+        mockMvc.perform(putWithCsrf(API_PATH + "/CUSTOMER_SEGMENT")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Cannot update protected system pricing attribute: CUSTOMER_SEGMENT"));
+    }
+
+    @Test
+    @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn404OnUpdateIfNotFound() throws Exception {
         PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
                 .attributeKey("NewAttribute")
@@ -241,15 +260,43 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn409WhenDeletingMetadataWithDependencies() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ComponentForConflict", "TierForConflict"));
+        // Create a custom metadata to test dependency conflict
+        createTestMetadata("CustomWithDep");
+        Long componentId = txHelper.doInTransaction(() -> {
+            PricingComponent component = txHelper.createPricingComponentInDb("ComponentForConflict");
+            PricingTier tier = new PricingTier();
+            tier.setPricingComponent(component);
+            tier.setName("TierForConflict");
+            tier.setCode("TFC");
+            tier.setMinThreshold(BigDecimal.ZERO);
+            tier.setApplyChargeOnFullBreach(false);
 
-        mockMvc.perform(deleteWithCsrf(API_PATH + "/customerSegment"))
+            TierCondition condition = new TierCondition();
+            condition.setPricingTier(tier);
+            condition.setAttributeName("CustomWithDep");
+            condition.setOperator(TierCondition.Operator.EQ);
+            condition.setAttributeValue("VAL");
+            tier.setConditions(new HashSet<>(Set.of(condition)));
+            entityManager.persist(tier);
+            entityManager.flush();
+            return component.getId();
+        });
+
+        mockMvc.perform(deleteWithCsrf(API_PATH + "/CustomWithDep"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Cannot delete Pricing Input Metadata 'customerSegment': It is used in one or more active tier conditions."));
+                .andExpect(jsonPath("$.message").value("Cannot delete Pricing Input Metadata 'CustomWithDep': It is used in one or more active tier conditions."));
 
         txHelper.doInTransaction(() -> {
             txHelper.deleteComponentGraphById(componentId);
         });
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldReturn422WhenDeletingSystemMetadata() throws Exception {
+        mockMvc.perform(deleteWithCsrf(API_PATH + "/CUSTOMER_SEGMENT"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Cannot delete protected system pricing attribute: CUSTOMER_SEGMENT"));
     }
 
     // --- SECURITY TESTS ---

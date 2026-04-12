@@ -8,6 +8,7 @@ import PlexusSelect from '../../components/PlexusSelect';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { HIDDEN_SYSTEM_KEYS } from '../../utils/pricingMetadata';
 
 const PricingComponentFormPage = () => {
   const { user, setToast } = useAuth();
@@ -685,7 +686,9 @@ const PricingComponentFormPage = () => {
                             <div className="col-span-5">
                               <PlexusSelect
                                 placeholder="Attribute..."
-                                options={metadata.map(m => ({ value: m.attributeKey, label: m.displayName }))}
+                                options={metadata
+                                  .filter(m => !HIDDEN_SYSTEM_KEYS.includes(m.attributeKey))
+                                  .map(m => ({ value: m.attributeKey, label: m.displayName }))}
                                 value={metadata.find(m => m.attributeKey === cond.attributeName) ? { value: cond.attributeName, label: metadata.find(m => m.attributeKey === cond.attributeName).displayName } : null}
                                 onChange={(opt) => {
                                   handleConditionChange(idx, cidx, 'attributeName', opt ? opt.value : '');

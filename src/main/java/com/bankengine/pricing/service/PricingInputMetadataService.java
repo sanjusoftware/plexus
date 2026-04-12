@@ -125,6 +125,10 @@ public class PricingInputMetadataService extends BaseService {
         PricingInputMetadata entity = pricingInputMetadataRepository.findByBankIdAndAttributeKey(getCurrentBankId(), attributeKey)
                 .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE + attributeKey));
 
+        if (PricingAttributeKeys.SYSTEM_KEYS.contains(entity.getAttributeKey())) {
+            throw new ValidationException("Cannot update protected system pricing attribute: " + entity.getAttributeKey());
+        }
+
         dto.setAttributeKey(attributeKey);
         normalizeSourceConfiguration(dto);
         entity.setDisplayName(dto.getDisplayName());
