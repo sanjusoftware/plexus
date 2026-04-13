@@ -63,6 +63,7 @@ interface SimulationResult {
   price: number;
   loading: boolean;
   error?: string;
+  detailedError?: string;
   breakdown?: PriceComponentDetail[];
 }
 
@@ -406,9 +407,17 @@ const ProductManagementPage = () => {
         }
       }));
     } catch (err: any) {
+      const apiError = err.response?.data;
+      const isBusinessRuleViolation = apiError?.code === 'BUSINESS_RULE_VIOLATION';
+
       setCalculatedPrices(prev => ({
         ...prev,
-        [prod.id]: { price: 0, loading: false, error: 'Calc Failed' }
+        [prod.id]: {
+          price: 0,
+          loading: false,
+          error: 'Calc Failed',
+          detailedError: isBusinessRuleViolation ? apiError.message : undefined
+        }
       }));
       setToast({ message: err.response?.data?.message || 'Price calculation failed.', type: 'error' });
     }
@@ -752,7 +761,7 @@ const ProductManagementPage = () => {
                       </div>
 
                        {simulationOpenIds.has(prod.id) && (
-                         <div className="mt-4 pt-4 border-t border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                         <div className="mt-4 pt-4 border-t border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                            <div className="bg-white rounded-xl border border-gray-200 p-4">
                               <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Calculation Inputs</h5>
                               <div className="space-y-3">
@@ -791,8 +800,17 @@ const ProductManagementPage = () => {
                                  </div>
                                )}
                                {calculatedPrices[prod.id]?.error && (
-                                 <div className="text-[10px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">
-                                   ⚠️ Simulation Failed: {calculatedPrices[prod.id].error}
+                                 <div className="flex-1 flex items-center justify-center p-6">
+                                   <div className="text-center">
+                                     <div className="text-[11px] font-black text-red-600 uppercase tracking-tight flex items-center justify-center gap-1.5">
+                                       <span>⚠️ Simulation Failed: {calculatedPrices[prod.id].error}</span>
+                                     </div>
+                                     {calculatedPrices[prod.id]?.detailedError && (
+                                       <div className="mt-2 text-[10px] font-bold text-gray-500 max-w-[300px] mx-auto leading-relaxed">
+                                         {calculatedPrices[prod.id].detailedError}
+                                       </div>
+                                     )}
+                                   </div>
                                  </div>
                                )}
                                {!calculatedPrices[prod.id] && (
