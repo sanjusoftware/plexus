@@ -7,6 +7,7 @@ import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAuth } from '../../context/AuthContext';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { useHasPermission } from '../../hooks/useHasPermission';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import LivePricePreview from '../../components/LivePricePreview';
 import PriceSimulationTool from '../../components/PriceSimulationTool';
@@ -24,14 +25,58 @@ interface ProductType {
   name: string;
 }
 
+interface ProductCategoryOption {
+  code: string;
+  name: string;
+}
+
+interface SelectOptionWithCode {
+  value: string;
+  label: string;
+  displayName?: string;
+  code?: string;
+}
+
 const CATEGORY_EXAMPLES = ['RETAIL', 'WEALTH', 'CORPORATE', 'INVESTMENT', 'ISLAMIC', 'SME'];
 const CREATE_NEW_CATEGORY = 'CREATE_NEW';
+
+const sanitizeCode = (value: string) => value.toUpperCase().trim().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+
+const humanizeCode = (code: string) => code
+  .split('_')
+  .filter(Boolean)
+  .map(part => part.charAt(0) + part.slice(1).toLowerCase())
+  .join(' ');
+
+const mergeCategoryOptions = (
+  masterRows: any[],
+  bankCodes: string[],
+  currentCategory?: string
+): ProductCategoryOption[] => {
+  const merged = new Map<string, ProductCategoryOption>();
+
+  masterRows.forEach((row: any) => {
+    const code = sanitizeCode(`${row?.code || ''}`);
+    if (!code) return;
+    const name = `${row?.name || ''}`.trim() || humanizeCode(code);
+    merged.set(code, { code, name });
+  });
+
+  [...bankCodes, currentCategory || ''].forEach((rawCode) => {
+    const code = sanitizeCode(`${rawCode || ''}`);
+    if (!code || merged.has(code)) return;
+    merged.set(code, { code, name: humanizeCode(code) || code });
+  });
+
+  return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
+};
 
 const ProductFormPage = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { setEntityName } = useBreadcrumb();
   const { user, setToast } = useAuth();
+  const { hasPermission } = useHasPermission();
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(true);
@@ -40,9 +85,12 @@ const ProductFormPage = () => {
   const [featureComponents, setFeatureComponents] = useState<FeatureComponent[]>([]);
   const [pricingComponents, setPricingComponents] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<ProductCategoryOption[]>([]);
   const [categoryExamples, setCategoryExamples] = useState<string[]>(CATEGORY_EXAMPLES);
-  const [customCategoryInput, setCustomCategoryInput] = useState('');
+  const [showCreateCategoryForm, setShowCreateCategoryForm] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [newCategoryDraft, setNewCategoryDraft] = useState({ name: '', code: '' });
+  const [isNewCategoryCodeEdited, setIsNewCategoryCodeEdited] = useState(false);
   const [isCodeEdited, setIsCodeEdited] = useState(false);
   const [showPriceSimulation, setShowPriceSimulation] = useState(false);
   const [showPricingHelp, setShowPricingHelp] = useState(false);
@@ -60,6 +108,8 @@ const ProductFormPage = () => {
 
   const signal = useAbortSignal();
   const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(formData);
+  const canCreateCategory = hasPermission({ action: 'POST', path: '/api/v1/product-categories' });
+
 
   const getDefaultValueForType = (type: string) => {
     switch (type) {
@@ -91,9 +141,6 @@ const ProductFormPage = () => {
         setProductTypes(pt.data || []);
 
         const masterCategoryRows: any[] = Array.isArray(categoryMasterRes?.data) ? (categoryMasterRes?.data as any[]) : [];
-        const activeMasterCategories = masterCategoryRows
-          .map((c: any) => `${c.code || ''}`.toUpperCase().trim())
-          .filter((c: string) => !!c);
         const categoriesFromBank = Array.isArray(categoryRes?.data?.categories)
           ? categoryRes?.data?.categories
           : [];
@@ -101,7 +148,7 @@ const ProductFormPage = () => {
           ? categoryRes?.data?.examples
           : CATEGORY_EXAMPLES;
 
-        setCategoryOptions(activeMasterCategories.length > 0 ? activeMasterCategories : categoriesFromBank);
+        setCategoryOptions(mergeCategoryOptions(masterCategoryRows, categoriesFromBank, p.data?.category));
         setCategoryExamples(examplesFromBank);
 
         if (isEditing && p.data) {
@@ -123,7 +170,6 @@ const ProductFormPage = () => {
             pricing: prod.pricing || []
           };
           setFormData(loadedFormData);
-          setCustomCategoryInput(prod.category || '');
           resetDirtyBaseline(loadedFormData);
           setIsCodeEdited(true);
         }
@@ -209,6 +255,38 @@ const ProductFormPage = () => {
     }
   };
 
+  const handleCreateCategory = async () => {
+    const payload = {
+      code: sanitizeCode(newCategoryDraft.code),
+      name: newCategoryDraft.name.trim()
+    };
+
+    if (!payload.code || !payload.name) {
+      setToast({ message: 'Category code and name are required.', type: 'error' });
+      return;
+    }
+
+    setCreatingCategory(true);
+    try {
+      const response = await axios.post('/api/v1/product-categories', payload);
+      const created = response.data || payload;
+      const createdCode = sanitizeCode(`${created.code || payload.code}`);
+      const createdName = `${created.name || payload.name}`.trim() || humanizeCode(createdCode);
+
+      setCategoryOptions((prev) => mergeCategoryOptions([...prev, { code: createdCode, name: createdName }], [], formData.category));
+      setFormData((prev: any) => ({ ...prev, category: createdCode }));
+      setShowCreateCategoryForm(false);
+      setNewCategoryDraft({ name: '', code: '' });
+      setIsNewCategoryCodeEdited(false);
+      clearViolation('category');
+      setToast({ message: 'Product category created successfully.', type: 'success' });
+    } catch (err: any) {
+      setToast({ message: err.response?.data?.message || 'Failed to create product category.', type: 'error' });
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center p-20">
@@ -229,31 +307,34 @@ const ProductFormPage = () => {
 
   const formatNameWithCode = (name: string, code: string) => `${name} (${code})`;
 
-  const formatOptionWithCode = (option: { label: string }) => {
-    const match = option.label.match(/^(.*)\s\(([^()]+)\)$/);
-    if (!match) {
+  const buildCodeDisplayOption = (code: string, name?: string): SelectOptionWithCode => ({
+    value: code,
+    label: formatNameWithCode(name || humanizeCode(code) || code, code),
+    displayName: name || humanizeCode(code) || code,
+    code
+  });
+
+  const formatOptionWithCode = (option: SelectOptionWithCode) => {
+    if (!option.code || !option.displayName) {
       return <span>{option.label}</span>;
     }
 
-    const [, name, code] = match;
     return (
       <span className="inline-flex items-baseline gap-1">
-        <span>{name}</span>
-        <span className="font-normal text-[10px] tracking-normal opacity-80">({code})</span>
+        <span>{option.displayName}</span>
+        <span className="font-normal text-[10px] tracking-normal text-gray-400">({option.code})</span>
       </span>
     );
   };
 
-  const categorySelectOptions = categoryOptions.map((category) => ({
-    value: category,
-    label: category
-  }));
-
-  const showCustomCategoryInput = !!formData.category && !categoryOptions.includes(formData.category);
-  const categoryDropdownOptions = [
-    ...categorySelectOptions,
-    { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }
-  ];
+  const categorySelectOptions = categoryOptions.map((category) => buildCodeDisplayOption(category.code, category.name));
+  const selectedCategory = categoryOptions.find((category) => category.code === formData.category);
+  const selectedCategoryOption = selectedCategory
+    ? buildCodeDisplayOption(selectedCategory.code, selectedCategory.name)
+    : (formData.category ? buildCodeDisplayOption(formData.category) : null);
+  const categoryDropdownOptions: SelectOptionWithCode[] = canCreateCategory
+    ? [...categorySelectOptions, { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }]
+    : categorySelectOptions;
 
   return (
     <AdminPage>
@@ -326,48 +407,97 @@ const ProductFormPage = () => {
                 required
                 placeholder={categorySelectOptions.length > 0 ? 'Select Existing Category...' : 'Create your first category...'}
                 options={categoryDropdownOptions}
-                value={showCustomCategoryInput
-                  ? { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }
-                  : (categorySelectOptions.find((opt) => opt.value === formData.category) || null)}
+                value={selectedCategoryOption}
+                formatOptionLabel={formatOptionWithCode}
                 onChange={(opt) => {
                   if (!opt) {
                     setFormData({ ...formData, category: '' });
-                    setCustomCategoryInput('');
+                    setShowCreateCategoryForm(false);
+                    setNewCategoryDraft({ name: '', code: '' });
+                    setIsNewCategoryCodeEdited(false);
                     clearViolation('category');
                     return;
                   }
 
                   if (opt.value === CREATE_NEW_CATEGORY) {
-                    const seedValue = showCustomCategoryInput ? customCategoryInput : '';
-                    setCustomCategoryInput(seedValue);
-                    setFormData({ ...formData, category: seedValue.toUpperCase().trim().replace(/\s+/g, '_') });
+                    setShowCreateCategoryForm(true);
                     clearViolation('category');
                     return;
                   }
 
                   setFormData({...formData, category: opt.value});
-                  setCustomCategoryInput('');
+                  setShowCreateCategoryForm(false);
+                  setNewCategoryDraft({ name: '', code: '' });
+                  setIsNewCategoryCodeEdited(false);
                   clearViolation('category');
                 }}
               />
-              {showCustomCategoryInput && (
-                <input
-                  type="text"
-                  className="mt-2 w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 text-sm transition focus:border-blue-500 shadow-sm"
-                  placeholder={`Define a new category (examples: ${categoryExamples.slice(0, 3).join(', ')})`}
-                  value={customCategoryInput}
-                  onChange={(e) => {
-                    const rawValue = e.target.value.toUpperCase().replace(/\s+/g, '_');
-                    setCustomCategoryInput(rawValue);
-                    setFormData({ ...formData, category: rawValue.trim() });
-                    clearViolation('category');
-                  }}
-                />
+              {showCreateCategoryForm && canCreateCategory && (
+                <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">New Category Name</label>
+                      <input
+                        type="text"
+                        className="w-full border border-white rounded-xl p-3 font-bold text-gray-900 text-sm transition focus:border-blue-500 shadow-sm"
+                        placeholder="e.g. Affluent Salaried"
+                        value={newCategoryDraft.name}
+                        onChange={(e) => {
+                          const nextName = e.target.value;
+                          const nextCode = sanitizeCode(nextName);
+                          setNewCategoryDraft((prev) => ({
+                            name: nextName,
+                            code: isNewCategoryCodeEdited ? prev.code : nextCode
+                          }));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Internal Code</label>
+                      <input
+                        type="text"
+                        className="w-full border border-white rounded-xl p-3 font-mono font-bold text-gray-900 text-sm transition focus:border-blue-500 shadow-sm"
+                        placeholder="AFFLUENT_SALARIED"
+                        value={newCategoryDraft.code}
+                        onChange={(e) => {
+                          setIsNewCategoryCodeEdited(true);
+                          setNewCategoryDraft((prev) => ({ ...prev, code: sanitizeCode(e.target.value) }));
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCreateCategory}
+                      disabled={creatingCategory}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {creatingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      Create Category
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateCategoryForm(false);
+                        setNewCategoryDraft({ name: '', code: '' });
+                        setIsNewCategoryCodeEdited(false);
+                      }}
+                      className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-white transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
               <p className="mt-1 text-[10px] text-gray-500 font-medium">
                 {categorySelectOptions.length > 0
-                  ? 'Master category list is preferred. Use "Create New Category" if needed.'
-                  : `No master categories found yet. Starter examples: ${categoryExamples.join(', ')}.`}
+                  ? (canCreateCategory
+                    ? 'Master category list is preferred. Use "Create New Category" if needed.'
+                    : 'Select from the existing category master list.')
+                  : (canCreateCategory
+                    ? `No master categories found yet. You can create one inline. Starter examples: ${categoryExamples.join(', ')}.`
+                    : `No master categories found yet. Starter examples: ${categoryExamples.join(', ')}.`)}
               </p>
               {renderViolations('category')}
             </div>
@@ -726,17 +856,27 @@ const ProductFormPage = () => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Target Component Code</label>
-                      <PlexusSelect
-                        placeholder="Select Target (Optional)..."
-                        options={pricingComponents.filter(pc => pc.code !== link.pricingComponentCode).map(pc => ({ value: pc.code, label: pc.code }))}
-                        value={link.targetComponentCode ? { value: link.targetComponentCode, label: link.targetComponentCode } : null}
-                        onChange={(opt) => {
-                          const newP = [...formData.pricing];
-                          newP[idx].targetComponentCode = opt ? opt.value : '';
-                          setFormData({...formData, pricing: newP});
-                          clearViolation(`pricing[${idx}].targetComponentCode`);
-                        }}
-                      />
+                      {(() => {
+                        const targetOptions = pricingComponents
+                          .filter(pc => pc.code !== link.pricingComponentCode)
+                          .map((pc: any) => buildCodeDisplayOption(pc.code, pc.name));
+                        const selectedTarget = pricingComponents.find((pc: any) => pc.code === link.targetComponentCode);
+
+                        return (
+                          <PlexusSelect
+                            placeholder="Select Target (Optional)..."
+                            options={targetOptions}
+                            value={selectedTarget ? buildCodeDisplayOption(selectedTarget.code, selectedTarget.name) : null}
+                            formatOptionLabel={formatOptionWithCode}
+                            onChange={(opt) => {
+                              const newP = [...formData.pricing];
+                              newP[idx].targetComponentCode = opt ? opt.value : '';
+                              setFormData({...formData, pricing: newP});
+                              clearViolation(`pricing[${idx}].targetComponentCode`);
+                            }}
+                          />
+                        );
+                      })()}
                       {renderViolations(`pricing[${idx}].targetComponentCode`)}
                     </div>
                   </div>
