@@ -694,7 +694,7 @@ const ProductFormPage = () => {
                   </div>
                 </div>
               ))}
-              {formData.features.length === 0 && <div className="py-8 text-center text-gray-400 bg-white border-2 border-dashed rounded-xl font-bold uppercase tracking-widest text-[10px]">No Feature Components Selected</div>}
+              {formData.features.length === 0 && <div className="py-8 text-center text-gray-400 bg-white border-2 border-dashed rounded-xl font-bold uppercase tracking-widest text-[10px]">No Product Features Selected</div>}
             </div>
           </div>
 

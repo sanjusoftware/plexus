@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Loader2, Package, ShieldCheck, Tag, Info, ChevronDown, ChevronUp, Play, RefreshCw, Zap } from 'lucide-react';
+import { Plus, Loader2, Package, Tag, Info, ChevronDown, ChevronUp, Play, RefreshCw, Zap, Puzzle } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import {
   AdminDataTable,
@@ -476,7 +476,7 @@ const ProductManagementPage = () => {
     <AdminPage>
       <AdminPageHeader
         icon={Package}
-        title="Product Management"
+        title="Product Catalog"
         description="Configure bank offerings, feature sets, and pricing bindings."
         actions={
           <HasPermission action="POST" path="/api/v1/products">
@@ -491,13 +491,13 @@ const ProductManagementPage = () => {
       />
 
       <AdminInfoBanner icon={Info} title="Fat DTO Architecture" tone="indigo">
-        <span className="italic">This system uses a decoupled model. Products are aggregates that link to reusable <strong>Feature Components</strong> and <strong>Pricing Components</strong>. You can create the product, its features, and its pricing links in one atomic request below.</span>
+        <span className="italic">This system uses a decoupled model. Products are aggregates that link to reusable <strong>Product Features</strong> and <strong>Pricing Components</strong>. You can create the product, its features, and its pricing links in one atomic request below.</span>
       </AdminInfoBanner>
 
       {loading ? (
         <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <AdminDataTable aria-label="Product management table" containerClassName="overflow-x-auto" className="min-w-[1200px]">
+        <AdminDataTable aria-label="Product catalog table" containerClassName="overflow-x-auto" className="min-w-[1200px]">
           <thead>
             <tr>
               <th>Product Details</th>
@@ -628,7 +628,7 @@ const ProductManagementPage = () => {
                         <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-blue-50/50 p-1.5 rounded-lg w-fit">
-                        <ShieldCheck className="w-3 h-3 mr-1.5 text-blue-500" /> Linked Feature components
+                          <Puzzle className="w-3 h-3 mr-1.5 text-blue-500" /> Linked Product Features
                       </h4>
                       <div className="space-y-2">
                         {prod.features?.map((f, idx) => (
@@ -640,7 +640,7 @@ const ProductManagementPage = () => {
                             <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg text-[10px]">{f.featureValue}</span>
                           </div>
                         ))}
-                        {(!prod.features || prod.features.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No feature components bound to this product.</p>}
+                        {(!prod.features || prod.features.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No product features bound to this product.</p>}
                       </div>
                     </div>
                     <div>
