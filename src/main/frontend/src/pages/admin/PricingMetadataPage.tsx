@@ -17,6 +17,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { HIDDEN_SYSTEM_KEYS } from '../../utils/pricingMetadata';
 
 interface PricingMetadata {
   id: number;
@@ -27,6 +28,7 @@ interface PricingMetadata {
   sourceField?: string;
   createdAt?: string;
   updatedAt?: string;
+  system: boolean;
 }
 
 const PricingMetadataPage = () => {
@@ -109,37 +111,74 @@ const PricingMetadataPage = () => {
               </tr>
             </thead>
             <tbody>
-              {metadata.length === 0 ? (
+              {metadata.filter(m => !HIDDEN_SYSTEM_KEYS.includes(m.attributeKey)).length === 0 ? (
                 <AdminDataTableEmptyRow colSpan={4}>No metadata registered. Rules engine will not recognize dynamic inputs.</AdminDataTableEmptyRow>
               ) : (
-                metadata.map((meta) => (
-                  <AdminDataTableRow key={meta.id}>
-                    <td className="whitespace-nowrap max-w-[250px]">
-                      <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={meta.displayName}>{meta.displayName}</div>
-                      <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={meta.attributeKey}>{meta.attributeKey}</div>
-                      <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400">
-                        <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-gray-500">{meta.sourceType === 'FACT_FIELD' ? 'Fact Field' : 'Custom Attribute'}</span>
-                        <span className="font-mono normal-case tracking-normal text-gray-400">→ {meta.sourceField || meta.attributeKey}</span>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap">
-                      <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
-                    </td>
-                     <AuditTimestampCell value={meta.updatedAt || meta.createdAt} />
-                    <AdminDataTableActionCell>
-                      <HasPermission action="PUT" path="/api/v1/pricing-metadata/*">
-                        <AdminDataTableActionButton onClick={() => navigate(`/pricing-metadata/edit/${meta.attributeKey}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${meta.displayName}`}>
-                          <AdminDataTableActionContent action="edit" />
-                        </AdminDataTableActionButton>
-                      </HasPermission>
-                      <HasPermission action="DELETE" path="/api/v1/pricing-metadata/*">
-                        <AdminDataTableActionButton onClick={() => setDeleteTarget(meta)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${meta.displayName}`}>
-                          <AdminDataTableActionContent action="delete" />
-                        </AdminDataTableActionButton>
-                      </HasPermission>
-                    </AdminDataTableActionCell>
-                  </AdminDataTableRow>
-                ))
+                <>
+                  {/* User Defined Group */}
+                  {metadata.filter(m => !m.system && !HIDDEN_SYSTEM_KEYS.includes(m.attributeKey)).map((meta) => (
+                    <AdminDataTableRow key={meta.id}>
+                      <td className="whitespace-nowrap max-w-[250px]">
+                        <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={meta.displayName}>{meta.displayName}</div>
+                        <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={meta.attributeKey}>{meta.attributeKey}</div>
+                        <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                          <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-gray-500">{meta.sourceType === 'FACT_FIELD' ? 'Fact Field' : 'Custom Attribute'}</span>
+                          <span className="font-mono normal-case tracking-normal text-gray-400">→ {meta.sourceField || meta.attributeKey}</span>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap">
+                        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
+                      </td>
+                       <AuditTimestampCell value={meta.updatedAt || meta.createdAt} />
+                      <AdminDataTableActionCell>
+                        <HasPermission action="PUT" path="/api/v1/pricing-metadata/*">
+                          <AdminDataTableActionButton onClick={() => navigate(`/pricing-metadata/edit/${meta.attributeKey}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${meta.displayName}`}>
+                            <AdminDataTableActionContent action="edit" />
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                        <HasPermission action="DELETE" path="/api/v1/pricing-metadata/*">
+                          <AdminDataTableActionButton onClick={() => setDeleteTarget(meta)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${meta.displayName}`}>
+                            <AdminDataTableActionContent action="delete" />
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                      </AdminDataTableActionCell>
+                    </AdminDataTableRow>
+                  ))}
+
+                  {/* Divider and System Provided Group Header */}
+                  {metadata.some(m => m.system && !HIDDEN_SYSTEM_KEYS.includes(m.attributeKey)) && (
+                    <tr className="bg-gray-50/50">
+                      <td colSpan={4} className="px-4 py-2 border-y border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <div className="h-px flex-1 bg-gray-100"></div>
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">System Provided Attributes</span>
+                          <div className="h-px flex-1 bg-gray-100"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* System Provided Group */}
+                  {metadata.filter(m => m.system && !HIDDEN_SYSTEM_KEYS.includes(m.attributeKey)).map((meta) => (
+                    <AdminDataTableRow key={meta.id} className="bg-blue-50/30">
+                      <td className="whitespace-nowrap max-w-[250px]">
+                        <div className="text-sm font-bold text-gray-900 leading-tight truncate" title={meta.displayName}>{meta.displayName}</div>
+                        <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={meta.attributeKey}>{meta.attributeKey}</div>
+                        <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                          <span className="rounded-full bg-blue-100/50 px-1.5 py-0.5 text-blue-600/70">System Mapping</span>
+                          <span className="font-mono normal-case tracking-normal text-gray-400">→ {meta.sourceField || meta.attributeKey}</span>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap">
+                        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase tracking-tight">{meta.dataType}</span>
+                      </td>
+                       <AuditTimestampCell value={meta.updatedAt || meta.createdAt} />
+                      <AdminDataTableActionCell>
+                        {/* Actions hidden for system attributes */}
+                      </AdminDataTableActionCell>
+                    </AdminDataTableRow>
+                  ))}
+                </>
               )}
             </tbody>
         </AdminDataTable>

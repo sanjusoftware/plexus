@@ -8,6 +8,7 @@ import PlexusSelect from '../../components/PlexusSelect';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { HIDDEN_SYSTEM_KEYS } from '../../utils/pricingMetadata';
 
 const PricingComponentFormPage = () => {
   const { user, setToast } = useAuth();
@@ -720,6 +721,7 @@ const PricingComponentFormPage = () => {
                                 placeholder="Attribute..."
                                 compact
                                 options={metadata
+                                  .filter(m => !HIDDEN_SYSTEM_KEYS.includes(m.attributeKey))
                                   .slice()
                                   .sort((a, b) => (a.displayName || a.attributeKey).localeCompare(b.displayName || b.attributeKey))
                                   .map(formatAttributeOption)}

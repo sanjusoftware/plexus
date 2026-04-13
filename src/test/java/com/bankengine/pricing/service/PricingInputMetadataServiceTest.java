@@ -38,19 +38,21 @@ class PricingInputMetadataServiceTest extends BaseServiceTest {
     @Test
     void getMetadataEntityByKey_ShouldReturnEntity_WhenExists() {
         String key = "amount";
+        String bankId = "BANK1";
         PricingInputMetadata entity = new PricingInputMetadata();
-        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, key)).thenReturn(Optional.of(entity));
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(bankId, key)).thenReturn(Optional.of(entity));
 
-        PricingInputMetadata result = metadataService.getMetadataEntityByKey(key);
+        PricingInputMetadata result = metadataService.getMetadataEntityByKey(key, bankId);
 
         assertThat(result).isEqualTo(entity);
     }
 
     @Test
     void getMetadataEntityByKey_ShouldThrowIllegalArgument_WhenMissing() {
-        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, "invalid")).thenReturn(Optional.empty());
+        String bankId = "BANK1";
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(bankId, "invalid")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> metadataService.getMetadataEntityByKey("invalid"))
+        assertThatThrownBy(() -> metadataService.getMetadataEntityByKey("invalid", bankId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Not found in PricingInputMetadata registry");
     }
@@ -129,11 +131,11 @@ class PricingInputMetadataServiceTest extends BaseServiceTest {
         dto.setSourceType("FACT_FIELD");
         dto.setSourceField("customerSegment");
         PricingInputMetadata existing = new PricingInputMetadata();
-        PricingInputMetadata saved = new PricingInputMetadata();
+        existing.setAttributeKey(key);
 
         when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, key)).thenReturn(Optional.of(existing));
-        when(pricingInputMetadataRepository.save(existing)).thenReturn(saved);
-        when(mapper.toResponse(saved)).thenReturn(null);
+        when(pricingInputMetadataRepository.save(existing)).thenReturn(existing);
+        when(mapper.toResponse(existing)).thenReturn(null);
 
         metadataService.updateMetadata(key, dto);
 

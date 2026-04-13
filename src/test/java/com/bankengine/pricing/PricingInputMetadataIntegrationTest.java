@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
 
     private static final String API_PATH = "/api/v1/pricing-metadata";
-    private static final int SEEDED_METADATA_COUNT = 2; // customerSegment, transactionAmount
+    private static final int SEEDED_METADATA_COUNT = 2; // CUSTOMER_SEGMENT, TRANSACTION_AMOUNT
 
     private static final String ROLE_PREFIX = "PIMT_";
     private static final String ADMIN_ROLE = ROLE_PREFIX + "TEST_ADMIN";
@@ -103,7 +103,9 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(get(API_PATH))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(expectedCount));
+                .andExpect(jsonPath("$.length()").value(expectedCount))
+                .andExpect(jsonPath("$[?(@.attributeKey == 'CUSTOMER_SEGMENT')].system").value(true))
+                .andExpect(jsonPath("$[?(@.attributeKey == 'Segment')].system").value(false));
     }
 
     @Test
@@ -216,6 +218,21 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {CREATOR_ROLE})
+    void shouldReturn422WhenUpdatingSystemMetadata() throws Exception {
+        PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
+                .attributeKey("CUSTOMER_SEGMENT")
+                .displayName("Illegal Update")
+                .dataType("STRING").build();
+
+        mockMvc.perform(putWithCsrf(API_PATH + "/CUSTOMER_SEGMENT")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Cannot update protected system pricing attribute: CUSTOMER_SEGMENT"));
+    }
+
+    @Test
+    @WithMockRole(roles = {CREATOR_ROLE})
     void shouldReturn404OnUpdateIfNotFound() throws Exception {
         PricingMetadataRequest requestDto = PricingMetadataRequest.builder()
                 .attributeKey("NewAttribute")
@@ -291,6 +308,14 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
         txHelper.doInTransaction(() -> {
             txHelper.deleteComponentGraphById(componentId);
         });
+    }
+
+    @Test
+    @WithMockRole(roles = {ADMIN_ROLE})
+    void shouldReturn422WhenDeletingSystemMetadata() throws Exception {
+        mockMvc.perform(deleteWithCsrf(API_PATH + "/CUSTOMER_SEGMENT"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Cannot delete protected system pricing attribute: CUSTOMER_SEGMENT"));
     }
 
     // --- SECURITY TESTS ---
