@@ -65,5 +65,42 @@ class ProductCategoryServiceTest extends BaseServiceTest {
         assertEquals(2, categories.size());
         assertEquals("CORPORATE", categories.get(0).getCode());
     }
+
+    @Test
+    @DisplayName("UpdateCategory should update name")
+    void updateCategory_ShouldUpdateName() {
+        ProductCategory existing = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("RETAIL").name("Retail").build();
+        when(productCategoryRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productCategoryRepository.save(any(ProductCategory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductCategoryDto request = ProductCategoryDto.builder().name("Retail Updated").build();
+        ProductCategoryDto updated = productCategoryService.updateCategory(1L, request);
+
+        assertEquals("Retail Updated", updated.getName());
+        assertEquals("RETAIL", updated.getCode());
+    }
+
+    @Test
+    @DisplayName("DeleteCategory should delete if not in use")
+    void deleteCategory_ShouldDelete() {
+        ProductCategory existing = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("RETAIL").name("Retail").build();
+        when(productCategoryRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productCategoryRepository.isCategoryInUse(TEST_BANK_ID, "RETAIL")).thenReturn(false);
+
+        productCategoryService.deleteCategory(1L);
+
+        verify(productCategoryRepository).delete(existing);
+    }
+
+    @Test
+    @DisplayName("DeleteCategory should throw if in use")
+    void deleteCategory_InUse_ShouldThrow() {
+        ProductCategory existing = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("RETAIL").name("Retail").build();
+        when(productCategoryRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(productCategoryRepository.isCategoryInUse(TEST_BANK_ID, "RETAIL")).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> productCategoryService.deleteCategory(1L));
+        verify(productCategoryRepository, never()).delete(any(ProductCategory.class));
+    }
 }
 

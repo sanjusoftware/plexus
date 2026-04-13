@@ -1,12 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FolderTree, Loader2, Plus } from 'lucide-react';
+import { Bookmark, Loader2, Plus } from 'lucide-react';
 import {
   AdminDataTable,
+  AdminDataTableActionButton,
+  AdminDataTableActionContent,
+  AdminDataTableActionCell,
+  AdminDataTableActionsHeader,
   AdminDataTableEmptyRow,
   AdminDataTableRow,
   AuditTimestampCell
 } from '../../components/AdminDataTable';
+import ConfirmationModal from '../../components/ConfirmationModal';
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
@@ -21,13 +27,16 @@ interface ProductCategory {
 }
 
 const ProductCategoriesPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { setToast } = useAuth();
   const signal = useAbortSignal();
 
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [newCategory, setNewCategory] = useState({ code: '', name: '' });
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<ProductCategory | null>(null);
+  const consumedSuccessKeyRef = useRef<string | null>(null);
 
   const fetchCategories = useCallback(async (abortSignal: AbortSignal) => {
     setLoading(true);
@@ -46,69 +55,51 @@ const ProductCategoriesPage = () => {
 
   useEffect(() => {
     fetchCategories(signal);
-  }, [fetchCategories, signal]);
-
-  const handleCreate = async () => {
-    const payload = {
-      code: newCategory.code.toUpperCase().trim().replace(/\s+/g, '_'),
-      name: newCategory.name.trim()
-    };
-
-    if (!payload.code || !payload.name) {
-      setToast({ message: 'Category code and name are required.', type: 'error' });
-      return;
+    const successMessage = (location.state as { success?: string } | null)?.success;
+    if (successMessage && consumedSuccessKeyRef.current !== location.key) {
+      consumedSuccessKeyRef.current = location.key;
+      setToast({ message: successMessage, type: 'success' });
     }
+  }, [fetchCategories, signal, location, setToast]);
 
-    setSubmitting(true);
+  const handleDelete = async () => {
+    if (!categoryToDelete) return;
+
     try {
-      await axios.post('/api/v1/product-categories', payload);
-      setToast({ message: 'Product category created successfully.', type: 'success' });
-      setNewCategory({ code: '', name: '' });
+      await axios.delete(`/api/v1/product-categories/${categoryToDelete.id}`);
+      setToast({ message: 'Product category deleted successfully.', type: 'success' });
       await fetchCategories(signal);
     } catch (err: any) {
-      setToast({ message: err.response?.data?.message || 'Failed to create product category.', type: 'error' });
+      setToast({ message: err.response?.data?.message || 'Failed to delete product category.', type: 'error' });
     } finally {
-      setSubmitting(false);
+      setShowConfirmModal(false);
+      setCategoryToDelete(null);
     }
+  };
+
+  const triggerDelete = (category: ProductCategory) => {
+    setCategoryToDelete(category);
+    setShowConfirmModal(true);
   };
 
   return (
     <AdminPage>
       <AdminPageHeader
-        icon={FolderTree}
+        icon={Bookmark}
         title="Product Categories"
         description="Manage bank-defined product category master data."
-      />
-
-      <div className="admin-card mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input
-            type="text"
-            value={newCategory.code}
-            onChange={(e) => setNewCategory((prev) => ({ ...prev, code: e.target.value }))}
-            placeholder="Category Code (e.g. RETAIL)"
-            className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-900 text-sm transition focus:border-blue-500 shadow-sm"
-          />
-          <input
-            type="text"
-            value={newCategory.name}
-            onChange={(e) => setNewCategory((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Category Name"
-            className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-900 text-sm transition focus:border-blue-500 shadow-sm"
-          />
-          <HasPermission action="POST" path="/api/v1/product-categories">
+        actions={
+          <HasPermission permission="catalog:product-category:create">
             <button
-              type="button"
-              onClick={handleCreate}
-              disabled={submitting}
-              className="admin-primary-btn justify-center"
+              onClick={() => navigate('/product-categories/create')}
+              className="admin-primary-btn"
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Create Category
+              <Plus className="h-4 w-4" />
+              New Category
             </button>
           </HasPermission>
-        </div>
-      </div>
+        }
+      />
 
       {loading ? (
         <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
@@ -116,13 +107,14 @@ const ProductCategoriesPage = () => {
         <AdminDataTable aria-label="Product categories table">
           <thead>
             <tr>
-              <th>Category</th>
+              <th>Category Details</th>
               <th>Updated At</th>
+              <AdminDataTableActionsHeader>Actions</AdminDataTableActionsHeader>
             </tr>
           </thead>
           <tbody>
             {categories.length === 0 ? (
-              <AdminDataTableEmptyRow colSpan={2}>No product categories found. Create your first category above.</AdminDataTableEmptyRow>
+              <AdminDataTableEmptyRow colSpan={3}>No product categories found. Get started by creating your first one.</AdminDataTableEmptyRow>
             ) : (
               categories.map((category) => (
                 <AdminDataTableRow key={category.id}>
@@ -131,15 +123,36 @@ const ProductCategoriesPage = () => {
                     <div className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-widest truncate" title={category.code}>{category.code}</div>
                   </td>
                   <AuditTimestampCell value={category.updatedAt || category.createdAt} />
+                  <AdminDataTableActionCell>
+                    <HasPermission permission="catalog:product-category:update">
+                      <AdminDataTableActionButton onClick={() => navigate(`/product-categories/edit/${category.id}`)} tone="primary" size="compact" title="Edit" aria-label={`Edit ${category.name}`}>
+                        <AdminDataTableActionContent action="edit" />
+                      </AdminDataTableActionButton>
+                    </HasPermission>
+                    <HasPermission permission="catalog:product-category:delete">
+                      <AdminDataTableActionButton onClick={() => triggerDelete(category)} tone="danger" size="compact" title="Delete" aria-label={`Delete ${category.name}`}>
+                        <AdminDataTableActionContent action="delete" />
+                      </AdminDataTableActionButton>
+                    </HasPermission>
+                  </AdminDataTableActionCell>
                 </AdminDataTableRow>
               ))
             )}
           </tbody>
         </AdminDataTable>
       )}
+
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => { setShowConfirmModal(false); setCategoryToDelete(null); }}
+        onConfirm={handleDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to permanently delete this product category? This action cannot be undone."
+        confirmText="Confirm & Delete"
+        variant="danger"
+      />
     </AdminPage>
   );
 };
 
 export default ProductCategoriesPage;
-

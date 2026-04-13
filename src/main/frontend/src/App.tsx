@@ -14,6 +14,7 @@ import PricingComponentsPage from './pages/admin/PricingComponentsPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import ProductFormPage from './pages/admin/ProductFormPage';
 import ProductTypeFormPage from './pages/admin/ProductTypeFormPage';
+import ProductCategoryFormPage from './pages/admin/ProductCategoryFormPage';
 import FeatureComponentsPage from './pages/admin/FeatureComponentsPage';
 import FeatureComponentFormPage from './pages/admin/FeatureComponentFormPage';
 import RoleManagementPage from './pages/admin/RoleManagementPage';
@@ -104,8 +105,18 @@ function App() {
                 </PermissionElement>
               } />
               <Route path="/product-categories" element={
-                <PermissionElement action="GET" path="/api/v1/product-categories">
+                <PermissionElement permission="catalog:product-category:read">
                   <ProductCategoriesPage />
+                </PermissionElement>
+              } />
+              <Route path="/product-categories/create" element={
+                <PermissionElement permission="catalog:product-category:create">
+                  <ProductCategoryFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/product-categories/edit/:id" element={
+                <PermissionElement permission="catalog:product-category:update">
+                  <ProductCategoryFormPage />
                 </PermissionElement>
               } />
               <Route path="/product-types/create" element={
