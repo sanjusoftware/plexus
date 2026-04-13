@@ -183,16 +183,18 @@ const PricingSimulationPage = () => {
         const effectiveDateKey = metadata.find(m => isSystemDateKey(m.attributeKey))?.attributeKey || keys.EFFECTIVE_DATE;
         const enrollmentDateKey = metadata.find(m => m.attributeKey.toUpperCase() === 'ENROLLMENT_DATE')?.attributeKey || 'ENROLLMENT_DATE';
 
+        const customAttributes = { ...scenario.inputs };
+
+        // Ensure effective date is set
+        if (!customAttributes[effectiveDateKey]) {
+          customAttributes[effectiveDateKey] = new Date().toISOString().split('T')[0];
+        }
+
         const request: ProductPriceRequest = {
           productId: scenario.productId,
           enrollmentDate: scenario.inputs[enrollmentDateKey] || new Date().toISOString().split('T')[0],
-          customAttributes: { ...scenario.inputs }
+          customAttributes
         };
-
-        // Ensure effective date is set
-        if (!request.customAttributes[effectiveDateKey]) {
-          request.customAttributes[effectiveDateKey] = new Date().toISOString().split('T')[0];
-        }
 
         const result = await PricingService.calculateProductPrice(request);
         newResults.set(i, result);
