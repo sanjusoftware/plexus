@@ -4,55 +4,44 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 @Slf4j
 @Component
-@Profile("dev")
 @Order(0)
 @ConditionalOnBean(StringRedisTemplate.class)
-@ConditionalOnProperty(prefix = "app.redis", name = "flush-on-startup", havingValue = "true")
-public class DevRedisStartupCleaner implements CommandLineRunner {
+@ConditionalOnProperty(prefix = "app.redis", name = "clear-system-caches-on-startup", havingValue = "true")
+public class SystemRedisStartupCleaner implements CommandLineRunner {
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final String sessionNamespace;
+    private final RedisStartupCleanerProperties redisStartupCleanerProperties;
 
-    public DevRedisStartupCleaner(
-            StringRedisTemplate stringRedisTemplate,
-            @org.springframework.beans.factory.annotation.Value("${spring.session.redis.namespace:bank-engine}") String sessionNamespace) {
+    public SystemRedisStartupCleaner(StringRedisTemplate stringRedisTemplate,
+                                     RedisStartupCleanerProperties redisStartupCleanerProperties) {
         this.stringRedisTemplate = stringRedisTemplate;
-        this.sessionNamespace = sessionNamespace;
+        this.redisStartupCleanerProperties = redisStartupCleanerProperties;
     }
-
-    private static final List<String> CACHE_PREFIX_PATTERNS = List.of(
-            "publicCatalog::*",
-            "productDetails::*",
-            "productPricingLinks::*",
-            "pricingMetadata::*"
-    );
 
     @Override
     public void run(String... args) {
         Set<String> keysToDelete = new LinkedHashSet<>();
-        collectKeys(keysToDelete, sessionNamespace + ":*");
-        CACHE_PREFIX_PATTERNS.forEach(pattern -> collectKeys(keysToDelete, pattern));
+        redisStartupCleanerProperties.getSystemCachePatterns()
+                .forEach(pattern -> collectKeys(keysToDelete, pattern));
 
         if (keysToDelete.isEmpty()) {
-            log.info("Dev Redis startup cleaner found no Plexus-owned Redis keys to delete.");
+            log.info("System Redis startup cleaner found no rebuildable system cache keys to delete.");
             return;
         }
 
         Long deleted = stringRedisTemplate.delete(keysToDelete);
-        log.info("Dev Redis startup cleaner deleted {} Redis keys for namespace '{}' and known cache prefixes.",
+        log.info("System Redis startup cleaner deleted {} Redis keys for system cache patterns {}.",
                 deleted,
-                sessionNamespace);
+                redisStartupCleanerProperties.getSystemCachePatterns());
     }
 
     private void collectKeys(Set<String> keysToDelete, String pattern) {

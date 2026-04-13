@@ -267,6 +267,25 @@ docker compose up --build -d
   - Debugger: `http://identity-provider:9090/default/debugger`
 - **Redis Commander**: `http://localhost:8081`
 
+#### Startup cleanup for rebuildable system Redis caches
+Plexus clears rebuildable **system** Redis caches on startup (for example authority discovery caches such as `systemAuthorities::*`). This is separate from user sessions and tenant/business caches.
+
+- Property: `app.redis.clear-system-caches-on-startup`
+- Pattern list: `app.redis.system-cache-patterns`
+
+**Docker / Compose example**
+Add or override the app service environment with a comma-separated list:
+
+```yaml
+services:
+  app:
+    environment:
+      - APP_REDIS_CLEAR_SYSTEM_CACHES_ON_STARTUP=true
+      - APP_REDIS_SYSTEM_CACHE_PATTERNS=systemAuthorities::*,permissionsMaster::*,controllerPermissions::*
+```
+
+Keep this list limited to **rebuildable global/system caches** only.
+
 ### B.1 One-command Hybrid Dev (Docker infra + local hot reload)
 If you want faster development feedback while keeping Docker convenience, use the hybrid scripts:
 
@@ -300,6 +319,22 @@ For active development with hot-reloading (via H2 database):
    ```
 - **H2 Console**: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:plexusdb`)
 
+**Local property override example**
+
+Use `application-local.properties`, IDE environment variables, or shell env vars to extend the startup-cleaned system cache patterns:
+
+```properties
+app.redis.clear-system-caches-on-startup=true
+app.redis.system-cache-patterns=systemAuthorities::*,permissionsMaster::*,controllerPermissions::*
+```
+
+Or with environment variables:
+
+```powershell
+$env:APP_REDIS_CLEAR_SYSTEM_CACHES_ON_STARTUP="true"
+$env:APP_REDIS_SYSTEM_CACHE_PATTERNS="systemAuthorities::*,permissionsMaster::*,controllerPermissions::*"
+```
+
 ## 3. Deployment to Azure
 
 The application is configured for deployment to **Azure Web App for Containers** using **GitHub Actions**.
@@ -324,6 +359,21 @@ To use the provided pipeline, configure these secrets in your GitHub repository:
 - `AZURE_WEBAPP_PUBLISH_PROFILE`: The publish profile XML from your Azure Web App.
 - `CODECOV_TOKEN`: Required if you want the CI workflow's Codecov upload step to succeed.
 
+### C. Startup cleanup of rebuildable system Redis caches
+For container and cloud deployments, Plexus can clear rebuildable **system** Redis caches on every startup. This is useful for caches derived from code scanning or global metadata, such as authority discovery.
+
+Recommended App Settings / environment variables:
+
+```text
+APP_REDIS_CLEAR_SYSTEM_CACHES_ON_STARTUP=true
+APP_REDIS_SYSTEM_CACHE_PATTERNS=systemAuthorities::*,permissionsMaster::*,controllerPermissions::*
+```
+
+Guidance:
+- Use a comma-separated list in `APP_REDIS_SYSTEM_CACHE_PATTERNS`.
+- Include only caches that are safe to rebuild automatically on startup.
+- Do **not** put session namespaces or tenant/business data caches into this list unless you intentionally want them invalidated on every deployment.
+
 ## 4. Environment Configuration Reference
 Key properties that can be overridden via environment variables:
 
@@ -342,10 +392,18 @@ Key properties that can be overridden via environment variables:
 | `spring.session.store-type` | `SPRING_SESSION_STORE_TYPE` | `none` |
 | `spring.data.redis.host` | `REDIS_HOST` | `localhost` |
 | `spring.data.redis.port` | `REDIS_PORT` | `6379` |
+| `app.redis.clear-system-caches-on-startup` | `APP_REDIS_CLEAR_SYSTEM_CACHES_ON_STARTUP` | `true` |
+| `app.redis.system-cache-patterns` | `APP_REDIS_SYSTEM_CACHE_PATTERNS` | `systemAuthorities::*` |
 | `spring.datasource.url` | `SPRING_DATASOURCE_URL` | `jdbc:h2:mem:plexusdb` |
 | `spring.datasource.username` | `SPRING_DATASOURCE_USERNAME` | `sa` |
 | `spring.datasource.password` | `SPRING_DATASOURCE_PASSWORD` | *(empty)* |
 | `spring.profiles.active` | `SPRING_PROFILES_ACTIVE` | `dev` |
+
+Example multi-pattern value:
+
+```text
+APP_REDIS_SYSTEM_CACHE_PATTERNS=systemAuthorities::*,permissionsMaster::*,controllerPermissions::*
+```
 
 ## 5. Deployment Models: SaaS vs On-Premise
 
