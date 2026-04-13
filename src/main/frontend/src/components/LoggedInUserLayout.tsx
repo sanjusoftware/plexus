@@ -54,7 +54,7 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
           label: 'Product Categories',
           icon: Bookmark,
           path: '/product-categories',
-          show: hasPermission({ action: 'GET', path: '/api/v1/product-categories' })
+          show: hasPermission('catalog:product-category:read')
         },
         {
           label: 'Product Features',

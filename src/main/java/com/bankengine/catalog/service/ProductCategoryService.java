@@ -54,6 +54,40 @@ public class ProductCategoryService extends BaseService {
         return toDto(saved);
     }
 
+    @Transactional
+    public ProductCategoryDto updateCategory(Long id, ProductCategoryDto request) {
+        String bankId = getCurrentBankId();
+        ProductCategory category = productCategoryRepository.findById(id)
+                .filter(c -> c.getBankId().equals(bankId))
+                .orElseThrow(() -> new IllegalArgumentException("Product category not found."));
+
+        String name = request.getName() == null ? "" : request.getName().trim();
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Category name is required.");
+        }
+
+        category.setName(name);
+        // Code is usually immutable once created as it's used as a reference in other tables
+        return toDto(productCategoryRepository.save(category));
+    }
+
+    @Transactional
+    public void deleteCategory(Long id) {
+        String bankId = getCurrentBankId();
+        ProductCategory category = productCategoryRepository.findById(id)
+                .filter(c -> c.getBankId().equals(bankId))
+                .orElseThrow(() -> new IllegalArgumentException("Product category not found."));
+
+        // Check if category is in use by any product
+        // Note: Product.category stores the CODE, not the ID.
+        boolean inUse = productCategoryRepository.isCategoryInUse(bankId, category.getCode());
+        if (inUse) {
+            throw new IllegalStateException("Cannot delete category as it is currently in use by products.");
+        }
+
+        productCategoryRepository.delete(category);
+    }
+
     private ProductCategoryDto toDto(ProductCategory category) {
         return ProductCategoryDto.builder()
                 .id(category.getId())

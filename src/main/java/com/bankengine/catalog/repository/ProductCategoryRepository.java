@@ -18,4 +18,7 @@ public interface ProductCategoryRepository extends TenantRepository<ProductCateg
 
     @Query("select upper(trim(c.code)) from ProductCategory c where c.bankId = :bankId")
     List<String> findCategoryCodesByBankId(@Param("bankId") String bankId);
+
+    @Query("SELECT COUNT(p) > 0 FROM Product p WHERE p.bankId = :bankId AND p.category = :code")
+    boolean isCategoryInUse(@Param("bankId") String bankId, @Param("code") String code);
 }
