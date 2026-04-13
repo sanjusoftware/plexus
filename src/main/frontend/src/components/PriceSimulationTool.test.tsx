@@ -38,16 +38,23 @@ describe('PriceSimulationTool', () => {
     });
   });
 
-  test('shows helper text for effective and enrollment dates and sends canonical pricing keys', async () => {
+  test('sends canonical pricing keys including loyalty score and salary account flag', async () => {
     render(<PriceSimulationTool isOpen onClose={jest.fn()} defaultProductId={7} />);
 
-    expect(screen.getByText('How dates work')).toBeInTheDocument();
-    expect(screen.getAllByText('Billing-cycle date used to select the pricing month and active pricing configuration. Example: 2026-05-01 runs the May billing cycle.')).toHaveLength(2);
-    expect(screen.getAllByText('Customer join date used for pro-rata within the selected billing cycle. Billing starts from the later of enrollment date and pricing start date.')).toHaveLength(2);
+    // Set Loyalty Score
+    const numberInputs = document.querySelectorAll('input[type="number"]');
+    const loyaltyScoreInput = Array.from(numberInputs).find((input) => (input as HTMLInputElement).placeholder === '' && (input as HTMLInputElement).value === '0') as HTMLInputElement | undefined;
+    if (loyaltyScoreInput) {
+      fireEvent.change(loyaltyScoreInput, { target: { value: '100' } });
+    }
+
+    // Set Is Salary Account checkbox
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    if (checkboxes.length > 0) {
+      fireEvent.click(checkboxes[0]);
+    }
 
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    expect(dateInputs).toHaveLength(2);
-
     fireEvent.change(dateInputs[0], { target: { value: '2026-05-01' } });
     fireEvent.change(dateInputs[1], { target: { value: '2026-04-13' } });
 
@@ -62,6 +69,8 @@ describe('PriceSimulationTool', () => {
           CUSTOMER_SEGMENT: 'RETAIL',
           EFFECTIVE_DATE: '2026-05-01',
           ENROLLMENT_DATE: '2026-04-13',
+          LOYALTY_SCORE: 100,
+          IS_SALARY_ACCOUNT: true,
         }
       });
     });

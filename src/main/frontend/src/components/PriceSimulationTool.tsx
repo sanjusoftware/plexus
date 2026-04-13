@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { X, Settings, Play, Download, Loader2, Info } from 'lucide-react';
+import { X, Settings, Play, Download, Loader2 } from 'lucide-react';
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
 import PlexusSelect from './PlexusSelect';
-import { formatComponentLabelWithProRata, getSimulationDateGuidance, getSimulationFieldHelperText } from '../pages/admin/ProductManagementPage.utils';
+import { formatComponentLabelWithProRata } from '../pages/admin/ProductManagementPage.utils';
 
 interface PriceSimulationToolProps {
   isOpen: boolean;
@@ -17,6 +17,9 @@ interface SimulationScenario {
   customerSegment: string;
   effectiveDate: string;
   enrollmentDate: string;
+  isSalaryAccount?: boolean;
+  loyaltyScore?: number;
+  customAttributes?: Record<string, any>;
 }
 
 const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClose, defaultProductId }) => {
@@ -28,6 +31,9 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
       customerSegment: 'RETAIL',
       effectiveDate: new Date().toISOString().split('T')[0],
       enrollmentDate: new Date().toISOString().split('T')[0],
+      isSalaryAccount: false,
+      loyaltyScore: 0,
+      customAttributes: {},
     },
   ]);
 
@@ -46,6 +52,9 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
         customerSegment: 'RETAIL',
         effectiveDate: new Date().toISOString().split('T')[0],
         enrollmentDate: new Date().toISOString().split('T')[0],
+        isSalaryAccount: false,
+        loyaltyScore: 0,
+        customAttributes: {},
       },
     ]);
   };
@@ -73,15 +82,24 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
           break;
         }
 
+        const customAttributes: Record<string, any> = {
+          TRANSACTION_AMOUNT: scenario.transactionAmount,
+          CUSTOMER_SEGMENT: scenario.customerSegment,
+          EFFECTIVE_DATE: scenario.effectiveDate,
+          ENROLLMENT_DATE: scenario.enrollmentDate,
+        };
+
+        if (scenario.isSalaryAccount !== undefined) {
+          customAttributes.IS_SALARY_ACCOUNT = scenario.isSalaryAccount;
+        }
+        if (scenario.loyaltyScore !== undefined && scenario.loyaltyScore > 0) {
+          customAttributes.LOYALTY_SCORE = scenario.loyaltyScore;
+        }
+
         const request: ProductPriceRequest = {
           productId: scenario.productId,
           enrollmentDate: scenario.enrollmentDate,
-          customAttributes: {
-            TRANSACTION_AMOUNT: scenario.transactionAmount,
-            CUSTOMER_SEGMENT: scenario.customerSegment,
-            EFFECTIVE_DATE: scenario.effectiveDate,
-            ENROLLMENT_DATE: scenario.enrollmentDate,
-          }
+          customAttributes,
         };
 
         const result = await PricingService.calculateProductPrice(request);
@@ -117,7 +135,6 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
 
   const currentResult = results.get(selectedScenario);
   const currentScenario = scenarios[selectedScenario];
-  const simulationDateGuidance = getSimulationDateGuidance();
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -197,20 +214,6 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-700">
-                    <Info className="h-3.5 w-3.5" />
-                    <span>How dates work</span>
-                  </div>
-                  <div className="mt-2 space-y-1.5 text-[10px] leading-snug text-purple-900">
-                    {simulationDateGuidance.map((entry) => (
-                      <p key={entry.label}>
-                        <span className="font-black uppercase tracking-wide">{entry.label}:</span> {entry.description}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
                     Scenario Name
@@ -271,34 +274,61 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                    Effective Date
-                  </label>
-                  <input
-                    type="date"
-                    value={currentScenario.effectiveDate}
-                    onChange={(e) => updateScenario(selectedScenario, { effectiveDate: e.target.value })}
-                    className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500"
-                  />
-                  <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">
-                    {getSimulationFieldHelperText('EFFECTIVE_DATE')}
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                      Effective Date
+                    </label>
+                    <input
+                      type="date"
+                      value={currentScenario.effectiveDate}
+                      onChange={(e) => updateScenario(selectedScenario, { effectiveDate: e.target.value })}
+                      className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                      Enrollment Date
+                    </label>
+                    <input
+                      type="date"
+                      value={currentScenario.enrollmentDate}
+                      onChange={(e) => updateScenario(selectedScenario, { enrollmentDate: e.target.value })}
+                      className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                    Enrollment Date
-                  </label>
-                  <input
-                    type="date"
-                    value={currentScenario.enrollmentDate}
-                    onChange={(e) => updateScenario(selectedScenario, { enrollmentDate: e.target.value })}
-                    className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500"
-                  />
-                  <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">
-                    {getSimulationFieldHelperText('ENROLLMENT_DATE')}
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                      Loyalty Score
+                    </label>
+                    <input
+                      type="number"
+                      value={currentScenario.loyaltyScore || 0}
+                      onChange={(e) =>
+                        updateScenario(selectedScenario, { loyaltyScore: parseInt(e.target.value) || 0 })
+                      }
+                      className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500"
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <label className="flex items-center space-x-3 cursor-pointer w-full">
+                      <input
+                        type="checkbox"
+                        checked={currentScenario.isSalaryAccount || false}
+                        onChange={(e) => updateScenario(selectedScenario, { isSalaryAccount: e.target.checked })}
+                        className="w-5 h-5 rounded border-2 border-gray-100 text-purple-600 cursor-pointer"
+                      />
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        Is Salary Account
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -332,7 +362,7 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
 
           {/* Results */}
           {currentResult && (
-            <div className="mt-8 pt-8 border-t border-gray-200 space-y-6">
+            <div className="mt-8 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-black text-gray-900 uppercase">Results</h3>
                 <div className="flex space-x-3">

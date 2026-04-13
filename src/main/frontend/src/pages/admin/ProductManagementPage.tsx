@@ -20,7 +20,7 @@ import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useSystemPricingKeys } from '../../hooks/useSystemPricingKeys';
 import { PriceComponentDetail, PricingMetadata, PricingService } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
-import { formatComponentLabelWithProRata, formatPercentageBaseHint, getSimulationDateGuidance, getSimulationFieldHelperText } from './ProductManagementPage.utils';
+import { formatComponentLabelWithProRata, formatPercentageBaseHint, getSimulationFieldHelperText } from './ProductManagementPage.utils';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -104,7 +104,6 @@ const ProductManagementPage = () => {
   const consumedSuccessKeyRef = useRef<string | null>(null);
 
   const signal = useAbortSignal();
-  const simulationDateGuidance = getSimulationDateGuidance();
 
 
   const toggleExpand = (id: number) => {
@@ -180,6 +179,48 @@ const ProductManagementPage = () => {
     }
   }, [setToast, isHiddenSystemKey, isSystemAmountKey, isSystemCustomerSegmentKey]);
 
+  // Define field groups and order for better UX
+  const getFieldGroups = (metadata: PricingMetadata[]) => {
+    const groups: (PricingMetadata[])[] = [];
+    const processed = new Set<string>();
+
+    // Known field pairing rules
+    const pairings: Record<string, string> = {
+      EFFECTIVE_DATE: 'ENROLLMENT_DATE',
+      ENROLLMENT_DATE: 'EFFECTIVE_DATE',
+      TRANSACTION_AMOUNT: 'LOYALTY_SCORE',
+      LOYALTY_SCORE: 'TRANSACTION_AMOUNT',
+      IS_SALARY_ACCOUNT: 'LOYALTY_SCORE',
+    };
+
+    // Fields to exclude (not needed for calculation)
+    const excludedFields = ['GROSS_TOTAL_AMOUNT'];
+
+    // Organize fields
+    metadata.forEach((meta) => {
+      if (processed.has(meta.attributeKey) || excludedFields.includes((meta.attributeKey || '').toUpperCase())) {
+        return;
+      }
+
+      const pairedFieldKey = pairings[(meta.attributeKey || '').toUpperCase()];
+      if (pairedFieldKey) {
+        const pairedField = metadata.find((m) => (m.attributeKey || '').toUpperCase() === pairedFieldKey);
+        if (pairedField && !processed.has(pairedField.attributeKey)) {
+          groups.push([meta, pairedField]);
+          processed.add(meta.attributeKey);
+          processed.add(pairedField.attributeKey);
+          return;
+        }
+      }
+
+      // Single field
+      groups.push([meta]);
+      processed.add(meta.attributeKey);
+    });
+
+    return groups;
+  };
+
   const parseInputValue = (dataType: string, rawValue: any) => {
     const normalizedType = (dataType || '').toUpperCase();
     if (rawValue === '' || rawValue === undefined || rawValue === null) return undefined;
@@ -200,13 +241,24 @@ const ProductManagementPage = () => {
     if (dataType === 'BOOLEAN') {
       return (
         <div key={key}>
-          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</label>
-          <PlexusSelect
-            compact
-            options={[{ value: 'true', label: 'TRUE' }, { value: 'false', label: 'FALSE' }]}
-            value={{ value: String(value), label: String(value).toUpperCase() }}
-            onChange={(opt) => setCalcInputs(prev => ({ ...prev, [key]: opt ? opt.value === 'true' : false }))}
-          />
+          <label className="flex items-center space-x-3 cursor-pointer h-full">
+            {/* Toggle Switch */}
+            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
+                 style={{ backgroundColor: (value === true || value === 'true') ? '#3b82f6' : '#d1d5db' }}>
+              <span
+                className="inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform"
+                style={{ transform: (value === true || value === 'true') ? 'translateX(20px)' : 'translateX(2px)' }}
+              />
+              <input
+                type="checkbox"
+                checked={value === true || value === 'true'}
+                onChange={(e) => setCalcInputs(prev => ({ ...prev, [key]: e.target.checked }))}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </div>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+          </label>
+          {helperText && <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">{helperText}</p>}
         </div>
       );
     }
@@ -410,61 +462,55 @@ const ProductManagementPage = () => {
     }
 
     return (
-      <div className="mt-4 bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
-          <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700">Calculation Receipt</h5>
-        </div>
-
-        <div className="p-3 space-y-2">
-          {charges.map((item, idx) => {
-            const amount = Math.abs(Number(item.calculatedAmount ?? item.rawValue ?? 0));
-            return (
-              <div key={`charge-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-blue-100 bg-blue-50/30">
-                <div className="min-w-0 pr-3">
-                  <div className="text-[11px] font-bold text-gray-800 leading-tight break-words">
-                    {formatComponentLabelWithProRata(getDisplayName(item.componentCode), item)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
-                  </div>
-                  <div className="text-[9px] text-gray-500 uppercase tracking-wider">
-                    {getReceiptMetaLine(item, false)}
-                  </div>
+      <div className="space-y-2">
+        {charges.map((item, idx) => {
+          const amount = Math.abs(Number(item.calculatedAmount ?? item.rawValue ?? 0));
+          return (
+            <div key={`charge-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-blue-100 bg-blue-50/30">
+              <div className="min-w-0 pr-3">
+                <div className="text-[11px] font-bold text-gray-800 leading-tight break-words">
+                  {formatComponentLabelWithProRata(getDisplayName(item.componentCode), item)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
                 </div>
-                <div className="text-xs font-black whitespace-nowrap text-blue-600">
-                  {PricingService.formatCurrency(amount)}
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider">
+                  {getReceiptMetaLine(item, false)}
                 </div>
               </div>
-            );
-          })}
+              <div className="text-xs font-black whitespace-nowrap text-blue-600">
+                {PricingService.formatCurrency(amount)}
+              </div>
+            </div>
+          );
+        })}
 
-          {discounts.map((item, idx) => {
-            const amount = Math.abs(Number(item.calculatedAmount ?? item.rawValue ?? 0));
-            return (
-              <div key={`discount-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-green-100 bg-green-50/30">
-                <div className="min-w-0 pr-3">
-                  <div className="text-[11px] font-bold text-gray-800 leading-tight break-words">
-                    {formatComponentLabelWithProRata(getDisplayName(item.componentCode), item)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
-                  </div>
-                  <div className="text-[9px] text-gray-500 uppercase tracking-wider">
-                    {getReceiptMetaLine(item, true)}
-                  </div>
+        {discounts.map((item, idx) => {
+          const amount = Math.abs(Number(item.calculatedAmount ?? item.rawValue ?? 0));
+          return (
+            <div key={`discount-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-green-100 bg-green-50/30">
+              <div className="min-w-0 pr-3">
+                <div className="text-[11px] font-bold text-gray-800 leading-tight break-words">
+                  {formatComponentLabelWithProRata(getDisplayName(item.componentCode), item)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
                 </div>
-                <div className="text-xs font-black whitespace-nowrap text-green-600">
-                  -{PricingService.formatCurrency(amount)}
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider">
+                  {getReceiptMetaLine(item, true)}
                 </div>
               </div>
-            );
-          })}
+              <div className="text-xs font-black whitespace-nowrap text-green-600">
+                -{PricingService.formatCurrency(amount)}
+              </div>
+            </div>
+          );
+        })}
 
-          {discounts.length === 0 && (
-            <div className="text-[10px] text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-100">No discounts applied.</div>
-          )}
-        </div>
+        {discounts.length === 0 && (
+          <div className="text-[10px] text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-100">No discounts applied.</div>
+        )}
 
-        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/70">
+        <div className="pt-3 border-t border-gray-100 space-y-1">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-500">
             <span>Total Charges</span>
             <span className="text-blue-600">{PricingService.formatCurrency(totalCharges)}</span>
           </div>
-          <div className="mt-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-500">
+          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-500">
             <span>Total Discounts</span>
             <span className="text-green-600">-{PricingService.formatCurrency(totalDiscounts)}</span>
           </div>
@@ -705,67 +751,61 @@ const ProductManagementPage = () => {
                           : <ChevronDown className="w-5 h-5 text-gray-400" />}
                       </div>
 
-                      {simulationOpenIds.has(prod.id) && (
-                        <div className="mt-4 pt-4 border-t border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <div className="bg-white rounded-xl border border-gray-200 p-4">
-                            <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Calculation Inputs</h5>
-                            <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5">
-                              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-700">
-                                <Info className="h-3.5 w-3.5" />
-                                <span>How dates work</span>
+                       {simulationOpenIds.has(prod.id) && (
+                         <div className="mt-4 pt-4 border-t border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                           <div className="bg-white rounded-xl border border-gray-200 p-4">
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Calculation Inputs</h5>
+                              <div className="space-y-3">
+                                {calcMetadata.length > 0
+                                  ? getFieldGroups(calcMetadata).map((group, groupIdx) => (
+                                      <div key={groupIdx} className={`grid gap-3 ${group.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                        {group.map((meta) => renderDynamicField(prod, meta))}
+                                      </div>
+                                    ))
+                                  : (
+                                    <div className="col-span-2 text-[10px] font-bold text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                                      Pricing metadata not available. Ensure `pricing:metadata:read` is granted to load dynamic inputs.
+                                    </div>
+                                  )}
                               </div>
-                              <div className="mt-2 space-y-1.5 text-[10px] leading-snug text-blue-900">
-                                {simulationDateGuidance.map((entry) => (
-                                  <p key={entry.label}>
-                                    <span className="font-black uppercase tracking-wide">{entry.label}:</span> {entry.description}
-                                  </p>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              {calcMetadata.length > 0
-                                ? calcMetadata.map((meta) => renderDynamicField(prod, meta))
-                                : (
-                                  <div className="text-[10px] font-bold text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-100">
-                                    Pricing metadata not available. Ensure `pricing:metadata:read` is granted to load dynamic inputs.
-                                  </div>
-                                )}
-                            </div>
-                            <div className="pt-3 mt-3 border-t border-gray-100">
-                              <button
-                                onClick={() => handleCalculatePrice(prod)}
-                                disabled={calculatedPrices[prod.id]?.loading}
-                                className="w-full bg-blue-600 text-white rounded-lg h-[42px] px-8 font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center space-x-2 disabled:opacity-50"
-                              >
-                                {calculatedPrices[prod.id]?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                                <span>Run Calculation</span>
-                              </button>
-                            </div>
-                          </div>
+                             <div className="pt-3 mt-3 border-t border-gray-100">
+                               <button
+                                 onClick={() => handleCalculatePrice(prod)}
+                                 disabled={calculatedPrices[prod.id]?.loading}
+                                 className="w-full bg-blue-600 text-white rounded-lg h-[42px] px-8 font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center space-x-2 disabled:opacity-50"
+                               >
+                                 {calculatedPrices[prod.id]?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                                 <span>Run Calculation</span>
+                               </button>
+                             </div>
+                           </div>
 
-                          <div>
-                            {calculatedPrices[prod.id]?.loading && (
-                              <div className="h-full min-h-[180px] bg-white rounded-xl border border-gray-200 flex items-center justify-center">
-                                <div className="flex items-center gap-2 text-blue-600 text-sm font-bold">
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  Calculating...
-                                </div>
-                              </div>
-                            )}
-                            {calculatedPrices[prod.id]?.error && (
-                              <div className="text-[10px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">
-                                ⚠️ Simulation Failed: {calculatedPrices[prod.id].error}
-                              </div>
-                            )}
-                            {!calculatedPrices[prod.id] && (
-                              <div className="h-full min-h-[180px] bg-white rounded-xl border border-gray-200 p-4 text-sm text-gray-500 flex items-center justify-center text-center">
-                                Run calculation to see a receipt-style component breakdown.
-                              </div>
-                            )}
-                            {calculatedPrices[prod.id] && !calculatedPrices[prod.id].loading && !calculatedPrices[prod.id].error && (
-                              renderBreakdown(prod, () => handleCalculatePrice(prod))
-                            )}
-                          </div>
+                              <div className="bg-white rounded-xl border border-gray-200 p-4 min-h-full flex flex-col">
+                                <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Calculation Receipt</h5>
+                                {calculatedPrices[prod.id]?.loading && (
+                                  <div className="flex-1 flex items-center justify-center">
+                                   <div className="flex items-center gap-2 text-blue-600 text-sm font-bold">
+                                     <Loader2 className="w-4 h-4 animate-spin" />
+                                     Calculating...
+                                   </div>
+                                 </div>
+                               )}
+                               {calculatedPrices[prod.id]?.error && (
+                                 <div className="text-[10px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">
+                                   ⚠️ Simulation Failed: {calculatedPrices[prod.id].error}
+                                 </div>
+                               )}
+                               {!calculatedPrices[prod.id] && (
+                                 <div className="flex-1 flex items-center justify-center text-center">
+                                   <div className="text-sm text-gray-500">
+                                     Run calculation to see a receipt-style component breakdown.
+                                   </div>
+                                 </div>
+                               )}
+                               {calculatedPrices[prod.id] && !calculatedPrices[prod.id].loading && !calculatedPrices[prod.id].error && (
+                                 renderBreakdown(prod, () => handleCalculatePrice(prod))
+                              )}
+                             </div>
                         </div>
                       )}
                     </div>
