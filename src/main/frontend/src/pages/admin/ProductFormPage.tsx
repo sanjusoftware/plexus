@@ -33,7 +33,6 @@ interface ProductCategoryOption {
 interface SelectOptionWithCode {
   value: string;
   label: string;
-  displayName?: string;
   code?: string;
 }
 
@@ -305,33 +304,22 @@ const ProductFormPage = () => {
       ));
   };
 
-  const formatNameWithCode = (name: string, code: string) => `${name} (${code})`;
-
   const buildCodeDisplayOption = (code: string, name?: string): SelectOptionWithCode => ({
     value: code,
-    label: formatNameWithCode(name || humanizeCode(code) || code, code),
-    displayName: name || humanizeCode(code) || code,
+    label: name || humanizeCode(code) || code,
     code
   });
-
-  const formatOptionWithCode = (option: SelectOptionWithCode) => {
-    if (!option.code || !option.displayName) {
-      return <span>{option.label}</span>;
-    }
-
-    return (
-      <span className="inline-flex items-baseline gap-1">
-        <span>{option.displayName}</span>
-        <span className="font-normal text-[10px] tracking-normal text-gray-400">({option.code})</span>
-      </span>
-    );
-  };
 
   const categorySelectOptions = categoryOptions.map((category) => buildCodeDisplayOption(category.code, category.name));
   const selectedCategory = categoryOptions.find((category) => category.code === formData.category);
   const selectedCategoryOption = selectedCategory
     ? buildCodeDisplayOption(selectedCategory.code, selectedCategory.name)
     : (formData.category ? buildCodeDisplayOption(formData.category) : null);
+  const productTypeSelectOptions = productTypes.map((productType) => buildCodeDisplayOption(productType.code, productType.name));
+  const selectedProductType = productTypes.find((productType) => productType.code === formData.productTypeCode);
+  const selectedProductTypeOption = selectedProductType
+    ? buildCodeDisplayOption(selectedProductType.code, selectedProductType.name)
+    : (formData.productTypeCode ? buildCodeDisplayOption(formData.productTypeCode) : null);
   const categoryDropdownOptions: SelectOptionWithCode[] = canCreateCategory
     ? [...categorySelectOptions, { value: CREATE_NEW_CATEGORY, label: '+ Create New Category...' }]
     : categorySelectOptions;
@@ -388,10 +376,9 @@ const ProductFormPage = () => {
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Product Classification</label>
               <PlexusSelect
                 required
-                placeholder="Select Category..."
-                options={productTypes.map(t => ({ value: t.code, label: formatNameWithCode(t.name, t.code) }))}
-                value={productTypes.find(t => t.code === formData.productTypeCode) ? { value: formData.productTypeCode, label: formatNameWithCode(productTypes.find(t => t.code === formData.productTypeCode)!.name, formData.productTypeCode) } : null}
-                formatOptionLabel={formatOptionWithCode}
+                placeholder="Select Product Classification..."
+                options={productTypeSelectOptions}
+                value={selectedProductTypeOption}
                 onChange={(opt) => {
                   setFormData({...formData, productTypeCode: opt ? opt.value : ''});
                   clearViolation('productTypeCode');
@@ -408,7 +395,6 @@ const ProductFormPage = () => {
                 placeholder={categorySelectOptions.length > 0 ? 'Select Existing Category...' : 'Create your first category...'}
                 options={categoryDropdownOptions}
                 value={selectedCategoryOption}
-                formatOptionLabel={formatOptionWithCode}
                 onChange={(opt) => {
                   if (!opt) {
                     setFormData({ ...formData, category: '' });
@@ -542,7 +528,7 @@ const ProductFormPage = () => {
                           );
                           return [
                             { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' },
-                            ...filteredFeatures.map(fc => ({ value: fc.code, label: formatNameWithCode(fc.name, fc.code) }))
+                            ...filteredFeatures.map(fc => buildCodeDisplayOption(fc.code, fc.name))
                           ];
                         })()}
                         value={(() => {
@@ -550,9 +536,8 @@ const ProductFormPage = () => {
                             return { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' };
                           }
                           const fc = featureComponents.find(f => f.code === link.featureComponentCode);
-                          return fc ? { value: fc.code, label: formatNameWithCode(fc.name, fc.code) } : null;
+                          return fc ? buildCodeDisplayOption(fc.code, fc.name) : null;
                         })()}
-                        formatOptionLabel={formatOptionWithCode}
                         onChange={(opt) => {
                           const newF = [...formData.features];
                           const val = opt ? opt.value : '';
@@ -778,18 +763,14 @@ const ProductFormPage = () => {
                           .filter(Boolean);
                         const pricingOptions = pricingComponents
                           .filter((pc: any) => pc.code === link.pricingComponentCode || !selectedCodes.includes(pc.code))
-                          .map((pc: any) => ({ value: pc.code, label: formatNameWithCode(pc.name, pc.code) }));
+                          .map((pc: any) => buildCodeDisplayOption(pc.code, pc.name));
                         const selectedPricing = pricingComponents.find((pc: any) => pc.code === link.pricingComponentCode);
 
                         return (
                       <PlexusSelect
                         placeholder="Select Global Pricing..."
                         options={pricingOptions}
-                        value={selectedPricing ? {
-                          value: link.pricingComponentCode,
-                          label: formatNameWithCode(selectedPricing.name, selectedPricing.code)
-                        } : null}
-                        formatOptionLabel={formatOptionWithCode}
+                        value={selectedPricing ? buildCodeDisplayOption(selectedPricing.code, selectedPricing.name) : null}
                         onChange={(opt) => {
                           const newP = [...formData.pricing];
                           newP[idx].pricingComponentCode = opt ? opt.value : '';
@@ -867,7 +848,7 @@ const ProductFormPage = () => {
                             placeholder="Select Target (Optional)..."
                             options={targetOptions}
                             value={selectedTarget ? buildCodeDisplayOption(selectedTarget.code, selectedTarget.name) : null}
-                            formatOptionLabel={formatOptionWithCode}
+                            optionMetaLayout="stacked"
                             onChange={(opt) => {
                               const newP = [...formData.pricing];
                               newP[idx].targetComponentCode = opt ? opt.value : '';

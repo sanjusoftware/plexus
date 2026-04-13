@@ -78,9 +78,26 @@ jest.mock('../../components/PriceSimulationTool', () => () => null);
 
 jest.mock('../../components/PlexusSelect', () => ({
   __esModule: true,
-  default: ({ options = [], value, onChange, placeholder, formatOptionLabel }: any) => {
+  default: ({ options = [], value, onChange, placeholder, formatOptionLabel, optionMetaLayout = 'inline' }: any) => {
     const slug = toTestIdSlug(placeholder || 'select');
-    const renderNode = (option: any) => formatOptionLabel ? formatOptionLabel(option) : option?.label;
+    const renderNode = (option: any) => {
+      if (formatOptionLabel) {
+        return formatOptionLabel(option);
+      }
+
+      if (!option) {
+        return null;
+      }
+
+      const secondary = option.secondaryLabel || option.code || option.metaKey;
+      if (!secondary) {
+        return option.label;
+      }
+
+      return optionMetaLayout === 'stacked'
+        ? <span>{option.label}<br />({secondary})</span>
+        : <span>{option.label} ({secondary})</span>;
+    };
 
     return (
       <div data-testid={`select-${slug}`}>
@@ -182,13 +199,21 @@ describe('ProductFormPage', () => {
     });
   };
 
-  test('renders target market segment and target component with display name plus code', async () => {
+  test('renders product classification, target market segment, and target component with display name plus code', async () => {
     mockParams.id = '42';
     mockBaseLookups();
 
     render(<ProductFormPage />);
 
     await screen.findByDisplayValue('Advanced mix rule based product');
+
+    const productTypeValue = screen.getByTestId(`value-${toTestIdSlug('Select Product Classification...')}`);
+    expect(productTypeValue).toHaveTextContent('Retail Banking');
+    expect(productTypeValue).toHaveTextContent('(RETAIL_BANKING)');
+
+    const aggregateValue = screen.getByTestId(`value-${toTestIdSlug('Select Global Pricing...')}`);
+    expect(aggregateValue).toHaveTextContent('Advanced Salary Based Discount');
+    expect(aggregateValue).toHaveTextContent('(ADV_SALARY_BASE_DISCOUNT)');
 
     const categoryValue = screen.getByTestId(`value-${toTestIdSlug('Select Existing Category...')}`);
     expect(categoryValue).toHaveTextContent('Affluent Salaried');

@@ -1,20 +1,28 @@
 import React from 'react';
-import Select, { Props as SelectProps, StylesConfig, GroupBase } from 'react-select';
+import Select, { FormatOptionLabelMeta, Props as SelectProps, StylesConfig, GroupBase } from 'react-select';
 
 export interface PlexusOption {
   value: string;
   label: string;
+  code?: string;
+  metaKey?: string;
+  secondaryLabel?: string;
 }
 
 interface PlexusSelectProps extends Omit<SelectProps<PlexusOption, false, GroupBase<PlexusOption>>, 'styles'> {
   showSearch?: boolean;
   compact?: boolean;
+  optionMetaLayout?: 'inline' | 'stacked';
+  singleValueMetaLayout?: 'inline' | 'stacked';
 }
 
 const PlexusSelect: React.FC<PlexusSelectProps> = ({
   showSearch,
   compact = false,
+  optionMetaLayout = 'inline',
+  singleValueMetaLayout = 'inline',
   options = [],
+  formatOptionLabel,
   ...props
 }) => {
   // Determine if we should show search based on item count if not explicitly set
@@ -23,6 +31,37 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
 
   const controlHeight = compact ? '36px' : '42px';
   const valueFontSize = compact ? '0.6875rem' : '0.75rem';
+
+  const getSecondaryLabel = (option: PlexusOption) => option.secondaryLabel || option.code || option.metaKey || '';
+
+  const renderOptionLabel = (option: PlexusOption, layout: 'inline' | 'stacked') => {
+    const secondaryLabel = getSecondaryLabel(option);
+
+    if (!secondaryLabel) {
+      return <span>{option.label}</span>;
+    }
+
+    if (layout === 'stacked') {
+      return (
+        <span className="flex flex-col items-start leading-tight gap-1 max-w-full">
+          <span className="block max-w-full break-words">{option.label}</span>
+          <span className="font-normal text-[10px] tracking-normal text-gray-400 whitespace-nowrap">({secondaryLabel})</span>
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-baseline gap-1 max-w-full">
+        <span className="min-w-0 break-words">{option.label}</span>
+        <span className="font-normal text-[10px] tracking-normal text-gray-400 whitespace-nowrap">({secondaryLabel})</span>
+      </span>
+    );
+  };
+
+  const defaultFormatOptionLabel = (option: PlexusOption, meta: FormatOptionLabelMeta<PlexusOption>) => {
+    const layout = meta.context === 'menu' ? optionMetaLayout : singleValueMetaLayout;
+    return renderOptionLabel(option, layout);
+  };
 
   const customStyles: StylesConfig<PlexusOption, false, GroupBase<PlexusOption>> = {
     control: (base, state) => ({
@@ -43,6 +82,7 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
     valueContainer: (base) => ({
       ...base,
       padding: '0 0.75rem',
+      overflow: 'hidden',
     }),
     placeholder: (base) => ({
       ...base,
@@ -59,6 +99,9 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
       fontSize: valueFontSize,
       textTransform: 'uppercase',
       letterSpacing: '0.1em', // tracking-widest
+      maxWidth: '100%',
+      overflow: 'hidden',
+      whiteSpace: 'normal',
     }),
     input: (base) => ({
       ...base,
@@ -106,6 +149,7 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
       padding: '0.75rem 1rem',
       borderRadius: '0.75rem',
       cursor: 'pointer',
+      whiteSpace: 'normal',
       '&:active': {
         backgroundColor: '#dbeafe',
       },
@@ -127,6 +171,7 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
     <Select
       {...props}
       options={options}
+      formatOptionLabel={formatOptionLabel ?? defaultFormatOptionLabel}
       isSearchable={isSearchable}
       styles={customStyles}
       menuPortalTarget={portalTarget}

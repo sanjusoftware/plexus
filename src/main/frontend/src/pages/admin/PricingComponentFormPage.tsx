@@ -728,12 +728,7 @@ const PricingComponentFormPage = () => {
                                 value={metadata.find(m => m.attributeKey === cond.attributeName)
                                   ? formatAttributeOption(metadata.find(m => m.attributeKey === cond.attributeName))
                                   : null}
-                                formatOptionLabel={(option: any) => (
-                                  <div className="flex flex-col leading-tight">
-                                    <span className="font-bold text-[11px] text-gray-800 uppercase tracking-wider">{option.label}</span>
-                                    <span className="font-mono text-[9px] text-gray-400">({option.metaKey || option.value})</span>
-                                  </div>
-                                )}
+                                optionMetaLayout="stacked"
                                 onChange={(opt) => {
                                   handleConditionChange(idx, cidx, 'attributeName', opt ? opt.value : '');
                                   clearViolation(`pricingTiers[${idx}].conditions[${cidx}].attributeName`);
