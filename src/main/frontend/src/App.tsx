@@ -20,6 +20,7 @@ import FeatureComponentFormPage from './pages/admin/FeatureComponentFormPage';
 import RoleManagementPage from './pages/admin/RoleManagementPage';
 import RoleFormPage from './pages/admin/RoleFormPage';
 import PricingComponentFormPage from './pages/admin/PricingComponentFormPage';
+import PricingSimulationPage from './pages/admin/PricingSimulationPage';
 import ErrorPage from './pages/ErrorPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BreadcrumbProvider } from './context/BreadcrumbContext';
@@ -167,6 +168,11 @@ function App() {
               <Route path="/pricing-components/create" element={
                 <PermissionElement permission="pricing:component:create">
                   <PricingComponentFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/pricing-simulation" element={
+                <PermissionElement permission="pricing:simulation:read">
+                  <PricingSimulationPage />
                 </PermissionElement>
               } />
               <Route path="/pricing-components/edit/:id" element={
