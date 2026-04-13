@@ -403,10 +403,18 @@ const ProductFormPage = () => {
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Feature Definition</label>
                       <PlexusSelect
                         placeholder="Select Global Component..."
-                        options={[
-                          { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' },
-                          ...featureComponents.map(fc => ({ value: fc.code, label: formatNameWithCode(fc.name, fc.code) }))
-                        ]}
+                        options={(() => {
+                          const selectedCodes = formData.features
+                            .map((f: any, fIdx: number) => (fIdx === idx ? null : f.featureComponentCode))
+                            .filter((code: any) => code && code !== 'CREATE_NEW');
+                          const filteredFeatures = featureComponents.filter(
+                            fc => fc.code === link.featureComponentCode || !selectedCodes.includes(fc.code)
+                          );
+                          return [
+                            { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' },
+                            ...filteredFeatures.map(fc => ({ value: fc.code, label: formatNameWithCode(fc.name, fc.code) }))
+                          ];
+                        })()}
                         value={(() => {
                           if (link.featureComponentCode === 'CREATE_NEW') {
                             return { value: 'CREATE_NEW', label: '+ CREATE NEW FEATURE...' };
