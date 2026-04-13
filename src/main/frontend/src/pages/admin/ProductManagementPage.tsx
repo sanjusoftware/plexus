@@ -20,6 +20,7 @@ import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useSystemPricingKeys } from '../../hooks/useSystemPricingKeys';
 import { PriceComponentDetail, PricingMetadata, PricingService } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
+import { getSimulationEffectiveDateFloor, getSimulationEffectiveDateValidationMessage } from './ProductManagementPage.utils';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -34,6 +35,8 @@ interface PricingLink {
   fixedValueType?: string;
   useRulesEngine: boolean;
   targetComponentCode?: string;
+  effectiveDate?: string;
+  expiryDate?: string | null;
 }
 
 interface Product {
@@ -186,11 +189,12 @@ const ProductManagementPage = () => {
     return rawValue;
   };
 
-  const renderDynamicField = (meta: PricingMetadata) => {
+  const renderDynamicField = (prod: Product, meta: PricingMetadata) => {
     const key = meta.attributeKey;
     const value = calcInputs[key] ?? '';
     const dataType = (meta.dataType || '').toUpperCase();
     const label = (meta.displayName || key).toUpperCase();
+    const minEffectiveDate = isSystemDateKey(key) ? getSimulationEffectiveDateFloor(prod) : undefined;
 
     if (dataType === 'BOOLEAN') {
       return (
@@ -238,8 +242,14 @@ const ProductManagementPage = () => {
           type={inputType}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-semibold bg-white focus:border-blue-500 transition h-[36px]"
           value={value}
+          min={inputType === 'date' ? minEffectiveDate : undefined}
           onChange={(e) => setCalcInputs(prev => ({ ...prev, [key]: e.target.value }))}
         />
+        {inputType === 'date' && minEffectiveDate && (
+          <p className="mt-1 text-[10px] font-semibold text-gray-400">
+            Pricing available from {minEffectiveDate}.
+          </p>
+        )}
       </div>
     );
   };
@@ -322,6 +332,18 @@ const ProductManagementPage = () => {
       if (!attributesFromMetadata[effectiveDateKey]) {
         attributesFromMetadata[effectiveDateKey] = new Date().toISOString().split('T')[0];
       }
+
+      const requestedEffectiveDate = String(attributesFromMetadata[effectiveDateKey] || '');
+      const effectiveDateValidationMessage = getSimulationEffectiveDateValidationMessage(prod, requestedEffectiveDate);
+      if (effectiveDateValidationMessage) {
+        setCalculatedPrices(prev => ({
+          ...prev,
+          [prod.id]: { price: 0, loading: false, error: 'Invalid Effective Date' }
+        }));
+        setToast({ message: effectiveDateValidationMessage, type: 'error' });
+        return;
+      }
+
       if (hasSystemPricingKey(keys.TRANSACTION_AMOUNT) && attributesFromMetadata[keys.TRANSACTION_AMOUNT] === undefined) {
         attributesFromMetadata[keys.TRANSACTION_AMOUNT] = 0;
       }
@@ -697,7 +719,7 @@ const ProductManagementPage = () => {
                             <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Calculation Inputs</h5>
                             <div className="space-y-3">
                               {calcMetadata.length > 0
-                                ? calcMetadata.map(renderDynamicField)
+                                ? calcMetadata.map((meta) => renderDynamicField(prod, meta))
                                 : (
                                   <div className="text-[10px] font-bold text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-100">
                                     Pricing metadata not available. Ensure `pricing:metadata:read` is granted to load dynamic inputs.

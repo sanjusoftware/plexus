@@ -440,6 +440,32 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {PRICING_READER_ROLE})
+    void calculateProductPrice_ShouldHonorConditionBasedBoundaryAtExactThreshold_EndToEnd() throws Exception {
+        Long productId = seedAdvancedRuledMixProductUsingConditionThresholds();
+
+        ProductPricingCalculationResult thresholdScenario = performProductCalculation(ProductPriceRequest.builder()
+                .productId(productId)
+                .enrollmentDate(LocalDate.of(2026, 4, 13))
+                .customAttributes(Map.of(
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.of(2026, 4, 13),
+                        "ENROLLMENT_DATE", LocalDate.of(2026, 4, 13),
+                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT, BigDecimal.ZERO,
+                        "IS_SALARY_ACCOUNT", false,
+                        "LOYALTY_SCORE", new BigDecimal("20"),
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("50000")
+                ))
+                .build());
+
+        assertEquals(new BigDecimal("1100.00"), thresholdScenario.getFinalChargeablePrice());
+        ProductPricingCalculationResult.PriceComponentDetail txSurcharge = findDetail(thresholdScenario, "ADV_TX_SURCHARGE_RULED");
+        assertNotNull(txSurcharge);
+        assertEquals("TX_HIGH", txSurcharge.getMatchedTierCode());
+        assertEquals(new BigDecimal("1000.00"), txSurcharge.getCalculatedAmount());
+    }
+
+    @Test
+    @WithMockRole(roles = {PRICING_READER_ROLE})
     void calculateProductPrice_ShouldLockAdvancedBreachProrataPayloads_EndToEnd() throws Exception {
         Long productId = seedAdvancedBreachProrataProduct();
 
@@ -556,6 +582,32 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
                             linkProduct(product, breachFee, true, null, null, null);
                             linkProduct(product, platformFee, false, new BigDecimal("30"), PriceValue.ValueType.FEE_ABSOLUTE, null);
+
+                            txHelper.flushAndClear();
+                            productRuleBuilderService.rebuildRules();
+                            return product.getId();
+                        });
+                    }
+
+                    private Long seedAdvancedRuledMixProductUsingConditionThresholds() {
+                        return txHelper.doInTransaction(() -> {
+                            txHelper.createAndSaveMetadata(PricingAttributeKeys.EFFECTIVE_DATE, "DATE");
+                            txHelper.createAndSaveMetadata("LOYALTY_SCORE", "DECIMAL");
+                            txHelper.createAndSaveMetadata("IS_SALARY_ACCOUNT", "BOOLEAN");
+
+                            ProductType type = txHelper.getOrCreateProductType("ADVANCED_RULED_TYPE_CONDITION");
+                            Product product = txHelper.getOrCreateProduct("ADV_PRODUCT_RULED_MIX_CONDITION", type, "RETAIL");
+
+                            PricingComponent baseFee = createPricingComponent("Advanced Base Fee (Condition)", "ADV_BASE_FEE", PricingComponent.ComponentType.FEE, false);
+                            PricingComponent txSurcharge = createPricingComponent("Advanced Transaction Surcharge (Condition)", "ADV_TX_SURCHARGE_RULED", PricingComponent.ComponentType.FEE, false);
+
+                            addTier(txSurcharge, "TX High", "TX_HIGH", 100, null, null, false, new BigDecimal("2"), PriceValue.ValueType.FEE_PERCENTAGE,
+                                    List.of(condition(PricingAttributeKeys.TRANSACTION_AMOUNT, TierCondition.Operator.GE, "50000")));
+                            addTier(txSurcharge, "TX Mid", "TX_MID", 50, null, null, false, new BigDecimal("1"), PriceValue.ValueType.FEE_PERCENTAGE,
+                                    List.of(condition(PricingAttributeKeys.TRANSACTION_AMOUNT, TierCondition.Operator.GE, "20000")));
+
+                            linkProduct(product, baseFee, false, new BigDecimal("100"), PriceValue.ValueType.FEE_ABSOLUTE, null);
+                            linkProduct(product, txSurcharge, true, null, null, null);
 
                             txHelper.flushAndClear();
                             productRuleBuilderService.rebuildRules();
