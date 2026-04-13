@@ -1,16 +1,19 @@
 package com.bankengine.pricing;
 
+import com.bankengine.catalog.model.Product;
 import com.bankengine.catalog.model.ProductBundle;
+import com.bankengine.catalog.model.ProductCategory;
 import com.bankengine.catalog.model.ProductType;
+import com.bankengine.catalog.repository.ProductCategoryRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.pricing.dto.BundlePriceRequest;
 import com.bankengine.pricing.dto.ProductPriceRequest;
-import com.bankengine.pricing.model.PriceValue;
-import com.bankengine.pricing.model.PricingComponent;
-import com.bankengine.pricing.model.ProductPricingLink;
+import com.bankengine.pricing.dto.ProductPricingCalculationResult;
+import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.repository.*;
+import com.bankengine.pricing.service.PricingAttributeKeys;
 import com.bankengine.pricing.service.ProductRuleBuilderService;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
@@ -30,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,6 +49,8 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     private ProductTypeRepository productTypeRepository;
     @Autowired
     private ProductRepository productRepository;
+    @Autowired
+    private ProductCategoryRepository productCategoryRepository;
     @Autowired
     private PricingComponentRepository pricingComponentRepository;
     @Autowired
@@ -75,6 +81,13 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
     void setupMetadata() {
         txHelper.doInTransaction(() -> {
             txHelper.setupCommittedMetadata();
+            productCategoryRepository.findByBankIdAndCode(TEST_BANK_ID, "RETAIL")
+                    .orElseGet(() -> {
+                        ProductCategory category = new ProductCategory();
+                        category.setCode("RETAIL");
+                        category.setName("Retail");
+                        return productCategoryRepository.save(category);
+                    });
         });
         entityManager.clear();
     }
@@ -96,6 +109,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
             // 4. Delete the Components and Bundles/Products
             pricingComponentRepository.deleteAllInBatch();
             productRepository.deleteAllInBatch();
+            productCategoryRepository.deleteAllInBatch();
 
             // Optional: clear product types if you want a totally fresh slate
             productTypeRepository.deleteAllInBatch();
@@ -122,9 +136,9 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
         request.setCustomAttributes(Map.of(
-                "customerSegment", "RETAIL",
-                "transactionAmount", BigDecimal.valueOf(1000.0),
-                "effectiveDate", LocalDate.now()));
+                PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                PricingAttributeKeys.TRANSACTION_AMOUNT, BigDecimal.valueOf(1000.0),
+                PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now()));
 
         mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -158,7 +172,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         BundlePriceRequest request = new BundlePriceRequest();
         request.setProductBundleId(ids.get("bundle"));
-        request.setCustomAttributes(Map.of("customerSegment", "RETAIL"));
+        request.setCustomAttributes(Map.of(PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL"));
 
         BundlePriceRequest.BundleProductItem pr1 = new BundlePriceRequest.BundleProductItem(ids.get("p1"), BigDecimal.valueOf(1000));
         BundlePriceRequest.BundleProductItem pr2 = new BundlePriceRequest.BundleProductItem(ids.get("p2"), BigDecimal.valueOf(1000));
@@ -205,7 +219,7 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
         BundlePriceRequest request = new BundlePriceRequest();
         request.setProductBundleId(ids.get("bundle"));
-        request.setCustomAttributes(Map.of("customerSegment", "RETAIL"));
+        request.setCustomAttributes(Map.of(PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL"));
         request.setProducts(List.of(
                 new BundlePriceRequest.BundleProductItem(ids.get("p1"), BigDecimal.valueOf(1000)),
                 new BundlePriceRequest.BundleProductItem(ids.get("p2"), BigDecimal.valueOf(1000))
@@ -262,9 +276,9 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
         request.setCustomAttributes(Map.of(
-                "customerSegment", "RETAIL",
-                "transactionAmount", new BigDecimal("1000.00"),
-                "effectiveDate", LocalDate.now()));
+                PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("1000.00"),
+                PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now()));
 
         // 2. ACT & ASSERT
         mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
@@ -314,9 +328,9 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
         request.setCustomAttributes(Map.of(
-                "customerSegment", "DEFAULT_SEGMENT",
-                "transactionAmount", new BigDecimal("1000.00"),
-                "effectiveDate", LocalDate.now()));
+                PricingAttributeKeys.CUSTOMER_SEGMENT, "DEFAULT_SEGMENT",
+                PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("1000.00"),
+                PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now()));
 
         mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -364,9 +378,9 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = new ProductPriceRequest();
         request.setProductId(productId);
         request.setCustomAttributes(Map.of(
-                "customerSegment", "RETAIL",
-                "transactionAmount", BigDecimal.ZERO,
-                "effectiveDate", LocalDate.now()));
+                PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                PricingAttributeKeys.TRANSACTION_AMOUNT, BigDecimal.ZERO,
+                PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now()));
 
         mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -376,6 +390,102 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.componentBreakdown[1].targetComponentCode").value("ATM_FEE_CODE"))
                 .andExpect(jsonPath("$.componentBreakdown[1].calculatedAmount").value(-5.00))
                 .andExpect(jsonPath("$.finalChargeablePrice").value(0.00));
+    }
+
+    @Test
+    @WithMockRole(roles = {PRICING_READER_ROLE})
+    void calculateProductPrice_ShouldLockAdvancedRuledMixScenarios_EndToEnd() throws Exception {
+        Long productId = seedAdvancedRuledMixProduct();
+
+        ProductPricingCalculationResult salaryScenario = performProductCalculation(ProductPriceRequest.builder()
+                .productId(productId)
+                .enrollmentDate(LocalDate.of(2026, 4, 13))
+                .customAttributes(Map.of(
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.of(2026, 4, 13),
+                        "ENROLLMENT_DATE", LocalDate.of(2026, 4, 13),
+                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT, BigDecimal.ZERO,
+                        "IS_SALARY_ACCOUNT", true,
+                        "LOYALTY_SCORE", new BigDecimal("90"),
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("60000")
+                ))
+                .build());
+
+        assertEquals(new BigDecimal("1120.00"), salaryScenario.getFinalChargeablePrice());
+        ProductPricingCalculationResult.PriceComponentDetail salaryDiscount = findDetail(salaryScenario, "ADV_SALARY_BASE_DISCOUNT");
+        assertNotNull(salaryDiscount);
+        assertEquals("ADV_BASE_FEE", salaryDiscount.getTargetComponentCode());
+        assertEquals(new BigDecimal("-50.00"), salaryDiscount.getCalculatedAmount());
+
+        ProductPricingCalculationResult thresholdScenario = performProductCalculation(ProductPriceRequest.builder()
+                .productId(productId)
+                .enrollmentDate(LocalDate.of(2026, 4, 13))
+                .customAttributes(Map.of(
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.of(2026, 4, 13),
+                        "ENROLLMENT_DATE", LocalDate.of(2026, 4, 13),
+                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT, BigDecimal.ZERO,
+                        "IS_SALARY_ACCOUNT", false,
+                        "LOYALTY_SCORE", new BigDecimal("20"),
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("50000")
+                ))
+                .build());
+
+        assertEquals(new BigDecimal("1100.00"), thresholdScenario.getFinalChargeablePrice());
+        ProductPricingCalculationResult.PriceComponentDetail txSurcharge = findDetail(thresholdScenario, "ADV_TX_SURCHARGE_RULED");
+        assertNotNull(txSurcharge);
+        assertEquals("TX_HIGH", txSurcharge.getMatchedTierCode());
+        assertEquals(new BigDecimal("1000.00"), txSurcharge.getCalculatedAmount());
+    }
+
+    @Test
+    @WithMockRole(roles = {PRICING_READER_ROLE})
+    void calculateProductPrice_ShouldLockAdvancedBreachProrataPayloads_EndToEnd() throws Exception {
+        Long productId = seedAdvancedBreachProrataProduct();
+
+        ProductPricingCalculationResult breachScenario = performProductCalculation(ProductPriceRequest.builder()
+                .productId(productId)
+                .enrollmentDate(LocalDate.of(2026, 4, 13))
+                .customAttributes(Map.of(
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.of(2026, 4, 13),
+                        "ENROLLMENT_DATE", LocalDate.of(2026, 3, 15),
+                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT, BigDecimal.ZERO,
+                        "IS_SALARY_ACCOUNT", false,
+                        "LOYALTY_SCORE", BigDecimal.ZERO,
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("12000")
+                ))
+                .build());
+
+        assertEquals(new BigDecimal("618.00"), breachScenario.getFinalChargeablePrice());
+        ProductPricingCalculationResult.PriceComponentDetail breachFee = findDetail(breachScenario, "ADV_BREACH_FEE");
+        assertNotNull(breachFee);
+        assertEquals("BREACH_FULL", breachFee.getMatchedTierCode());
+        assertEquals(new BigDecimal("600.00"), breachFee.getCalculatedAmount());
+
+        ProductPricingCalculationResult.PriceComponentDetail platformFee = findDetail(breachScenario, "ADV_PLATFORM_FEE_PRORATA");
+        assertNotNull(platformFee);
+        assertEquals(new BigDecimal("18.00"), platformFee.getCalculatedAmount());
+
+        ProductPricingCalculationResult belowThresholdScenario = performProductCalculation(ProductPriceRequest.builder()
+                .productId(productId)
+                .enrollmentDate(LocalDate.of(2026, 4, 13))
+                .customAttributes(Map.of(
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.of(2026, 4, 13),
+                        "ENROLLMENT_DATE", LocalDate.of(2026, 3, 15),
+                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT, BigDecimal.ZERO,
+                        "IS_SALARY_ACCOUNT", false,
+                        "LOYALTY_SCORE", BigDecimal.ZERO,
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("9000")
+                ))
+                .build());
+
+        assertEquals(new BigDecimal("18.00"), belowThresholdScenario.getFinalChargeablePrice());
+        assertNull(findDetail(belowThresholdScenario, "ADV_BREACH_FEE"));
+        ProductPricingCalculationResult.PriceComponentDetail belowThresholdPlatformFee = findDetail(belowThresholdScenario, "ADV_PLATFORM_FEE_PRORATA");
+        assertNotNull(belowThresholdPlatformFee);
+        assertEquals(new BigDecimal("18.00"), belowThresholdPlatformFee.getCalculatedAmount());
     }
 
     @Test
@@ -399,4 +509,150 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
     }
+
+                    private Long seedAdvancedRuledMixProduct() {
+                        return txHelper.doInTransaction(() -> {
+                            txHelper.createAndSaveMetadata(PricingAttributeKeys.EFFECTIVE_DATE, "DATE");
+                            txHelper.createAndSaveMetadata("LOYALTY_SCORE", "DECIMAL");
+                            txHelper.createAndSaveMetadata("IS_SALARY_ACCOUNT", "BOOLEAN");
+
+                            ProductType type = txHelper.getOrCreateProductType("ADVANCED_RULED_TYPE");
+                            Product product = txHelper.getOrCreateProduct("ADV_PRODUCT_RULED_MIX", type, "RETAIL");
+
+                            PricingComponent baseFee = createPricingComponent("Advanced Base Fee", "ADV_BASE_FEE", PricingComponent.ComponentType.FEE, false);
+                            PricingComponent txSurcharge = createPricingComponent("Advanced Transaction Surcharge", "ADV_TX_SURCHARGE_RULED", PricingComponent.ComponentType.FEE, false);
+                            PricingComponent loyaltyDiscount = createPricingComponent("Advanced Loyalty Discount", "ADV_LOYALTY_DISCOUNT", PricingComponent.ComponentType.DISCOUNT, false);
+                            PricingComponent salaryDiscount = createPricingComponent("Advanced Salary Discount", "ADV_SALARY_BASE_DISCOUNT", PricingComponent.ComponentType.DISCOUNT, false);
+
+                            addTier(txSurcharge, "TX High", "TX_HIGH", 100, new BigDecimal("50000"), null, false, new BigDecimal("2"), PriceValue.ValueType.FEE_PERCENTAGE, List.of());
+                            addTier(txSurcharge, "TX Mid", "TX_MID", 50, new BigDecimal("20000"), null, false, new BigDecimal("1"), PriceValue.ValueType.FEE_PERCENTAGE, List.of());
+                            addTier(loyaltyDiscount, "Loyalty High", "LOYALTY_HIGH", 100, null, null, false, new BigDecimal("10"), PriceValue.ValueType.DISCOUNT_PERCENTAGE,
+                                    List.of(condition("LOYALTY_SCORE", TierCondition.Operator.GE, "80")));
+                            addTier(salaryDiscount, "Salary True", "SALARY_TRUE", 100, null, null, false, new BigDecimal("50"), PriceValue.ValueType.DISCOUNT_PERCENTAGE,
+                                    List.of(condition("IS_SALARY_ACCOUNT", TierCondition.Operator.EQ, "true")));
+
+                            linkProduct(product, baseFee, false, new BigDecimal("100"), PriceValue.ValueType.FEE_ABSOLUTE, null);
+                            linkProduct(product, txSurcharge, true, null, null, null);
+                            linkProduct(product, loyaltyDiscount, true, null, null, null);
+                            linkProduct(product, salaryDiscount, true, null, null, "ADV_BASE_FEE");
+
+                            txHelper.flushAndClear();
+                            productRuleBuilderService.rebuildRules();
+                            return product.getId();
+                        });
+                    }
+
+                    private Long seedAdvancedBreachProrataProduct() {
+                        return txHelper.doInTransaction(() -> {
+                            txHelper.createAndSaveMetadata(PricingAttributeKeys.EFFECTIVE_DATE, "DATE");
+
+                            ProductType type = txHelper.getOrCreateProductType("ADVANCED_BREACH_TYPE");
+                            Product product = txHelper.getOrCreateProduct("ADV_PRODUCT_BREACH_PRORATA", type, "RETAIL");
+
+                            PricingComponent breachFee = createPricingComponent("Advanced Breach Fee", "ADV_BREACH_FEE", PricingComponent.ComponentType.FEE, false);
+                            PricingComponent platformFee = createPricingComponent("Advanced Platform Fee", "ADV_PLATFORM_FEE_PRORATA", PricingComponent.ComponentType.FEE, true);
+
+                            addTier(breachFee, "Full Breach", "BREACH_FULL", 100, new BigDecimal("10000"), null, true, new BigDecimal("5"), PriceValue.ValueType.FEE_PERCENTAGE, List.of());
+
+                            linkProduct(product, breachFee, true, null, null, null);
+                            linkProduct(product, platformFee, false, new BigDecimal("30"), PriceValue.ValueType.FEE_ABSOLUTE, null);
+
+                            txHelper.flushAndClear();
+                            productRuleBuilderService.rebuildRules();
+                            return product.getId();
+                        });
+                    }
+
+                    private PricingComponent createPricingComponent(String name, String code, PricingComponent.ComponentType type, boolean proRataApplicable) {
+                        PricingComponent component = new PricingComponent();
+                        component.setName(name);
+                        component.setCode(code);
+                        component.setVersion(1);
+                        component.setStatus(VersionableEntity.EntityStatus.DRAFT);
+                        component.setType(type);
+                        component.setProRataApplicable(proRataApplicable);
+                        return pricingComponentRepository.save(component);
+                    }
+
+                    private void addTier(PricingComponent component,
+                                         String tierName,
+                                         String tierCode,
+                                         int priority,
+                                         BigDecimal minThreshold,
+                                         BigDecimal maxThreshold,
+                                         boolean applyChargeOnFullBreach,
+                                         BigDecimal rawValue,
+                                         PriceValue.ValueType valueType,
+                                         List<TierCondition> conditions) {
+                        PricingTier tier = new PricingTier();
+                        tier.setPricingComponent(component);
+                        tier.setName(tierName);
+                        tier.setCode(tierCode);
+                        tier.setPriority(priority);
+                        tier.setMinThreshold(minThreshold);
+                        tier.setMaxThreshold(maxThreshold);
+                        tier.setApplyChargeOnFullBreach(applyChargeOnFullBreach);
+                        PricingTier savedTier = pricingTierRepository.save(tier);
+
+                        PriceValue value = new PriceValue();
+                        value.setPricingTier(savedTier);
+                        value.setRawValue(rawValue);
+                        value.setValueType(valueType);
+                        priceValueRepository.save(value);
+
+                        for (TierCondition template : conditions) {
+                            TierCondition condition = new TierCondition();
+                            condition.setPricingTier(savedTier);
+                            condition.setAttributeName(template.getAttributeName());
+                            condition.setOperator(template.getOperator());
+                            condition.setAttributeValue(template.getAttributeValue());
+                            condition.setConnector(template.getConnector());
+                            tierConditionRepository.save(condition);
+                        }
+                    }
+
+                    private TierCondition condition(String attributeName, TierCondition.Operator operator, String attributeValue) {
+                        TierCondition condition = new TierCondition();
+                        condition.setAttributeName(attributeName);
+                        condition.setOperator(operator);
+                        condition.setAttributeValue(attributeValue);
+                        return condition;
+                    }
+
+                    private void linkProduct(Product product,
+                                             PricingComponent component,
+                                             boolean useRulesEngine,
+                                             BigDecimal fixedValue,
+                                             PriceValue.ValueType fixedValueType,
+                                             String targetComponentCode) {
+                        ProductPricingLink link = new ProductPricingLink();
+                        link.setProduct(product);
+                        link.setPricingComponent(component);
+                        link.setUseRulesEngine(useRulesEngine);
+                        link.setFixedValue(fixedValue);
+                        link.setFixedValueType(fixedValueType);
+                        link.setTargetComponentCode(targetComponentCode);
+                        link.setEffectiveDate(LocalDate.of(2026, 1, 1));
+                        link.setExpiryDate(LocalDate.of(2030, 12, 31));
+                        productPricingLinkRepository.save(link);
+                    }
+
+                    private ProductPricingCalculationResult performProductCalculation(ProductPriceRequest request) throws Exception {
+                        String response = mockMvc.perform(postWithCsrf(BASE_URL + "/calculate/product")
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString();
+
+                        return objectMapper.readValue(response, ProductPricingCalculationResult.class);
+                    }
+
+                    private ProductPricingCalculationResult.PriceComponentDetail findDetail(ProductPricingCalculationResult result, String componentCode) {
+                        return result.getComponentBreakdown().stream()
+                                .filter(detail -> componentCode.equals(detail.getComponentCode()))
+                                .findFirst()
+                                .orElse(null);
+                    }
 }

@@ -3,14 +3,8 @@ package com.bankengine.pricing;
 import com.bankengine.auth.model.Role;
 import com.bankengine.auth.repository.RoleRepository;
 import com.bankengine.auth.security.TenantContextHolder;
-import com.bankengine.catalog.model.BundleProductLink;
-import com.bankengine.catalog.model.Product;
-import com.bankengine.catalog.model.ProductBundle;
-import com.bankengine.catalog.model.ProductType;
-import com.bankengine.catalog.repository.BundleProductLinkRepository;
-import com.bankengine.catalog.repository.ProductBundleRepository;
-import com.bankengine.catalog.repository.ProductRepository;
-import com.bankengine.catalog.repository.ProductTypeRepository;
+import com.bankengine.catalog.model.*;
+import com.bankengine.catalog.repository.*;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.common.repository.BankConfigurationRepository;
@@ -53,6 +47,8 @@ public class TestTransactionHelper {
     @Autowired
     private ProductRepository productRepository;
     @Autowired
+    private ProductCategoryRepository productCategoryRepository;
+    @Autowired
     private ProductTypeRepository productTypeRepository;
     @Autowired
     private ProductBundleRepository productBundleRepository;
@@ -87,6 +83,7 @@ public class TestTransactionHelper {
     @Transactional
     public Product createValidProduct(String productName, String typeName, VersionableEntity.EntityStatus status) {
         ProductType type = getOrCreateProductType(typeName);
+        ensureProductCategoryExists(TEST_BANK_ID, "RETAIL");
         Product product = Product.builder()
                 .name(productName)
                 .code(generateValidCode(productName))
@@ -243,6 +240,7 @@ public class TestTransactionHelper {
     public Product getOrCreateProduct(String name, ProductType type, String category) {
         String code = generateValidCode(name);
         String bankId = TenantContextHolder.getBankId();
+        ensureProductCategoryExists(bankId, category);
         return productRepository.findByBankIdAndCodeAndVersion(bankId, code, 1)
                 .orElseGet(() -> {
                     Product p = new Product();
@@ -255,6 +253,23 @@ public class TestTransactionHelper {
                     p.setBankId(bankId);
                     p.setActivationDate(LocalDate.now().minusDays(1));
                     return productRepository.save(p);
+                });
+    }
+
+    @Transactional
+    public ProductCategory ensureProductCategoryExists(String bankId, String categoryCode) {
+        if (categoryCode == null || categoryCode.isBlank()) {
+            throw new IllegalArgumentException("Category code is required.");
+        }
+
+        String normalizedCode = categoryCode.trim().toUpperCase();
+        return productCategoryRepository.findByBankIdAndCode(bankId, normalizedCode)
+                .orElseGet(() -> {
+                    ProductCategory category = new ProductCategory();
+                    category.setBankId(bankId);
+                    category.setCode(normalizedCode);
+                    category.setName(normalizedCode);
+                    return productCategoryRepository.save(category);
                 });
     }
 

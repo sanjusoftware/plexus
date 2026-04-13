@@ -14,6 +14,7 @@ import com.bankengine.common.dto.BankConfigurationResponse;
 import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
+import com.bankengine.data.seeding.CoreMetadataSeeder;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
 import com.bankengine.web.exception.ValidationException;
@@ -52,6 +53,8 @@ class BankConfigurationServiceTest extends BaseServiceTest {
     private AuthorityDiscoveryService authorityDiscoveryService;
     @Mock
     private PermissionMappingService permissionMappingService;
+    @Mock
+    private CoreMetadataSeeder coreMetadataSeeder;
 
     @InjectMocks
     private BankConfigurationService bankConfigurationService;
@@ -71,6 +74,7 @@ class BankConfigurationServiceTest extends BaseServiceTest {
         lenient().when(bundleProductLinkRepository.findAllByBankIdAndBundleStatuses(anyString(), anySet())).thenReturn(List.of());
         lenient().when(productCategoryRepository.findByBankIdAndCode(anyString(), anyString())).thenReturn(Optional.empty());
         lenient().when(productCategoryRepository.save(any(ProductCategory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().doNothing().when(coreMetadataSeeder).seedCorePricingInputMetadata(anyString());
     }
 
     @Test

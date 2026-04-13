@@ -122,7 +122,7 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(component.getPricingTiers()).thenReturn(Set.of(tier));
 
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(component));
-        when(metadataService.getMetadataEntityByKey("transactionAmount")).thenReturn(metadata);
+        when(metadataService.getMetadataEntityByKey(eq("transactionAmount"), anyString())).thenReturn(metadata);
         when(droolsExpressionBuilder.buildExpression(any(TierCondition.class), any(PricingInputMetadata.class), anyString()))
                 .thenReturn(MOCKED_DRL_EXPRESSION);
 
@@ -207,7 +207,8 @@ public class ProductRuleBuilderServiceTest extends BaseServiceTest {
         when(pricingComponentRepository.findAllWithDetailsBy()).thenReturn(List.of(comp));
 
         String drl = productRuleBuilderService.buildAllRulesForCompilation();
-        assertTrue(drl.contains("((java.math.BigDecimal) customAttributes[\"transactionAmount\"]) <= new java.math.BigDecimal(\"1000.00\")"));
+        assertTrue(drl.contains("customAttributes[\"TRANSACTION_AMOUNT\"]"));
+        assertTrue(drl.contains("<= new java.math.BigDecimal(\"1000.00\")"));
     }
 
     @Test

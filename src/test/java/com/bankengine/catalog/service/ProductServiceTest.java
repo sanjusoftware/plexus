@@ -69,6 +69,7 @@ public class ProductServiceTest extends BaseServiceTest {
         product.setId(1L);
         product.setBankId(TEST_BANK_ID);
         product.setCode("PROD-001");
+        product.setCategory("OTHER");
         product.setVersion(1);
         product.setStatus(status);
         product.setProductFeatureLinks(new ArrayList<>());

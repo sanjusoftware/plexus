@@ -132,9 +132,16 @@ public class ProductPricingService extends BaseService {
                 .map(PricingTier::getCode)
                 .collect(Collectors.toSet());
 
+        // Preserve optional target mapping for rule-based discounts.
+        Map<String, String> targetByComponentCode = new HashMap<>();
+        ruleLinks.forEach(link -> targetByComponentCode.put(
+                link.getPricingComponent().getCode(),
+                link.getTargetComponentCode()
+        ));
+
         // 3. Execute Rules with fully populated code sets
         return determinePriceWithDrools(componentCodes, activeTierCodes, normalizedAttributes).stream()
-                .map(this::mapFactToDetail)
+                .map(fact -> mapFactToDetail(fact, targetByComponentCode.get(fact.getComponentCode())))
                 .toList();
     }
 
@@ -234,7 +241,7 @@ public class ProductPricingService extends BaseService {
                 .build();
     }
 
-    private PriceComponentDetail mapFactToDetail(PriceValue fact) {
+    private PriceComponentDetail mapFactToDetail(PriceValue fact, String targetComponentCode) {
     // Default values
     boolean proRata = false;
     boolean fullBreach = false;
@@ -257,6 +264,7 @@ public class ProductPricingService extends BaseService {
             .rawValue(fact.getRawValue())
             .valueType(fact.getValueType())
             .sourceType("RULES_ENGINE")
+            .targetComponentCode(targetComponentCode)
             .matchedTierId(fact.getMatchedTierId())
             .matchedTierCode(tierCode)
             .proRataApplicable(proRata)

@@ -21,6 +21,6 @@ public class ProductPriceRequest {
     private java.time.LocalDate enrollmentDate;
 
     // "External Facility Counters".
-    // Maps like: {"customerSegment":"CORPORATE","transactionAmount":1000,"effectiveDate":"2026-04-11"}
+    // Maps like: {"CUSTOMER_SEGMENT":"CORPORATE","TRANSACTION_AMOUNT":1000,"EFFECTIVE_DATE":"2026-04-11"}
     private Map<String, Object> customAttributes;
 }

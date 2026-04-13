@@ -89,6 +89,9 @@ public class ProductIntegrationTest extends AbstractIntegrationTest {
                 productRepoStatic.deleteAllInBatch();
                 productTypeRepoStatic.deleteAllInBatch();
 
+                txHelperStatic.ensureProductCategoryExists(TEST_BANK_ID, "RETAIL");
+                txHelperStatic.ensureProductCategoryExists(TEST_BANK_ID, "CORPORATE");
+
                 ProductType pt = new ProductType();
                 pt.setName("Base Checking Type");
                 pt.setCode("BCT");

@@ -18,7 +18,8 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
   ...props
 }) => {
   // Determine if we should show search based on item count if not explicitly set
-  const isSearchable = showSearch !== undefined ? showSearch : options.length > 10;
+  const isSearchable = showSearch !== undefined ? showSearch : options.length > 8;
+  const portalTarget = typeof window !== 'undefined' ? document.body : undefined;
 
   const controlHeight = compact ? '36px' : '42px';
   const valueFontSize = compact ? '0.6875rem' : '0.75rem';
@@ -74,21 +75,27 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
       overflow: 'hidden',
       padding: '0.5rem',
       marginTop: '0.5rem',
-      zIndex: 50,
+      zIndex: 9999,
+    }),
+    menuPortal: (base) => ({
+      ...base,
+      zIndex: 9999,
     }),
     menuList: (base) => ({
       ...base,
       padding: 0,
+      maxHeight: '280px',
+      overflowY: 'auto',
     }),
     option: (base, state) => ({
       ...base,
       backgroundColor: state.isSelected
-        ? '#3b82f6'
+        ? '#eff6ff'
         : state.isFocused
           ? '#eff6ff'
           : 'transparent',
       color: state.isSelected
-        ? 'white'
+        ? (state.data.value === 'CREATE_NEW' ? '#2563eb' : '#374151')
         : state.data.value === 'CREATE_NEW'
           ? '#2563eb' // blue-600
           : '#374151',
@@ -122,6 +129,8 @@ const PlexusSelect: React.FC<PlexusSelectProps> = ({
       options={options}
       isSearchable={isSearchable}
       styles={customStyles}
+      menuPortalTarget={portalTarget}
+      menuPosition="fixed"
       components={{
         IndicatorSeparator: null,
       }}

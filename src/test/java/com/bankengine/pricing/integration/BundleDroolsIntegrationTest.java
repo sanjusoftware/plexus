@@ -20,6 +20,7 @@ import com.bankengine.pricing.repository.PriceValueRepository;
 import com.bankengine.pricing.repository.PricingComponentRepository;
 import com.bankengine.pricing.repository.PricingTierRepository;
 import com.bankengine.pricing.service.BundlePricingService;
+import com.bankengine.pricing.service.PricingAttributeKeys;
 import com.bankengine.pricing.service.ProductPricingService;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.test.config.AbstractIntegrationTest;
@@ -79,6 +80,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
         TenantContextHolder.setBankId(TEST_BANK_ID);
         txHelper.doInTransaction(() -> {
             cleanupData();
+            txHelper.ensureProductCategoryExists(TEST_BANK_ID, "RETAIL");
             ProductType type = productTypeRepository.save(ProductType.builder()
                     .name("SAVINGS_TYPE").code("SAV_TYPE").bankId(TEST_BANK_ID).build());
 
@@ -121,8 +123,8 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
                 .customAttributes(Map.of(
-                        "effectiveDate", LocalDate.now(),
-                        "customerSegment", "RETAIL"))
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now(),
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL"))
                 .products(List.of(new BundlePriceRequest.BundleProductItem(productId, new BigDecimal("1000.00"))))
                 .build();
 
@@ -165,7 +167,7 @@ public class BundleDroolsIntegrationTest extends AbstractIntegrationTest {
 
         BundlePriceRequest request = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
-                .customAttributes(Map.of("customerSegment", "RETAIL"))
+                .customAttributes(Map.of(PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL"))
                 .products(List.of(new BundlePriceRequest.BundleProductItem(productId, productFee)))
                 .build();
 

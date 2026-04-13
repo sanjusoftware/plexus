@@ -49,6 +49,7 @@ const PricingComponentFormPage = () => {
     code: '',
     name: '',
     type: 'FEE',
+    proRataApplicable: false,
     description: '',
     pricingTiers: []
   });
@@ -139,6 +140,7 @@ const PricingComponentFormPage = () => {
 
   const mapTierFromApi = useCallback((tier: any, componentType: string) => {
     const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) ? tier.priceValues[0] : null);
+    const applyChargeOnFullBreach = tier?.applyChargeOnFullBreach ?? firstValue?.applyChargeOnFullBreach ?? false;
     return {
       id: tier.id,
       code: tier.code || '',
@@ -146,7 +148,7 @@ const PricingComponentFormPage = () => {
       priority: normalizePriorityForForm(tier.priority),
       minThreshold: tier.minThreshold,
       maxThreshold: tier.maxThreshold,
-      applyChargeOnFullBreach: tier.applyChargeOnFullBreach || false,
+      applyChargeOnFullBreach,
       isCodeEdited: true,
       conditions: (tier.conditions || []).map((c: any) => ({
         attributeName: c.attributeName || '',
@@ -165,6 +167,7 @@ const PricingComponentFormPage = () => {
     code: data.code,
     name: data.name,
     type: data.type,
+    proRataApplicable: !!data.proRataApplicable,
     description: data.description,
     pricingTiers: (data.pricingTiers || []).map((tier: any) => ({
       code: tier.code,
@@ -189,6 +192,16 @@ const PricingComponentFormPage = () => {
   const signal = useAbortSignal();
   const { resetDirtyBaseline, confirmDiscardChanges } = useUnsavedChangesGuard(formData);
 
+  const formatAttributeOption = (m: any) => {
+    const display = m?.displayName || m?.attributeKey || '';
+    const key = m?.attributeKey || '';
+    return {
+      value: key,
+      label: display,
+      metaKey: key,
+    };
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -212,6 +225,7 @@ const PricingComponentFormPage = () => {
               code: comp.code,
               name: comp.name,
               type: comp.type,
+              proRataApplicable: !!comp.proRataApplicable,
               description: comp.description,
               pricingTiers: sortTiersByPriority((comp.pricingTiers || []).map((t: any) => mapTierFromApi(t, comp.type)))
             };
@@ -514,6 +528,25 @@ const PricingComponentFormPage = () => {
               </div>
               {renderViolations('type')}
             </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Pro-Rata Applicable</label>
+              <div className="h-[42px] flex items-center px-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData({ ...formData, proRataApplicable: !formData.proRataApplicable });
+                    clearViolation('proRataApplicable');
+                  }}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${formData.proRataApplicable ? 'bg-blue-600' : 'bg-gray-200'}`}
+                >
+                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${formData.proRataApplicable ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+                <span className="ml-2 text-[9px] font-bold uppercase tracking-widest text-gray-500">
+                  {formData.proRataApplicable ? 'ENABLED' : 'DISABLED'}
+                </span>
+              </div>
+              {renderViolations('proRataApplicable')}
+            </div>
             <div className="md:col-span-2">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Business Description</label>
               <textarea className="w-full border border-gray-200 rounded-xl p-3 h-20 font-medium text-sm transition focus:border-blue-500 shadow-sm" value={formData.description} onChange={(e) => {
@@ -685,8 +718,20 @@ const PricingComponentFormPage = () => {
                             <div className="col-span-5">
                               <PlexusSelect
                                 placeholder="Attribute..."
-                                options={metadata.map(m => ({ value: m.attributeKey, label: m.displayName }))}
-                                value={metadata.find(m => m.attributeKey === cond.attributeName) ? { value: cond.attributeName, label: metadata.find(m => m.attributeKey === cond.attributeName).displayName } : null}
+                                compact
+                                options={metadata
+                                  .slice()
+                                  .sort((a, b) => (a.displayName || a.attributeKey).localeCompare(b.displayName || b.attributeKey))
+                                  .map(formatAttributeOption)}
+                                value={metadata.find(m => m.attributeKey === cond.attributeName)
+                                  ? formatAttributeOption(metadata.find(m => m.attributeKey === cond.attributeName))
+                                  : null}
+                                formatOptionLabel={(option: any) => (
+                                  <div className="flex flex-col leading-tight">
+                                    <span className="font-bold text-[11px] text-gray-800 uppercase tracking-wider">{option.label}</span>
+                                    <span className="font-mono text-[9px] text-gray-400">({option.metaKey || option.value})</span>
+                                  </div>
+                                )}
                                 onChange={(opt) => {
                                   handleConditionChange(idx, cidx, 'attributeName', opt ? opt.value : '');
                                   clearViolation(`pricingTiers[${idx}].conditions[${cidx}].attributeName`);

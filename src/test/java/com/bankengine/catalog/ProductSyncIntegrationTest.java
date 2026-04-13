@@ -80,6 +80,7 @@ public class ProductSyncIntegrationTest extends AbstractIntegrationTest {
         try {
             TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelperStatic.doInTransaction(() -> {
+                txHelperStatic.ensureProductCategoryExists(TEST_BANK_ID, "RETAIL");
                 ProductType type = ProductType.builder()
                         .name("Sync Test Type")
                         .code("STT")

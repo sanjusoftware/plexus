@@ -123,11 +123,12 @@ class RoleSessionRefreshIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(deleteWithCsrf(ROLE_API + "/{roleName}", targetRole)
                         .session(session))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied: You cannot delete a role assigned to your own account."));
 
         mockMvc.perform(get(AUTH_USER_API).session(session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.permissions", not(hasItem("pricing:component:read"))))
+                .andExpect(jsonPath("$.permissions", hasItem("pricing:component:read")))
                 .andExpect(jsonPath("$.permissions", hasItem("auth:role:write")));
     }
 

@@ -79,6 +79,8 @@ public class FeatureComponentIntegrationTest extends AbstractIntegrationTest {
                 productRepoStatic.deleteAll();
                 productTypeRepoStatic.deleteAll();
 
+                txHelperStatic.ensureProductCategoryExists(TEST_BANK_ID, "RETAIL");
+
                 ProductType type = new ProductType();
                 type.setName("Test Type for Link");
                 type.setCode("TTFL");

@@ -10,6 +10,7 @@ import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.PricingTier;
 import com.bankengine.pricing.model.TierCondition;
 import com.bankengine.pricing.repository.*;
+import com.bankengine.pricing.service.PricingAttributeKeys;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -104,7 +105,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
 
     private PricingTierRequest getValidTierDto() {
         TierConditionDto cond = new TierConditionDto();
-        cond.setAttributeName("customerSegment");
+        cond.setAttributeName(PricingAttributeKeys.CUSTOMER_SEGMENT);
         cond.setOperator(TierCondition.Operator.EQ);
         cond.setAttributeValue("DEFAULT_SEGMENT");
 
@@ -180,7 +181,7 @@ public class PricingComponentIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(get(BASE_URL + "/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pricingTiers.length()", is(1)))
-                .andExpect(jsonPath("$.pricingTiers[0].conditions[0].attributeName", is("customerSegment")))
+                .andExpect(jsonPath("$.pricingTiers[0].conditions[0].attributeName", is(PricingAttributeKeys.CUSTOMER_SEGMENT)))
                 .andExpect(jsonPath("$.pricingTiers[0].priceValues[0].valueType", is("FEE_ABSOLUTE")));
     }
 

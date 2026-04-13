@@ -137,6 +137,24 @@ class ProductPricingServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should propagate targetComponentCode for rules-engine pricing links")
+    void getProductPricing_shouldIncludeTargetComponentCodeForRuleFacts() {
+        ProductPricingLink rules = createPricingLink(2L, "ADV_SALARY_BASE_DISCOUNT", null, null, true);
+        rules.setTargetComponentCode("ADV_BASE_FEE");
+
+        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(rules));
+
+        KieSession mockSession = setupMockDrools();
+        PriceValue discountFact = createFact("ADV_SALARY_BASE_DISCOUNT", "50.00", PriceValue.ValueType.DISCOUNT_PERCENTAGE);
+        when(mockSession.getObjects(any())).thenReturn((Collection) List.of(discountFact));
+        when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+
+        ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
+
+        assertEquals("ADV_BASE_FEE", result.getComponentBreakdown().getFirst().getTargetComponentCode());
+    }
+
+    @Test
     @DisplayName("Should throw NotFoundException if no links exist for product")
     void getProductPricing_shouldThrowExceptionWhenNoLinks() {
         when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of());

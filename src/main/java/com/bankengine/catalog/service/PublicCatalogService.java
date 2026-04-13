@@ -22,6 +22,7 @@ import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.PricingComponent;
 import com.bankengine.pricing.model.ProductPricingLink;
 import com.bankengine.pricing.service.BundlePricingService;
+import com.bankengine.pricing.service.PricingAttributeKeys;
 import com.bankengine.pricing.service.ProductPricingService;
 import com.bankengine.web.exception.NotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -150,9 +151,9 @@ public class PublicCatalogService extends BaseService {
                         ProductPriceRequest request = ProductPriceRequest.builder()
                                 .productId(product.getId())
                                 .customAttributes(Map.of(
-                                        "transactionAmount", estimatedMonthlyBalance,
-                                        "customerSegment", customerSegment,
-                                        "effectiveDate", LocalDate.now()))
+                                        PricingAttributeKeys.TRANSACTION_AMOUNT, estimatedMonthlyBalance,
+                                        PricingAttributeKeys.CUSTOMER_SEGMENT, customerSegment,
+                                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now()))
                                 .build();
 
                         try {
@@ -178,8 +179,8 @@ public class PublicCatalogService extends BaseService {
         BundlePriceRequest pricingRequest = BundlePriceRequest.builder()
                 .productBundleId(bundleId)
                 .customAttributes(Map.of(
-                        "customerSegment", segment,
-                        "effectiveDate", LocalDate.now()))
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, segment,
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now()))
                 .products(bundle.getContainedProducts().stream()
                         .map(link -> new BundlePriceRequest.BundleProductItem(link.getProduct().getId(), BigDecimal.ZERO))
                         .toList())

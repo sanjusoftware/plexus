@@ -14,6 +14,7 @@ import com.bankengine.pricing.model.*;
 import com.bankengine.pricing.model.PriceValue.ValueType;
 import com.bankengine.pricing.model.TierCondition.Operator;
 import com.bankengine.pricing.repository.*;
+import com.bankengine.pricing.service.PricingAttributeKeys;
 import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.pricing.service.ProductPricingService;
 import com.bankengine.rules.service.KieContainerReloadService;
@@ -99,6 +100,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         txHelper.doInTransaction(() -> {
             cleanupData();
             coreMetadataSeeder.seedCorePricingInputMetadata(TEST_BANK_ID);
+            txHelper.ensureProductCategoryExists(TEST_BANK_ID, "RETAIL");
             ProductType type = productTypeRepository.save(ProductType.builder()
                     .name("LOAN_TYPE").code(generateValidCode("LOAN_TYPE")).bankId(TEST_BANK_ID).build());
 
@@ -116,7 +118,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
             tier.getConditions().add(TierCondition.builder()
-                    .pricingTier(tier).attributeName("customerSegment").operator(Operator.EQ)
+                    .pricingTier(tier).attributeName(PricingAttributeKeys.CUSTOMER_SEGMENT).operator(Operator.EQ)
                     .attributeValue(TEST_SEGMENT).connector(TierCondition.LogicalConnector.AND)
                     .bankId(TEST_BANK_ID).build());
 
@@ -159,9 +161,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customAttributes(Map.of(
-                        "customerSegment", TEST_SEGMENT,
-                        "transactionAmount", TEST_AMOUNT,
-                        "effectiveDate", LocalDate.now()))
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, TEST_SEGMENT,
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, TEST_AMOUNT,
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now()))
                 .build();
 
         ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
@@ -206,9 +208,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customAttributes(Map.of(
-                        "customerSegment", TEST_SEGMENT,
-                        "effectiveDate", LocalDate.now(),
-                        "transactionAmount", TEST_AMOUNT))
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, TEST_SEGMENT,
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now(),
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, TEST_AMOUNT))
                 .build();
 
         List<PriceComponentDetail> results = productPricingService.getProductPricing(request).getComponentBreakdown();
@@ -237,9 +239,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customAttributes(Map.of(
-                        "customerSegment", TEST_SEGMENT,
-                        "effectiveDate", LocalDate.now(),
-                        "transactionAmount", TEST_AMOUNT))
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, TEST_SEGMENT,
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now(),
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, TEST_AMOUNT))
                 .build();
 
         assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
@@ -260,9 +262,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customAttributes(Map.of(
-                        "customerSegment", TEST_SEGMENT,
-                        "effectiveDate", LocalDate.now(),
-                        "transactionAmount", TEST_AMOUNT))
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, TEST_SEGMENT,
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now(),
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, TEST_AMOUNT))
                 .build();
 
         assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
@@ -282,7 +284,7 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
                     .minThreshold(BigDecimal.ZERO).bankId(TEST_BANK_ID).build();
 
             tier.getConditions().add(TierCondition.builder()
-                    .pricingTier(tier).attributeName("transactionAmount").operator(Operator.GT)
+                    .pricingTier(tier).attributeName(PricingAttributeKeys.TRANSACTION_AMOUNT).operator(Operator.GT)
                     .attributeValue("500.00").connector(TierCondition.LogicalConnector.AND)
                     .bankId(TEST_BANK_ID).build());
 
@@ -308,9 +310,9 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
         ProductPriceRequest request = ProductPriceRequest.builder()
                 .productId(this.persistedProduct.getId())
                 .customAttributes(Map.of(
-                        "customerSegment", TEST_SEGMENT,
-                        "transactionAmount", TEST_AMOUNT,
-                        "effectiveDate", LocalDate.now().plusDays(1)))
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, TEST_SEGMENT,
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, TEST_AMOUNT,
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now().plusDays(1)))
                 .build();
 
         List<PriceComponentDetail> results = productPricingService.getProductPricing(request).getComponentBreakdown();

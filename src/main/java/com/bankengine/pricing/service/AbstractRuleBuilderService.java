@@ -194,8 +194,12 @@ public abstract class AbstractRuleBuilderService extends BaseService {
 
         // 2. Automatic Threshold Logic (Min/Max)
         String amountExpression = factName.equals("BundlePricingInput")
-                ? "((java.math.BigDecimal) customAttributes[\"grossTotalAmount\"])"
-                : "((java.math.BigDecimal) customAttributes[\"transactionAmount\"])";
+                ? String.format("((java.math.BigDecimal) (customAttributes[\"%s\"] != null ? customAttributes[\"%s\"] : customAttributes[\"grossTotalAmount\"]))",
+                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT,
+                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT)
+                : String.format("((java.math.BigDecimal) (customAttributes[\"%s\"] != null ? customAttributes[\"%s\"] : customAttributes[\"transactionAmount\"]))",
+                        PricingAttributeKeys.TRANSACTION_AMOUNT,
+                        PricingAttributeKeys.TRANSACTION_AMOUNT);
 
         if (tier.getMinThreshold() != null) {
             conditionBuilder.append(String.format(", %s >= new java.math.BigDecimal(\"%s\")",

@@ -6,13 +6,16 @@ import com.bankengine.pricing.model.PricingInputMetadata;
 import com.bankengine.pricing.repository.PricingInputMetadataRepository;
 import com.bankengine.pricing.repository.TierConditionRepository;
 import com.bankengine.rules.service.KieContainerReloadService;
+import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.DependencyViolationException;
+import com.bankengine.web.exception.NotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -22,7 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class PricingInputMetadataServiceTest {
+class PricingInputMetadataServiceTest extends BaseServiceTest {
 
     @Mock private PricingInputMetadataRepository pricingInputMetadataRepository;
     @Mock private TierConditionRepository tierConditionRepository;
@@ -36,7 +39,7 @@ class PricingInputMetadataServiceTest {
     void getMetadataEntityByKey_ShouldReturnEntity_WhenExists() {
         String key = "amount";
         PricingInputMetadata entity = new PricingInputMetadata();
-        when(pricingInputMetadataRepository.findByAttributeKey(key)).thenReturn(Optional.of(entity));
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, key)).thenReturn(Optional.of(entity));
 
         PricingInputMetadata result = metadataService.getMetadataEntityByKey(key);
 
@@ -45,7 +48,7 @@ class PricingInputMetadataServiceTest {
 
     @Test
     void getMetadataEntityByKey_ShouldThrowIllegalArgument_WhenMissing() {
-        when(pricingInputMetadataRepository.findByAttributeKey("invalid")).thenReturn(Optional.empty());
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, "invalid")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> metadataService.getMetadataEntityByKey("invalid"))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -61,10 +64,14 @@ class PricingInputMetadataServiceTest {
         dto.setSourceType("FACT_FIELD");
         dto.setSourceField("transactionAmount");
         PricingInputMetadata entity = new PricingInputMetadata();
+        entity.setAttributeKey("new_key");
+        PricingInputMetadata saved = new PricingInputMetadata();
+        saved.setAttributeKey("new_key");
 
-        when(pricingInputMetadataRepository.findByAttributeKey("new_key")).thenReturn(Optional.empty());
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, "new_key")).thenReturn(Optional.empty());
         when(mapper.toEntity(dto)).thenReturn(entity);
-        when(pricingInputMetadataRepository.save(entity)).thenReturn(entity);
+        when(pricingInputMetadataRepository.save(entity)).thenReturn(saved);
+        when(mapper.toResponse(saved)).thenReturn(null);
 
         metadataService.createMetadata(dto);
 
@@ -83,10 +90,13 @@ class PricingInputMetadataServiceTest {
         dto.setDataType("string");
         dto.setSourceField("new_key_case");
         PricingInputMetadata entity = new PricingInputMetadata();
+        PricingInputMetadata saved = new PricingInputMetadata();
+        saved.setAttributeKey("new_key_case");
 
-        when(pricingInputMetadataRepository.findByAttributeKey("new_key_case")).thenReturn(Optional.empty());
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, "new_key_case")).thenReturn(Optional.empty());
         when(mapper.toEntity(dto)).thenReturn(entity);
-        when(pricingInputMetadataRepository.save(entity)).thenReturn(entity);
+        when(pricingInputMetadataRepository.save(entity)).thenReturn(saved);
+        when(mapper.toResponse(saved)).thenReturn(null);
 
         metadataService.createMetadata(dto);
 
@@ -100,7 +110,8 @@ class PricingInputMetadataServiceTest {
     void createMetadata_ShouldThrowException_WhenKeyAlreadyExists() {
         PricingMetadataRequest dto = new PricingMetadataRequest();
         dto.setAttributeKey("existing");
-        when(pricingInputMetadataRepository.findByAttributeKey("existing")).thenReturn(Optional.of(new PricingInputMetadata()));
+        dto.setDataType("STRING");
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, "existing")).thenReturn(Optional.of(new PricingInputMetadata()));
 
         assertThatThrownBy(() -> metadataService.createMetadata(dto))
                 .isInstanceOf(DependencyViolationException.class)
@@ -118,9 +129,11 @@ class PricingInputMetadataServiceTest {
         dto.setSourceType("FACT_FIELD");
         dto.setSourceField("customerSegment");
         PricingInputMetadata existing = new PricingInputMetadata();
+        PricingInputMetadata saved = new PricingInputMetadata();
 
-        when(pricingInputMetadataRepository.findByAttributeKey(key)).thenReturn(Optional.of(existing));
-        when(pricingInputMetadataRepository.save(existing)).thenReturn(existing);
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, key)).thenReturn(Optional.of(existing));
+        when(pricingInputMetadataRepository.save(existing)).thenReturn(saved);
+        when(mapper.toResponse(saved)).thenReturn(null);
 
         metadataService.updateMetadata(key, dto);
 
@@ -136,12 +149,12 @@ class PricingInputMetadataServiceTest {
         PricingInputMetadata entity = new PricingInputMetadata();
         entity.setAttributeKey(key);
 
-        when(pricingInputMetadataRepository.findByAttributeKey(key)).thenReturn(Optional.of(entity));
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, key)).thenReturn(Optional.of(entity));
         when(tierConditionRepository.existsByAttributeName(key)).thenReturn(false);
 
         metadataService.deleteMetadata(key);
 
-        verify(pricingInputMetadataRepository).deleteByAttributeKey(key);
+        verify(pricingInputMetadataRepository).deleteByBankIdAndAttributeKey(TEST_BANK_ID, key);
         verify(reloadService).reloadKieContainer();
     }
 
@@ -150,22 +163,34 @@ class PricingInputMetadataServiceTest {
         String key = "active_key";
         PricingInputMetadata entity = new PricingInputMetadata();
         entity.setAttributeKey(key);
+        entity.setBankId(TEST_BANK_ID);
+        entity.setDataType("STRING");
 
-        when(pricingInputMetadataRepository.findByAttributeKey(key)).thenReturn(Optional.of(entity));
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, key)).thenReturn(Optional.of(entity));
         when(tierConditionRepository.existsByAttributeName(key)).thenReturn(true);
 
         assertThatThrownBy(() -> metadataService.deleteMetadata(key))
                 .isInstanceOf(DependencyViolationException.class)
                 .hasMessageContaining("used in one or more active tier conditions");
 
-        verify(pricingInputMetadataRepository, never()).deleteByAttributeKey(any());
+        verify(pricingInputMetadataRepository, never()).deleteByBankIdAndAttributeKey(any(), any());
         verify(reloadService, never()).reloadKieContainer();
     }
 
     @Test
     void getMetadataEntitiesByKeys_ShouldDelegateToRepository() {
         Set<String> keys = Set.of("a", "b");
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKeyIn(TEST_BANK_ID, keys)).thenReturn(List.of());
         metadataService.getMetadataEntitiesByKeys(keys);
-        verify(pricingInputMetadataRepository).findByAttributeKeyIn(keys);
+        verify(pricingInputMetadataRepository).findByBankIdAndAttributeKeyIn(TEST_BANK_ID, keys);
+    }
+
+    @Test
+    void updateMetadata_ShouldThrowNotFound_WhenMissing() {
+        when(pricingInputMetadataRepository.findByBankIdAndAttributeKey(TEST_BANK_ID, "target")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> metadataService.updateMetadata("target", new PricingMetadataRequest()))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Pricing Input Metadata not found with key: target");
     }
 }

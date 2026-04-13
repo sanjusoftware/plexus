@@ -313,6 +313,11 @@ const ProductManagementPage = () => {
 
       const metadataEffectiveDateKey = calcMetadata.find((meta) => isSystemDateKey(meta.attributeKey || ''))?.attributeKey;
       const effectiveDateKey = metadataEffectiveDateKey || keys.EFFECTIVE_DATE;
+      const enrollmentDateKey = calcMetadata.find((meta) => (meta.attributeKey || '').toUpperCase() === 'ENROLLMENT_DATE')?.attributeKey
+        || Object.keys(attributesFromMetadata).find((key) => key.toUpperCase() === 'ENROLLMENT_DATE');
+      const enrollmentDateValue = enrollmentDateKey
+        ? attributesFromMetadata[enrollmentDateKey]
+        : undefined;
 
       if (!attributesFromMetadata[effectiveDateKey]) {
         attributesFromMetadata[effectiveDateKey] = new Date().toISOString().split('T')[0];
@@ -323,7 +328,9 @@ const ProductManagementPage = () => {
 
       const request = {
         productId: prod.id,
-        enrollmentDate: new Date().toISOString().split('T')[0],
+        enrollmentDate: typeof enrollmentDateValue === 'string' && enrollmentDateValue.trim()
+          ? enrollmentDateValue
+          : new Date().toISOString().split('T')[0],
         customAttributes: attributesFromMetadata
       };
 

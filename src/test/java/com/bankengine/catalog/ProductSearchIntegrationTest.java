@@ -48,6 +48,7 @@ public class ProductSearchIntegrationTest extends AbstractIntegrationTest {
             TenantContextHolder.setBankId(TEST_BANK_ID);
             txHelperStatic.doInTransaction(() -> {
                 productTypeRepoStatic.deleteAllInBatch();
+                txHelperStatic.ensureProductCategoryExists(TEST_BANK_ID, "RETAIL");
                 ProductType baseType = ProductType.builder().name("General Banking").code("GEN").bankId(TEST_BANK_ID).build();
                 EXISTING_PRODUCT_TYPE_ID = productTypeRepoStatic.save(baseType).getId();
             });

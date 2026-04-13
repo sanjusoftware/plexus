@@ -1,8 +1,8 @@
 package com.bankengine.pricing;
 
 import com.bankengine.pricing.dto.PricingMetadataRequest;
-import com.bankengine.pricing.model.PricingInputMetadata;
-import com.bankengine.pricing.repository.PricingInputMetadataRepository;
+import com.bankengine.pricing.model.*;
+import com.bankengine.pricing.repository.*;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.test.config.AbstractIntegrationTest;
 import com.bankengine.test.config.WithMockRole;
@@ -39,6 +39,10 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private PricingInputMetadataRepository metadataRepository;
+    @Autowired private PricingComponentRepository pricingComponentRepository;
+    @Autowired private PricingTierRepository pricingTierRepository;
+    @Autowired private TierConditionRepository tierConditionRepository;
+    @Autowired private PriceValueRepository priceValueRepository;
     @Autowired private TestTransactionHelper txHelper;
 
     @MockBean
@@ -241,11 +245,48 @@ class PricingInputMetadataIntegrationTest extends AbstractIntegrationTest {
     @Test
     @WithMockRole(roles = {ADMIN_ROLE})
     void shouldReturn409WhenDeletingMetadataWithDependencies() throws Exception {
-        Long componentId = txHelper.doInTransaction(() -> txHelper.createLinkedTierAndValue("ComponentForConflict", "TierForConflict"));
+        String dependentKey = "DEPENDENCY_KEY";
+        Long componentId = txHelper.doInTransaction(() -> {
+            metadataRepository.save(PricingInputMetadata.builder()
+                    .attributeKey(dependentKey)
+                    .dataType("STRING")
+                    .displayName(dependentKey + " Display")
+                    .sourceType(PricingInputMetadata.AttributeSourceType.CUSTOM_ATTRIBUTE)
+                    .sourceField(dependentKey)
+                    .bankId(TEST_BANK_ID)
+                    .build());
 
-        mockMvc.perform(deleteWithCsrf(API_PATH + "/customerSegment"))
+            PricingComponent component = txHelper.createPricingComponentInDb("ComponentForConflict");
+            PricingTier tier = PricingTier.builder()
+                    .pricingComponent(component)
+                    .name("TierForConflict")
+                    .code("TIER_FOR_CONFLICT")
+                    .minThreshold(java.math.BigDecimal.ZERO)
+                    .bankId(TEST_BANK_ID)
+                    .build();
+            PricingTier savedTier = pricingTierRepository.save(tier);
+
+            tierConditionRepository.save(TierCondition.builder()
+                    .pricingTier(savedTier)
+                    .attributeName(dependentKey)
+                    .operator(TierCondition.Operator.EQ)
+                    .attributeValue("Y")
+                    .bankId(TEST_BANK_ID)
+                    .build());
+
+            priceValueRepository.save(PriceValue.builder()
+                    .pricingTier(savedTier)
+                    .rawValue(java.math.BigDecimal.ONE)
+                    .valueType(PriceValue.ValueType.FEE_ABSOLUTE)
+                    .bankId(TEST_BANK_ID)
+                    .build());
+
+            return component.getId();
+        });
+
+        mockMvc.perform(deleteWithCsrf(API_PATH + "/" + dependentKey))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Cannot delete Pricing Input Metadata 'customerSegment': It is used in one or more active tier conditions."));
+                .andExpect(jsonPath("$.message").value("Cannot delete Pricing Input Metadata '" + dependentKey + "': It is used in one or more active tier conditions."));
 
         txHelper.doInTransaction(() -> {
             txHelper.deleteComponentGraphById(componentId);
