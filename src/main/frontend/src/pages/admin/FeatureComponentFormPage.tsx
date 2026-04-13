@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Loader2, Save, ShieldCheck } from 'lucide-react';
+import { Loader2, Save, Puzzle } from 'lucide-react';
 import { AdminFormHeader, AdminPage } from '../../components/AdminPageLayout';
 import PlexusSelect from '../../components/PlexusSelect';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
@@ -38,7 +38,7 @@ const FeatureComponentFormPage = () => {
           setIsCodeEdited(true);
         } catch (err: any) {
           if (axios.isCancel(err)) return;
-          setToast({ message: 'Failed to fetch feature component.', type: 'error' });
+          setToast({ message: 'Failed to fetch product feature.', type: 'error' });
         } finally {
           if (!signal.aborted) {
             setLoading(false);
@@ -106,8 +106,8 @@ const FeatureComponentFormPage = () => {
   return (
     <AdminPage width="narrow">
       <AdminFormHeader
-        icon={ShieldCheck}
-        title={`${isEditing ? 'Edit' : 'Register'} Feature`}
+        icon={Puzzle}
+        title={`${isEditing ? 'Edit' : 'Register'} Product Feature`}
         description="Define reusable product features."
         onClose={handleCancel}
       />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Loader2, ShieldCheck, Info } from 'lucide-react';
+import { Plus, Loader2, Puzzle, Info } from 'lucide-react';
 import {
   AdminDataTable,
   AdminDataTableActionButton,
@@ -47,7 +47,7 @@ const FeatureComponentsPage = () => {
       setFeatures(response.data);
     } catch (err: any) {
       if (axios.isCancel(err)) return;
-      setToast({ message: 'Failed to fetch feature components.', type: 'error' });
+      setToast({ message: 'Failed to fetch product features.', type: 'error' });
     } finally {
       if (!abortSignal.aborted) {
         setLoading(false);
@@ -92,8 +92,8 @@ const FeatureComponentsPage = () => {
   return (
     <AdminPage>
       <AdminPageHeader
-        icon={ShieldCheck}
-        title="Feature Components"
+        icon={Puzzle}
+        title="Product Features"
         description="Manage reusable non-monetary product features and specifications."
         actions={
           <HasPermission action="POST" path="/api/v1/features">
@@ -114,10 +114,10 @@ const FeatureComponentsPage = () => {
       {loading ? (
         <div className="admin-card flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
       ) : (
-        <AdminDataTable aria-label="Feature components table">
+        <AdminDataTable aria-label="Product features table">
             <thead>
               <tr>
-                <th>Feature Component</th>
+                <th>Product Feature</th>
                 <th>Data Type</th>
                 <th>Status</th>
                 <th>Updated At</th>
@@ -184,7 +184,7 @@ const FeatureComponentsPage = () => {
                 </AdminDataTableRow>
               ))}
               {features.length === 0 && (
-                <AdminDataTableEmptyRow colSpan={5}>No feature components found.</AdminDataTableEmptyRow>
+                <AdminDataTableEmptyRow colSpan={5}>No product features found.</AdminDataTableEmptyRow>
               )}
             </tbody>
         </AdminDataTable>

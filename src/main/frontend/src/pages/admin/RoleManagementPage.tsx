@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Loader2, Shield, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Loader2, ShieldCheck, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { AdminDataTableActionButton, AdminDataTableActionContent } from '../../components/AdminDataTable';
 import ConfirmationModal from '../../components/ConfirmationModal';
@@ -121,7 +121,7 @@ const RoleManagementPage = () => {
   return (
     <AdminPage>
       <AdminPageHeader
-        icon={Shield}
+        icon={ShieldCheck}
         title="Roles & Permissions"
         description="Map identity provider roles to granular system authorities."
         actions={
@@ -158,7 +158,7 @@ const RoleManagementPage = () => {
                 >
                   <div className="flex items-center space-x-4">
                     <div className="p-2.5 bg-blue-50 rounded-xl group-hover:bg-blue-600 transition duration-300">
-                      <Shield className="w-5 h-5 text-blue-600 group-hover:text-white transition duration-300" />
+                      <ShieldCheck className="w-5 h-5 text-blue-600 group-hover:text-white transition duration-300" />
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-gray-900 uppercase">{mapping.name}</h3>

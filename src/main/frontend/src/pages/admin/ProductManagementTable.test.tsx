@@ -42,7 +42,7 @@ jest.mock('../../components/HasPermission', () => ({
   HasPermission: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }));
 
-describe('Product Management Page Table', () => {
+describe('Product Catalog Page Table', () => {
   beforeEach(() => {
     mockNavigate.mockReset();
     mockSetToast.mockReset();
@@ -71,7 +71,7 @@ describe('Product Management Page Table', () => {
 
     render(<ProductManagementPage />);
 
-    const table = await screen.findByRole('table', { name: /product management table/i });
+    const table = await screen.findByRole('table', { name: /product catalog table/i });
     const headers = within(table).getAllByRole('columnheader').map((header) => header.textContent);
 
     expect(headers).toEqual(['Product Details', 'Product Type', 'Category', 'Status', 'Updated At', 'Actions']);
@@ -99,7 +99,7 @@ describe('Product Management Page Table', () => {
 
     render(<ProductManagementPage />);
 
-    const table = await screen.findByRole('table', { name: /product management table/i });
+    const table = await screen.findByRole('table', { name: /product catalog table/i });
     const actionsHeader = within(table).getByText('Actions');
     expect(actionsHeader).toHaveClass('admin-table__actions-header');
 
@@ -129,7 +129,7 @@ describe('Product Management Page Table', () => {
 
     render(<ProductManagementPage />);
 
-    const table = await screen.findByRole('table', { name: /product management table/i });
+    const table = await screen.findByRole('table', { name: /product catalog table/i });
 
     const versionButton = within(table).getByTitle('Create Revision (v+1)');
     expect(versionButton).toHaveClass('admin-table__action-btn', 'admin-table__action-btn--success', 'admin-table__action-btn--compact');

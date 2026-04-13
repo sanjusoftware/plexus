@@ -13,6 +13,7 @@ const routeConfig: Record<string, RouteMapping> = {
   '/dashboard': { path: '/dashboard', label: 'Dashboard' },
   '/banks': { path: '/banks', label: 'Bank Management' },
   '/product-types': { path: '/product-types', label: 'Product Types' },
+  '/features': { path: '/features', label: 'Product Features' },
   '/pricing-metadata': { path: '/pricing-metadata', label: 'Pricing Metadata' },
   '/pricing-components': { path: '/pricing-components', label: 'Pricing Components' },
   '/products': { path: '/products', label: 'Product Catalog' },
@@ -60,6 +61,7 @@ const Breadcrumbs: React.FC = () => {
         const singularMap: Record<string, string> = {
           '/banks': 'Bank',
           '/product-types': 'Product Type',
+          '/features': 'Product Feature',
           '/pricing-metadata': 'Attribute',
           '/pricing-components': 'Pricing Component',
           '/products': 'Product',

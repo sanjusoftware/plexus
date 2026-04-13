@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Loader2, Tag, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Plus, Loader2, CircleDollarSign, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import {
   AdminDataTable,
   AdminDataTableActionButton,
@@ -250,7 +250,7 @@ const PricingComponentsPage = () => {
   return (
     <AdminPage>
       <AdminPageHeader
-        icon={Tag}
+        icon={CircleDollarSign}
         tone="purple"
         title="Pricing Components"
         description="Manage reusable pricing structures with multi-tier logic."

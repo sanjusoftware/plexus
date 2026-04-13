@@ -96,7 +96,7 @@ const LandingPage = () => {
           <div className="p-6 rounded-2xl bg-white border hover:shadow-xl transition">
             <Settings className="h-12 w-12 text-blue-600 mb-6" />
             <h3 className="text-xl font-bold mb-3">Product Catalog</h3>
-            <p className="text-gray-600">Reusable feature components allow you to define any banking product—CASA, Loans, Credit Cards—in minutes.</p>
+            <p className="text-gray-600">Reusable product features allow you to define any banking product—CASA, Loans, Credit Cards—in minutes.</p>
           </div>
 
           <div className="p-6 rounded-2xl bg-white border hover:shadow-xl transition">

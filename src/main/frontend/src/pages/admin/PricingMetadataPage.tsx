@@ -80,7 +80,7 @@ const PricingMetadataPage = () => {
     <AdminPage>
       <AdminPageHeader
         icon={Database}
-        title="Pricing Input Metadata"
+        title="Pricing Metadata"
         description="Register attributes used in dynamic pricing calculation rules."
         actions={
           <HasPermission action="POST" path="/api/v1/pricing-metadata">
