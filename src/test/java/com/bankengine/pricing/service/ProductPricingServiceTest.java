@@ -74,7 +74,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
     void getProductPricing_shouldOrchestrateCollectionAndAggregation() {
         // Arrange
         ProductPricingLink fixedLink = createPricingLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
-        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(fixedLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(fixedLink));
         when(priceAggregator.calculateBundleImpact(anyList(), any(BigDecimal.class), any(BigDecimal.class), any(), any()))
                 .thenReturn(new BigDecimal("10.00"));
 
@@ -99,7 +99,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @DisplayName("Should include DISCOUNT_PERCENTAGE and FREE_COUNT types in the breakdown")
     void getProductPricing_shouldIncludeWaivedAndFreeCountInBreakdown() {
         ProductPricingLink rulesLink = createPricingLink(202L, "RulesComp", null, null, true);
-        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
         KieSession mockSession = setupMockDrools();
         PriceValue feeFact = createFact("PROCESSING_FEE", "10.00", PriceValue.ValueType.FEE_ABSOLUTE);
@@ -122,7 +122,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
         ProductPricingLink fixed = createPricingLink(1L, "Fixed", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
         ProductPricingLink rules = createPricingLink(2L, "Rules", null, null, true);
 
-        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(fixed, rules));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(fixed, rules));
         KieSession mockSession = setupMockDrools();
         when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
 
@@ -142,7 +142,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
         ProductPricingLink rules = createPricingLink(2L, "ADV_SALARY_BASE_DISCOUNT", null, null, true);
         rules.setTargetComponentCode("ADV_BASE_FEE");
 
-        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(rules));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rules));
 
         KieSession mockSession = setupMockDrools();
         PriceValue discountFact = createFact("ADV_SALARY_BASE_DISCOUNT", "50.00", PriceValue.ValueType.DISCOUNT_PERCENTAGE);
@@ -155,9 +155,35 @@ class ProductPricingServiceTest extends BaseServiceTest {
     }
 
     @Test
+    @DisplayName("Should propagate effective and expiry dates for fixed and rules-engine component details")
+    void getProductPricing_shouldIncludeLinkDateWindowInBreakdown() {
+        ProductPricingLink fixed = createPricingLink(1L, "Fixed", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
+        fixed.setEffectiveDate(LocalDate.of(2026, 4, 13));
+        fixed.setExpiryDate(LocalDate.of(2026, 4, 30));
+
+        ProductPricingLink rules = createPricingLink(2L, "RULED_DISCOUNT", null, null, true);
+        rules.setEffectiveDate(LocalDate.of(2026, 4, 21));
+        rules.setExpiryDate(LocalDate.of(2026, 4, 30));
+
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(fixed, rules));
+
+        KieSession mockSession = setupMockDrools();
+        PriceValue discountFact = createFact("RULED_DISCOUNT", "50.00", PriceValue.ValueType.DISCOUNT_PERCENTAGE);
+        when(mockSession.getObjects(any())).thenReturn((Collection) List.of(discountFact));
+        when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+
+        ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
+
+        assertEquals(LocalDate.of(2026, 4, 13), result.getComponentBreakdown().get(0).getEffectiveDate());
+        assertEquals(LocalDate.of(2026, 4, 30), result.getComponentBreakdown().get(0).getExpiryDate());
+        assertEquals(LocalDate.of(2026, 4, 21), result.getComponentBreakdown().get(1).getEffectiveDate());
+        assertEquals(LocalDate.of(2026, 4, 30), result.getComponentBreakdown().get(1).getExpiryDate());
+    }
+
+    @Test
     @DisplayName("Should throw NotFoundException if no links exist for product")
     void getProductPricing_shouldThrowExceptionWhenNoLinks() {
-        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of());
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(anyLong(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of());
         assertThrows(NotFoundException.class, () -> productPricingService.getProductPricing(request));
     }
 
@@ -165,7 +191,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @DisplayName("DSK: Should propagate Tier flags (Pro-rata/Breach) to Aggregator")
     void getProductPricing_shouldPropagateNewTierFlags() {
         ProductPricingLink rulesLink = createPricingLink(300L, "DskComp", null, null, true);
-        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(anyLong(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
         KieSession mockSession = setupMockDrools();
         PricingComponent comp = rulesLink.getPricingComponent();
@@ -192,7 +218,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @DisplayName("Branch: Should handle PriceValue with null PricingTier (Defensive Mapping)")
     void mapFactToDetail_shouldHandleNullTier() {
         ProductPricingLink rulesLink = createPricingLink(600L, "NoTierComp", null, null, true);
-        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(anyLong(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
         KieSession mockSession = setupMockDrools();
         PriceValue fact = createFact("ORPHAN_FEE", "20.00", PriceValue.ValueType.FEE_ABSOLUTE);
@@ -213,7 +239,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
         ProductPricingLink emptyFixedLink = createPricingLink(900L, "EmptyFixed", null, null, false);
         ProductPricingLink validLink = createPricingLink(901L, "ValidFixed", new BigDecimal("5.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
 
-        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(emptyFixedLink, validLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(anyLong(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(emptyFixedLink, validLink));
         when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any()))
                 .thenReturn(new BigDecimal("5.00"));
 
@@ -237,7 +263,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
 
         // Mock link with useRulesEngine = true
         ProductPricingLink rulesLink = createPricingLink(50L, "WIRE_FEE", null, null, true);
-        when(productPricingLinkRepository.findByProductIdAndDate(any(), any())).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
         // Setup Drools to return a 100% discount if loyalty_score > 80
         PriceValue loyaltyWaiver = PriceValue.builder()
@@ -273,7 +299,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
                         PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL")))
                 .build();
         ProductPricingLink fixedLink = createPricingLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
-        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(fixedLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(anyLong(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(fixedLink));
         when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(new BigDecimal("10.00"));
 
         ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
@@ -296,7 +322,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
                 .build();
 
         ProductPricingLink fixedLink = createPricingLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
-        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), eq(requestedDate))).thenReturn(List.of(fixedLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), eq(requestedDate.withDayOfMonth(1)), eq(requestedDate.withDayOfMonth(requestedDate.lengthOfMonth())))).thenReturn(List.of(fixedLink));
         when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(new BigDecimal("10.00"));
 
         productPricingService.getProductPricing(request);
@@ -314,7 +340,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
     void getProductPricing_shouldPassCustomAttributesToDrools() {
         request.setCustomAttributes(java.util.Map.of("yearsOfService", 5));
         ProductPricingLink rulesLink = createPricingLink(202L, "RulesComp", null, null, true);
-        when(productPricingLinkRepository.findByProductIdAndDate(eq(1L), any(LocalDate.class))).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
         KieSession mockSession = setupMockDrools();
         when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
@@ -333,7 +359,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @DisplayName("Branch: mapFactToDetail should use entity code if matchedTierCode is null")
     void mapFactToDetail_shouldUseEntityCode() {
         ProductPricingLink rulesLink = createPricingLink(700L, "EntityCodeComp", null, null, true);
-        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(anyLong(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
         KieSession mockSession = setupMockDrools();
         PriceValue fact = createFact("FEE_CODE", "15.00", PriceValue.ValueType.FEE_ABSOLUTE);
@@ -357,7 +383,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
     void determinePriceWithDrools_nullCustomAttributes() {
         request.setCustomAttributes(null);
         ProductPricingLink rulesLink = createPricingLink(800L, "NullCustomComp", null, null, true);
-        when(productPricingLinkRepository.findByProductIdAndDate(anyLong(), any())).thenReturn(List.of(rulesLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(anyLong(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
         KieSession mockSession = setupMockDrools();
         when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);

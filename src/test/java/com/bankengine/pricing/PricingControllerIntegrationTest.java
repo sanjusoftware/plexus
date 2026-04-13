@@ -516,6 +516,35 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockRole(roles = {PRICING_READER_ROLE})
+    void calculateProductPrice_ShouldProrateMidCyclePricingLaunchWithinBillingMonth_EndToEnd() throws Exception {
+        Long productId = seedAdvancedBreachProrataProductWithMidCycleLaunch();
+
+        ProductPricingCalculationResult scenario = performProductCalculation(ProductPriceRequest.builder()
+                .productId(productId)
+                .enrollmentDate(LocalDate.of(2026, 4, 1))
+                .customAttributes(Map.of(
+                        PricingAttributeKeys.CUSTOMER_SEGMENT, "RETAIL",
+                        PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.of(2026, 4, 1),
+                        "ENROLLMENT_DATE", LocalDate.of(2026, 4, 1),
+                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT, BigDecimal.ZERO,
+                        "IS_SALARY_ACCOUNT", false,
+                        "LOYALTY_SCORE", BigDecimal.ZERO,
+                        PricingAttributeKeys.TRANSACTION_AMOUNT, new BigDecimal("12000")
+                ))
+                .build());
+
+        assertEquals(new BigDecimal("618.00"), scenario.getFinalChargeablePrice());
+        ProductPricingCalculationResult.PriceComponentDetail platformFee = findDetail(scenario, "ADV_PLATFORM_FEE_PRORATA");
+        assertNotNull(platformFee);
+        assertEquals(new BigDecimal("18.00"), platformFee.getCalculatedAmount());
+
+        ProductPricingCalculationResult.PriceComponentDetail breachFee = findDetail(scenario, "ADV_BREACH_FEE");
+        assertNotNull(breachFee);
+        assertEquals(new BigDecimal("600.00"), breachFee.getCalculatedAmount());
+    }
+
+    @Test
+    @WithMockRole(roles = {PRICING_READER_ROLE})
     void calculateProductPrice_ShouldReturn400_WhenValidationFails() throws Exception {
         ProductPriceRequest request = new ProductPriceRequest();
 
@@ -582,6 +611,27 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
 
                             linkProduct(product, breachFee, true, null, null, null);
                             linkProduct(product, platformFee, false, new BigDecimal("30"), PriceValue.ValueType.FEE_ABSOLUTE, null);
+
+                            txHelper.flushAndClear();
+                            productRuleBuilderService.rebuildRules();
+                            return product.getId();
+                        });
+                    }
+
+                    private Long seedAdvancedBreachProrataProductWithMidCycleLaunch() {
+                        return txHelper.doInTransaction(() -> {
+                            txHelper.createAndSaveMetadata(PricingAttributeKeys.EFFECTIVE_DATE, "DATE");
+
+                            ProductType type = txHelper.getOrCreateProductType("ADVANCED_BREACH_TYPE_MIDCYCLE");
+                            Product product = txHelper.getOrCreateProduct("ADV_PRODUCT_BREACH_PRORATA_MIDCYCLE", type, "RETAIL");
+
+                            PricingComponent breachFee = createPricingComponent("Advanced Breach Fee MidCycle", "ADV_BREACH_FEE", PricingComponent.ComponentType.FEE, false);
+                            PricingComponent platformFee = createPricingComponent("Advanced Platform Fee MidCycle", "ADV_PLATFORM_FEE_PRORATA", PricingComponent.ComponentType.FEE, true);
+
+                            addTier(breachFee, "Full Breach", "BREACH_FULL", 100, new BigDecimal("10000"), null, true, new BigDecimal("5"), PriceValue.ValueType.FEE_PERCENTAGE, List.of());
+
+                            linkProduct(product, breachFee, true, null, null, null, LocalDate.of(2026, 4, 13), null);
+                            linkProduct(product, platformFee, false, new BigDecimal("30"), PriceValue.ValueType.FEE_ABSOLUTE, null, LocalDate.of(2026, 4, 13), null);
 
                             txHelper.flushAndClear();
                             productRuleBuilderService.rebuildRules();
@@ -677,6 +727,18 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
                                              BigDecimal fixedValue,
                                              PriceValue.ValueType fixedValueType,
                                              String targetComponentCode) {
+                        linkProduct(product, component, useRulesEngine, fixedValue, fixedValueType, targetComponentCode,
+                                LocalDate.of(2026, 1, 1), LocalDate.of(2030, 12, 31));
+                    }
+
+                    private void linkProduct(Product product,
+                                             PricingComponent component,
+                                             boolean useRulesEngine,
+                                             BigDecimal fixedValue,
+                                             PriceValue.ValueType fixedValueType,
+                                             String targetComponentCode,
+                                             LocalDate effectiveDate,
+                                             LocalDate expiryDate) {
                         ProductPricingLink link = new ProductPricingLink();
                         link.setProduct(product);
                         link.setPricingComponent(component);
@@ -684,8 +746,8 @@ public class PricingControllerIntegrationTest extends AbstractIntegrationTest {
                         link.setFixedValue(fixedValue);
                         link.setFixedValueType(fixedValueType);
                         link.setTargetComponentCode(targetComponentCode);
-                        link.setEffectiveDate(LocalDate.of(2026, 1, 1));
-                        link.setExpiryDate(LocalDate.of(2030, 12, 31));
+                        link.setEffectiveDate(effectiveDate);
+                        link.setExpiryDate(expiryDate);
                         productPricingLinkRepository.save(link);
                     }
 

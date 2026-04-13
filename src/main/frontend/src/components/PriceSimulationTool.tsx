@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Settings, Play, Download, Loader2 } from 'lucide-react';
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
 import PlexusSelect from './PlexusSelect';
+import { formatComponentLabelWithProRata } from '../pages/admin/ProductManagementPage.utils';
 
 interface PriceSimulationToolProps {
   isOpen: boolean;
@@ -339,7 +340,7 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
                       <tbody className="divide-y divide-gray-100">
                         {currentResult.componentBreakdown.map((component, idx) => (
                           <tr key={idx} className="hover:bg-gray-50 transition">
-                            <td className="px-4 py-3 font-bold text-gray-900">{component.componentCode}</td>
+                            <td className="px-4 py-3 font-bold text-gray-900">{formatComponentLabelWithProRata(component.componentCode, component)}</td>
                             <td className="px-4 py-3 text-xs font-bold text-gray-600">
                               {PricingService.getValueTypeLabel(component.valueType)}
                             </td>

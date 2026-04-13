@@ -84,7 +84,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .useRulesEngine(false)
                 .build();
 
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(fixedFeeLink));
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(fixedFeeLink));
         when(productBundleRepository.findById(bundleId)).thenReturn(Optional.of(ProductBundle.builder().id(bundleId).build()));
 
         // 3. Mock Rules: 10% Global Discount (No Target)
@@ -130,7 +130,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         BundlePricingLink feeALink = createLink("SERVICE_FEE", "100.00");
         BundlePricingLink feeBLink = createLink("TECH_FEE", "50.00");
 
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(feeALink, feeBLink));
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(feeALink, feeBLink));
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(ProductBundle.builder().build()));
 
         // 50% discount targeting TECH_FEE only
@@ -165,7 +165,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("50.00")).build());
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(new ArrayList<>());
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(new ArrayList<>());
 
         BundlePricingInput rulesOutput = new BundlePricingInput();
         rulesOutput.addAdjustment("FREE_TRANSFERS", new BigDecimal("5.00"), "FREE_COUNT");
@@ -205,7 +205,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
                 .build();
 
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(link));
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(link));
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
 
@@ -243,7 +243,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
                 .build();
 
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(link));
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(link));
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
 
@@ -271,7 +271,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("50.00")).build());
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(new ArrayList<>());
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(new ArrayList<>());
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
 
         assertDoesNotThrow(() -> {
@@ -292,7 +292,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(new ArrayList<>());
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(new ArrayList<>());
 
         // Simulate rules engine seeing the 95 score and returning a VIP discount
         BundlePricingInput rulesOutput = new BundlePricingInput();
@@ -315,7 +315,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(null).build());
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of());
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of());
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
 
         var response = bundlePricingService.calculateTotalBundlePrice(request);
@@ -347,7 +347,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of());
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of());
 
         BundlePricingInput rulesOutput = new BundlePricingInput();
         rulesOutput.setAdjustments(null); // Explicitly null
@@ -371,7 +371,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(new BigDecimal("100.00")).build());
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of());
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of());
 
         BundlePricingInput rulesOutput = new BundlePricingInput();
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenAnswer(invocation -> {
@@ -401,7 +401,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .fixedValueType(null) // Should default to FEE_ABSOLUTE
                 .build();
 
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(link));
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(link));
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
 
         var response = bundlePricingService.calculateTotalBundlePrice(request);
@@ -434,7 +434,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
                 .fixedValueType(PriceValue.ValueType.FEE_ABSOLUTE)
                 .build();
 
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of(link));
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(link));
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
 
         var response = bundlePricingService.calculateTotalBundlePrice(request);
@@ -453,7 +453,7 @@ class BundlePricingServiceTest extends BaseServiceTest {
         when(productPricingService.getProductPricing(any())).thenReturn(
                 ProductPricingCalculationResult.builder().finalChargeablePrice(null).build());
         when(productBundleRepository.findById(any())).thenReturn(Optional.of(new ProductBundle()));
-        when(bundlePricingLinkRepository.findByBundleIdAndDate(any(), any())).thenReturn(List.of());
+        when(bundlePricingLinkRepository.findByBundleIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of());
         when(bundleRulesEngineService.determineBundleAdjustments(any())).thenReturn(new BundlePricingInput());
 
         var response = bundlePricingService.calculateTotalBundlePrice(request);

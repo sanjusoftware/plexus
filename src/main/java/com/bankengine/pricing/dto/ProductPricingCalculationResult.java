@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -53,5 +54,17 @@ public class ProductPricingCalculationResult {
 
         @Schema(description = "Database ID of the specific tier that matched the logic", example = "1024")
         private Long matchedTierId;
+
+        @Schema(description = "Date from which this component becomes active for billing", example = "2026-04-13")
+        private LocalDate effectiveDate;
+
+        @Schema(description = "Date after which this component is no longer active for billing", example = "2026-04-30")
+        private LocalDate expiryDate;
+
+        @Schema(description = "Number of active billing days used when pro-rating this component", example = "18")
+        private Integer activeDays;
+
+        @Schema(description = "Total number of days in the billing cycle used for pro-rating", example = "30")
+        private Integer billingCycleDays;
     }
 }

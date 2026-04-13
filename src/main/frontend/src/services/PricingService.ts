@@ -26,6 +26,8 @@ export interface PriceComponentDetail {
   sourceType: 'FIXED_VALUE' | 'RULES_ENGINE';
   matchedTierCode?: string;
   matchedTierId?: number;
+  activeDays?: number;
+  billingCycleDays?: number;
 }
 
 export interface ProductPricingCalculationResult {

@@ -12,14 +12,15 @@ import java.util.List;
 
 public interface ProductPricingLinkRepository extends TenantRepository<ProductPricingLink, Long> {
 
-    @Query("SELECT l FROM ProductPricingLink l " +
+    @Query("SELECT DISTINCT l FROM ProductPricingLink l " +
             "JOIN FETCH l.pricingComponent c " +
             "LEFT JOIN FETCH c.pricingTiers t " +
             "WHERE l.product.id = :productId " +
-            "AND l.effectiveDate <= :targetDate " +
-            "AND (l.expiryDate IS NULL OR l.expiryDate >= :targetDate)")
-    List<ProductPricingLink> findByProductIdAndDate(@Param("productId") Long productId,
-                                                    @Param("targetDate") LocalDate targetDate);
+            "AND (l.effectiveDate IS NULL OR l.effectiveDate <= :cycleEnd) " +
+            "AND (l.expiryDate IS NULL OR l.expiryDate >= :cycleStart)")
+    List<ProductPricingLink> findByProductIdOverlappingCycle(@Param("productId") Long productId,
+                                                             @Param("cycleStart") LocalDate cycleStart,
+                                                             @Param("cycleEnd") LocalDate cycleEnd);
 
     List<ProductPricingLink> findByProductId(Long productId);
 

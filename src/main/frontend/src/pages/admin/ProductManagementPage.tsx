@@ -20,7 +20,7 @@ import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useSystemPricingKeys } from '../../hooks/useSystemPricingKeys';
 import { PriceComponentDetail, PricingMetadata, PricingService } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
-import { getSimulationEffectiveDateFloor, getSimulationEffectiveDateValidationMessage } from './ProductManagementPage.utils';
+import { formatComponentLabelWithProRata } from './ProductManagementPage.utils';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -194,7 +194,6 @@ const ProductManagementPage = () => {
     const value = calcInputs[key] ?? '';
     const dataType = (meta.dataType || '').toUpperCase();
     const label = (meta.displayName || key).toUpperCase();
-    const minEffectiveDate = isSystemDateKey(key) ? getSimulationEffectiveDateFloor(prod) : undefined;
 
     if (dataType === 'BOOLEAN') {
       return (
@@ -242,14 +241,8 @@ const ProductManagementPage = () => {
           type={inputType}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-semibold bg-white focus:border-blue-500 transition h-[36px]"
           value={value}
-          min={inputType === 'date' ? minEffectiveDate : undefined}
           onChange={(e) => setCalcInputs(prev => ({ ...prev, [key]: e.target.value }))}
         />
-        {inputType === 'date' && minEffectiveDate && (
-          <p className="mt-1 text-[10px] font-semibold text-gray-400">
-            Pricing available from {minEffectiveDate}.
-          </p>
-        )}
       </div>
     );
   };
@@ -333,16 +326,6 @@ const ProductManagementPage = () => {
         attributesFromMetadata[effectiveDateKey] = new Date().toISOString().split('T')[0];
       }
 
-      const requestedEffectiveDate = String(attributesFromMetadata[effectiveDateKey] || '');
-      const effectiveDateValidationMessage = getSimulationEffectiveDateValidationMessage(prod, requestedEffectiveDate);
-      if (effectiveDateValidationMessage) {
-        setCalculatedPrices(prev => ({
-          ...prev,
-          [prod.id]: { price: 0, loading: false, error: 'Invalid Effective Date' }
-        }));
-        setToast({ message: effectiveDateValidationMessage, type: 'error' });
-        return;
-      }
 
       if (hasSystemPricingKey(keys.TRANSACTION_AMOUNT) && attributesFromMetadata[keys.TRANSACTION_AMOUNT] === undefined) {
         attributesFromMetadata[keys.TRANSACTION_AMOUNT] = 0;
@@ -407,6 +390,16 @@ const ProductManagementPage = () => {
       return `${raw}% of ${PricingService.formatCurrency(inferredBase)}`;
     };
 
+    const getReceiptMetaLine = (item: PriceComponentDetail, isDiscount: boolean) => {
+      const segments = [
+        item.valueType,
+        item.matchedTierCode ? `Tier: ${item.matchedTierCode}` : null,
+        getPercentageHint(item, isDiscount),
+      ].filter(Boolean);
+
+      return segments.join(' | ');
+    };
+
     if (breakdown.length === 0) {
       return (
         <div className="mt-4 text-[10px] font-bold text-gray-500 bg-white p-3 rounded-lg border border-gray-200">
@@ -428,11 +421,10 @@ const ProductManagementPage = () => {
               <div key={`charge-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-blue-100 bg-blue-50/30">
                 <div className="min-w-0 pr-3">
                   <div className="text-[11px] font-bold text-gray-800 truncate">
-                    {getDisplayName(item.componentCode)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
+                    {formatComponentLabelWithProRata(getDisplayName(item.componentCode), item)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
                   </div>
                   <div className="text-[9px] text-gray-500 uppercase tracking-wider">
-                    {item.valueType}{item.matchedTierCode ? ` | Tier: ${item.matchedTierCode}` : ''}
-                    {getPercentageHint(item, false) ? ` | ${getPercentageHint(item, false)}` : ''}
+                    {getReceiptMetaLine(item, false)}
                   </div>
                 </div>
                 <div className="text-xs font-black whitespace-nowrap text-blue-600">
@@ -448,11 +440,10 @@ const ProductManagementPage = () => {
               <div key={`discount-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-green-100 bg-green-50/30">
                 <div className="min-w-0 pr-3">
                   <div className="text-[11px] font-bold text-gray-800 truncate">
-                    {getDisplayName(item.componentCode)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
+                    {formatComponentLabelWithProRata(getDisplayName(item.componentCode), item)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
                   </div>
                   <div className="text-[9px] text-gray-500 uppercase tracking-wider">
-                    {item.valueType}{item.matchedTierCode ? ` | Tier: ${item.matchedTierCode}` : ''}
-                    {getPercentageHint(item, true) ? ` | ${getPercentageHint(item, true)}` : ''}
+                    {getReceiptMetaLine(item, true)}
                   </div>
                 </div>
                 <div className="text-xs font-black whitespace-nowrap text-green-600">

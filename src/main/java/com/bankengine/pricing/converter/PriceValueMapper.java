@@ -42,5 +42,9 @@ public interface PriceValueMapper {
     @Mapping(target = "targetComponentCode", ignore = true)
     @Mapping(target = "proRataApplicable", source = "pricingTier.pricingComponent.proRataApplicable")
     @Mapping(target = "applyChargeOnFullBreach", source = "pricingTier.applyChargeOnFullBreach")
+    @Mapping(target = "effectiveDate", ignore = true)
+    @Mapping(target = "expiryDate", ignore = true)
+    @Mapping(target = "activeDays", ignore = true)
+    @Mapping(target = "billingCycleDays", ignore = true)
     ProductPricingCalculationResult.PriceComponentDetail toDetailDto(PriceValue entity);
 }

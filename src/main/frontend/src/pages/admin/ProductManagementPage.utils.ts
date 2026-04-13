@@ -1,34 +1,22 @@
-export interface ProductSimulationPricingLink {
-  effectiveDate?: string;
-  expiryDate?: string | null;
-}
+import { PriceComponentDetail } from '../../services/PricingService';
 
-export interface ProductSimulationProduct {
-  code: string;
-  pricing?: ProductSimulationPricingLink[];
-}
-
-export const isIsoDateString = (value?: string | null): value is string =>
-  Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
-
-export const getSimulationEffectiveDateFloor = (product: ProductSimulationProduct): string | undefined => {
-  const effectiveDates = (product.pricing || [])
-    .map((link) => link.effectiveDate)
-    .filter(isIsoDateString)
-    .sort();
-
-  return effectiveDates[0];
-};
-
-export const getSimulationEffectiveDateValidationMessage = (
-  product: ProductSimulationProduct,
-  requestedEffectiveDate?: string | null,
-): string | undefined => {
-  const minimumEffectiveDate = getSimulationEffectiveDateFloor(product);
-  if (!minimumEffectiveDate || !isIsoDateString(requestedEffectiveDate) || requestedEffectiveDate >= minimumEffectiveDate) {
-    return undefined;
+export const formatProRataHint = (item: Pick<PriceComponentDetail, 'activeDays' | 'billingCycleDays'>): string | null => {
+  if (item.activeDays == null || item.billingCycleDays == null) {
+    return null;
   }
 
-  return `Pricing for ${product.code} is available from ${minimumEffectiveDate}.`;
+  if (item.activeDays < 0 || item.billingCycleDays <= 0 || item.activeDays > item.billingCycleDays) {
+    return null;
+  }
+
+  return `Pro-rated for ${item.activeDays} of ${item.billingCycleDays} days`;
+};
+
+export const formatComponentLabelWithProRata = (
+  label: string,
+  item: Pick<PriceComponentDetail, 'activeDays' | 'billingCycleDays'>,
+): string => {
+  const proRataHint = formatProRataHint(item);
+  return proRataHint ? `${label} (${proRataHint})` : label;
 };
 

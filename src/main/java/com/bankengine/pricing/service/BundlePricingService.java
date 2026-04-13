@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BundlePricingService extends BaseService {
 
+    private record BundleLinkContext(LocalDate effectiveDate, LocalDate expiryDate, boolean proRataApplicable) {}
+
     private final ProductPricingService productPricingService;
     private final BundleRulesEngineService bundleRulesEngineService;
     private final ProductBundleRepository productBundleRepository;
@@ -56,8 +58,10 @@ public class BundlePricingService extends BaseService {
 
         // 2. Fetch Bundle and Active Temporal Links
         verifyBundleExists(bundlePriceRequest.getProductBundleId());
+        LocalDate cycleStart = effectiveDate.withDayOfMonth(1);
+        LocalDate cycleEnd = effectiveDate.withDayOfMonth(effectiveDate.lengthOfMonth());
         List<BundlePricingLink> activeLinks = bundlePricingLinkRepository
-                .findByBundleIdAndDate(bundlePriceRequest.getProductBundleId(), effectiveDate);
+                .findByBundleIdOverlappingCycle(bundlePriceRequest.getProductBundleId(), cycleStart, cycleEnd);
 
         // 3. Assemble Components (Fixed from DB + Dynamic from Rules)
         List<PriceComponentDetail> bundleAdjustments = assembleBundleComponents(bundlePriceRequest, activeLinks, existingFeePool);
@@ -114,6 +118,7 @@ public class BundlePricingService extends BaseService {
 
             ProductPriceRequest singlePricingRequest = ProductPriceRequest.builder()
                     .productId(productReq.getProductId())
+                    .enrollmentDate(request.getEnrollmentDate())
                     .customAttributes(productAttributes)
                     .build();
 
@@ -162,7 +167,7 @@ public class BundlePricingService extends BaseService {
 
         // Add Dynamic Adjustments (Drools)
         BundlePricingInput rulesOutput = fireRulesEngine(request, activeLinks, existingFeePool);
-        adjustments.addAll(convertRulesToDetail(rulesOutput.getAdjustments()));
+        adjustments.addAll(convertRulesToDetail(rulesOutput.getAdjustments(), activeLinks));
 
         return adjustments;
     }
@@ -182,6 +187,8 @@ public class BundlePricingService extends BaseService {
                 .sourceType("FIXED_VALUE")
                 .applyChargeOnFullBreach(isFullBreach)
                 .proRataApplicable(link.getPricingComponent().isProRataApplicable())
+                .effectiveDate(link.getEffectiveDate())
+                .expiryDate(link.getExpiryDate())
                 .build();
     }
 
@@ -246,11 +253,25 @@ public class BundlePricingService extends BaseService {
         }
     }
 
-    private List<PriceComponentDetail> convertRulesToDetail(Map<String, BundlePricingInput.BundleAdjustment> adjustments) {
+    private List<PriceComponentDetail> convertRulesToDetail(Map<String, BundlePricingInput.BundleAdjustment> adjustments,
+                                                            List<BundlePricingLink> activeLinks) {
         if (adjustments == null) return new ArrayList<>();
+
+        Map<String, BundleLinkContext> linkContextByComponentCode = activeLinks.stream()
+                .collect(Collectors.toMap(
+                        link -> link.getPricingComponent().getCode(),
+                        link -> new BundleLinkContext(
+                                link.getEffectiveDate(),
+                                link.getExpiryDate(),
+                                link.getPricingComponent().isProRataApplicable()
+                        ),
+                        (existing, replacement) -> existing,
+                        HashMap::new
+                ));
 
         return adjustments.entrySet().stream().map(entry -> {
             PriceValue.ValueType type = PriceValue.ValueType.valueOf(entry.getValue().getType());
+            BundleLinkContext linkContext = linkContextByComponentCode.get(entry.getKey());
             return PriceComponentDetail.builder()
                     .componentCode(entry.getKey())
                     .rawValue(entry.getValue().getValue())
@@ -258,6 +279,9 @@ public class BundlePricingService extends BaseService {
                     .valueType(type)
                     .targetComponentCode(entry.getValue().getTargetComponentCode())
                     .applyChargeOnFullBreach(entry.getValue().isApplyChargeOnFullBreach())
+                    .proRataApplicable(linkContext != null && linkContext.proRataApplicable())
+                    .effectiveDate(linkContext != null ? linkContext.effectiveDate() : null)
+                    .expiryDate(linkContext != null ? linkContext.expiryDate() : null)
                     .build();
         }).toList();
     }

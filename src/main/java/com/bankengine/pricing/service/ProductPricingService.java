@@ -41,6 +41,8 @@ public class ProductPricingService extends BaseService {
     private final ProductPricingLinkRepository productPricingLinkRepository;
     private final PriceAggregator priceAggregator;
 
+    private record PricingLinkContext(String targetComponentCode, LocalDate effectiveDate, LocalDate expiryDate) {}
+
     /**
      * Live Pricing Entry Point: Fetches configuration from DB/Rules and calculates final price.
      */
@@ -133,15 +135,19 @@ public class ProductPricingService extends BaseService {
                 .collect(Collectors.toSet());
 
         // Preserve optional target mapping for rule-based discounts.
-        Map<String, String> targetByComponentCode = new HashMap<>();
-        ruleLinks.forEach(link -> targetByComponentCode.put(
-                link.getPricingComponent().getCode(),
-                link.getTargetComponentCode()
-        ));
+        Map<String, PricingLinkContext> linkContextByComponentCode = new HashMap<>();
+        ruleLinks.forEach(link -> {
+            String componentCode = link.getPricingComponent().getCode();
+            linkContextByComponentCode.put(componentCode, new PricingLinkContext(
+                    link.getTargetComponentCode(),
+                    link.getEffectiveDate(),
+                    link.getExpiryDate()
+            ));
+        });
 
         // 3. Execute Rules with fully populated code sets
         return determinePriceWithDrools(componentCodes, activeTierCodes, normalizedAttributes).stream()
-                .map(fact -> mapFactToDetail(fact, targetByComponentCode.get(fact.getComponentCode())))
+                .map(fact -> mapFactToDetail(fact, linkContextByComponentCode.get(fact.getComponentCode())))
                 .toList();
     }
 
@@ -222,7 +228,10 @@ public class ProductPricingService extends BaseService {
     @Cacheable(value = "productPricingLinks",
             key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #productId + '_' + #effectiveDate")
     public List<ProductPricingLink> getCachedLinks(Long productId, LocalDate effectiveDate) {
-        return productPricingLinkRepository.findByProductIdAndDate(productId, effectiveDate);
+        LocalDate cycleReference = effectiveDate != null ? effectiveDate : LocalDate.now();
+        LocalDate cycleStart = cycleReference.withDayOfMonth(1);
+        LocalDate cycleEnd = cycleReference.withDayOfMonth(cycleReference.lengthOfMonth());
+        return productPricingLinkRepository.findByProductIdOverlappingCycle(productId, cycleStart, cycleEnd);
     }
 
     // -----------------------------------------------------------------------------------
@@ -238,37 +247,36 @@ public class ProductPricingService extends BaseService {
                 .targetComponentCode(link.getTargetComponentCode())
                 .proRataApplicable(link.getPricingComponent().isProRataApplicable())
                 .applyChargeOnFullBreach(false)
+                .effectiveDate(link.getEffectiveDate())
+                .expiryDate(link.getExpiryDate())
                 .build();
     }
 
-    private PriceComponentDetail mapFactToDetail(PriceValue fact, String targetComponentCode) {
-    // Default values
-    boolean proRata = false;
-    boolean fullBreach = false;
+    private PriceComponentDetail mapFactToDetail(PriceValue fact, PricingLinkContext linkContext) {
+        boolean proRata = false;
+        boolean fullBreach = false;
+        String tierCode = fact.getMatchedTierCode();
 
-    // Extract Tier Code from the flat field (populated by Drools)
-    // or the nested entity (populated by DB/Hibernate)
-    String tierCode = fact.getMatchedTierCode();
-
-    if (fact.getPricingTier() != null) {
-        proRata = fact.getPricingTier().getPricingComponent().isProRataApplicable();
-        fullBreach = fact.getPricingTier().isApplyChargeOnFullBreach();
-        // Fallback to entity code if flat field is missing
-        if (tierCode == null) {
-            tierCode = fact.getPricingTier().getCode();
+        if (fact.getPricingTier() != null) {
+            proRata = fact.getPricingTier().getPricingComponent().isProRataApplicable();
+            fullBreach = fact.getPricingTier().isApplyChargeOnFullBreach();
+            if (tierCode == null) {
+                tierCode = fact.getPricingTier().getCode();
+            }
         }
-    }
 
-    return PriceComponentDetail.builder()
-            .componentCode(fact.getComponentCode())
-            .rawValue(fact.getRawValue())
-            .valueType(fact.getValueType())
-            .sourceType("RULES_ENGINE")
-            .targetComponentCode(targetComponentCode)
-            .matchedTierId(fact.getMatchedTierId())
-            .matchedTierCode(tierCode)
-            .proRataApplicable(proRata)
-            .applyChargeOnFullBreach(fullBreach)
-            .build();
-}
+        return PriceComponentDetail.builder()
+                .componentCode(fact.getComponentCode())
+                .rawValue(fact.getRawValue())
+                .valueType(fact.getValueType())
+                .sourceType("RULES_ENGINE")
+                .targetComponentCode(linkContext != null ? linkContext.targetComponentCode() : null)
+                .matchedTierId(fact.getMatchedTierId())
+                .matchedTierCode(tierCode)
+                .proRataApplicable(proRata)
+                .applyChargeOnFullBreach(fullBreach)
+                .effectiveDate(linkContext != null ? linkContext.effectiveDate() : null)
+                .expiryDate(linkContext != null ? linkContext.expiryDate() : null)
+                .build();
+    }
 }

@@ -1,34 +1,30 @@
-import { getSimulationEffectiveDateFloor, getSimulationEffectiveDateValidationMessage, isIsoDateString } from './ProductManagementPage.utils';
+import { formatComponentLabelWithProRata, formatProRataHint } from './ProductManagementPage.utils';
 
-describe('ProductManagementPage simulation date helpers', () => {
-  const product = {
-    code: 'ADV_PRODUCT_BREACH_PRORATA',
-    pricing: [
-      { effectiveDate: '2026-04-13', expiryDate: null },
-      { effectiveDate: '2026-05-01', expiryDate: null },
-      { effectiveDate: undefined, expiryDate: null },
-    ]
-  };
-
-  test('recognizes valid ISO date strings only', () => {
-    expect(isIsoDateString('2026-04-13')).toBe(true);
-    expect(isIsoDateString('2026-4-13')).toBe(false);
-    expect(isIsoDateString('13-04-2026')).toBe(false);
-    expect(isIsoDateString(undefined)).toBe(false);
+describe('ProductManagementPage receipt helpers', () => {
+  test('formats active-day metadata for receipt display', () => {
+    expect(formatProRataHint({ activeDays: 18, billingCycleDays: 30 }))
+      .toBe('Pro-rated for 18 of 30 days');
   });
 
-  test('returns the earliest configured pricing effective date for simulation guardrails', () => {
-    expect(getSimulationEffectiveDateFloor(product)).toBe('2026-04-13');
+  test('formats the component label with an inline pro-rata suffix', () => {
+    expect(formatComponentLabelWithProRata('Monthly Fee', { activeDays: 18, billingCycleDays: 30 }))
+      .toBe('Monthly Fee (Pro-rated for 18 of 30 days)');
   });
 
-  test('returns a clear validation message when the requested date is before pricing becomes active', () => {
-    expect(getSimulationEffectiveDateValidationMessage(product, '2026-04-01'))
-      .toBe('Pricing for ADV_PRODUCT_BREACH_PRORATA is available from 2026-04-13.');
+  test('returns null when active-day metadata is missing', () => {
+    expect(formatProRataHint({ activeDays: undefined, billingCycleDays: 30 })).toBeNull();
+    expect(formatProRataHint({ activeDays: 18, billingCycleDays: undefined })).toBeNull();
   });
 
-  test('allows same-day and later pricing simulation dates', () => {
-    expect(getSimulationEffectiveDateValidationMessage(product, '2026-04-13')).toBeUndefined();
-    expect(getSimulationEffectiveDateValidationMessage(product, '2026-04-30')).toBeUndefined();
+  test('returns null for invalid active-day values', () => {
+    expect(formatProRataHint({ activeDays: -1, billingCycleDays: 30 })).toBeNull();
+    expect(formatProRataHint({ activeDays: 31, billingCycleDays: 30 })).toBeNull();
+    expect(formatProRataHint({ activeDays: 10, billingCycleDays: 0 })).toBeNull();
+  });
+
+  test('leaves the component label unchanged when there is no valid pro-rata metadata', () => {
+    expect(formatComponentLabelWithProRata('Monthly Fee', { activeDays: undefined, billingCycleDays: 30 }))
+      .toBe('Monthly Fee');
   });
 });
 

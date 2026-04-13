@@ -80,6 +80,32 @@ class PriceAggregatorTest {
     }
 
     @Test
+    @DisplayName("Pro-rata Check - Should start charging from the component effective date when pricing launches mid-cycle")
+    void shouldProrateFromComponentEffectiveDateWhenPriceStartsAfterEnrollment() {
+        List<PriceComponentDetail> components = List.of(
+                PriceComponentDetail.builder()
+                        .componentCode("MONTHLY_FEE")
+                        .rawValue(new BigDecimal("31.00"))
+                        .valueType(ValueType.FEE_ABSOLUTE)
+                        .proRataApplicable(true)
+                        .effectiveDate(LocalDate.of(2024, 1, 21))
+                        .build()
+        );
+
+        BigDecimal netImpact = aggregator.calculateBundleImpact(
+                components,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 1, 1)
+        );
+
+        assertScaledBigDecimal("11.00", netImpact);
+        assertEquals(11, components.getFirst().getActiveDays());
+        assertEquals(31, components.getFirst().getBillingCycleDays());
+    }
+
+    @Test
     @DisplayName("Waiver Check - Should handle 100% discount as a specific waiver")
     void shouldHandleOneHundredPercentDiscount() {
         List<PriceComponentDetail> components = List.of(
@@ -92,6 +118,69 @@ class PriceAggregatorTest {
         BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, null, LocalDate.now());
 
         assertScaledBigDecimal("10.00", netImpact);
+    }
+
+    @Test
+    @DisplayName("Pro-rata Check - Targeted discount should be prorated independently from its target fee")
+    void shouldProrateTargetedDiscountIndependently() {
+        List<PriceComponentDetail> components = List.of(
+                PriceComponentDetail.builder()
+                        .componentCode("MONTHLY_FEE")
+                        .rawValue(new BigDecimal("31.00"))
+                        .valueType(ValueType.FEE_ABSOLUTE)
+                        .proRataApplicable(true)
+                        .effectiveDate(LocalDate.of(2024, 1, 10))
+                        .build(),
+                PriceComponentDetail.builder()
+                        .componentCode("LOYALTY_WAIVER")
+                        .rawValue(new BigDecimal("50.00"))
+                        .valueType(ValueType.DISCOUNT_PERCENTAGE)
+                        .targetComponentCode("MONTHLY_FEE")
+                        .effectiveDate(LocalDate.of(2024, 1, 16))
+                        .build()
+        );
+
+        BigDecimal netImpact = aggregator.calculateBundleImpact(
+                components,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 1, 1)
+        );
+
+        assertScaledBigDecimal("14.00", netImpact);
+        assertScaledBigDecimal("22.00", components.get(0).getCalculatedAmount());
+        assertScaledBigDecimal("-8.00", components.get(1).getCalculatedAmount());
+        assertEquals(22, components.get(0).getActiveDays());
+        assertEquals(16, components.get(1).getActiveDays());
+        assertEquals(31, components.get(1).getBillingCycleDays());
+    }
+
+    @Test
+    @DisplayName("Pro-rata Check - Should stop charging at the component expiry date within the billing cycle")
+    void shouldProrateUntilComponentExpiryDate() {
+        List<PriceComponentDetail> components = List.of(
+                PriceComponentDetail.builder()
+                        .componentCode("MONTHLY_FEE")
+                        .rawValue(new BigDecimal("30.00"))
+                        .valueType(ValueType.FEE_ABSOLUTE)
+                        .proRataApplicable(true)
+                        .effectiveDate(LocalDate.of(2024, 6, 1))
+                        .expiryDate(LocalDate.of(2024, 6, 10))
+                        .build()
+        );
+
+        BigDecimal netImpact = aggregator.calculateBundleImpact(
+                components,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                LocalDate.of(2024, 6, 1),
+                LocalDate.of(2024, 6, 30)
+        );
+
+        assertScaledBigDecimal("10.00", netImpact);
+        assertEquals(10, components.getFirst().getActiveDays());
+        assertEquals(30, components.getFirst().getBillingCycleDays());
     }
 
     @Test

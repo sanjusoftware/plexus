@@ -11,14 +11,13 @@ import java.util.List;
 
 @Repository
 public interface BundlePricingLinkRepository extends TenantRepository<BundlePricingLink, Long> {
-    /**
-     * Finds all active bundle pricing links for a specific bundle on a given date.
-     * Logic: effectiveDate <= date AND expiryDate >= date
-     */
-    @Query("SELECT b FROM BundlePricingLink b " +
+    @Query("SELECT DISTINCT b FROM BundlePricingLink b " +
+            "JOIN FETCH b.pricingComponent c " +
+            "LEFT JOIN FETCH c.pricingTiers t " +
             "WHERE b.productBundle.id = :bundleId " +
-            "AND b.effectiveDate <= :date " +
-            "AND b.expiryDate >= :date")
-    List<BundlePricingLink> findByBundleIdAndDate(@Param("bundleId") Long bundleId,
-                                                  @Param("date") LocalDate date);
+            "AND (b.effectiveDate IS NULL OR b.effectiveDate <= :cycleEnd) " +
+            "AND (b.expiryDate IS NULL OR b.expiryDate >= :cycleStart)")
+    List<BundlePricingLink> findByBundleIdOverlappingCycle(@Param("bundleId") Long bundleId,
+                                                           @Param("cycleStart") LocalDate cycleStart,
+                                                           @Param("cycleEnd") LocalDate cycleEnd);
 }
