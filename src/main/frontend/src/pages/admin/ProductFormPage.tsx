@@ -9,7 +9,6 @@ import PlexusSelect from '../../components/PlexusSelect';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useHasPermission } from '../../hooks/useHasPermission';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
-import PriceSimulationTool from '../../components/PriceSimulationTool';
 
 interface FeatureComponent {
   id: number;
@@ -90,7 +89,6 @@ const ProductFormPage = () => {
   const [newCategoryDraft, setNewCategoryDraft] = useState({ name: '', code: '' });
   const [isNewCategoryCodeEdited, setIsNewCategoryCodeEdited] = useState(false);
   const [isCodeEdited, setIsCodeEdited] = useState(false);
-  const [showPriceSimulation, setShowPriceSimulation] = useState(false);
   const [showPricingHelp, setShowPricingHelp] = useState(false);
 
   const [formData, setFormData] = useState<any>({
@@ -916,16 +914,6 @@ const ProductFormPage = () => {
 
            <div className="flex space-x-4 border-t border-gray-100 pt-6">
              <button type="button" onClick={handleCancel} className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
-             {!isEditing && (
-               <button
-                 type="button"
-                 onClick={() => setShowPriceSimulation(true)}
-                 className="flex-1 px-4 py-3 border border-amber-200 text-amber-700 rounded-xl font-bold hover:bg-amber-50 transition uppercase tracking-widest text-[10px] flex items-center justify-center"
-               >
-                 <Zap className="w-4 h-4 mr-1.5" />
-                 Test Pricing
-               </button>
-             )}
              <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50">
                {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
                Commit Product Aggregate
@@ -934,12 +922,6 @@ const ProductFormPage = () => {
         </form>
       </div>
 
-      {/* Price Simulation Tool */}
-      <PriceSimulationTool
-        isOpen={showPriceSimulation}
-        onClose={() => setShowPriceSimulation(false)}
-        defaultProductId={id ? parseInt(id) : undefined}
-      />
     </AdminPage>
   );
 };

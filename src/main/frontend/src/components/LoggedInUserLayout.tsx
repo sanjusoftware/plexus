@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumbs from './Breadcrumbs';
 import GlobalToast from './GlobalToast';
 import {
-  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Bookmark, Puzzle, CircleDollarSign, Layers, ChevronLeft, ChevronRight, ShieldCheck, ExternalLink
+  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Bookmark, Puzzle, CircleDollarSign, Layers, ChevronLeft, ChevronRight, ShieldCheck, ExternalLink, Zap
 } from 'lucide-react';
 
 interface LoggedInUserLayoutProps {
@@ -90,6 +90,12 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
           icon: Layers,
           path: '/pricing-tiers',
           show: hasPermission({ action: 'GET', path: '/api/v1/pricing-tiers' })
+        },
+        {
+          label: 'Pricing Simulation',
+          icon: Zap,
+          path: '/pricing-simulation',
+          show: hasPermission('pricing:simulation:read')
         }
       ]
     },

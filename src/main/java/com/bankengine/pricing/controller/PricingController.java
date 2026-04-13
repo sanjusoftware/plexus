@@ -34,7 +34,7 @@ public class PricingController {
     @ApiResponse(responseCode = "200", description = "Successfully calculated pricing.",
             content = @Content(schema = @Schema(implementation = ProductPricingCalculationResult.class)))
     @PostMapping("/calculate/product")
-    @PreAuthorize("hasAuthority('pricing:calculate:read')")
+    @PreAuthorize("hasAnyAuthority('pricing:calculate:read', 'pricing:simulation:read')")
     public ResponseEntity<ProductPricingCalculationResult> calculateProductPrice(
             @Valid @RequestBody ProductPriceRequest request) {
 
