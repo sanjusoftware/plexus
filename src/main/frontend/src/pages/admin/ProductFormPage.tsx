@@ -9,7 +9,6 @@ import PlexusSelect from '../../components/PlexusSelect';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useHasPermission } from '../../hooks/useHasPermission';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
-import LivePricePreview from '../../components/LivePricePreview';
 import PriceSimulationTool from '../../components/PriceSimulationTool';
 
 interface FeatureComponent {
@@ -934,11 +933,6 @@ const ProductFormPage = () => {
            </div>
         </form>
       </div>
-
-      {/* Live Price Preview - Only show after product activation with pricing */}
-      {isEditing && formData.pricing && formData.pricing.length > 0 && (
-        <LivePricePreview productId={id ? parseInt(id) : undefined} currentFormData={formData} />
-      )}
 
       {/* Price Simulation Tool */}
       <PriceSimulationTool
