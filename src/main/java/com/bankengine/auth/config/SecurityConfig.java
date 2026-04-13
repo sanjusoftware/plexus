@@ -122,6 +122,7 @@ public class SecurityConfig {
                                 "/pricing-simulation",
                                 "/pricing-components/**",
                                 "/products/**",
+                                "/bundles/**",
                                 "/roles/**",
                                 "/auth/**",
                                 "/v3/api-docs/**",

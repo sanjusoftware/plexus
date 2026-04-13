@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumbs from './Breadcrumbs';
 import GlobalToast from './GlobalToast';
 import {
-  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Bookmark, Puzzle, CircleDollarSign, Layers, ChevronLeft, ChevronRight, ShieldCheck, ExternalLink, Zap
+  Cpu, LayoutDashboard, Building2, Package, LogOut, User as UserIcon, List, Database, Bookmark, Puzzle, CircleDollarSign, Layers, ChevronLeft, ChevronRight, ShieldCheck, ExternalLink, Library, Zap
 } from 'lucide-react';
 
 interface LoggedInUserLayoutProps {
@@ -67,6 +67,12 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
           icon: Package,
           path: '/products',
           show: hasPermission({ action: 'GET', path: '/api/v1/products' })
+        },
+        {
+          label: 'Product Bundles',
+          icon: Library,
+          path: '/bundles',
+          show: hasPermission('catalog:bundle:read')
         }
       ]
     },
