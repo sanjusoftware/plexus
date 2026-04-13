@@ -72,8 +72,6 @@ jest.mock('../../hooks/useUnsavedChangesGuard', () => ({
   })
 }));
 
-jest.mock('../../components/LivePricePreview', () => () => null);
-
 jest.mock('../../components/PriceSimulationTool', () => () => null);
 
 jest.mock('../../components/PlexusSelect', () => ({

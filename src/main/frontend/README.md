@@ -22,7 +22,7 @@ This frontend application provides a comprehensive UI for managing banking produ
 - **Product Management**: Create, edit, activate, and lifecycle manage products
 - **Feature Components**: Link reusable feature definitions to products
 - **Pricing Configuration**: Set up static pricing or dynamic rules-based pricing tiers
-- **Price Calculation**: Real-time pricing preview and simulation tools
+- **Price Calculation**: Multi-scenario real-time pricing simulation tools
 - **Role-Based Access Control**: Permission-based UI elements and API interactions
 - **Multi-Tenant Support**: Bank-scoped operations with secure context isolation
 
@@ -80,7 +80,6 @@ npm run build   # Production build
 ```
 src/
 ├── components/
-│   ├── LivePricePreview.tsx         # Real-time pricing preview
 │   ├── PriceSimulationTool.tsx      # Multi-scenario pricing tester
 │   ├── PricingTierVisualization.tsx # Tier structure visualization
 │   ├── PlexusSelect.tsx             # Custom select component
@@ -103,12 +102,6 @@ src/
 ---
 
 ## Key Features
-
-### 🎯 Live Price Preview
-Real-time pricing calculation during product creation
-- Adjustable transaction amount and customer segment
-- Component breakdown display
-- Pro-rata calculations
 
 ### 🧪 Price Simulation Tool
 Multi-scenario pricing tester with:
@@ -137,17 +130,6 @@ Permission-based UI rendering via `HasPermission` component
 ## Component Architecture
 
 ### New Components
-
-#### **LivePricePreview**
-```typescript
-<LivePricePreview
-  productId={123}
-  currentFormData={formData}
-/>
-```
-- Real-time price calculation
-- Input controls for testing
-- Component breakdown display
 
 #### **PriceSimulationTool**
 ```typescript
