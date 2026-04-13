@@ -121,6 +121,7 @@ public class SecurityConfig {
                                 "/pricing-metadata/**",
                                 "/pricing-components/**",
                                 "/products/**",
+                                "/bundles/**",
                                 "/roles/**",
                                 "/auth/**",
                                 "/v3/api-docs/**",

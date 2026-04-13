@@ -12,7 +12,9 @@ import PricingMetadataPage from './pages/admin/PricingMetadataPage';
 import PricingMetadataFormPage from './pages/admin/PricingMetadataFormPage';
 import PricingComponentsPage from './pages/admin/PricingComponentsPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
+import ProductBundlesPage from './pages/admin/ProductBundlesPage';
 import ProductFormPage from './pages/admin/ProductFormPage';
+import ProductBundleFormPage from './pages/admin/ProductBundleFormPage';
 import ProductTypeFormPage from './pages/admin/ProductTypeFormPage';
 import ProductCategoryFormPage from './pages/admin/ProductCategoryFormPage';
 import FeatureComponentsPage from './pages/admin/FeatureComponentsPage';
@@ -187,6 +189,21 @@ function App() {
               <Route path="/products/edit/:id" element={
                 <PermissionElement permission="catalog:product:update">
                   <ProductFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/bundles" element={
+                <PermissionElement permission="catalog:bundle:read">
+                  <ProductBundlesPage />
+                </PermissionElement>
+              } />
+              <Route path="/bundles/create" element={
+                <PermissionElement permission="catalog:bundle:create">
+                  <ProductBundleFormPage />
+                </PermissionElement>
+              } />
+              <Route path="/bundles/edit/:id" element={
+                <PermissionElement permission="catalog:bundle:update">
+                  <ProductBundleFormPage />
                 </PermissionElement>
               } />
               <Route path="/roles" element={
