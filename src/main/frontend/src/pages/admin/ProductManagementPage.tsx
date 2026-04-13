@@ -20,7 +20,7 @@ import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useSystemPricingKeys } from '../../hooks/useSystemPricingKeys';
 import { PriceComponentDetail, PricingMetadata, PricingService } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
-import { formatComponentLabelWithProRata } from './ProductManagementPage.utils';
+import { formatComponentLabelWithProRata, formatPercentageBaseHint, getSimulationDateGuidance, getSimulationFieldHelperText } from './ProductManagementPage.utils';
 
 interface FeatureLink {
   featureComponentCode: string;
@@ -104,6 +104,7 @@ const ProductManagementPage = () => {
   const consumedSuccessKeyRef = useRef<string | null>(null);
 
   const signal = useAbortSignal();
+  const simulationDateGuidance = getSimulationDateGuidance();
 
 
   const toggleExpand = (id: number) => {
@@ -194,6 +195,7 @@ const ProductManagementPage = () => {
     const value = calcInputs[key] ?? '';
     const dataType = (meta.dataType || '').toUpperCase();
     const label = (meta.displayName || key).toUpperCase();
+    const helperText = getSimulationFieldHelperText(key);
 
     if (dataType === 'BOOLEAN') {
       return (
@@ -243,6 +245,9 @@ const ProductManagementPage = () => {
           value={value}
           onChange={(e) => setCalcInputs(prev => ({ ...prev, [key]: e.target.value }))}
         />
+        {helperText && (
+          <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">{helperText}</p>
+        )}
       </div>
     );
   };
@@ -379,15 +384,11 @@ const ProductManagementPage = () => {
     };
 
     const getPercentageHint = (item: PriceComponentDetail, isDiscount: boolean) => {
-      if (!item.valueType?.includes('PERCENTAGE')) return null;
-      const raw = Math.abs(Number(item.rawValue ?? 0));
-      const calculated = Math.abs(Number(item.calculatedAmount ?? 0));
-      if (!raw || !calculated) return null;
-      const inferredBase = (calculated * 100) / raw;
-      if (isDiscount && !item.targetComponentCode) {
-        return `${raw}% of total charges (${PricingService.formatCurrency(inferredBase)})`;
-      }
-      return `${raw}% of ${PricingService.formatCurrency(inferredBase)}`;
+      return formatPercentageBaseHint(item, {
+        isDiscount,
+        formatCurrency: (amount) => PricingService.formatCurrency(amount),
+        targetComponentLabel: item.targetComponentCode ? getDisplayName(item.targetComponentCode) : null,
+      });
     };
 
     const getReceiptMetaLine = (item: PriceComponentDetail, isDiscount: boolean) => {
@@ -420,7 +421,7 @@ const ProductManagementPage = () => {
             return (
               <div key={`charge-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-blue-100 bg-blue-50/30">
                 <div className="min-w-0 pr-3">
-                  <div className="text-[11px] font-bold text-gray-800 truncate">
+                  <div className="text-[11px] font-bold text-gray-800 leading-tight break-words">
                     {formatComponentLabelWithProRata(getDisplayName(item.componentCode), item)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
                   </div>
                   <div className="text-[9px] text-gray-500 uppercase tracking-wider">
@@ -439,7 +440,7 @@ const ProductManagementPage = () => {
             return (
               <div key={`discount-${item.componentCode}-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg border border-green-100 bg-green-50/30">
                 <div className="min-w-0 pr-3">
-                  <div className="text-[11px] font-bold text-gray-800 truncate">
+                  <div className="text-[11px] font-bold text-gray-800 leading-tight break-words">
                     {formatComponentLabelWithProRata(getDisplayName(item.componentCode), item)} <span className="text-[9px] font-mono font-normal text-gray-500">({item.componentCode})</span>
                   </div>
                   <div className="text-[9px] text-gray-500 uppercase tracking-wider">
@@ -708,6 +709,19 @@ const ProductManagementPage = () => {
                         <div className="mt-4 pt-4 border-t border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div className="bg-white rounded-xl border border-gray-200 p-4">
                             <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Calculation Inputs</h5>
+                            <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5">
+                              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                                <Info className="h-3.5 w-3.5" />
+                                <span>How dates work</span>
+                              </div>
+                              <div className="mt-2 space-y-1.5 text-[10px] leading-snug text-blue-900">
+                                {simulationDateGuidance.map((entry) => (
+                                  <p key={entry.label}>
+                                    <span className="font-black uppercase tracking-wide">{entry.label}:</span> {entry.description}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
                             <div className="space-y-3">
                               {calcMetadata.length > 0
                                 ? calcMetadata.map((meta) => renderDynamicField(prod, meta))

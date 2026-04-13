@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { X, Settings, Play, Download, Loader2 } from 'lucide-react';
+import { X, Settings, Play, Download, Loader2, Info } from 'lucide-react';
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult } from '../services/PricingService';
 import PlexusSelect from './PlexusSelect';
-import { formatComponentLabelWithProRata } from '../pages/admin/ProductManagementPage.utils';
+import { formatComponentLabelWithProRata, getSimulationDateGuidance, getSimulationFieldHelperText } from '../pages/admin/ProductManagementPage.utils';
 
 interface PriceSimulationToolProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ interface SimulationScenario {
   productId: number;
   transactionAmount: number;
   customerSegment: string;
+  effectiveDate: string;
   enrollmentDate: string;
 }
 
@@ -25,6 +26,7 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
       productId: defaultProductId || 0,
       transactionAmount: 1000,
       customerSegment: 'RETAIL',
+      effectiveDate: new Date().toISOString().split('T')[0],
       enrollmentDate: new Date().toISOString().split('T')[0],
     },
   ]);
@@ -42,6 +44,7 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
         productId: defaultProductId || 0,
         transactionAmount: 1000,
         customerSegment: 'RETAIL',
+        effectiveDate: new Date().toISOString().split('T')[0],
         enrollmentDate: new Date().toISOString().split('T')[0],
       },
     ]);
@@ -74,9 +77,10 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
           productId: scenario.productId,
           enrollmentDate: scenario.enrollmentDate,
           customAttributes: {
-            transactionAmount: scenario.transactionAmount,
-            customerSegment: scenario.customerSegment,
-            effectiveDate: new Date().toISOString().split('T')[0],
+            TRANSACTION_AMOUNT: scenario.transactionAmount,
+            CUSTOMER_SEGMENT: scenario.customerSegment,
+            EFFECTIVE_DATE: scenario.effectiveDate,
+            ENROLLMENT_DATE: scenario.enrollmentDate,
           }
         };
 
@@ -113,6 +117,7 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
 
   const currentResult = results.get(selectedScenario);
   const currentScenario = scenarios[selectedScenario];
+  const simulationDateGuidance = getSimulationDateGuidance();
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -192,6 +197,20 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
               </div>
 
               <div className="space-y-4">
+                <div className="rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-700">
+                    <Info className="h-3.5 w-3.5" />
+                    <span>How dates work</span>
+                  </div>
+                  <div className="mt-2 space-y-1.5 text-[10px] leading-snug text-purple-900">
+                    {simulationDateGuidance.map((entry) => (
+                      <p key={entry.label}>
+                        <span className="font-black uppercase tracking-wide">{entry.label}:</span> {entry.description}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
                     Scenario Name
@@ -254,6 +273,21 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
 
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Effective Date
+                  </label>
+                  <input
+                    type="date"
+                    value={currentScenario.effectiveDate}
+                    onChange={(e) => updateScenario(selectedScenario, { effectiveDate: e.target.value })}
+                    className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500"
+                  />
+                  <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">
+                    {getSimulationFieldHelperText('EFFECTIVE_DATE')}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
                     Enrollment Date
                   </label>
                   <input
@@ -262,6 +296,9 @@ const PriceSimulationTool: React.FC<PriceSimulationToolProps> = ({ isOpen, onClo
                     onChange={(e) => updateScenario(selectedScenario, { enrollmentDate: e.target.value })}
                     className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500"
                   />
+                  <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">
+                    {getSimulationFieldHelperText('ENROLLMENT_DATE')}
+                  </p>
                 </div>
               </div>
 
