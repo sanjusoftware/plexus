@@ -190,7 +190,7 @@ const PricingSimulationPage = () => {
         };
 
         // Ensure effective date is set
-        if (!request.customAttributes[effectiveDateKey]) {
+        if (request.customAttributes && !request.customAttributes[effectiveDateKey]) {
           request.customAttributes[effectiveDateKey] = new Date().toISOString().split('T')[0];
         }
 
