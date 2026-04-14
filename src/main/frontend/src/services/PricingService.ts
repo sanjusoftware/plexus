@@ -29,6 +29,7 @@ export interface PriceComponentDetail {
   activeDays?: number;
   billingCycleDays?: number;
   effectiveDate?: string | null;
+  priceAmount?: number; // For compatibility
 }
 
 export interface ProductPricingCalculationResult {
@@ -62,8 +63,10 @@ export interface PricingTier {
   priority: number;
   minThreshold?: number;
   maxThreshold?: number;
+  applyChargeOnFullBreach?: boolean;
   conditions: TierCondition[];
   priceValues: PriceComponentDetail[];
+  priceValue?: PriceComponentDetail; // For compatibility
 }
 
 export interface PricingComponent {
@@ -76,6 +79,8 @@ export interface PricingComponent {
   description: string;
   proRataApplicable: boolean;
   pricingTiers: PricingTier[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface FeatureComponent {

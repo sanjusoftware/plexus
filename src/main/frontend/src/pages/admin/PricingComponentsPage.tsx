@@ -17,7 +17,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
-import { PricingService, TierCondition, PricingComponent } from '../../services/PricingService';
+import { PricingService, TierCondition, PricingComponent, PricingTier } from '../../services/PricingService';
 
 const PricingComponentsPage = () => {
   const navigate = useNavigate();
@@ -34,18 +34,20 @@ const PricingComponentsPage = () => {
   const [copyCode, setCopyCode] = useState('');
   const consumedSuccessKeyRef = useRef<string | null>(null);
 
-  const normalizeTier = useCallback((tier: any): any => {
+  const normalizeTier = useCallback((tier: any): PricingTier => {
     const firstValue = tier?.priceValue || (Array.isArray(tier?.priceValues) && tier.priceValues.length > 0 ? tier.priceValues[0] : null);
+    const normalizedPriceValue = firstValue ? {
+        ...firstValue,
+        priceAmount: firstValue.priceAmount ?? firstValue.rawValue ?? 0,
+        rawValue: firstValue.rawValue ?? firstValue.priceAmount ?? 0
+    } : null;
+
     return {
       ...tier,
       conditions: tier.conditions || [],
-      priceValues: tier.priceValues || (firstValue ? [firstValue] : []),
-      priceValue: {
-        priceAmount: firstValue?.priceAmount ?? firstValue?.rawValue ?? 0,
-        valueType: firstValue?.valueType || '—',
-        currency: firstValue?.currency,
-        rawValue: firstValue?.rawValue
-      }
+      priceValues: tier.priceValues || (normalizedPriceValue ? [normalizedPriceValue] : []),
+      priceValue: normalizedPriceValue,
+      applyChargeOnFullBreach: tier.applyChargeOnFullBreach ?? normalizedPriceValue?.applyChargeOnFullBreach ?? false
     };
   }, []);
 
@@ -391,14 +393,14 @@ const PricingComponentsPage = () => {
 
                                 <div className="space-y-3">
                                     {/* Thresholds */}
-                                    {(tier.minThreshold !== null || tier.maxThreshold !== null) && (
+                                    {(tier.minThreshold !== null && tier.minThreshold !== undefined || tier.maxThreshold !== null && tier.maxThreshold !== undefined) && (
                                         <div className="flex items-center gap-4 mb-2">
-                                            {tier.minThreshold !== null && (
+                                            {tier.minThreshold !== null && tier.minThreshold !== undefined && (
                                                 <div className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
                                                     MIN: <span className="text-blue-600 font-black">{tier.minThreshold}</span>
                                                 </div>
                                             )}
-                                            {tier.maxThreshold !== null && (
+                                            {tier.maxThreshold !== null && tier.maxThreshold !== undefined && (
                                                 <div className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
                                                     MAX: <span className="text-blue-600 font-black">{tier.maxThreshold}</span>
                                                 </div>
@@ -428,13 +430,13 @@ const PricingComponentsPage = () => {
                                   <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Price Configuration</div>
                                   <div className="flex items-baseline justify-end space-x-1.5">
                                     <span className="text-3xl font-black text-blue-600 tracking-tighter">
-                                      {tier.priceValue.valueType.includes('PERCENTAGE') ? '' : (user?.currencyCode || 'USD')}
-                                      {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(tier.priceValue.priceAmount)}
-                                      {tier.priceValue.valueType.includes('PERCENTAGE') ? '%' : ''}
+                                      {tier.priceValue?.valueType.includes('PERCENTAGE') ? '' : (user?.currencyCode || 'USD')}
+                                      {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(tier.priceValue?.priceAmount || 0)}
+                                      {tier.priceValue?.valueType.includes('PERCENTAGE') ? '%' : ''}
                                     </span>
                                   </div>
-                                  <div className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest mt-1 ${PricingService.getValueTypeColor(tier.priceValue.valueType)}`}>
-                                      {tier.priceValue.valueType.replace(/_/g, ' ')}
+                                  <div className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest mt-1 ${tier.priceValue ? PricingService.getValueTypeColor(tier.priceValue.valueType) : 'text-gray-500 bg-gray-50'}`}>
+                                      {tier.priceValue?.valueType.replace(/_/g, ' ') || '—'}
                                   </div>
                                   {tier.applyChargeOnFullBreach && (
                                       <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase tracking-tighter mt-2 bg-amber-50 px-2 py-1 rounded border border-amber-100">
