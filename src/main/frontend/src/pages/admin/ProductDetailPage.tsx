@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   Package,
-  ChevronLeft,
   Loader2,
   Puzzle,
   Tag,
@@ -13,7 +12,7 @@ import {
   RefreshCw,
   Edit,
   Trash2,
-  CheckCircle,
+  CheckCircle2,
   History,
   Archive
 } from 'lucide-react';
@@ -453,12 +452,6 @@ const ProductDetailPage = () => {
 
   return (
     <AdminPage>
-      <div className="mb-4">
-        <Link to="/products" className="inline-flex items-center text-xs font-bold text-gray-500 hover:text-blue-600 transition uppercase tracking-widest">
-          <ChevronLeft className="w-4 h-4 mr-1" /> Back to Catalog
-        </Link>
-      </div>
-
       <AdminPageHeader
         icon={Package}
         title={product.name}
@@ -468,7 +461,7 @@ const ProductDetailPage = () => {
             {product.status === 'DRAFT' && (
               <HasPermission action="POST" path="/api/v1/products/*/activate">
                 <button onClick={() => handleStatusAction('activate')} className="admin-success-btn">
-                  <CheckCircle className="h-4 w-4" /> Activate
+                  <CheckCircle2 className="h-4 w-4" /> Activate
                 </button>
               </HasPermission>
             )}
