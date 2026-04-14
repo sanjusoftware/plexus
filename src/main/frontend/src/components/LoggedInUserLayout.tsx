@@ -29,6 +29,13 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
 
   const roles = (user?.roles as string[]) || [];
 
+  const isActive = (path: string) => {
+    if (location.pathname === path) return true;
+    if (location.pathname.startsWith(`${path}/`)) return true;
+    if (path === '/banks' && location.pathname === '/my-bank') return true;
+    return false;
+  };
+
   const menuGroups = [
     {
       title: '',
@@ -155,19 +162,22 @@ const LoggedInUserLayout: React.FC<LoggedInUserLayoutProps> = ({ children }) => 
                     </span>
                   </div>
                 )}
-                {visibleItems.map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={() => navigate(item.path)}
-                    title={isCollapsed ? item.label : undefined}
-                    className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-2.5'} w-full p-2.5 rounded-lg transition ${
-                      location.pathname === item.path ? 'bg-blue-800' : 'hover:bg-blue-800'
-                    }`}
-                  >
-                    <item.icon className={`h-4 w-4 flex-shrink-0 ${location.pathname === item.path ? 'text-blue-300' : 'text-blue-300'}`} />
-                    {!isCollapsed && <span className={`${location.pathname === item.path ? 'font-medium' : ''} text-sm whitespace-nowrap`}>{item.label}</span>}
-                  </button>
-                ))}
+                {visibleItems.map((item) => {
+                  const active = isActive(item.path);
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => navigate(item.path)}
+                      title={isCollapsed ? item.label : undefined}
+                      className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-2.5'} w-full p-2.5 rounded-lg transition ${
+                        active ? 'bg-blue-800' : 'hover:bg-blue-800'
+                      }`}
+                    >
+                      <item.icon className="h-4 w-4 flex-shrink-0 text-blue-300" />
+                      {!isCollapsed && <span className={`${active ? 'font-medium' : ''} text-sm whitespace-nowrap`}>{item.label}</span>}
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
