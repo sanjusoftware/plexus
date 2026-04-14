@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Loader2, Package, Tag, Info, ChevronDown, ChevronUp, Play, RefreshCw, Zap, Puzzle } from 'lucide-react';
+import { Plus, Loader2, Package, Tag, Info, ChevronDown, ChevronUp, Play, RefreshCw, Zap, Puzzle, AlertTriangle, Layers } from 'lucide-react';
 import { AdminInfoBanner, AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import {
   AdminDataTable,
@@ -18,7 +18,7 @@ import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useSystemPricingKeys } from '../../hooks/useSystemPricingKeys';
-import { PriceComponentDetail, PricingMetadata, PricingService } from '../../services/PricingService';
+import { PriceComponentDetail, PricingMetadata, PricingService, PricingComponent, FeatureComponent, TierCondition } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
 import { formatComponentLabelWithProRata, formatPercentageBaseHint, getSimulationFieldHelperText } from './ProductManagementPage.utils';
 
@@ -78,7 +78,7 @@ const toTitleFromCode = (value: string) =>
 const ProductManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setToast } = useAuth();
+  const { user, setToast } = useAuth();
   const {
     keys,
     hasSystemPricingKey,
@@ -99,6 +99,10 @@ const ProductManagementPage = () => {
     [keys.EFFECTIVE_DATE]: new Date().toISOString().split('T')[0],
   });
 
+  const [componentDetails, setComponentDetails] = useState<Record<string, PricingComponent>>({});
+  const [featureDetails, setFeatureDetails] = useState<Record<string, FeatureComponent>>({});
+  const [detailsLoading, setDetailsLoading] = useState<Set<string>>(new Set());
+
   // Modal states
   const [archiveModal, setArchiveModal] = useState<{ isOpen: boolean; productId?: number }>({ isOpen: false });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; productId?: number; productName?: string }>({ isOpen: false });
@@ -106,6 +110,39 @@ const ProductManagementPage = () => {
 
   const signal = useAbortSignal();
 
+  const fetchComponentDetails = useCallback(async (code: string) => {
+    if (componentDetails[code] || detailsLoading.has(code)) return;
+    setDetailsLoading(prev => new Set(prev).add(code));
+    try {
+      const details = await PricingService.getPricingComponentByCode(code);
+      setComponentDetails(prev => ({ ...prev, [code]: details }));
+    } catch (err) {
+      console.error(`Failed to fetch details for component ${code}`, err);
+    } finally {
+      setDetailsLoading(prev => {
+        const next = new Set(prev);
+        next.delete(code);
+        return next;
+      });
+    }
+  }, [componentDetails, detailsLoading]);
+
+  const fetchFeatureDetails = useCallback(async (code: string) => {
+    if (featureDetails[code] || detailsLoading.has(code)) return;
+    setDetailsLoading(prev => new Set(prev).add(code));
+    try {
+      const details = await PricingService.getFeatureComponentByCode(code);
+      setFeatureDetails(prev => ({ ...prev, [code]: details }));
+    } catch (err) {
+      console.error(`Failed to fetch details for feature ${code}`, err);
+    } finally {
+      setDetailsLoading(prev => {
+        const next = new Set(prev);
+        next.delete(code);
+        return next;
+      });
+    }
+  }, [featureDetails, detailsLoading]);
 
   const toggleExpand = (id: number) => {
     const newExpanded = new Set(expandedIds);
@@ -118,6 +155,11 @@ const ProductManagementPage = () => {
       });
     } else {
       newExpanded.add(id);
+      const product = products.find(p => p.id === id);
+      if (product) {
+        product.pricing?.forEach(p => fetchComponentDetails(p.pricingComponentCode));
+        product.features?.forEach(f => fetchFeatureDetails(f.featureComponentCode));
+      }
     }
     setExpandedIds(newExpanded);
   };
@@ -318,6 +360,7 @@ const ProductManagementPage = () => {
     try {
       await axios.post(`/api/v1/products/${id}/${action}`);
       setToast({ message: `Product ${action}d successfully.`, type: 'success' });
+      PricingService.clearComponentCache(); // Clear cache when something changes
       await fetchInitialData(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || `Failed to ${action} product.`, type: 'error' });
@@ -421,6 +464,49 @@ const ProductManagementPage = () => {
       }));
       setToast({ message: err.response?.data?.message || 'Price calculation failed.', type: 'error' });
     }
+  };
+
+  const formatCondition = (condition: TierCondition, currency: string) => {
+    const attributeLabel = toTitleFromCode(condition.attributeName);
+    const value = condition.attributeValue;
+    const op = condition.operator;
+
+    const getCurrencySymbol = (code: string) => {
+      const symbols: Record<string, string> = {
+        'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'INR': '₹', 'AUD': 'A$', 'CAD': 'C$', 'CHF': 'CHF', 'CNY': '¥', 'HKD': 'HK$', 'NZD': 'NZ$', 'SEK': 'kr', 'KRW': '₩', 'SGD': 'S$', 'NOK': 'kr', 'MXN': '$',
+      };
+      return symbols[code] || code;
+    };
+
+    const formatNumber = (val: string) => {
+      const n = parseFloat(val);
+      if (isNaN(n)) return val;
+      return new Intl.NumberFormat('en-US').format(n);
+    };
+
+    const opMap: Record<string, string> = {
+      'EQ': 'is',
+      'GT': 'is greater than',
+      'LT': 'is less than',
+      'GE': 'is greater than or equal to',
+      'LE': 'is less than or equal to'
+    };
+
+    const friendlyOp = opMap[op] || op;
+
+    let formattedValue = value;
+    const lowerAttr = condition.attributeName.toLowerCase();
+    if (lowerAttr.includes('amount') || lowerAttr.includes('balance') || lowerAttr.includes('income')) {
+        formattedValue = `${getCurrencySymbol(currency)}${formatNumber(value)}`;
+    } else if (!isNaN(parseFloat(value))) {
+        formattedValue = formatNumber(value);
+    }
+
+    return (
+      <span>
+        <span className="text-blue-500">{attributeLabel}</span> {friendlyOp} <span className="font-black text-blue-900">{formattedValue}</span>
+      </span>
+    );
   };
 
   const renderBreakdown = (prod: Product, onRefresh?: () => void) => {
@@ -632,9 +718,16 @@ const ProductManagementPage = () => {
 
                     {/* Status */}
                     <td className="text-center">
-                      <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold uppercase tracking-tight ${prod.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                        {prod.status}
-                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold uppercase tracking-tight ${prod.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                          {prod.status}
+                        </span>
+                        {prod.status === 'ACTIVE' && prod.activationDate && (
+                            <span className="text-[9px] text-gray-400 font-bold mt-1">
+                                {new Date(prod.activationDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })}
+                            </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Updated At */}
@@ -666,14 +759,13 @@ const ProductManagementPage = () => {
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
-                      {(prod.status === 'DRAFT' || prod.status === 'ACTIVE') && (
+                      {(prod.status === 'DRAFT') && (
                         <HasPermission action="PATCH" path="/api/v1/products/*">
                           <AdminDataTableActionButton
-                            onClick={(e) => { e.stopPropagation(); prod.status === 'DRAFT' && navigate(`/products/edit/${prod.id}`); }}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/products/edit/${prod.id}`); }}
                             tone="primary"
                             size="compact"
-                            disabled={prod.status !== 'DRAFT'}
-                            title={prod.status === 'DRAFT' ? "Modify Product" : "Direct editing is not allowed for active products. Create a new version to make changes."}
+                            title="Modify Product"
                           >
                             <AdminDataTableActionContent action="edit" />
                           </AdminDataTableActionButton>
@@ -694,21 +786,47 @@ const ProductManagementPage = () => {
                   {expandedIds.has(prod.id) && (
                     <tr className="bg-white">
                       <td colSpan={6} className="p-0 border-b border-gray-100">
-                        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="p-6">
+                            {/* Product Tagline & Description */}
+                            <div className="mb-6 border-l-4 border-blue-500 pl-4">
+                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight">{prod.tagline || 'No tagline defined'}</h4>
+                                <p className="text-xs text-gray-500 mt-1 italic">{prod.fullDescription || 'No description available for this product.'}</p>
+                            </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-blue-50/50 p-1.5 rounded-lg w-fit">
                           <Puzzle className="w-3 h-3 mr-1.5 text-blue-500" /> Product Features
                       </h4>
-                      <div className="space-y-2">
-                        {prod.features?.map((f, idx) => (
-                          <div key={idx} className="flex justify-between items-center text-xs p-3 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-blue-100 hover:bg-white transition shadow-sm">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-gray-700">{f.featureName || 'Unnamed Feature'}</span>
-                              <span className="text-[9px] font-mono text-gray-400">{f.featureComponentCode}</span>
+                      <div className="space-y-3">
+                        {prod.features?.map((f, idx) => {
+                          const details = featureDetails[f.featureComponentCode];
+                          return (
+                          <div key={idx} className="p-4 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-blue-100 hover:bg-white transition shadow-sm">
+                            <div className="flex justify-between items-start mb-2">
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-gray-700 text-sm">{f.featureName || details?.name || 'Unnamed Feature'}</span>
+                                        {details && (
+                                            <>
+                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${details.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                    {details.status}
+                                                </span>
+                                                <span className="text-[8px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                                    v{details.version}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <span className="text-[9px] font-mono text-gray-400">{f.featureComponentCode}</span>
+                                </div>
+                                <span className="font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg text-[11px] shadow-sm border border-blue-100">{f.featureValue}</span>
                             </div>
-                            <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg text-[10px]">{f.featureValue}</span>
+                            {details?.description && (
+                                <p className="text-[10px] text-gray-500 italic mt-1 leading-relaxed">{details.description}</p>
+                            )}
                           </div>
-                        ))}
+                        );})}
                         {(!prod.features || prod.features.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No product features bound to this product.</p>}
                       </div>
                     </div>
@@ -716,18 +834,88 @@ const ProductManagementPage = () => {
                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-purple-50/50 p-1.5 rounded-lg w-fit">
                         <Tag className="w-3 h-3 mr-1.5 text-purple-500" /> Pricing rules
                       </h4>
-                      <div className="space-y-2">
-                        {prod.pricing?.map((p, idx) => (
-                          <div key={idx} className="flex justify-between items-center text-xs p-3 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-purple-100 hover:bg-white transition shadow-sm">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-gray-700">{p.pricingComponentName || 'Unnamed Component'}</span>
-                              <span className="text-[9px] font-mono text-gray-400">{p.pricingComponentCode}</span>
+                      <div className="space-y-4">
+                        {prod.pricing?.map((p, idx) => {
+                          const details = componentDetails[p.pricingComponentCode];
+                          return (
+                          <div key={idx} className="p-4 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-purple-100 hover:bg-white transition shadow-sm">
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-gray-700 text-sm">{p.pricingComponentName || details?.name || 'Unnamed Component'}</span>
+                                        {details && (
+                                            <>
+                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${details.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                    {details.status}
+                                                </span>
+                                                <span className="text-[8px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                                    v{details.version}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <span className="text-[9px] font-mono text-gray-400">{p.pricingComponentCode}</span>
+                                </div>
+                                <span className={`font-bold px-2.5 py-1 rounded-lg text-[10px] shadow-sm border ${p.useRulesEngine ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-purple-100 text-purple-700 border-purple-200'}`}>
+                                  {p.useRulesEngine ? 'DYNAMIC RULES' : `${PricingService.formatCurrency(p.fixedValue || 0)} (${p.fixedValueType?.replace(/_/g, ' ')})`}
+                                </span>
                             </div>
-                            <span className={`font-bold px-2 py-0.5 rounded-lg text-[10px] ${p.useRulesEngine ? 'bg-amber-100 text-amber-700' : 'bg-purple-100 text-purple-700'}`}>
-                              {p.useRulesEngine ? 'DYNAMIC RULES' : `${p.fixedValue} (${p.fixedValueType})`}
-                            </span>
+
+                            {details?.description && (
+                                <p className="text-[10px] text-gray-500 italic mb-4 leading-relaxed border-l-2 border-gray-200 pl-2">{details.description}</p>
+                            )}
+
+                            {details?.pricingTiers && details.pricingTiers.length > 0 && (
+                                <div className="space-y-2 mt-4">
+                                    <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+                                        <Layers className="w-3 h-3 mr-1" /> Tier Configuration
+                                    </div>
+                                    {[...details.pricingTiers].sort((a, b) => (b.priority || 0) - (a.priority || 0)).map((tier, tidx) => (
+                                        <div key={tidx} className="bg-white p-3 rounded-lg border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                                            <div className="flex-1">
+                                                <div className="flex items-center space-x-2 mb-1">
+                                                    <span className="text-[8px] font-black bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded uppercase tracking-tighter">Tier #{tidx + 1}</span>
+                                                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{tier.code}</div>
+                                                </div>
+                                                <h5 className="font-bold text-gray-800 text-[11px]">{tier.name}</h5>
+
+                                                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                                    {tier.conditions?.map((c, cidx) => (
+                                                        <React.Fragment key={cidx}>
+                                                            <div className="bg-blue-50/50 text-blue-700 px-2 py-0.5 rounded text-[9px] font-medium border border-blue-100">
+                                                                {formatCondition(c, user?.currencyCode || 'USD')}
+                                                            </div>
+                                                            {cidx < tier.conditions.length - 1 && (
+                                                                <span className="text-[8px] font-black text-gray-300 uppercase">{c.connector}</span>
+                                                            )}
+                                                        </React.Fragment>
+                                                    ))}
+                                                    {(!tier.conditions || tier.conditions.length === 0) && (
+                                                        <div className="text-[9px] text-gray-400 italic bg-gray-50 px-2 py-0.5 rounded border border-gray-100">Catch-all Tier</div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 pl-4 border-l border-gray-50">
+                                                <div className="text-right">
+                                                    <div className="text-[11px] font-black text-blue-600">
+                                                        {tier.priceValues?.[0]?.valueType?.includes('PERCENTAGE') ? '' : (user?.currencyCode || 'USD')}
+                                                        {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(tier.priceValues?.[0]?.rawValue || 0)}
+                                                        {tier.priceValues?.[0]?.valueType?.includes('PERCENTAGE') ? '%' : ''}
+                                                    </div>
+                                                    <div className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">{tier.priceValues?.[0]?.valueType?.replace(/_/g, ' ')}</div>
+                                                </div>
+                                                <div className="text-center bg-gray-50 px-2 py-1 rounded">
+                                                    <div className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">Prio</div>
+                                                    <div className="text-[10px] font-bold text-gray-600">{tier.priority ?? '—'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                           </div>
-                        ))}
+                        );})}
                         {(!prod.pricing || prod.pricing.length === 0) && <p className="text-[10px] text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed text-center">No pricing rules bound to this product.</p>}
                       </div>
                     </div>
@@ -827,6 +1015,7 @@ const ProductManagementPage = () => {
                         </div>
                       )}
                     </div>
+                        </div>
                         </div>
                       </td>
                     </tr>

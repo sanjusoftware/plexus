@@ -19,15 +19,16 @@ export interface PriceComponentDetail {
   componentCode: string;
   targetComponentCode?: string;
   rawValue: number;
-  valueType: 'FEE_ABSOLUTE' | 'FEE_PERCENTAGE' | 'RATE_ABSOLUTE' | 'DISCOUNT_ABSOLUTE' | 'DISCOUNT_PERCENTAGE';
+  valueType: 'FEE_ABSOLUTE' | 'FEE_PERCENTAGE' | 'RATE_ABSOLUTE' | 'DISCOUNT_ABSOLUTE' | 'DISCOUNT_PERCENTAGE' | 'FREE_COUNT';
   proRataApplicable: boolean;
   applyChargeOnFullBreach: boolean;
   calculatedAmount: number;
-  sourceType: 'FIXED_VALUE' | 'RULES_ENGINE';
+  sourceType: 'FIXED_VALUE' | 'RULES_ENGINE' | 'CATALOG';
   matchedTierCode?: string;
   matchedTierId?: number;
   activeDays?: number;
   billingCycleDays?: number;
+  effectiveDate?: string | null;
 }
 
 export interface ProductPricingCalculationResult {
@@ -47,9 +48,52 @@ export interface BundlePriceResponse {
   productsBreakdown: ProductPricingCalculationResult[];
 }
 
+export interface TierCondition {
+  attributeName: string;
+  operator: string;
+  attributeValue: string;
+  connector: string;
+}
+
+export interface PricingTier {
+  id: number;
+  name: string;
+  code: string;
+  priority: number;
+  minThreshold?: number;
+  maxThreshold?: number;
+  conditions: TierCondition[];
+  priceValues: PriceComponentDetail[];
+}
+
+export interface PricingComponent {
+  id: number;
+  name: string;
+  code: string;
+  version: number;
+  status: string;
+  type: string;
+  description: string;
+  proRataApplicable: boolean;
+  pricingTiers: PricingTier[];
+}
+
+export interface FeatureComponent {
+  id: number;
+  code: string;
+  name: string;
+  dataType: string;
+  status: string;
+  version: number;
+  description?: string;
+}
+
 class PricingServiceClass {
   private systemKeysCache: string[] | null = null;
   private systemKeysInFlight: Promise<string[]> | null = null;
+
+  private componentCache: Record<string, PricingComponent> = {};
+  private featureCache: Record<string, FeatureComponent> = {};
 
   async getSystemPricingAttributeKeys(signal?: AbortSignal): Promise<string[]> {
     if (this.systemKeysCache) {
@@ -114,6 +158,57 @@ class PricingServiceClass {
     }
   }
 
+  async getPricingComponentByCode(code: string, version?: number, signal?: AbortSignal): Promise<PricingComponent> {
+    const cacheKey = `${code}${version ? `_v${version}` : ''}`;
+    if (this.componentCache[cacheKey]) {
+      return this.componentCache[cacheKey];
+    }
+
+    try {
+      const response = await axios.get(`/api/v1/pricing-components/code/${code}`, {
+        params: { version },
+        signal
+      });
+      const data = response.data;
+      this.componentCache[cacheKey] = data;
+      return data;
+    } catch (error) {
+      if (axios.isCancel(error)) throw error;
+      console.error(`Failed to fetch pricing component ${code}:`, error);
+      throw error;
+    }
+  }
+
+  async getFeatureComponentByCode(code: string, version?: number, signal?: AbortSignal): Promise<FeatureComponent> {
+    const cacheKey = `${code}${version ? `_v${version}` : ''}`;
+    if (this.featureCache[cacheKey]) {
+      return this.featureCache[cacheKey];
+    }
+
+    try {
+      const response = await axios.get(`/api/v1/features/code/${code}`, {
+        params: { version },
+        signal
+      });
+      // The backend returns a List<FeatureComponentResponse> for /code/{code}
+      const data = Array.isArray(response.data) ? response.data[0] : response.data;
+      if (!data) {
+        throw new Error(`Feature component ${code} not found`);
+      }
+      this.featureCache[cacheKey] = data;
+      return data;
+    } catch (error) {
+      if (axios.isCancel(error)) throw error;
+      console.error(`Failed to fetch feature component ${code}:`, error);
+      throw error;
+    }
+  }
+
+  clearComponentCache() {
+    this.componentCache = {};
+    this.featureCache = {};
+  }
+
   /**
    * Format currency values consistently
    */
@@ -162,6 +257,7 @@ class PricingServiceClass {
       RATE_ABSOLUTE: 'Absolute Rate',
       DISCOUNT_ABSOLUTE: 'Absolute Discount',
       DISCOUNT_PERCENTAGE: 'Percentage Discount',
+      FREE_COUNT: 'Free Count'
     };
     return labels[valueType] || valueType;
   }
@@ -197,4 +293,3 @@ class PricingServiceClass {
 
 // Export singleton instance
 export const PricingService = new PricingServiceClass();
-

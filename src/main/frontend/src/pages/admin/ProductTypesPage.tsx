@@ -173,18 +173,11 @@ const ProductTypesPage = () => {
                         </>
                       )}
                       {type.status === 'ACTIVE' && (
-                        <>
-                          <HasPermission action="PUT" path="/api/v1/product-types/*">
-                            <AdminDataTableActionButton disabled tone="neutral" size="compact" title="Active product types cannot be edited. Archive and create a new draft type instead." aria-label={`Edit ${type.name} (Disabled)`}>
-                              <AdminDataTableActionContent action="edit" />
-                            </AdminDataTableActionButton>
-                          </HasPermission>
-                          <HasPermission action="POST" path="/api/v1/product-types/*/archive">
-                            <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" size="compact" title="Archive" aria-label={`Archive ${type.name}`}>
-                              <AdminDataTableActionContent action="archive" />
-                            </AdminDataTableActionButton>
-                          </HasPermission>
-                        </>
+                        <HasPermission action="POST" path="/api/v1/product-types/*/archive">
+                          <AdminDataTableActionButton onClick={() => triggerConfirmAction(type)} tone="danger" size="compact" title="Archive" aria-label={`Archive ${type.name}`}>
+                            <AdminDataTableActionContent action="archive" />
+                          </AdminDataTableActionButton>
+                        </HasPermission>
                       )}
                     </AdminDataTableActionCell>
                   </AdminDataTableRow>

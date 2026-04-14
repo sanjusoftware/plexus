@@ -425,16 +425,17 @@ const ProductBundlesPage = () => {
                           </AdminDataTableActionButton>
                         </HasPermission>
                       )}
-                      <HasPermission permission="catalog:bundle:update">
-                        <AdminDataTableActionButton
-                          onClick={(e) => { e.stopPropagation(); bundle.status === 'DRAFT' && navigate(`/bundles/edit/${bundle.id}`); }}
-                          tone="primary"
-                          size="compact"
-                          disabled={bundle.status !== 'DRAFT'}
-                        >
-                          <AdminDataTableActionContent action="edit" />
-                        </AdminDataTableActionButton>
-                      </HasPermission>
+                      {bundle.status === 'DRAFT' && (
+                        <HasPermission permission="catalog:bundle:update">
+                          <AdminDataTableActionButton
+                            onClick={(e) => { e.stopPropagation(); navigate(`/bundles/edit/${bundle.id}`); }}
+                            tone="primary"
+                            size="compact"
+                          >
+                            <AdminDataTableActionContent action="edit" />
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                      )}
                       <HasPermission permission="catalog:bundle:delete">
                         <AdminDataTableActionButton
                           onClick={(e) => { e.stopPropagation(); bundle.status === 'ACTIVE' ? setArchiveModal({ isOpen: true, bundleId: bundle.id }) : setDeleteModal({ isOpen: true, bundleId: bundle.id, bundleName: bundle.name }); }}
