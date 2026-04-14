@@ -134,8 +134,8 @@ describe('Product Catalog Page Table', () => {
     const versionButton = within(table).getByTitle('Create Revision (v+1)');
     expect(versionButton).toHaveClass('admin-table__action-btn', 'admin-table__action-btn--success', 'admin-table__action-btn--compact');
 
-    const editButton = within(table).getByTitle('Direct editing is not allowed for active products. Create a new version to make changes.');
-    expect(editButton).toBeDisabled();
+    const editButton = within(table).queryByTitle('Direct editing is not allowed for active products. Create a new version to make changes.');
+    expect(editButton).not.toBeInTheDocument();
 
     const archiveButton = within(table).getByTitle('Archive Product');
     expect(archiveButton).toHaveClass('admin-table__action-btn', 'admin-table__action-btn--danger', 'admin-table__action-btn--compact');

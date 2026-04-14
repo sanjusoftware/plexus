@@ -186,17 +186,18 @@ const RoleManagementPage = () => {
                           <AdminDataTableActionContent action="edit" />
                         </AdminDataTableActionButton>
                       </HasPermission>
-                      <HasPermission action="POST" path="/api/v1/roles/mapping">
-                        <AdminDataTableActionButton
-                          onClick={(e) => { e.stopPropagation(); confirmDelete(mapping.name); }}
-                          tone="danger"
-                          size="compact"
-                          disabled={isOwnRole}
-                          title={isOwnRole ? 'You cannot delete a role assigned to your own account.' : 'Delete role'}
-                        >
-                          <AdminDataTableActionContent action="delete" />
-                        </AdminDataTableActionButton>
-                      </HasPermission>
+                      {!isOwnRole && (
+                        <HasPermission action="POST" path="/api/v1/roles/mapping">
+                          <AdminDataTableActionButton
+                            onClick={(e) => { e.stopPropagation(); confirmDelete(mapping.name); }}
+                            tone="danger"
+                            size="compact"
+                            title="Delete role"
+                          >
+                            <AdminDataTableActionContent action="delete" />
+                          </AdminDataTableActionButton>
+                        </HasPermission>
+                      )}
                     </div>
                     {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                   </div>

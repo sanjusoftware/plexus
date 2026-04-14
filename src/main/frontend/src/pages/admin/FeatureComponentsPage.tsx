@@ -17,6 +17,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { HasPermission } from '../../components/HasPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
+import { PricingService } from '../../services/PricingService';
 
 interface FeatureComponent {
   id: number;
@@ -73,6 +74,7 @@ const FeatureComponentsPage = () => {
     try {
       await axios.post(`/api/v1/features/${id}/activate`);
       setToast({ message: 'Feature activated successfully.', type: 'success' });
+      PricingService.clearComponentCache();
       await fetchFeatures(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Activation failed.', type: 'error' });
@@ -83,6 +85,7 @@ const FeatureComponentsPage = () => {
     try {
       await axios.delete(`/api/v1/features/${id}`);
       setToast({ message: 'Feature deleted successfully.', type: 'success' });
+      PricingService.clearComponentCache();
       await fetchFeatures(signal);
     } catch (err: any) {
       setToast({ message: err.response?.data?.message || 'Deletion failed.', type: 'error' });
@@ -166,19 +169,6 @@ const FeatureComponentsPage = () => {
                           </AdminDataTableActionButton>
                         </HasPermission>
                       </>
-                    )}
-                    {feat.status === 'ACTIVE' && (
-                      <HasPermission action="PUT" path="/api/v1/features/*">
-                        <AdminDataTableActionButton
-                          tone="primary"
-                          size="compact"
-                          disabled
-                          title="Direct editing is not allowed for active features. Linked products must be versioned to apply feature metadata changes."
-                          aria-label={`Edit ${feat.name} (Disabled)`}
-                        >
-                          <AdminDataTableActionContent action="edit" />
-                        </AdminDataTableActionButton>
-                      </HasPermission>
                     )}
                   </AdminDataTableActionCell>
                 </AdminDataTableRow>
