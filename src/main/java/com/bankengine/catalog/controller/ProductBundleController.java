@@ -14,6 +14,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,6 +45,25 @@ public class ProductBundleController {
     @PreAuthorize("hasAuthority('catalog:bundle:create')")
     public ResponseEntity<ProductBundleResponse> createProductBundle(@Valid @RequestBody ProductBundleRequest dto) {
         return new ResponseEntity<>(bundleService.createBundle(dto), HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "List all product bundles",
+            description = "Retrieves a paginated list of all product bundles. Returns bundles in all statuses (DRAFT, ACTIVE, ARCHIVED).")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Bundles retrieved successfully."),
+        @ApiResponse(responseCode = "401", description = "Authentication required."),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions to read bundles.")
+    })
+    @GetMapping
+    @PreAuthorize("hasAuthority('catalog:bundle:read')")
+    public ResponseEntity<Page<ProductBundleResponse>> getAllBundles(
+            @Parameter(description = "Page number (0-indexed)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size", example = "20")
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductBundleResponse> bundles = bundleService.getAllBundles(pageable);
+        return ResponseEntity.ok(bundles);
     }
 
     @Operation(summary = "Search for a bundle by ID",

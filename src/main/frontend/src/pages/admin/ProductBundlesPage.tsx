@@ -128,7 +128,13 @@ const ProductBundlesPage = () => {
     setLoading(true);
     try {
       const [b, metadata] = await Promise.all([
-        axios.get('/api/v1/bundles', { signal: abortSignal }),
+        axios.get('/api/v1/bundles', { signal: abortSignal }).catch(err => {
+          // Handle 405 or other errors gracefully - bundles endpoint may not be available
+          if (err.response?.status === 405 || err.response?.status === 404) {
+            return { data: { content: [] } };
+          }
+          throw err;
+        }),
         PricingService.getPricingMetadata(abortSignal).catch(() => []),
       ]);
       setBundles(b.data.content || []);
