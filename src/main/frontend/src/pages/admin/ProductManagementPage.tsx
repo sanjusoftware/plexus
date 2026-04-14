@@ -697,7 +697,7 @@ const ProductManagementPage = () => {
                         <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-blue-50/50 p-1.5 rounded-lg w-fit">
-                          <Puzzle className="w-3 h-3 mr-1.5 text-blue-500" /> Linked Product Features
+                          <Puzzle className="w-3 h-3 mr-1.5 text-blue-500" /> Product Features
                       </h4>
                       <div className="space-y-2">
                         {prod.features?.map((f, idx) => (
@@ -714,7 +714,7 @@ const ProductManagementPage = () => {
                     </div>
                     <div>
                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center bg-purple-50/50 p-1.5 rounded-lg w-fit">
-                        <Tag className="w-3 h-3 mr-1.5 text-purple-500" /> Pricing rule bindings
+                        <Tag className="w-3 h-3 mr-1.5 text-purple-500" /> Pricing rules
                       </h4>
                       <div className="space-y-2">
                         {prod.pricing?.map((p, idx) => (
