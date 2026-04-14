@@ -53,11 +53,11 @@ public class PermissionMappingService {
     }
 
     /**
-     * Evicts all entries from the rolePermissions cache.
+     * Evicts all entries from the rolePermissions and systemAuthorities caches.
      * Must be called whenever a role mapping is created, updated, or deleted
-     * to ensure the JwtAuthConverter gets fresh data.
+     * to ensure the JwtAuthConverter and AuthorityDiscoveryService get fresh data.
      */
-    @CacheEvict(value = CACHE_NAME, allEntries = true)
+    @CacheEvict(value = {CACHE_NAME, "systemAuthorities"}, allEntries = true)
     public void evictAllRolePermissionsCache() {
         // Method body can be empty. The annotation performs the eviction logic.
     }
