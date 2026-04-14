@@ -28,7 +28,11 @@ const Breadcrumbs: React.FC = () => {
 
   // Reset entityName when moving to a non-subpage
   useEffect(() => {
-    if (!location.pathname.includes('/edit/') && !location.pathname.includes('/create') && !location.pathname.includes('/register')) {
+    const isSubPage = location.pathname.includes('/edit/') ||
+                      location.pathname.includes('/create') ||
+                      location.pathname.includes('/register') ||
+                      (/^\/products\/\d+$/.test(location.pathname));
+    if (!isSubPage) {
       setEntityName(null);
     }
   }, [location.pathname, setEntityName]);
@@ -74,6 +78,8 @@ const Breadcrumbs: React.FC = () => {
           subLabel = `New ${singularName}`;
         } else if (subAction === 'edit') {
           subLabel = entityName || `Edit ${singularName}`;
+        } else if (basePagePath === '/products' && /^\d+$/.test(subAction)) {
+          subLabel = entityName || `Product Details`;
         }
 
         if (subLabel) {

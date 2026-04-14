@@ -12,6 +12,7 @@ import PricingMetadataPage from './pages/admin/PricingMetadataPage';
 import PricingMetadataFormPage from './pages/admin/PricingMetadataFormPage';
 import PricingComponentsPage from './pages/admin/PricingComponentsPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
+import ProductDetailPage from './pages/admin/ProductDetailPage';
 import ProductBundlesPage from './pages/admin/ProductBundlesPage';
 import ProductFormPage from './pages/admin/ProductFormPage';
 import ProductBundleFormPage from './pages/admin/ProductBundleFormPage';
@@ -185,6 +186,11 @@ function App() {
               <Route path="/products" element={
                 <PermissionElement permission="catalog:product:read">
                   <ProductManagementPage />
+                </PermissionElement>
+              } />
+              <Route path="/products/:id" element={
+                <PermissionElement permission="catalog:product:read">
+                  <ProductDetailPage />
                 </PermissionElement>
               } />
               <Route path="/products/create" element={
