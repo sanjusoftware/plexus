@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
-import PlexusSelect from './PlexusSelect';
+import PlexusSelect from '../../components/PlexusSelect';
 
 jest.mock('react-select', () => ({
   __esModule: true,

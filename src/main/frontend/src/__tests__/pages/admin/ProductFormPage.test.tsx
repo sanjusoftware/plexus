@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import ProductFormPage from './ProductFormPage';
+import ProductFormPage from '../../../pages/admin/ProductFormPage';
 
 const mockNavigate = jest.fn();
 const mockSetToast = jest.fn();
@@ -42,39 +42,39 @@ jest.mock('react-router-dom', () => ({
   useParams: () => mockParams
 }), { virtual: true });
 
-jest.mock('../../context/AuthContext', () => ({
+jest.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({
     user: { bank_id: 'BANK_A' },
     setToast: mockSetToast
   })
 }));
 
-jest.mock('../../context/BreadcrumbContext', () => ({
+jest.mock('../../../context/BreadcrumbContext', () => ({
   useBreadcrumb: () => ({
     setEntityName: mockSetEntityName
   })
 }));
 
-jest.mock('../../hooks/useAbortSignal', () => ({
+jest.mock('../../../hooks/useAbortSignal', () => ({
   useAbortSignal: () => stableSignal
 }));
 
-jest.mock('../../hooks/useHasPermission', () => ({
+jest.mock('../../../hooks/useHasPermission', () => ({
   useHasPermission: () => ({
     hasPermission: (...args: any[]) => mockHasPermission(...args)
   })
 }));
 
-jest.mock('../../hooks/useUnsavedChangesGuard', () => ({
+jest.mock('../../../hooks/useUnsavedChangesGuard', () => ({
   useUnsavedChangesGuard: () => ({
     resetDirtyBaseline: mockResetDirtyBaseline,
     confirmDiscardChanges: mockConfirmDiscardChanges
   })
 }));
 
-jest.mock('../../components/PriceSimulationTool', () => () => null);
+jest.mock('../../../components/PriceSimulationTool', () => () => null);
 
-jest.mock('../../components/PlexusSelect', () => ({
+jest.mock('../../../components/PlexusSelect', () => ({
   __esModule: true,
   default: ({ options = [], value, onChange, placeholder, formatOptionLabel, optionMetaLayout = 'inline' }: any) => {
     const slug = toTestIdSlug(placeholder || 'select');

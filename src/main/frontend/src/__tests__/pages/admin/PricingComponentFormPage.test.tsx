@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
-import PricingComponentFormPage from './PricingComponentFormPage';
+import PricingComponentFormPage from '../../../pages/admin/PricingComponentFormPage';
 
 const mockNavigate = jest.fn();
 const mockSetToast = jest.fn();
@@ -36,24 +36,24 @@ jest.mock('react-router-dom', () => ({
   useParams: () => ({ id: '10' })
 }), { virtual: true });
 
-jest.mock('../../context/AuthContext', () => ({
+jest.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({
     user: { currencyCode: 'USD' },
     setToast: mockSetToast
   })
 }));
 
-jest.mock('../../context/BreadcrumbContext', () => ({
+jest.mock('../../../context/BreadcrumbContext', () => ({
   useBreadcrumb: () => ({
     setEntityName: mockSetEntityName
   })
 }));
 
-jest.mock('../../hooks/useAbortSignal', () => ({
+jest.mock('../../../hooks/useAbortSignal', () => ({
   useAbortSignal: () => stableSignal
 }));
 
-jest.mock('../../hooks/useUnsavedChangesGuard', () => ({
+jest.mock('../../../hooks/useUnsavedChangesGuard', () => ({
   useUnsavedChangesGuard: () => ({
     resetDirtyBaseline: jest.fn(),
     confirmDiscardChanges: jest.fn().mockReturnValue(true)
