@@ -155,7 +155,40 @@ class PricingServiceClass {
   async calculateBundlePrice(request: BundlePriceRequest, signal?: AbortSignal): Promise<BundlePriceResponse> {
     try {
       const response = await axios.post('/api/v1/pricing/calculate/bundle', request, { signal });
-      return response.data;
+      const data = response.data || {};
+
+      // Normalize older/newer backend shapes. Frontend expects { totalPrice, productsBreakdown }
+      if (data.totalPrice !== undefined && data.productsBreakdown !== undefined) {
+        return data;
+      }
+
+      // Backend may return netTotalAmount/grossTotalAmount and productResults
+      const totalPrice = data.totalPrice ?? data.netTotalAmount ?? data.grossTotalAmount ?? 0;
+      const productResults = data.productResults || data.productResults || [];
+
+      const productsBreakdown: ProductPricingCalculationResult[] = (productResults || []).map((pr: any) => ({
+        finalChargeablePrice: pr.finalChargeablePrice ?? pr.productTotalFee ?? 0,
+        componentBreakdown: (pr.pricingComponents || pr.componentBreakdown || []).map((c: any) => ({
+          componentCode: c.componentCode || c.code || '',
+          targetComponentCode: c.targetComponentCode || c.targetComponent || null,
+          rawValue: c.rawValue ?? c.priceAmount ?? 0,
+          valueType: c.valueType || c.priceValueType || 'FEE_ABSOLUTE',
+          proRataApplicable: Boolean(c.proRataApplicable),
+          applyChargeOnFullBreach: Boolean(c.applyChargeOnFullBreach),
+          calculatedAmount: c.calculatedAmount ?? c.calculated ?? c.priceAmount ?? 0,
+          sourceType: c.sourceType || 'FIXED_VALUE',
+          matchedTierCode: c.matchedTierCode ?? c.matchedTier?.code,
+          matchedTierId: c.matchedTierId ?? c.matchedTier?.id ?? null,
+          activeDays: c.activeDays ?? null,
+          billingCycleDays: c.billingCycleDays ?? null,
+          effectiveDate: c.effectiveDate ?? null,
+        }))
+      }));
+
+      return {
+        totalPrice,
+        productsBreakdown,
+      } as BundlePriceResponse;
     } catch (error) {
       if (axios.isCancel(error)) throw error;
       console.error('Bundle pricing calculation failed:', error);
