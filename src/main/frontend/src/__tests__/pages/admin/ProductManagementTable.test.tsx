@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
-import ProductManagementPage from './ProductManagementPage';
-import { formatAuditTimestamp } from '../../utils/auditTimestamp';
+import ProductManagementPage from '../../../pages/admin/ProductManagementPage';
+import { formatAuditTimestamp } from '../../../utils/auditTimestamp';
 
 const mockNavigate = jest.fn();
 const mockSetToast = jest.fn();
@@ -32,13 +32,13 @@ jest.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: '/', state: {} })
 }), { virtual: true });
 
-jest.mock('../../context/AuthContext', () => ({
+jest.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({
     setToast: mockSetToast
   })
 }));
 
-jest.mock('../../components/HasPermission', () => ({
+jest.mock('../../../components/HasPermission', () => ({
   HasPermission: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }));
 

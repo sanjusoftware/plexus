@@ -1,11 +1,11 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import PriceSimulationTool from './PriceSimulationTool';
-import { PricingService } from '../services/PricingService';
+import PriceSimulationTool from '../../components/PriceSimulationTool';
+import { PricingService } from '../../services/PricingService';
 
 const mockCalculateProductPrice = jest.fn();
 
-jest.mock('../services/PricingService', () => ({
+jest.mock('../../services/PricingService', () => ({
   PricingService: {
     calculateProductPrice: (...args: any[]) => mockCalculateProductPrice(...args),
     formatCurrency: (amount: number) => `$${amount.toFixed(2)}`,
@@ -15,7 +15,7 @@ jest.mock('../services/PricingService', () => ({
   },
 }));
 
-jest.mock('./PlexusSelect', () => ({
+jest.mock('../../components/PlexusSelect', () => ({
   __esModule: true,
   default: ({ options = [], value, onChange }: any) => (
     <select

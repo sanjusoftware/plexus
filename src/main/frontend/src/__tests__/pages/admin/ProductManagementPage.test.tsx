@@ -1,4 +1,4 @@
-import { formatComponentLabelWithProRata, formatPercentageBaseHint, formatProRataHint, getSimulationDateGuidance, getSimulationFieldHelperText } from './ProductManagementPage.utils';
+import { formatComponentLabelWithProRata, formatPercentageBaseHint, formatProRataHint, getSimulationDateGuidance, getSimulationFieldHelperText } from '../../../pages/admin/ProductManagementPage.utils';
 
 describe('ProductManagementPage receipt helpers', () => {
   test('formats active-day metadata for receipt display', () => {
