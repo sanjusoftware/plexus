@@ -51,6 +51,14 @@
 	@apply inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  .admin-success-btn {
+	@apply inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-green-100 transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .admin-danger-btn {
+	@apply inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-red-100 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
   .admin-secondary-btn {
 	@apply inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-xs font-bold uppercase tracking-widest text-gray-600 transition hover:bg-gray-50;
   }
