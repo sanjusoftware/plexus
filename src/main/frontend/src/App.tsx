@@ -14,6 +14,7 @@ import PricingComponentsPage from './pages/admin/PricingComponentsPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import ProductDetailPage from './pages/admin/ProductDetailPage';
 import ProductBundlesPage from './pages/admin/ProductBundlesPage';
+import ProductBundleDetailPage from './pages/admin/ProductBundleDetailPage';
 import ProductFormPage from './pages/admin/ProductFormPage';
 import ProductBundleFormPage from './pages/admin/ProductBundleFormPage';
 import ProductTypeFormPage from './pages/admin/ProductTypeFormPage';
@@ -206,6 +207,11 @@ function App() {
               <Route path="/bundles" element={
                 <PermissionElement permission="catalog:bundle:read">
                   <ProductBundlesPage />
+                </PermissionElement>
+              } />
+              <Route path="/bundles/:id" element={
+                <PermissionElement permission="catalog:bundle:read">
+                  <ProductBundleDetailPage />
                 </PermissionElement>
               } />
               <Route path="/bundles/create" element={

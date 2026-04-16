@@ -17,6 +17,7 @@ const routeConfig: Record<string, RouteMapping> = {
   '/pricing-metadata': { path: '/pricing-metadata', label: 'Pricing Metadata' },
   '/pricing-components': { path: '/pricing-components', label: 'Pricing Components' },
   '/products': { path: '/products', label: 'Product Catalog' },
+  '/bundles': { path: '/bundles', label: 'Product Bundles' },
   '/roles': { path: '/roles', label: 'Roles & Permissions' },
   '/onboarding': { path: '/onboarding', label: 'Onboarding' }
 };
@@ -31,7 +32,8 @@ const Breadcrumbs: React.FC = () => {
     const isSubPage = location.pathname.includes('/edit/') ||
                       location.pathname.includes('/create') ||
                       location.pathname.includes('/register') ||
-                      (/^\/products\/\d+$/.test(location.pathname));
+                      (/^\/products\/\d+$/.test(location.pathname)) ||
+                      (/^\/bundles\/\d+$/.test(location.pathname));
     if (!isSubPage) {
       setEntityName(null);
     }
@@ -69,6 +71,7 @@ const Breadcrumbs: React.FC = () => {
           '/pricing-metadata': 'Attribute',
           '/pricing-components': 'Pricing Component',
           '/products': 'Product',
+          '/bundles': 'Product Bundle',
           '/roles': 'Role'
         };
 
@@ -80,6 +83,8 @@ const Breadcrumbs: React.FC = () => {
           subLabel = entityName || `Edit ${singularName}`;
         } else if (basePagePath === '/products' && /^\d+$/.test(subAction)) {
           subLabel = entityName || `Product Details`;
+        } else if (basePagePath === '/bundles' && /^\d+$/.test(subAction)) {
+          subLabel = entityName || `Bundle Details`;
         }
 
         if (subLabel) {
