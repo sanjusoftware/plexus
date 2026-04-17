@@ -64,6 +64,7 @@ interface BundleSimulationResult {
   totalPrice: number;
   loading: boolean;
   error?: string;
+  detailedError?: string;
   productsBreakdown?: ProductPricingCalculationResult[];
 }
 
@@ -198,7 +199,7 @@ const ProductBundleDetailPage = () => {
 
   const handleCalculatePrice = async () => {
     if (!bundle) return;
-    setCalculatedPrice({ loading: true, totalPrice: 0 });
+    setCalculatedPrice(prev => ({ ...(prev || { totalPrice: 0, loading: true }), loading: true, error: undefined, detailedError: undefined }));
 
     try {
       const attributesFromMetadata: Record<string, any> = {};
@@ -226,7 +227,14 @@ const ProductBundleDetailPage = () => {
         productsBreakdown: result.productsBreakdown
       });
     } catch (err: any) {
-      setCalculatedPrice({ totalPrice: 0, loading: false, error: 'Calculation Failed' });
+      const apiError = err.response?.data;
+      const isBusinessRuleViolation = apiError?.code === 'BUSINESS_RULE_VIOLATION';
+      setCalculatedPrice({
+        totalPrice: 0,
+        loading: false,
+        error: 'Calculation Failed',
+        detailedError: isBusinessRuleViolation ? apiError.message : undefined
+      });
       setToast({ message: err.response?.data?.message || 'Price calculation failed.', type: 'error' });
     }
   };
@@ -418,7 +426,7 @@ const ProductBundleDetailPage = () => {
             </div>
 
             {simulationOpen && (
-                <div className="mt-6 pt-6 border-t border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <div className="mt-6 pt-6 border-t border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
                         <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Calculation Parameters</h5>
                         <div className="space-y-4">
@@ -463,16 +471,27 @@ const ProductBundleDetailPage = () => {
                         </button>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-gray-200 p-4 min-h-full">
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 min-h-full flex flex-col">
                         <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Bundle Breakdown</h5>
                         {calculatedPrice?.loading && (
-                            <div className="flex items-center justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>
+                            <div className="flex-1 flex items-center justify-center"><div className="flex items-center gap-2 text-blue-600 text-sm font-bold"><Loader2 className="w-4 h-4 animate-spin" /> Calculating...</div></div>
                         )}
                         {calculatedPrice?.error && (
-                            <div className="text-[10px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">{calculatedPrice.error}</div>
+                            <div className="flex-1 flex items-center justify-center p-6 text-center">
+                                <div>
+                                    <div className="text-[11px] font-black text-red-600 uppercase tracking-tight flex items-center justify-center gap-1.5">
+                                        <span>⚠️ {calculatedPrice.error}</span>
+                                    </div>
+                                    {calculatedPrice.detailedError && (
+                                        <div className="mt-2 text-[10px] font-bold text-gray-500 max-w-[300px] mx-auto leading-relaxed">
+                                            {calculatedPrice.detailedError}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         )}
                         {!calculatedPrice && (
-                            <div className="text-center text-sm text-gray-400 py-10">Run calculation to see bundle details.</div>
+                            <div className="flex-1 flex items-center justify-center text-center text-sm text-gray-400 py-10">Run calculation to see bundle details.</div>
                         )}
                         {calculatedPrice && !calculatedPrice.loading && !calculatedPrice.error && (
                             renderBreakdown()
