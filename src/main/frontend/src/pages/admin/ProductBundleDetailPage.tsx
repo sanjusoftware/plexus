@@ -159,7 +159,7 @@ const ProductBundleDetailPage = () => {
         setLoading(false);
       }
     }
-  }, [id, signal, setEntityName, isHiddenSystemKey, isSystemCustomerSegmentKey, setToast, navigate]);
+  }, [id, signal, setEntityName, isHiddenSystemKey, isSystemAmountKey, isSystemCustomerSegmentKey, setToast, navigate]);
 
   useEffect(() => {
     fetchBundleData();
@@ -574,6 +574,23 @@ const ProductBundleDetailPage = () => {
                         <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-700 mb-3">Bundle Breakdown</h5>
                         {calculatedPrice?.loading && (
                             <div className="flex-1 flex items-center justify-center"><div className="flex items-center gap-2 text-blue-600 text-sm font-bold"><Loader2 className="w-4 h-4 animate-spin" /> Calculating...</div></div>
+                        )}
+                        {calculatedPrice?.error && (
+                            <div className="flex-1 flex items-center justify-center p-6 text-center">
+                              <div>
+                                <div className="text-[11px] font-black text-red-600 uppercase tracking-tight flex items-center justify-center gap-1.5">
+                                  <span>⚠️ Simulation Failed: {calculatedPrice.error}</span>
+                                </div>
+                                {calculatedPrice.detailedError && (
+                                  <div className="mt-2 text-[10px] font-bold text-gray-500 max-w-[300px] mx-auto leading-relaxed">
+                                    {calculatedPrice.detailedError}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                        )}
+                        {!calculatedPrice && (
+                            <div className="flex-1 flex items-center justify-center text-center text-sm text-gray-500 py-10">Run calculation to see bundle details.</div>
                         )}
                         {calculatedPrice && !calculatedPrice.loading && !calculatedPrice.error && (
                             renderBreakdown()
