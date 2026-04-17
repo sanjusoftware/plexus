@@ -669,7 +669,7 @@ const ProductDetailPage = () => {
                             )) : <div className="text-[10px] font-bold text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-100">Pricing metadata not available.</div>}
                         </div>
                         <div className="pt-3 mt-3 border-t border-gray-100">
-                            <button onClick={handleCalculatePrice} disabled={calculatedPrice?.loading} className="w-full bg-blue-600 text-white rounded-lg h-[42px] px-8 font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center space-x-2 disabled:opacity-50">
+                            <button onClick={handleCalculatePrice} disabled={calculatedPrice?.loading} className="admin-primary-btn w-full h-[42px] px-8 tracking-widest text-[10px] uppercase shadow-lg shadow-blue-100 justify-center">
                                 {calculatedPrice?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                                 <span>Run Calculation</span>
                             </button>

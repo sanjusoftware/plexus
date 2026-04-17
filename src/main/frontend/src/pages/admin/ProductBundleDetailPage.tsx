@@ -563,7 +563,7 @@ const ProductBundleDetailPage = () => {
                         <button
                             onClick={handleCalculatePrice}
                             disabled={calculatedPrice?.loading}
-                            className="w-full mt-4 bg-blue-600 text-white rounded-lg h-[42px] font-black uppercase tracking-widest text-[10px] flex items-center justify-center space-x-2 shadow-lg shadow-blue-100"
+                            className="admin-primary-btn w-full mt-4 justify-center h-[42px] tracking-widest text-[10px] uppercase shadow-lg"
                         >
                             {calculatedPrice?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                             <span>Calculate Bundle Total</span>

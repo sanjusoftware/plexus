@@ -378,7 +378,7 @@ const RoleFormPage = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50"
+              className="admin-primary-btn flex-1 px-4 py-3 justify-center uppercase tracking-widest text-[10px] shadow-lg shadow-blue-100"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
               {isEditing ? 'Commit Authority Mapping' : 'Register Role'}

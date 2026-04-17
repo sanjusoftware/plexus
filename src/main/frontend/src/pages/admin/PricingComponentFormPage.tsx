@@ -906,7 +906,7 @@ const PricingComponentFormPage = () => {
 
           <div className="flex space-x-4 border-t border-gray-100 pt-6">
             <button type="button" onClick={handleCancel} className="flex-1 px-6 py-3 border border-gray-200 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="admin-primary-btn flex-1 px-6 py-3 justify-center uppercase tracking-widest text-[10px] shadow-lg shadow-blue-100">
               {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
               Commit Structure
             </button>

@@ -233,7 +233,7 @@ const ProductBundleFormPage = () => {
                 <div className="p-2 bg-blue-50 rounded-xl"><Package className="w-5 h-5 text-blue-600" /></div>
                 <h3 className="text-lg font-bold text-gray-900 tracking-tight">Member Products</h3>
               </div>
-              <button type="button" onClick={addProductLink} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition">+ Add Product</button>
+              <button type="button" onClick={addProductLink} className="admin-primary-btn px-3 py-1.5 uppercase tracking-widest text-[10px]">+ Add Product</button>
             </div>
             <div className="space-y-4">
               {formData.products.map((p: any, idx: number) => (
@@ -291,7 +291,7 @@ const ProductBundleFormPage = () => {
                 <div className="p-2 bg-purple-50 rounded-xl"><Tag className="w-5 h-5 text-purple-600" /></div>
                 <h3 className="text-lg font-bold text-gray-900 tracking-tight">Bundle Pricing Adjustments</h3>
               </div>
-              <button type="button" onClick={addPricingLink} className="bg-purple-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-purple-700 transition">+ Add Pricing Adjustment</button>
+              <button type="button" onClick={addPricingLink} className="admin-primary-btn px-3 py-1.5 uppercase tracking-widest text-[10px]">+ Add Pricing Adjustment</button>
             </div>
             <div className="space-y-4">
               {formData.pricing.map((p: any, idx: number) => (
@@ -373,7 +373,7 @@ const ProductBundleFormPage = () => {
 
           <div className="flex space-x-4 border-t border-gray-100 pt-6">
             <button type="button" onClick={handleCancel} className="flex-1 px-4 py-3 border border-gray-100 rounded-xl font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition uppercase tracking-widest text-[10px]">Discard Changes</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center uppercase tracking-widest text-[10px] disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="admin-primary-btn flex-1 px-4 py-3 justify-center uppercase tracking-widest text-[10px] shadow-lg shadow-blue-200">
               {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
               Commit Product Bundle
             </button>
