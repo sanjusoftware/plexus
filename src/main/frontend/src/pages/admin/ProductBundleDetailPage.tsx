@@ -23,8 +23,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useSystemPricingKeys } from '../../hooks/useSystemPricingKeys';
-import { PricingMetadata, PricingService, ProductPricingCalculationResult } from '../../services/PricingService';
+import { PricingMetadata, PricingService, ProductPricingCalculationResult, PriceComponentDetail } from '../../services/PricingService';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import PlexusSelect from '../../components/PlexusSelect';
+import {
+  formatComponentLabelWithProRata,
+  getSimulationFieldHelperText
+} from './ProductManagementPage.utils';
 
 interface BundleProduct {
   productId: number;
@@ -83,7 +88,10 @@ const ProductBundleDetailPage = () => {
   const { setToast } = useAuth();
   const {
     keys,
+    hasSystemPricingKey,
     isHiddenSystemKey,
+    isSystemAmountKey,
+    isSystemDateKey,
     isSystemCustomerSegmentKey,
   } = useSystemPricingKeys();
 
@@ -128,7 +136,7 @@ const ProductBundleDetailPage = () => {
             case 'DECIMAL':
             case 'INTEGER':
             case 'LONG':
-              next[m.attributeKey] = 0;
+              next[m.attributeKey] = isSystemAmountKey(m.attributeKey || '') ? 1000 : 0;
               break;
             case 'BOOLEAN':
               next[m.attributeKey] = false;
@@ -151,7 +159,7 @@ const ProductBundleDetailPage = () => {
         setLoading(false);
       }
     }
-  }, [id, signal, setEntityName, isHiddenSystemKey, isSystemCustomerSegmentKey, setToast, navigate]);
+  }, [id, signal, setEntityName, isHiddenSystemKey, isSystemAmountKey, isSystemCustomerSegmentKey, setToast, navigate]);
 
   useEffect(() => {
     fetchBundleData();
@@ -197,6 +205,91 @@ const ProductBundleDetailPage = () => {
     }
   };
 
+  const getFieldGroups = (metadata: PricingMetadata[]) => {
+    const groups: (PricingMetadata[])[] = [];
+    const processed = new Set<string>();
+    const pairings: Record<string, string> = {
+      EFFECTIVE_DATE: 'ENROLLMENT_DATE',
+      ENROLLMENT_DATE: 'EFFECTIVE_DATE',
+      TRANSACTION_AMOUNT: 'LOYALTY_SCORE',
+      LOYALTY_SCORE: 'TRANSACTION_AMOUNT',
+      IS_SALARY_ACCOUNT: 'LOYALTY_SCORE',
+    };
+    const excludedFields = ['GROSS_TOTAL_AMOUNT'];
+
+    metadata.forEach((meta) => {
+      if (processed.has(meta.attributeKey) || excludedFields.includes((meta.attributeKey || '').toUpperCase())) {
+        return;
+      }
+      const pairedFieldKey = pairings[(meta.attributeKey || '').toUpperCase()];
+      if (pairedFieldKey) {
+        const pairedField = metadata.find((m) => (m.attributeKey || '').toUpperCase() === pairedFieldKey);
+        if (pairedField && !processed.has(pairedField.attributeKey)) {
+          groups.push([meta, pairedField]);
+          processed.add(meta.attributeKey);
+          processed.add(pairedField.attributeKey);
+          return;
+        }
+      }
+      groups.push([meta]);
+      processed.add(meta.attributeKey);
+    });
+    return groups;
+  };
+
+  const parseInputValue = (dataType: string, rawValue: any) => {
+    const normalizedType = (dataType || '').toUpperCase();
+    if (rawValue === '' || rawValue === undefined || rawValue === null) return undefined;
+    if (normalizedType === 'DECIMAL') return Number(rawValue);
+    if (normalizedType === 'INTEGER' || normalizedType === 'LONG') return parseInt(rawValue, 10);
+    if (normalizedType === 'BOOLEAN') return rawValue === true || rawValue === 'true';
+    return rawValue;
+  };
+
+  const renderDynamicField = (meta: PricingMetadata) => {
+    const key = meta.attributeKey;
+    const value = calcInputs[key] ?? '';
+    const dataType = (meta.dataType || '').toUpperCase();
+    const label = (meta.displayName || key).toUpperCase();
+    const helperText = getSimulationFieldHelperText(key);
+
+    if (dataType === 'BOOLEAN') {
+      return (
+        <div key={key}>
+          <label className="flex items-center space-x-3 cursor-pointer h-full">
+            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
+                 style={{ backgroundColor: (value === true || value === 'true') ? '#3b82f6' : '#d1d5db' }}>
+              <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform"
+                style={{ transform: (value === true || value === 'true') ? 'translateX(20px)' : 'translateX(2px)' }}
+              />
+              <input type="checkbox" checked={value === true || value === 'true'} onChange={(e) => setCalcInputs(prev => ({ ...prev, [key]: e.target.checked }))} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+            </div>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+          </label>
+          {helperText && <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">{helperText}</p>}
+        </div>
+      );
+    }
+
+    if (isSystemCustomerSegmentKey(key)) {
+      return (
+        <div key={key}>
+          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</label>
+          <PlexusSelect options={[{ value: 'RETAIL', label: 'RETAIL' }, { value: 'PREMIUM', label: 'PREMIUM' }, { value: 'CORPORATE', label: 'CORPORATE' }, { value: 'VIP', label: 'VIP' }]} value={{ value: String(value || 'RETAIL'), label: String(value || 'RETAIL') }} onChange={(opt) => setCalcInputs(prev => ({ ...prev, [key]: opt ? opt.value : 'RETAIL' }))} />
+        </div>
+      );
+    }
+
+    const inputType = dataType === 'DATE' ? 'date' : (dataType === 'DECIMAL' || dataType === 'INTEGER' || dataType === 'LONG') ? 'number' : 'text';
+    return (
+      <div key={key}>
+        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</label>
+        <input type={inputType} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-semibold bg-white focus:border-blue-500 transition h-[42px]" value={value} onChange={(e) => setCalcInputs(prev => ({ ...prev, [key]: e.target.value }))} />
+        {helperText && <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">{helperText}</p>}
+      </div>
+    );
+  };
+
   const handleCalculatePrice = async () => {
     if (!bundle) return;
     setCalculatedPrice(prev => ({ ...(prev || { totalPrice: 0, loading: true }), loading: true, error: undefined, detailedError: undefined }));
@@ -204,15 +297,27 @@ const ProductBundleDetailPage = () => {
     try {
       const attributesFromMetadata: Record<string, any> = {};
       calcMetadata.forEach(meta => {
-        const value = calcInputs[meta.attributeKey];
-        if (value !== undefined && value !== '') {
-          attributesFromMetadata[meta.attributeKey] = value;
+        const parsed = parseInputValue(meta.dataType, calcInputs[meta.attributeKey]);
+        if (parsed !== undefined && !Number.isNaN(parsed)) {
+          attributesFromMetadata[meta.attributeKey] = parsed;
         }
       });
 
+      const metadataEffectiveDateKey = calcMetadata.find((meta) => isSystemDateKey(meta.attributeKey || ''))?.attributeKey;
+      const effectiveDateKey = metadataEffectiveDateKey || keys.EFFECTIVE_DATE;
+      const enrollmentDateKey = calcMetadata.find((meta) => (meta.attributeKey || '').toUpperCase() === 'ENROLLMENT_DATE')?.attributeKey || Object.keys(attributesFromMetadata).find((key) => key.toUpperCase() === 'ENROLLMENT_DATE');
+      const enrollmentDateValue = enrollmentDateKey ? attributesFromMetadata[enrollmentDateKey] : undefined;
+
+      if (!attributesFromMetadata[effectiveDateKey]) {
+        attributesFromMetadata[effectiveDateKey] = new Date().toISOString().split('T')[0];
+      }
+      if (hasSystemPricingKey(keys.TRANSACTION_AMOUNT) && attributesFromMetadata[keys.TRANSACTION_AMOUNT] === undefined) {
+        attributesFromMetadata[keys.TRANSACTION_AMOUNT] = 0;
+      }
+
       const request = {
         productBundleId: bundle.id,
-        enrollmentDate: new Date().toISOString().split('T')[0],
+        enrollmentDate: typeof enrollmentDateValue === 'string' && enrollmentDateValue.trim() ? enrollmentDateValue : new Date().toISOString().split('T')[0],
         products: bundle.products.map(p => ({
           productId: p.productId,
           transactionAmount: productAmounts[`${p.productId}`] || 1000
@@ -232,7 +337,7 @@ const ProductBundleDetailPage = () => {
       setCalculatedPrice({
         totalPrice: 0,
         loading: false,
-        error: 'Calculation Failed',
+        error: 'Calc Failed',
         detailedError: isBusinessRuleViolation ? apiError.message : undefined
       });
       setToast({ message: err.response?.data?.message || 'Price calculation failed.', type: 'error' });
@@ -260,7 +365,7 @@ const ProductBundleDetailPage = () => {
                   const isDiscount = item.valueType?.startsWith('DISCOUNT');
                   return (
                     <div key={cIdx} className={`flex items-center justify-between p-2 rounded-lg text-[10px] ${isDiscount ? 'bg-green-50/50 text-green-700' : 'bg-blue-50/50 text-blue-700'}`}>
-                      <span className="font-bold">{toTitleFromCode(item.componentCode)}</span>
+                      <span className="font-bold">{formatComponentLabelWithProRata(toTitleFromCode(item.componentCode), item)}</span>
                       <span className="font-black">{isDiscount ? '-' : ''}{PricingService.formatCurrency(Math.abs(item.calculatedAmount))}</span>
                     </div>
                   );
@@ -438,7 +543,7 @@ const ProductBundleDetailPage = () => {
                                             <span className="text-[10px] font-bold text-gray-600 flex-1 truncate">{p.productName}</span>
                                             <input
                                                 type="number"
-                                                className="w-24 border border-gray-200 rounded-lg px-2 py-1 text-[11px] font-semibold h-[32px]"
+                                                className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-semibold h-[42px] bg-white focus:border-blue-500 transition"
                                                 value={productAmounts[`${p.productId}`] || 1000}
                                                 onChange={(e) => setProductAmounts(prev => ({ ...prev, [`${p.productId}`]: Number(e.target.value) }))}
                                             />
@@ -447,18 +552,12 @@ const ProductBundleDetailPage = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                {calcMetadata.map(meta => (
-                                    <div key={meta.attributeKey}>
-                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{meta.displayName || meta.attributeKey}</label>
-                                        <input
-                                            type={meta.dataType === 'DATE' ? 'date' : 'text'}
-                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-semibold h-[36px]"
-                                            value={calcInputs[meta.attributeKey] || ''}
-                                            onChange={(e) => setCalcInputs(prev => ({ ...prev, [meta.attributeKey]: e.target.value }))}
-                                        />
+                            <div className="space-y-3">
+                                {calcMetadata.length > 0 ? getFieldGroups(calcMetadata).map((group, groupIdx) => (
+                                    <div key={groupIdx} className={`grid gap-3 ${group.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                        {group.map((meta) => renderDynamicField(meta))}
                                     </div>
-                                ))}
+                                )) : <div className="text-[10px] font-bold text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-100">Pricing metadata not available.</div>}
                             </div>
                         </div>
                         <button
@@ -478,20 +577,20 @@ const ProductBundleDetailPage = () => {
                         )}
                         {calculatedPrice?.error && (
                             <div className="flex-1 flex items-center justify-center p-6 text-center">
-                                <div>
-                                    <div className="text-[11px] font-black text-red-600 uppercase tracking-tight flex items-center justify-center gap-1.5">
-                                        <span>⚠️ {calculatedPrice.error}</span>
-                                    </div>
-                                    {calculatedPrice.detailedError && (
-                                        <div className="mt-2 text-[10px] font-bold text-gray-500 max-w-[300px] mx-auto leading-relaxed">
-                                            {calculatedPrice.detailedError}
-                                        </div>
-                                    )}
+                              <div>
+                                <div className="text-[11px] font-black text-red-600 uppercase tracking-tight flex items-center justify-center gap-1.5">
+                                  <span>⚠️ Simulation Failed: {calculatedPrice.error}</span>
                                 </div>
+                                {calculatedPrice.detailedError && (
+                                  <div className="mt-2 text-[10px] font-bold text-gray-500 max-w-[300px] mx-auto leading-relaxed">
+                                    {calculatedPrice.detailedError}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                         )}
                         {!calculatedPrice && (
-                            <div className="flex-1 flex items-center justify-center text-center text-sm text-gray-400 py-10">Run calculation to see bundle details.</div>
+                            <div className="flex-1 flex items-center justify-center text-center text-sm text-gray-500 py-10">Run calculation to see bundle details.</div>
                         )}
                         {calculatedPrice && !calculatedPrice.loading && !calculatedPrice.error && (
                             renderBreakdown()
