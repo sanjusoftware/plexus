@@ -484,7 +484,7 @@ const BankManagementPage = () => {
                 <HasPermission action="PUT" path="/api/v1/banks/*">
                   <button
                     onClick={() => navigate(`/banks/edit/${selectedBank.bankId}`)}
-                    className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-md shadow-blue-100 flex items-center justify-center"
+                    className="admin-primary-btn flex-1 py-2.5 justify-center uppercase tracking-widest text-[10px] shadow-md shadow-blue-100"
                   >
                     <Edit className="h-3 w-3 mr-1.5" /> Edit Configuration
                   </button>
@@ -494,7 +494,7 @@ const BankManagementPage = () => {
                     <HasPermission action="POST" path="/api/v1/banks/*/activate">
                       <button
                         onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
-                        className="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-green-700 transition shadow-md shadow-blue-100"
+                        className="admin-success-btn flex-1 py-2.5 justify-center uppercase tracking-widest text-[10px] shadow-md shadow-blue-100"
                       >
                         Approve Bank
                       </button>
@@ -502,7 +502,7 @@ const BankManagementPage = () => {
                     <HasPermission action="POST" path="/api/v1/banks/*/reject">
                       <button
                         onClick={() => confirmReject(selectedBank.bankId)}
-                        className="flex-1 bg-red-100 text-red-700 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-200 transition"
+                        className="admin-danger-btn flex-1 py-2.5 justify-center uppercase tracking-widest text-[10px]"
                       >
                         Reject Request
                       </button>
@@ -513,7 +513,7 @@ const BankManagementPage = () => {
                   <HasPermission action="POST" path="/api/v1/banks/*/deactivate">
                     <button
                       onClick={() => confirmDeactivate(selectedBank.bankId)}
-                      className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gray-200 transition"
+                      className="admin-secondary-btn flex-1 py-2.5 justify-center uppercase tracking-widest text-[10px]"
                     >
                       Deactivate Bank
                     </button>
@@ -523,7 +523,7 @@ const BankManagementPage = () => {
                   <HasPermission action="POST" path="/api/v1/banks/*/activate">
                     <button
                       onClick={() => handleStatusUpdate(selectedBank.bankId, 'activate')}
-                      className="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-green-700 transition shadow-md shadow-blue-100"
+                      className="admin-success-btn flex-1 py-2.5 justify-center uppercase tracking-widest text-[10px] shadow-md shadow-blue-100"
                     >
                       Re-activate Bank
                     </button>
