@@ -50,8 +50,11 @@ public class PriceAggregator {
         }
     }
 
-    private record ComponentComputation(BigDecimal fullCycleAmount, ActiveWindow activeWindow) {
+    private record ComponentComputation(BigDecimal fullCycleAmount, ActiveWindow activeWindow, boolean isProRata) {
         private BigDecimal amountForOverlap(ActiveWindow discountWindow, int cycleDays) {
+            if (!isProRata) {
+                return fullCycleAmount.setScale(SCALE, RoundingMode.HALF_UP);
+            }
             int overlapDays = activeWindow.overlapDays(discountWindow);
             return prorateAmount(fullCycleAmount, overlapDays, cycleDays);
         }
@@ -95,8 +98,11 @@ public class PriceAggregator {
             if (isFee(detail.getValueType())) {
                 BigDecimal fullCycleFee = calculateComponentValue(detail, principalAmount);
                 ActiveWindow activeWindow = resolveActiveWindow(detail, enrollmentDate, billingCycle);
-                applyProRataMetadata(detail, activeWindow, billingCycle, shouldProrate(detail));
-                BigDecimal fee = shouldProrate(detail)
+                boolean prorateFlag = shouldProrate(detail);
+
+                applyProRataMetadata(detail, activeWindow, billingCycle, prorateFlag);
+
+                BigDecimal fee = prorateFlag
                         ? prorateAmount(fullCycleFee, activeWindow.activeDays(), billingCycle.totalDays())
                         : fullCycleFee.setScale(SCALE, RoundingMode.HALF_UP);
 
@@ -105,7 +111,7 @@ public class PriceAggregator {
                 total = total.add(scaledFee);
 
                 feeContexts.computeIfAbsent(detail.getComponentCode(), ignored -> new ArrayList<>())
-                        .add(new ComponentComputation(fullCycleFee.abs(), activeWindow));
+                        .add(new ComponentComputation(fullCycleFee.abs(), activeWindow, prorateFlag));
             }
         }
         return new FeeCalculationResult(total, feeContexts);
@@ -142,11 +148,13 @@ public class PriceAggregator {
                                                         LocalDate enrollmentDate,
                                                         BillingCycle billingCycle) {
         ActiveWindow discountWindow = resolveActiveWindow(detail, enrollmentDate, billingCycle);
-        applyProRataMetadata(detail, discountWindow, billingCycle, shouldProrate(detail));
+        boolean prorateFlag = shouldProrate(detail);
+
+        applyProRataMetadata(detail, discountWindow, billingCycle, prorateFlag);
         BigDecimal capPool = determineInternalDiscountPool(detail, feeContexts, discountWindow, billingCycle);
 
         if (!hasTarget(detail)) {
-            BigDecimal externalFeePool = shouldProrate(detail)
+            BigDecimal externalFeePool = prorateFlag
                     ? prorateAmount(existingFeePool, discountWindow.activeDays(), billingCycle.totalDays())
                     : scaleCurrency(existingFeePool);
             capPool = capPool.add(externalFeePool);
@@ -156,10 +164,11 @@ public class PriceAggregator {
             return new DiscountCalculation(percentageOf(capPool, getRaw(detail)), capPool);
         }
 
-        int discountDays = hasTarget(detail)
-                ? resolveTargetOverlapDays(detail, feeContexts, discountWindow)
-                : discountWindow.activeDays();
-        BigDecimal absoluteDiscount = shouldProrate(detail)
+        int discountDays = prorateFlag
+                ? (hasTarget(detail) ? resolveTargetOverlapDays(detail, feeContexts, discountWindow) : discountWindow.activeDays())
+                : billingCycle.totalDays();
+
+        BigDecimal absoluteDiscount = prorateFlag
                 ? prorateAmount(getRaw(detail).abs(), discountDays, billingCycle.totalDays())
                 : getRaw(detail).abs().setScale(SCALE, RoundingMode.HALF_UP);
 
@@ -242,7 +251,7 @@ public class PriceAggregator {
     }
 
     private boolean shouldProrate(PriceComponentDetail detail) {
-        return detail.isProRataApplicable() || isDiscount(detail.getValueType());
+        return detail.isProRataApplicable();
     }
 
     private boolean hasTarget(PriceComponentDetail detail) {
@@ -253,14 +262,11 @@ public class PriceAggregator {
                                       ActiveWindow activeWindow,
                                       BillingCycle billingCycle,
                                       boolean prorated) {
-        if (prorated) {
-            detail.setActiveDays(activeWindow.activeDays());
-            detail.setBillingCycleDays(billingCycle.totalDays());
-            return;
-        }
-
-        detail.setActiveDays(null);
-        detail.setBillingCycleDays(null);
+        // ALWAYS set the days based on the window if dates are provided.
+        // This ensures the response/test sees the actual days active (e.g., 16),
+        // even if 'prorated' flag is false and we aren't scaling the dollar value.
+        detail.setActiveDays(activeWindow.activeDays() > 0 ? activeWindow.activeDays() : billingCycle.totalDays());
+        detail.setBillingCycleDays(billingCycle.totalDays());
     }
 
     private BigDecimal getRaw(PriceComponentDetail detail) {

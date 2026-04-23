@@ -224,12 +224,12 @@ public class DroolsIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Temporal Gap - Throws NotFound when no Links are active for the requested date")
+    @DisplayName("Temporal Gap - Throws NotFound when no Links exist for the entire month/cycle")
     void testCalculation_InDateGap_ThrowsNotFound() {
         txHelper.doInTransaction(() -> {
-            // Expire all links to create a gap for today
             productPricingLinkRepository.findAll().forEach(link -> {
-                link.setExpiryDate(LocalDate.now().minusDays(1));
+                link.setEffectiveDate(LocalDate.now().minusMonths(2));
+                link.setExpiryDate(LocalDate.now().minusMonths(1).withDayOfMonth(1));
                 productPricingLinkRepository.save(link);
             });
         });

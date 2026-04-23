@@ -132,7 +132,7 @@ public class TestTransactionHelper {
         link.setFixedValueType(type);
         link.setUseRulesEngine(false);
         link.setBankId(product.getBankId());
-        link.setEffectiveDate(LocalDate.now().minusDays(1));
+        link.setEffectiveDate(LocalDate.now().withDayOfMonth(1));
         link.setExpiryDate(LocalDate.now().plusYears(10));
 
         productPricingLinkRepository.save(link);
@@ -171,7 +171,7 @@ public class TestTransactionHelper {
         link.setFixedValueType(type);
         link.setUseRulesEngine(false);
         link.setBankId(bundle.getBankId());
-        link.setEffectiveDate(LocalDate.now().minusDays(1));
+        link.setEffectiveDate(LocalDate.now().withDayOfMonth(1));
         link.setExpiryDate(LocalDate.now().plusYears(10));
 
         if (bundle.getBundlePricingLinks() == null) {
@@ -256,6 +256,9 @@ public class TestTransactionHelper {
                 });
     }
 
+    /**
+     * Idempotently retrieves or creates a category.
+     */
     @Transactional
     public ProductCategory ensureProductCategoryExists(String bankId, String categoryCode) {
         if (categoryCode == null || categoryCode.isBlank()) {
@@ -414,7 +417,7 @@ public class TestTransactionHelper {
         link.setFixedValueType(type);
         link.setUseRulesEngine(false);
         link.setBankId(product.getBankId());
-        link.setEffectiveDate(LocalDate.now().minusDays(1));
+        link.setEffectiveDate(LocalDate.now().withDayOfMonth(1));
         link.setExpiryDate(LocalDate.now().plusYears(10));
 
         return productPricingLinkRepository.save(link);

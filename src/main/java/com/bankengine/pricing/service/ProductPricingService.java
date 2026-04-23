@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kie.api.runtime.ClassObjectFilter;
 import org.kie.api.runtime.KieSession;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,76 +40,72 @@ public class ProductPricingService extends BaseService {
     private final ProductPricingLinkRepository productPricingLinkRepository;
     private final PriceAggregator priceAggregator;
 
-    private record PricingLinkContext(String targetComponentCode, LocalDate effectiveDate, LocalDate expiryDate) {}
+    private record PricingLinkContext(String targetComponentCode, LocalDate effectiveDate, LocalDate expiryDate) {
+    }
 
-    /**
-     * Live Pricing Entry Point: Fetches configuration from DB/Rules and calculates final price.
-     */
     @Transactional(readOnly = true)
     public ProductPricingCalculationResult getProductPricing(ProductPriceRequest request) {
-        // 0. Validation & Security
         verifyProductAccess(request.getProductId());
 
         Map<String, Object> normalizedAttributes = buildNormalizedCustomAttributes(request);
         LocalDate effectiveDate = extractLocalDate(normalizedAttributes.get(ATTR_EFFECTIVE_DATE), LocalDate.now());
 
-        // 1. Data Retrieval: Fetch active pricing links (Fixed and Rule-based definitions)
+        // 1. Data Retrieval: Relaxed for cycle-based pro-rating
         List<ProductPricingLink> activePricingLinks = getActivePricingLinks(request.getProductId(), effectiveDate);
 
-        // 2. Component Assembly: Combine Static (DB) and Dynamic (Drools) components
+        // 2. Component Assembly
         List<PriceComponentDetail> priceComponentDetails = assemblePricingComponents(activePricingLinks, normalizedAttributes);
 
-        // 3. Calculation: Delegate to the Pure Calculation Engine (PriceAggregator)
-        // TRANSACTION_AMOUNT is the canonical base for percentage fee math.
-        BigDecimal productFeeCalculationBaseAmount = extractBigDecimal(normalizedAttributes.get(ATTR_TRANSACTION_AMOUNT), BigDecimal.ZERO);
+        // 3. Calculation
+        BigDecimal transactionAmount = extractBigDecimal(normalizedAttributes.get(ATTR_TRANSACTION_AMOUNT), BigDecimal.ZERO);
 
-        // Note: For a single product, the 'netImpact' is the sum of its fees and discounts
         BigDecimal netImpact = priceAggregator.calculateBundleImpact(
                 priceComponentDetails,
-                productFeeCalculationBaseAmount,
+                transactionAmount,
                 BigDecimal.ZERO,
                 request.getEnrollmentDate(),
                 effectiveDate);
 
-        // 4. Build Final Result
-        // The PRICE of the product is the sum of the fees, NOT the transaction amount
         return ProductPricingCalculationResult.builder()
                 .finalChargeablePrice(netImpact)
                 .componentBreakdown(priceComponentDetails)
                 .build();
     }
 
-    // -----------------------------------------------------------------------------------
-    // PRIVATE HELPER METHODS (Orchestration Steps)
-    // -----------------------------------------------------------------------------------
-
     private void verifyProductAccess(Long productId) {
         getByIdSecurely(productRepository, productId, "Product");
     }
 
     private List<ProductPricingLink> getActivePricingLinks(Long productId, LocalDate effectiveDate) {
-        List<ProductPricingLink> links = getCachedLinks(productId, effectiveDate);
+        // We fetch all links overlapping the month.
+        // If pro-rating is required, we must not strictly filter by 'effectiveDate' here,
+        // because the Aggregator needs the link to calculate partial-month fees.
+        List<ProductPricingLink> links = getLinksByCycle(productId, effectiveDate);
+
         if (links.isEmpty()) {
             throw new NotFoundException("No active pricing configuration found for product: "
-                    + productId + " on date: " + effectiveDate);
+                    + productId + " in the cycle containing: " + effectiveDate);
         }
+
         return links;
     }
 
-    /**
-     * Gathers all definitions (Fixed from DB and Tiers from Rules).
-     */
+    private List<ProductPricingLink> getLinksByCycle(Long productId, LocalDate effectiveDate) {
+        LocalDate cycleReference = effectiveDate != null ? effectiveDate : LocalDate.now();
+        LocalDate cycleStart = cycleReference.withDayOfMonth(1);
+        LocalDate cycleEnd = cycleReference.withDayOfMonth(cycleReference.lengthOfMonth());
+        return productPricingLinkRepository.findByProductIdOverlappingCycle(productId, cycleStart, cycleEnd);
+    }
+
     private List<PriceComponentDetail> assemblePricingComponents(List<ProductPricingLink> links,
                                                                  Map<String, Object> normalizedAttributes) {
         List<PriceComponentDetail> components = new ArrayList<>();
 
-        // Process Static Fixed Values
         links.stream()
                 .filter(link -> !link.isUseRulesEngine() && link.getFixedValue() != null)
                 .map(this::mapFixedLinkToDetail)
                 .forEach(components::add);
 
-        // Process Dynamic Rule-Based Tiers
         List<ProductPricingLink> ruleBasedLinks = links.stream()
                 .filter(ProductPricingLink::isUseRulesEngine).toList();
 
@@ -123,18 +118,15 @@ public class ProductPricingService extends BaseService {
 
     private List<PriceComponentDetail> retrieveDynamicComponents(List<ProductPricingLink> ruleLinks,
                                                                  Map<String, Object> normalizedAttributes) {
-        // 1. Identify Target Component Codes and Versions
         Set<String> componentCodes = ruleLinks.stream()
                 .map(l -> l.getPricingComponent().getCode() + ":" + l.getPricingComponent().getVersion())
                 .collect(Collectors.toSet());
 
-        // 2. Harvest Tier Codes directly from the active component links.
         Set<String> activeTierCodes = ruleLinks.stream()
                 .flatMap(l -> l.getPricingComponent().getPricingTiers().stream())
                 .map(PricingTier::getCode)
                 .collect(Collectors.toSet());
 
-        // Preserve optional target mapping for rule-based discounts.
         Map<String, PricingLinkContext> linkContextByComponentCode = new HashMap<>();
         ruleLinks.forEach(link -> {
             String componentCode = link.getPricingComponent().getCode();
@@ -145,7 +137,6 @@ public class ProductPricingService extends BaseService {
             ));
         });
 
-        // 3. Execute Rules with fully populated code sets
         return determinePriceWithDrools(componentCodes, activeTierCodes, normalizedAttributes).stream()
                 .map(fact -> mapFactToDetail(fact, linkContextByComponentCode.get(fact.getComponentCode())))
                 .toList();
@@ -160,9 +151,7 @@ public class ProductPricingService extends BaseService {
             input.setBankId(getCurrentBankId());
             input.setTargetPricingComponentCodes(componentCodes);
             input.setActivePricingTierCodes(activeTierCodes);
-
             input.setRuleFired(false);
-
             input.getCustomAttributes().putAll(normalizedAttributes);
 
             kieSession.setGlobal("log", log);
@@ -203,7 +192,6 @@ public class ProductPricingService extends BaseService {
         }
     }
 
-
     private BigDecimal extractBigDecimal(Object value, BigDecimal defaultValue) {
         if (value == null) return defaultValue;
         if (value instanceof BigDecimal decimal) return decimal;
@@ -224,19 +212,6 @@ public class ProductPricingService extends BaseService {
             return defaultValue;
         }
     }
-
-    @Cacheable(value = "productPricingLinks",
-            key = "T(com.bankengine.auth.security.TenantContextHolder).getBankId() + '_' + #productId + '_' + #effectiveDate")
-    public List<ProductPricingLink> getCachedLinks(Long productId, LocalDate effectiveDate) {
-        LocalDate cycleReference = effectiveDate != null ? effectiveDate : LocalDate.now();
-        LocalDate cycleStart = cycleReference.withDayOfMonth(1);
-        LocalDate cycleEnd = cycleReference.withDayOfMonth(cycleReference.lengthOfMonth());
-        return productPricingLinkRepository.findByProductIdOverlappingCycle(productId, cycleStart, cycleEnd);
-    }
-
-    // -----------------------------------------------------------------------------------
-    // MAPPING LOGIC
-    // -----------------------------------------------------------------------------------
 
     private PriceComponentDetail mapFixedLinkToDetail(ProductPricingLink link) {
         return PriceComponentDetail.builder()
