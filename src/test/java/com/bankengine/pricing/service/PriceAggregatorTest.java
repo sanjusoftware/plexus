@@ -136,6 +136,7 @@ class PriceAggregatorTest {
                         .rawValue(new BigDecimal("50.00"))
                         .valueType(ValueType.DISCOUNT_PERCENTAGE)
                         .targetComponentCode("MONTHLY_FEE")
+                        .proRataApplicable(true)
                         .effectiveDate(LocalDate.of(2024, 1, 16))
                         .build()
         );

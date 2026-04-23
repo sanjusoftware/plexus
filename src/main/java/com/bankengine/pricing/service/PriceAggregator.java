@@ -50,8 +50,11 @@ public class PriceAggregator {
         }
     }
 
-    private record ComponentComputation(BigDecimal fullCycleAmount, ActiveWindow activeWindow) {
+    private record ComponentComputation(BigDecimal fullCycleAmount, ActiveWindow activeWindow, boolean proRataApplicable) {
         private BigDecimal amountForOverlap(ActiveWindow discountWindow, int cycleDays) {
+            if (!proRataApplicable) {
+                return fullCycleAmount;
+            }
             int overlapDays = activeWindow.overlapDays(discountWindow);
             return prorateAmount(fullCycleAmount, overlapDays, cycleDays);
         }
@@ -105,7 +108,7 @@ public class PriceAggregator {
                 total = total.add(scaledFee);
 
                 feeContexts.computeIfAbsent(detail.getComponentCode(), ignored -> new ArrayList<>())
-                        .add(new ComponentComputation(fullCycleFee.abs(), activeWindow));
+                        .add(new ComponentComputation(fullCycleFee.abs(), activeWindow, detail.isProRataApplicable()));
             }
         }
         return new FeeCalculationResult(total, feeContexts);
@@ -136,13 +139,11 @@ public class PriceAggregator {
         return total;
     }
 
-    private DiscountCalculation calculateDiscountAmount(PriceComponentDetail detail,
+    private BigDecimal calculateDiscountAmountInternal(PriceComponentDetail detail,
                                                         BigDecimal existingFeePool,
                                                         Map<String, List<ComponentComputation>> feeContexts,
-                                                        LocalDate enrollmentDate,
+                                                        ActiveWindow discountWindow,
                                                         BillingCycle billingCycle) {
-        ActiveWindow discountWindow = resolveActiveWindow(detail, enrollmentDate, billingCycle);
-        applyProRataMetadata(detail, discountWindow, billingCycle, shouldProrate(detail));
         BigDecimal capPool = determineInternalDiscountPool(detail, feeContexts, discountWindow, billingCycle);
 
         if (!hasTarget(detail)) {
@@ -151,6 +152,17 @@ public class PriceAggregator {
                     : scaleCurrency(existingFeePool);
             capPool = capPool.add(externalFeePool);
         }
+        return capPool;
+    }
+
+    private DiscountCalculation calculateDiscountAmount(PriceComponentDetail detail,
+                                                        BigDecimal existingFeePool,
+                                                        Map<String, List<ComponentComputation>> feeContexts,
+                                                        LocalDate enrollmentDate,
+                                                        BillingCycle billingCycle) {
+        ActiveWindow discountWindow = resolveActiveWindow(detail, enrollmentDate, billingCycle);
+        applyProRataMetadata(detail, discountWindow, billingCycle, shouldProrate(detail));
+        BigDecimal capPool = calculateDiscountAmountInternal(detail, existingFeePool, feeContexts, discountWindow, billingCycle);
 
         if (detail.getValueType() == PriceValue.ValueType.DISCOUNT_PERCENTAGE) {
             return new DiscountCalculation(percentageOf(capPool, getRaw(detail)), capPool);
@@ -242,7 +254,7 @@ public class PriceAggregator {
     }
 
     private boolean shouldProrate(PriceComponentDetail detail) {
-        return detail.isProRataApplicable() || isDiscount(detail.getValueType());
+        return detail.isProRataApplicable();
     }
 
     private boolean hasTarget(PriceComponentDetail detail) {

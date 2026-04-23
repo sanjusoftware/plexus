@@ -89,12 +89,13 @@ public class ProductPricingService extends BaseService {
     }
 
     private List<ProductPricingLink> getActivePricingLinks(Long productId, LocalDate effectiveDate) {
-        List<ProductPricingLink> links = getCachedLinks(productId, effectiveDate);
-        if (links.isEmpty()) {
+        List<ProductPricingLink> allLinks = getCachedLinks(productId, effectiveDate);
+
+        if (allLinks.isEmpty()) {
             throw new NotFoundException("No active pricing configuration found for product: "
                     + productId + " on date: " + effectiveDate);
         }
-        return links;
+        return allLinks;
     }
 
     /**

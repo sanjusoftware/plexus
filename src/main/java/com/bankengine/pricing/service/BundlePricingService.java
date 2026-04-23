@@ -63,6 +63,11 @@ public class BundlePricingService extends BaseService {
         List<BundlePricingLink> activeLinks = bundlePricingLinkRepository
                 .findByBundleIdOverlappingCycle(bundlePriceRequest.getProductBundleId(), cycleStart, cycleEnd);
 
+        if (activeLinks.isEmpty()) {
+            throw new NotFoundException("No active pricing configuration found for bundle: "
+                    + bundlePriceRequest.getProductBundleId() + " on date: " + effectiveDate);
+        }
+
         // 3. Assemble Components (Fixed from DB + Dynamic from Rules)
         List<PriceComponentDetail> bundleAdjustments = assembleBundleComponents(bundlePriceRequest, activeLinks, existingFeePool);
 
