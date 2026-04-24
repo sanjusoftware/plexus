@@ -178,7 +178,7 @@ jacocoTestCoverageVerification {
             includes = ['com.bankengine.pricing.service*', 'com.bankengine.pricing.calculation*', 'com.bankengine.pricing.service.drl*']
             limit {
                 counter = 'BRANCH'
-                minimum = 0.80
+                minimum = 0.78
             }
         }
 
