@@ -188,7 +188,7 @@ jacocoTestCoverageVerification {
             includes = ['com.bankengine.auth.service*', 'com.bankengine.auth.security*', 'com.bankengine.auth.config*']
             limit {
                 counter = 'BRANCH'
-                minimum = 0.50
+                minimum = 0.80
             }
         }
 
@@ -198,7 +198,7 @@ jacocoTestCoverageVerification {
             includes = ['com.bankengine.catalog.service*']
             limit {
                 counter = 'BRANCH'
-                minimum = 0.67
+                minimum = 0.80
             }
         }
 

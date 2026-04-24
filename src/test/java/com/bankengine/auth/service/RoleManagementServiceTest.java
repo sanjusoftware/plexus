@@ -16,11 +16,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -89,7 +92,7 @@ class RoleManagementServiceTest {
     void getAllRoleNames_ShouldReturnList() {
         Role r1 = new Role(); r1.setName("A");
         Role r2 = new Role(); r2.setName("B");
-        when(roleRepository.findAll()).thenReturn(java.util.List.of(r1, r2));
+        when(roleRepository.findAll()).thenReturn(List.of(r1, r2));
 
         assertThat(roleManagementService.getAllRoleNames()).containsExactly("A", "B");
     }
@@ -126,7 +129,7 @@ class RoleManagementServiceTest {
 
         Jwt jwt = Jwt.withTokenValue("mock-token")
                 .header("alg", "none")
-                .claim("roles", java.util.List.of("ADMIN", "OTHER_ROLE"))
+                .claim("roles", List.of("ADMIN", "OTHER_ROLE"))
                 .build();
         JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
 
@@ -136,5 +139,66 @@ class RoleManagementServiceTest {
 
         verify(roleRepository, never()).delete(any(Role.class));
         verify(permissionMappingService, never()).evictAllRolePermissionsCache();
+    }
+
+    @Test
+    @DisplayName("Branch: deleteRole - system admin check")
+    void testDeleteRole_systemAdmin() {
+        Role role = new Role(); role.setName("SYSTEM_ADMIN");
+        when(roleRepository.findByName("SYSTEM_ADMIN")).thenReturn(Optional.of(role));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> roleManagementService.deleteRole("SYSTEM_ADMIN", null));
+    }
+
+    @Test
+    @DisplayName("Branch: extractCurrentUserRoles - various cases")
+    void testExtractCurrentUserRoles() {
+        Role role = new Role(); role.setName("TARGET");
+        when(roleRepository.findByName("TARGET")).thenReturn(Optional.of(role));
+
+        // null auth
+        roleManagementService.deleteRole("TARGET", null);
+        verify(roleRepository).delete(role);
+        reset(roleRepository);
+        when(roleRepository.findByName("TARGET")).thenReturn(Optional.of(role));
+
+        // JwtAuthenticationToken with null claims
+        JwtAuthenticationToken jwtAuthNull = mock(JwtAuthenticationToken.class);
+        when(jwtAuthNull.getTokenAttributes()).thenReturn(null);
+        roleManagementService.deleteRole("TARGET", jwtAuthNull);
+        verify(roleRepository).delete(role);
+        reset(roleRepository);
+        when(roleRepository.findByName("TARGET")).thenReturn(Optional.of(role));
+
+        // OAuth2User
+        org.springframework.security.oauth2.core.user.OAuth2User oauth2User = mock(org.springframework.security.oauth2.core.user.OAuth2User.class);
+        when(oauth2User.getAttributes()).thenReturn(Map.of("roles", List.of("TARGET")));
+        org.springframework.security.core.Authentication auth1 = mock(org.springframework.security.core.Authentication.class);
+        when(auth1.getPrincipal()).thenReturn(oauth2User);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> roleManagementService.deleteRole("TARGET", auth1));
+
+        // Jwt
+        org.springframework.security.oauth2.jwt.Jwt jwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("token").header("alg", "none").claim("roles", "TARGET").build();
+        org.springframework.security.core.Authentication auth2 = mock(org.springframework.security.core.Authentication.class);
+        when(auth2.getPrincipal()).thenReturn(jwt);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> roleManagementService.deleteRole("TARGET", auth2));
+
+        // Map
+        Map<String, Object> principalMap = Map.of("roles", List.of("TARGET"));
+        org.springframework.security.core.Authentication auth3 = mock(org.springframework.security.core.Authentication.class);
+        when(auth3.getPrincipal()).thenReturn(principalMap);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> roleManagementService.deleteRole("TARGET", auth3));
+
+        // Single string role in map
+        Map<String, Object> principalMapSingle = Map.of("roles", "TARGET");
+        org.springframework.security.core.Authentication auth4 = mock(org.springframework.security.core.Authentication.class);
+        when(auth4.getPrincipal()).thenReturn(principalMapSingle);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> roleManagementService.deleteRole("TARGET", auth4));
+    }
+
+    @Test
+    @DisplayName("Branch: getAllRoleMappings success")
+    void testGetAllRoleMappings() {
+        when(roleRepository.findAll()).thenReturn(List.of(new Role()));
+        assertFalse(roleManagementService.getAllRoleMappings().isEmpty());
     }
 }

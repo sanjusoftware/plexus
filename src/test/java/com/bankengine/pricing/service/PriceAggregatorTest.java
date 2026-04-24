@@ -309,4 +309,77 @@ class PriceAggregatorTest {
                 .targetComponentCode(target)
                 .build();
     }
+
+    @DisplayName("Branch: Absolute discount without pro-rata and without target")
+    void shouldHandleAbsoluteDiscountNoProRataNoTarget() {
+        List<PriceComponentDetail> components = List.of(
+                createComponentDetail("F1", "100.00", ValueType.FEE_ABSOLUTE, null),
+                PriceComponentDetail.builder()
+                        .componentCode("D1")
+                        .rawValue(new BigDecimal("10.00"))
+                        .valueType(ValueType.DISCOUNT_ABSOLUTE)
+                        .proRataApplicable(false)
+                        .targetComponentCode(null)
+                        .build()
+        );
+
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, null, LocalDate.now());
+        // 100 - 10 = 90
+        assertScaledBigDecimal("90.00", netImpact);
+    }
+
+    @Test
+    @DisplayName("Branch: Targeted discount where target is missing from pool")
+    void shouldHandleTargetedDiscountWithMissingTarget() {
+        List<PriceComponentDetail> components = List.of(
+                createComponentDetail("F1", "100.00", ValueType.FEE_ABSOLUTE, null),
+                PriceComponentDetail.builder()
+                        .componentCode("D1")
+                        .rawValue(new BigDecimal("10.00"))
+                        .valueType(ValueType.DISCOUNT_ABSOLUTE)
+                        .targetComponentCode("MISSING")
+                        .build()
+        );
+
+        BigDecimal netImpact = aggregator.calculateBundleImpact(components, BigDecimal.ZERO, BigDecimal.ZERO, null, LocalDate.now());
+        // Target missing -> pool is 0 -> discount is capped at 0 -> impact is 100
+        assertScaledBigDecimal("100.00", netImpact);
+    }
+
+    @Test
+    @DisplayName("Branch: Pro-rated absolute discount with target")
+    void shouldHandleProRatedAbsoluteDiscountWithTarget() {
+        List<PriceComponentDetail> components = List.of(
+                PriceComponentDetail.builder()
+                        .componentCode("F1")
+                        .rawValue(new BigDecimal("30.00"))
+                        .valueType(ValueType.FEE_ABSOLUTE)
+                        .proRataApplicable(true)
+                        .effectiveDate(LocalDate.of(2024, 6, 1))
+                        .expiryDate(LocalDate.of(2024, 6, 30))
+                        .build(),
+                PriceComponentDetail.builder()
+                        .componentCode("D1")
+                        .rawValue(new BigDecimal("30.00"))
+                        .valueType(ValueType.DISCOUNT_ABSOLUTE)
+                        .targetComponentCode("F1")
+                        .proRataApplicable(true)
+                        .effectiveDate(LocalDate.of(2024, 6, 1))
+                        .expiryDate(LocalDate.of(2024, 6, 15)) // 15 days of discount
+                        .build()
+        );
+
+        BigDecimal netImpact = aggregator.calculateBundleImpact(
+                components,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                LocalDate.of(2024, 6, 1),
+                LocalDate.of(2024, 6, 30)
+        );
+
+        // Fee: 30.00 (30/30 days) = 30.00
+        // Discount: 30.00 (15/30 days) = 15.00
+        // Net: 15.00
+        assertScaledBigDecimal("15.00", netImpact);
+    }
 }

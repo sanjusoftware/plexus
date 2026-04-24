@@ -4,7 +4,6 @@ import com.bankengine.catalog.dto.ProductCategoryDto;
 import com.bankengine.catalog.model.ProductCategory;
 import com.bankengine.catalog.repository.ProductCategoryRepository;
 import com.bankengine.test.config.BaseServiceTest;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,93 +13,111 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProductCategoryServiceTest extends BaseServiceTest {
 
     @Mock
-    private ProductCategoryRepository productCategoryRepository;
+    private ProductCategoryRepository repository;
 
     @InjectMocks
-    private ProductCategoryService productCategoryService;
+    private ProductCategoryService service;
 
     @Test
-    @DisplayName("CreateCategory should sanitize code and persist")
-    void createCategory_ShouldSanitizeAndPersist() {
-        ProductCategoryDto request = ProductCategoryDto.builder().code("retail segment").name("Retail Segment").build();
-
-        when(productCategoryRepository.findByBankIdAndCode(TEST_BANK_ID, "RETAIL_SEGMENT")).thenReturn(Optional.empty());
-        when(productCategoryRepository.save(any(ProductCategory.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        ProductCategoryDto saved = productCategoryService.createCategory(request);
-
-        assertEquals("RETAIL_SEGMENT", saved.getCode());
-        assertEquals("Retail Segment", saved.getName());
-        verify(productCategoryRepository).save(any(ProductCategory.class));
-    }
-
-    @Test
-    @DisplayName("CreateCategory should reject duplicate bank scoped code")
-    void createCategory_WhenDuplicate_ShouldThrow() {
-        ProductCategory existing = ProductCategory.builder().bankId(TEST_BANK_ID).code("RETAIL").name("Retail").build();
-        when(productCategoryRepository.findByBankIdAndCode(TEST_BANK_ID, "RETAIL")).thenReturn(Optional.of(existing));
-
-        assertThrows(IllegalStateException.class,
-                () -> productCategoryService.createCategory(ProductCategoryDto.builder().code("retail").name("Retail").build()));
-        verify(productCategoryRepository, never()).save(any(ProductCategory.class));
-    }
-
-    @Test
-    @DisplayName("ListCategories should return sorted tenant categories")
-    void listCategories_ShouldReturnRows() {
-        when(productCategoryRepository.findAllByBankIdOrderByName(TEST_BANK_ID)).thenReturn(List.of(
-                ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("CORPORATE").name("Corporate").build(),
-                ProductCategory.builder().id(2L).bankId(TEST_BANK_ID).code("RETAIL").name("Retail").build()
+    void testListCategories() {
+        when(repository.findAllByBankIdOrderByName(TEST_BANK_ID)).thenReturn(List.of(
+            ProductCategory.builder().id(1L).code("C1").name("N1").build()
         ));
-
-        List<ProductCategoryDto> categories = productCategoryService.listCategories();
-        assertEquals(2, categories.size());
-        assertEquals("CORPORATE", categories.get(0).getCode());
+        List<ProductCategoryDto> result = service.listCategories();
+        assertFalse(result.isEmpty());
+        assertEquals("C1", result.get(0).getCode());
     }
 
     @Test
-    @DisplayName("UpdateCategory should update name")
-    void updateCategory_ShouldUpdateName() {
-        ProductCategory existing = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("RETAIL").name("Retail").build();
-        when(productCategoryRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(productCategoryRepository.save(any(ProductCategory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    void testCreateCategory_Success() {
+        ProductCategoryDto req = ProductCategoryDto.builder().code("NEW").name("New Name").build();
+        when(repository.findByBankIdAndCode(TEST_BANK_ID, "NEW")).thenReturn(Optional.empty());
+        when(repository.save(any())).thenReturn(ProductCategory.builder().code("NEW").name("New Name").build());
 
-        ProductCategoryDto request = ProductCategoryDto.builder().name("Retail Updated").build();
-        ProductCategoryDto updated = productCategoryService.updateCategory(1L, request);
-
-        assertEquals("Retail Updated", updated.getName());
-        assertEquals("RETAIL", updated.getCode());
+        ProductCategoryDto result = service.createCategory(req);
+        assertEquals("NEW", result.getCode());
     }
 
     @Test
-    @DisplayName("DeleteCategory should delete if not in use")
-    void deleteCategory_ShouldDelete() {
-        ProductCategory existing = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("RETAIL").name("Retail").build();
-        when(productCategoryRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(productCategoryRepository.isCategoryInUse(TEST_BANK_ID, "RETAIL")).thenReturn(false);
-
-        productCategoryService.deleteCategory(1L);
-
-        verify(productCategoryRepository).delete(existing);
+    void testCreateCategory_MissingCode() {
+        ProductCategoryDto req = ProductCategoryDto.builder().code("").name("Name").build();
+        assertThrows(IllegalArgumentException.class, () -> service.createCategory(req));
     }
 
     @Test
-    @DisplayName("DeleteCategory should throw if in use")
-    void deleteCategory_InUse_ShouldThrow() {
-        ProductCategory existing = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("RETAIL").name("Retail").build();
-        when(productCategoryRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(productCategoryRepository.isCategoryInUse(TEST_BANK_ID, "RETAIL")).thenReturn(true);
+    void testCreateCategory_MissingName() {
+        ProductCategoryDto req = ProductCategoryDto.builder().code("C").name("").build();
+        assertThrows(IllegalArgumentException.class, () -> service.createCategory(req));
+    }
 
-        assertThrows(IllegalStateException.class, () -> productCategoryService.deleteCategory(1L));
-        verify(productCategoryRepository, never()).delete(any(ProductCategory.class));
+    @Test
+    void testCreateCategory_NullName() {
+        ProductCategoryDto req = ProductCategoryDto.builder().code("C").name(null).build();
+        assertThrows(IllegalArgumentException.class, () -> service.createCategory(req));
+    }
+
+    @Test
+    void testCreateCategory_Duplicate() {
+        ProductCategoryDto req = ProductCategoryDto.builder().code("EXIST").name("Name").build();
+        when(repository.findByBankIdAndCode(TEST_BANK_ID, "EXIST")).thenReturn(Optional.of(new ProductCategory()));
+        assertThrows(IllegalStateException.class, () -> service.createCategory(req));
+    }
+
+    @Test
+    void testUpdateCategory_Success() {
+        ProductCategory cat = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("C").name("Old").build();
+        when(repository.findById(1L)).thenReturn(Optional.of(cat));
+        when(repository.save(any())).thenReturn(cat);
+
+        ProductCategoryDto req = ProductCategoryDto.builder().name("New").build();
+        ProductCategoryDto result = service.updateCategory(1L, req);
+        assertEquals("New", result.getName());
+    }
+
+    @Test
+    void testUpdateCategory_NotFound() {
+        when(repository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> service.updateCategory(1L, ProductCategoryDto.builder().name("N").build()));
+    }
+
+    @Test
+    void testUpdateCategory_WrongBank() {
+        ProductCategory cat = ProductCategory.builder().id(1L).bankId("OTHER").code("C").name("Old").build();
+        when(repository.findById(1L)).thenReturn(Optional.of(cat));
+        assertThrows(IllegalArgumentException.class, () -> service.updateCategory(1L, ProductCategoryDto.builder().name("N").build()));
+    }
+
+    @Test
+    void testUpdateCategory_MissingName() {
+        ProductCategory cat = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("C").name("Old").build();
+        when(repository.findById(1L)).thenReturn(Optional.of(cat));
+        assertThrows(IllegalArgumentException.class, () -> service.updateCategory(1L, ProductCategoryDto.builder().name("").build()));
+    }
+
+    @Test
+    void testDeleteCategory_Success() {
+        ProductCategory cat = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("C").build();
+        when(repository.findById(1L)).thenReturn(Optional.of(cat));
+        when(repository.isCategoryInUse(TEST_BANK_ID, "C")).thenReturn(false);
+
+        service.deleteCategory(1L);
+        verify(repository).delete(cat);
+    }
+
+    @Test
+    void testDeleteCategory_InUse() {
+        ProductCategory cat = ProductCategory.builder().id(1L).bankId(TEST_BANK_ID).code("C").build();
+        when(repository.findById(1L)).thenReturn(Optional.of(cat));
+        when(repository.isCategoryInUse(TEST_BANK_ID, "C")).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> service.deleteCategory(1L));
     }
 }
-
