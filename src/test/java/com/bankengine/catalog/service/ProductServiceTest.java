@@ -42,16 +42,26 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class ProductServiceTest extends BaseServiceTest {
 
-    @Mock private ProductRepository productRepository;
-    @Mock private ProductCategoryRepository productCategoryRepository;
-    @Mock private ProductTypeRepository productTypeRepository;
-    @Mock private FeatureComponentService featureComponentService;
-    @Mock private PricingComponentService pricingComponentService;
-    @Mock private ProductMapper productMapper;
-    @Mock private FeatureLinkMapper featureLinkMapper;
-    @Mock private PricingLinkMapper pricingLinkMapper;
-    @Mock private com.bankengine.catalog.repository.BundleProductLinkRepository bundleProductLinkRepository;
-    @Mock private EntityManager entityManager;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private ProductCategoryRepository productCategoryRepository;
+    @Mock
+    private ProductTypeRepository productTypeRepository;
+    @Mock
+    private FeatureComponentService featureComponentService;
+    @Mock
+    private PricingComponentService pricingComponentService;
+    @Mock
+    private ProductMapper productMapper;
+    @Mock
+    private FeatureLinkMapper featureLinkMapper;
+    @Mock
+    private PricingLinkMapper pricingLinkMapper;
+    @Mock
+    private com.bankengine.catalog.repository.BundleProductLinkRepository bundleProductLinkRepository;
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private ProductService productService;
@@ -145,7 +155,7 @@ public class ProductServiceTest extends BaseServiceTest {
         productService.createProduct(dto);
 
         verify(productRepository).save(argThat(p ->
-            p.getStatus() == VersionableEntity.EntityStatus.DRAFT && p.getVersion() == 1
+                p.getStatus() == VersionableEntity.EntityStatus.DRAFT && p.getVersion() == 1
         ));
     }
 
@@ -621,5 +631,141 @@ public class ProductServiceTest extends BaseServiceTest {
 
         assertEquals(1, product.getProductFeatureLinks().size());
         assertEquals(1, product.getProductPricingLinks().size());
+    }
+
+    // --- ADDITIONAL COVERAGE TESTS ---
+
+    @Test
+    @DisplayName("Branch: activateProduct - activationDate branches")
+    void testActivateProduct_ActivationDateBranches() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        product.setActivationDate(null);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        productService.activateProduct(1L, null);
+        assertEquals(LocalDate.now(), product.getActivationDate());
+
+        Product product2 = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        product2.setActivationDate(LocalDate.now().plusDays(10));
+        when(productRepository.findById(2L)).thenReturn(Optional.of(product2));
+        when(productRepository.save(any())).thenReturn(product2);
+        productService.activateProduct(2L, null);
+        assertEquals(LocalDate.now().plusDays(10), product2.getActivationDate());
+
+        Product product3 = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(3L)).thenReturn(Optional.of(product3));
+        when(productRepository.save(any())).thenReturn(product3);
+        LocalDate specificDate = LocalDate.now().plusDays(5);
+        productService.activateProduct(3L, specificDate);
+        assertEquals(specificDate, product3.getActivationDate());
+    }
+
+    @Test
+    @DisplayName("Branch: mapPricingFields - fixedValue > 10000")
+    void testMapPricingFields_ValueExceeds() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+        PricingComponent pc = new PricingComponent();
+        pc.setCode("P1");
+        pc.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(pricingComponentService.getPricingComponentByCode(eq("P1"), any())).thenReturn(pc);
+
+        ProductPricingDto dto = new ProductPricingDto();
+        dto.setPricingComponentCode("P1");
+        dto.setFixedValue(new java.math.BigDecimal("10001"));
+
+        ProductRequest req = ProductRequest.builder().pricing(List.of(dto)).build();
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, req));
+    }
+
+    @Test
+    @DisplayName("Branch: mapPricingFields - effectiveDate in past")
+    void testMapPricingFields_PastEffectiveDate() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+        PricingComponent pc = new PricingComponent();
+        pc.setCode("P1");
+        pc.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(pricingComponentService.getPricingComponentByCode(eq("P1"), any())).thenReturn(pc);
+
+        ProductPricingDto dto = new ProductPricingDto();
+        dto.setPricingComponentCode("P1");
+        dto.setEffectiveDate(LocalDate.now().minusDays(1));
+
+        ProductRequest req = ProductRequest.builder().pricing(List.of(dto)).build();
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, req));
+    }
+
+    @Test
+    @DisplayName("Branch: mapPricingFields - expiryDate before effectiveDate")
+    void testMapPricingFields_ExpiryBeforeEffective() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+        PricingComponent pc = new PricingComponent();
+        pc.setCode("P1");
+        pc.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(pricingComponentService.getPricingComponentByCode(eq("P1"), any())).thenReturn(pc);
+
+        ProductPricingDto dto = new ProductPricingDto();
+        dto.setPricingComponentCode("P1");
+        dto.setEffectiveDate(LocalDate.now().plusDays(10));
+        dto.setExpiryDate(LocalDate.now().plusDays(5));
+
+        ProductRequest req = ProductRequest.builder().pricing(List.of(dto)).build();
+        assertThrows(com.bankengine.web.exception.ValidationException.class, () -> productService.updateProduct(1L, req));
+    }
+
+    @Test
+    @DisplayName("Branch: validateFeatureValue - boolean various")
+    void testValidateFeatureValue_BooleanVarious() {
+        Product product = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+        FeatureComponent fBool = new FeatureComponent();
+        fBool.setCode("BOOL");
+        fBool.setDataType(FeatureComponent.DataType.BOOLEAN);
+        fBool.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(featureComponentService.getFeatureComponentByCode("BOOL", null)).thenReturn(fBool);
+        when(productRepository.save(any())).thenReturn(product);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        productService.updateProduct(1L, createFeatureRequestByCode("BOOL", "false"));
+        assertEquals("false", product.getProductFeatureLinks().get(0).getFeatureValue());
+    }
+
+    @Test
+    @DisplayName("Branch: syncFeaturesInternal - fat DTO component creation")
+    void testSyncFeaturesInternal_FatDtoCreation() {
+        Product p = createValidProduct(VersionableEntity.EntityStatus.DRAFT);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(p));
+        when(productRepository.save(any())).thenReturn(p);
+        when(productMapper.toResponse(any())).thenReturn(new ProductResponse());
+
+        when(featureComponentService.getFeatureComponentByCode(eq("NEW"), any())).thenThrow(new NotFoundException(""));
+        FeatureComponentResponse resp = new FeatureComponentResponse();
+        resp.setId(100L);
+        when(featureComponentService.createFeature(any())).thenReturn(resp);
+        FeatureComponent comp = new FeatureComponent();
+        comp.setId(100L);
+        comp.setCode("NEW");
+        comp.setDataType(FeatureComponent.DataType.STRING);
+        comp.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(featureComponentService.getFeatureComponentById(100L)).thenReturn(comp);
+
+        ProductFeatureDto dto = ProductFeatureDto.builder()
+                .featureComponentCode("NEW")
+                .featureName("Name")
+                .dataType("STRING")
+                .featureValue("Val")
+                .build();
+
+        productService.updateProduct(1L, ProductRequest.builder().features(List.of(dto)).build());
+        assertEquals(1, p.getProductFeatureLinks().size());
+        assertEquals("NEW", p.getProductFeatureLinks().get(0).getFeatureComponent().getCode());
     }
 }

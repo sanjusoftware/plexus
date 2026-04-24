@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -84,7 +85,6 @@ class PricingComponentServiceTest extends BaseServiceTest {
         entity.setCode("MTH-FEE");
         entity.setType(PricingComponent.ComponentType.FEE);
         entity.setPricingTiers(new LinkedHashSet<>());
-        entity.setPricingTiers(new LinkedHashSet<>());
 
         when(componentRepository.existsByBankIdAndCodeAndVersion(any(), eq("MTH-FEE"), anyInt())).thenReturn(false);
         when(pricingComponentMapper.toEntity(request)).thenReturn(entity);
@@ -102,13 +102,9 @@ class PricingComponentServiceTest extends BaseServiceTest {
         PricingComponentRequest request = newPricingComponentRequest("Test");
         request.setType("INVALID_TYPE");
 
-        // The service calls validateComponentType(request.getType()) BEFORE toEntity
-        // So it will throw before even reaching MapStruct mapper in this test setup.
-
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> componentService.createComponent(request));
-        assertTrue(ex.getMessage().contains("Invalid value for pricing component type"),
-            "Exception message should indicate the type error. Found: " + ex.getMessage());
+        assertTrue(ex.getMessage().contains("Invalid value for pricing component type"));
     }
 
     // --- TIER & VALUE OPERATIONS ---
@@ -144,7 +140,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         when(componentRepository.findById(cId)).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class,
-            () -> componentService.updateTierAndValue(cId, tId, new PricingTierRequest()));
+                () -> componentService.updateTierAndValue(cId, tId, new PricingTierRequest()));
     }
 
     @Test
@@ -263,7 +259,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         when(componentRepository.findById(id)).thenReturn(Optional.of(active));
 
         assertThrows(IllegalStateException.class,
-            () -> componentService.updateComponent(id, newPricingComponentRequest("Fail")));
+                () -> componentService.updateComponent(id, newPricingComponentRequest("Fail")));
     }
 
     @Test
@@ -377,7 +373,6 @@ class PricingComponentServiceTest extends BaseServiceTest {
         when(pricingComponentMapper.clone(source)).thenReturn(target);
         when(pricingTierMapper.clone(oldTier)).thenReturn(clonedTier);
         when(priceValueMapper.clone(oldVal)).thenReturn(clonedValue);
-        // Note: TierCondition uses toDto/toEntity mapping in your service logic
         when(tierConditionMapper.toDto(oldCond)).thenReturn(new TierConditionDto());
         when(tierConditionMapper.toEntity(any())).thenReturn(new TierCondition());
 
@@ -692,7 +687,7 @@ class PricingComponentServiceTest extends BaseServiceTest {
         source.setCode("PRC-NULL");
         PricingComponent target = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
         target.setCode("PRC-NULL");
-        target.setPricingTiers(new LinkedHashSet<>()); // MapStruct often initializes collections
+        target.setPricingTiers(new LinkedHashSet<>());
 
         when(componentRepository.findById(1L)).thenReturn(Optional.of(source));
         when(pricingComponentMapper.clone(source)).thenReturn(target);
@@ -772,5 +767,111 @@ class PricingComponentServiceTest extends BaseServiceTest {
         when(componentRepository.save(any())).thenReturn(component);
 
         assertDoesNotThrow(() -> componentService.createComponent(request));
+    }
+
+    @Test
+    @DisplayName("Branch: activateComponent - archive previous version")
+    void testActivateComponent_archivePrevious() {
+        Long id = 2L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(id);
+        component.setCode("V-CODE");
+        component.setVersion(2);
+        component.setBankId(TEST_BANK_ID);
+
+        PricingComponent previous = getValidPricingComponent(VersionableEntity.EntityStatus.ACTIVE);
+        previous.setId(1L);
+        previous.setCode("V-CODE");
+        previous.setVersion(1);
+        previous.setBankId(TEST_BANK_ID);
+
+        when(componentRepository.findById(id)).thenReturn(Optional.of(component));
+        when(componentRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, "V-CODE", 1)).thenReturn(Optional.of(previous));
+        when(componentRepository.save(any())).thenReturn(component);
+
+        componentService.activateComponent(id);
+
+        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, previous.getStatus());
+        verify(componentRepository).save(previous);
+    }
+
+    @Test
+    @DisplayName("Branch: archiveComponent - failures")
+    void testArchiveComponent_failures() {
+        PricingComponent draft = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        when(componentRepository.findById(1L)).thenReturn(Optional.of(draft));
+
+        assertThrows(IllegalStateException.class, () -> componentService.archiveComponent(1L));
+    }
+
+    @Test
+    @DisplayName("Branch: archiveComponent - success")
+    void testArchiveComponent_success() {
+        PricingComponent active = getValidPricingComponent(VersionableEntity.EntityStatus.ACTIVE);
+        when(componentRepository.findById(1L)).thenReturn(Optional.of(active));
+        when(componentRepository.save(any())).thenReturn(active);
+
+        componentService.archiveComponent(1L);
+        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, active.getStatus());
+    }
+
+    @Test
+    @DisplayName("Branch: validatePriceValueType - failure")
+    void testValidatePriceValueType_failure() {
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        when(componentRepository.findById(1L)).thenReturn(Optional.of(component));
+
+        PricingTierRequest tierReq = new PricingTierRequest();
+        PriceValueRequest valueReq = new PriceValueRequest();
+        valueReq.setValueType("INVALID");
+
+        assertThrows(IllegalArgumentException.class, () -> componentService.addTierAndValue(1L, tierReq, valueReq));
+    }
+
+    @Test
+    @DisplayName("Branch: validateComponentAndValueType - null tiers")
+    void testValidateComponentAndValueType_nullTiers() {
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setPricingTiers(null);
+        PricingComponentRequest request = newPricingComponentRequest("Null Tiers");
+
+        when(componentRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(pricingComponentMapper.toEntity(any())).thenReturn(component);
+        when(componentRepository.save(any())).thenReturn(component);
+
+        assertDoesNotThrow(() -> componentService.createComponent(request));
+    }
+
+    @Test
+    @DisplayName("Branch: activateComponent - already active or version 1")
+    void testActivateComponent_various() {
+        Long id = 1L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(id);
+        component.setVersion(1);
+        component.setBankId(TEST_BANK_ID);
+        component.setActivationDate(LocalDate.now().plusDays(1));
+
+        when(componentRepository.findById(id)).thenReturn(Optional.of(component));
+        when(componentRepository.save(any())).thenReturn(component);
+
+        componentService.activateComponent(id);
+        assertEquals(VersionableEntity.EntityStatus.ACTIVE, component.getStatus());
+        // activationDate should remain as set in the component
+        assertEquals(LocalDate.now().plusDays(1), component.getActivationDate());
+    }
+
+    @Test
+    @DisplayName("Branch: updateComponent - type validation")
+    void testUpdateComponent_typeValidation() {
+        Long id = 1L;
+        PricingComponent component = getValidPricingComponent(VersionableEntity.EntityStatus.DRAFT);
+        component.setId(id);
+        when(componentRepository.findById(id)).thenReturn(Optional.of(component));
+
+        PricingComponentRequest request = new PricingComponentRequest();
+        request.setType("INVALID");
+
+        assertThrows(IllegalArgumentException.class, () -> componentService.updateComponent(id, request));
     }
 }

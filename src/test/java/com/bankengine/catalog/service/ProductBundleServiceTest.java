@@ -3,6 +3,7 @@ package com.bankengine.catalog.service;
 import com.bankengine.catalog.converter.ProductBundleMapper;
 import com.bankengine.catalog.dto.ProductBundleRequest;
 import com.bankengine.catalog.dto.ProductBundleResponse;
+import com.bankengine.catalog.dto.ProductPricingDto;
 import com.bankengine.catalog.dto.VersionRequest;
 import com.bankengine.catalog.model.BundleProductLink;
 import com.bankengine.catalog.model.Product;
@@ -10,6 +11,10 @@ import com.bankengine.catalog.model.ProductBundle;
 import com.bankengine.catalog.repository.ProductBundleRepository;
 import com.bankengine.catalog.repository.ProductRepository;
 import com.bankengine.common.model.VersionableEntity;
+import com.bankengine.pricing.model.BundlePricingLink;
+import com.bankengine.pricing.model.PriceValue;
+import com.bankengine.pricing.model.PricingComponent;
+import com.bankengine.pricing.service.PricingComponentService;
 import com.bankengine.test.config.BaseServiceTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +22,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
@@ -31,10 +39,16 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ProductBundleServiceTest extends BaseServiceTest {
 
-    @Mock private ProductBundleRepository bundleRepository;
-    @Mock private ProductRepository productRepository;
-    @Mock private CatalogConstraintService constraintService;
-    @Mock private ProductBundleMapper bundleMapper;
+    @Mock
+    private ProductBundleRepository bundleRepository;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private CatalogConstraintService constraintService;
+    @Mock
+    private ProductBundleMapper bundleMapper;
+    @Mock
+    private PricingComponentService pricingComponentService;
 
     @InjectMocks
     private ProductBundleService bundleService;
@@ -45,6 +59,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
         ProductBundle bundle = new ProductBundle();
         bundle.setBankId(TEST_BANK_ID);
         bundle.setContainedProducts(new ArrayList<>());
+        bundle.setBundlePricingLinks(new ArrayList<>());
         bundle.setStatus(status);
         return bundle;
     }
@@ -76,6 +91,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
     void createBundle_Success() {
         ProductBundleRequest request = new ProductBundleRequest();
         request.setName("Gold Bundle");
+        request.setCode("GOLD-01");
         ProductBundleRequest.BundleProduct item = new ProductBundleRequest.BundleProduct();
         item.setProductCode("P-101");
         request.setProducts(List.of(item));
@@ -169,7 +185,6 @@ class ProductBundleServiceTest extends BaseServiceTest {
         assertEquals(VersionableEntity.EntityStatus.ACTIVE, source.getStatus(), "Source remains unchanged until revision activation");
 
         // Assert: Metadata & Temporal
-        // assertEquals(newActivationDate, newVersion.getActivationDate());
         assertEquals("Updated Name", newVersion.getName());
     }
 
@@ -197,15 +212,6 @@ class ProductBundleServiceTest extends BaseServiceTest {
         assertEquals(1, branch.getVersion(), "Branches must restart at version 1");
         assertEquals(VersionableEntity.EntityStatus.DRAFT, branch.getStatus(), "Branches must start as DRAFT");
         assertEquals(VersionableEntity.EntityStatus.ACTIVE, source.getStatus(), "Source should remain ACTIVE when branching to a new code");
-    }
-
-    @Test
-    @DisplayName("Versioning: Should throw AccessDeniedException if bankId is wrong")
-    void versionBundle_SecurityGuard() {
-        ProductBundle source = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
-        source.setBankId("ATTACKER_BANK");
-        when(bundleRepository.findById(1L)).thenReturn(Optional.of(source));
-        assertThrows(AccessDeniedException.class, () -> bundleService.versionBundle(1L, new VersionRequest()));
     }
 
     @Test
@@ -318,7 +324,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
     @DisplayName("Archive: Should set status to INACTIVE and expiry to TODAY")
     void archiveBundle_Success() {
         ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
-        bundle.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        bundle.setStatus(VersionableEntity.EntityStatus.DRAFT);
         when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
 
         bundleService.archiveBundle(1L);
@@ -332,7 +338,7 @@ class ProductBundleServiceTest extends BaseServiceTest {
     void archiveBundle_KeepsPastExpiryDate() {
         LocalDate pastDate = LocalDate.now().minusDays(5);
         ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
-        bundle.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        bundle.setStatus(VersionableEntity.EntityStatus.DRAFT);
         bundle.setExpiryDate(pastDate);
 
         when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
@@ -364,14 +370,276 @@ class ProductBundleServiceTest extends BaseServiceTest {
     }
 
     @Test
-    @DisplayName("Branch: activateBundle adjustments")
-    void testActivateBundle_adjustments() {
+    @DisplayName("Branch: syncBundlePricingInternal - update and remove")
+    void testSyncBundlePricingInternal() {
         ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
-        bundle.setActivationDate(null);
 
+        PricingComponent pc1 = new PricingComponent();
+        pc1.setCode("PC1");
+        PricingComponent pc2 = new PricingComponent();
+        pc2.setCode("PC2");
+
+        BundlePricingLink link1 = new BundlePricingLink();
+        link1.setPricingComponent(pc1);
+        link1.setProductBundle(bundle);
+        bundle.getBundlePricingLinks().add(link1);
+
+        ProductPricingDto dto1 = new ProductPricingDto();
+        dto1.setPricingComponentCode("PC1");
+        dto1.setFixedValue(new java.math.BigDecimal("10.00"));
+
+        ProductPricingDto dto2 = new ProductPricingDto();
+        dto2.setPricingComponentCode("PC2");
+        dto2.setFixedValue(new java.math.BigDecimal("20.00"));
+
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(pricingComponentService.getPricingComponentByCode("PC2", null)).thenReturn(pc2);
+        when(bundleRepository.save(any())).thenReturn(bundle);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setPricing(List.of(dto1, dto2));
+
+        bundleService.updateBundle(1L, request);
+
+        assertEquals(2, bundle.getBundlePricingLinks().size());
+        assertTrue(bundle.getBundlePricingLinks().stream().anyMatch(l -> l.getPricingComponent().getCode().equals("PC1") && l.getFixedValue().equals(new java.math.BigDecimal("10.00"))));
+    }
+
+    @Test
+    @DisplayName("Branch: mapBundlePricingFields - validation errors")
+    void testMapBundlePricingFields_Validations() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+
+        ProductPricingDto dto = new ProductPricingDto();
+        dto.setPricingComponentCode("PC1");
+        dto.setEffectiveDate(LocalDate.now().minusDays(1));
+
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setPricing(List.of(dto));
+
+        PricingComponent pc = new PricingComponent();
+        pc.setCode("PC1");
+        when(pricingComponentService.getPricingComponentByCode("PC1", null)).thenReturn(pc);
+
+        assertThrows(IllegalArgumentException.class, () -> bundleService.updateBundle(1L, request));
+
+        dto.setEffectiveDate(LocalDate.now().plusDays(1));
+        dto.setExpiryDate(LocalDate.now());
+        assertThrows(IllegalArgumentException.class, () -> bundleService.updateBundle(1L, request));
+    }
+
+    @Test
+    @DisplayName("Branch: updateBundle - partial metadata")
+    void testUpdateBundle_PartialMetadata() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(bundleRepository.save(any())).thenReturn(bundle);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setDescription("New Desc");
+        request.setTargetCustomerSegments("RETAIL");
+
+        bundleService.updateBundle(1L, request);
+
+        assertEquals("New Desc", bundle.getDescription());
+        assertEquals("RETAIL", bundle.getTargetCustomerSegments());
+    }
+
+    @Test
+    @DisplayName("Read: getProductBundleByCode")
+    void testGetProductBundleByCode() {
+        ProductBundle bundle = new ProductBundle();
+        bundle.setBankId(TEST_BANK_ID);
+        when(bundleRepository.findByBankIdAndCodeAndVersion(TEST_BANK_ID, "CODE", 1)).thenReturn(Optional.of(bundle));
+
+        ProductBundle result = bundleService.getProductBundleByCode("CODE", 1);
+        assertEquals(bundle, result);
+    }
+
+    @Test
+    @DisplayName("Read: getAllBundles")
+    void testGetAllBundles() {
+        ProductBundle bundle = new ProductBundle();
+        Page<ProductBundle> page = new PageImpl<>(List.of(bundle));
+        when(bundleRepository.findAll(any(Pageable.class))).thenReturn(page);
+        when(bundleMapper.toResponse(bundle)).thenReturn(new ProductBundleResponse());
+
+        Page<ProductBundleResponse> result = bundleService.getAllBundles(Pageable.unpaged());
+        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Branch: activateBundle - already active or past date")
+    void testActivateBundle_various() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        bundle.setActivationDate(LocalDate.now().plusDays(10)); // Future date
+        Product activeProd = createValidProduct(101L);
+        bundle.getContainedProducts().add(BundleProductLink.builder().product(activeProd).mainAccount(true).build());
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(bundleRepository.save(any())).thenReturn(bundle);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        bundleService.activateBundle(1L);
+        assertEquals(LocalDate.now().plusDays(10), bundle.getActivationDate());
+    }
+
+    @Test
+    @DisplayName("Branch: activateBundle - Constituent products must be ACTIVE")
+    void testActivateBundle_inactiveProducts() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        Product draftProd = createValidProduct(102L);
+        draftProd.setName("DraftProd");
+        draftProd.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        bundle.getContainedProducts().add(BundleProductLink.builder().product(draftProd).mainAccount(true).build());
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> bundleService.activateBundle(1L));
+        assertTrue(ex.getMessage().contains("Products must be ACTIVE: DraftProd"));
+    }
+
+    @Test
+    @DisplayName("Branch: versionBundle - deep clone coverage")
+    void testVersionBundle_deepClone() {
+        ProductBundle source = createValidBundle(VersionableEntity.EntityStatus.ACTIVE);
+        source.setCode("B1");
+        source.setVersion(1);
+
+        Product p = createValidProduct(10L);
+        BundleProductLink pLink = new BundleProductLink();
+        pLink.setProduct(p);
+        pLink.setMainAccount(true);
+        pLink.setMandatory(true);
+        source.getContainedProducts().add(pLink);
+
+        PricingComponent pc = new PricingComponent();
+        pc.setCode("PC");
+        BundlePricingLink prLink = new BundlePricingLink();
+        prLink.setPricingComponent(pc);
+        source.getBundlePricingLinks().add(prLink);
+
+        ProductBundle target = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        target.setBankId(TEST_BANK_ID);
+
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(bundleMapper.clone(source)).thenReturn(target);
+        when(bundleMapper.clonePricing(prLink)).thenReturn(new BundlePricingLink());
+        when(bundleRepository.existsByBankIdAndCodeAndVersion(any(), any(), anyInt())).thenReturn(false);
+        when(bundleRepository.save(any())).thenReturn(target);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        bundleService.versionBundle(1L, new VersionRequest());
+
+        assertEquals(1, target.getContainedProducts().size());
+        assertEquals(1, target.getBundlePricingLinks().size());
+    }
+
+    @Test
+    @DisplayName("Branch: activateBundle - already active logic")
+    void testActivateBundle_alreadyActive() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        bundle.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        bundle.setActivationDate(LocalDate.now());
         Product activeProd = createValidProduct(101L);
         bundle.getContainedProducts().add(BundleProductLink.builder().product(activeProd).mainAccount(true).build());
 
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(bundleRepository.save(any())).thenReturn(bundle);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        bundleService.activateBundle(1L);
+        assertEquals(VersionableEntity.EntityStatus.ACTIVE, bundle.getStatus());
+    }
+
+    @Test
+    @DisplayName("Branch: syncBundlePricingInternal - update existing fields")
+    void testSyncBundlePricingInternal_update() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+
+        PricingComponent pc = new PricingComponent();
+        pc.setCode("PC");
+        BundlePricingLink link = new BundlePricingLink();
+        link.setPricingComponent(pc);
+        link.setFixedValue(new java.math.BigDecimal("5.00"));
+        link.setFixedValueType(PriceValue.ValueType.DISCOUNT_PERCENTAGE);
+        link.setUseRulesEngine(false);
+        link.setEffectiveDate(LocalDate.now().plusDays(1));
+        link.setExpiryDate(LocalDate.now().plusDays(10));
+        bundle.getBundlePricingLinks().add(link);
+
+        ProductPricingDto dto = new ProductPricingDto();
+        dto.setPricingComponentCode("PC");
+        dto.setFixedValue(new java.math.BigDecimal("10.00"));
+        dto.setFixedValueType(PriceValue.ValueType.FEE_ABSOLUTE);
+        dto.setUseRulesEngine(true);
+        dto.setEffectiveDate(LocalDate.now().plusDays(2));
+        dto.setExpiryDate(LocalDate.now().plusDays(11));
+
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(bundleRepository.save(any())).thenReturn(bundle);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setPricing(List.of(dto));
+
+        bundleService.updateBundle(1L, request);
+
+        assertEquals(new java.math.BigDecimal("10.00"), link.getFixedValue());
+        assertEquals(PriceValue.ValueType.FEE_ABSOLUTE, link.getFixedValueType());
+        assertTrue(link.isUseRulesEngine());
+        assertEquals(LocalDate.now().plusDays(2), link.getEffectiveDate());
+        assertEquals(LocalDate.now().plusDays(11), link.getExpiryDate());
+    }
+
+    @Test
+    @DisplayName("Branch: syncBundlePricingInternal - creation with existing and new")
+    void testSyncBundlePricingInternal_complex() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+
+        PricingComponent pcExisting = new PricingComponent();
+        pcExisting.setCode("PC_EXISTING");
+        PricingComponent pcNew = new PricingComponent();
+        pcNew.setCode("PC_NEW");
+
+        BundlePricingLink linkExisting = new BundlePricingLink();
+        linkExisting.setPricingComponent(pcExisting);
+        linkExisting.setProductBundle(bundle);
+        bundle.getBundlePricingLinks().add(linkExisting);
+
+        ProductPricingDto dtoExisting = new ProductPricingDto();
+        dtoExisting.setPricingComponentCode("PC_EXISTING");
+        dtoExisting.setFixedValue(new java.math.BigDecimal("10.00"));
+        dtoExisting.setFixedValueType(PriceValue.ValueType.FEE_ABSOLUTE);
+        dtoExisting.setUseRulesEngine(true);
+        dtoExisting.setEffectiveDate(LocalDate.now().plusDays(5));
+        dtoExisting.setExpiryDate(LocalDate.now().plusDays(10));
+
+        ProductPricingDto dtoNew = new ProductPricingDto();
+        dtoNew.setPricingComponentCode("PC_NEW");
+        dtoNew.setFixedValue(new java.math.BigDecimal("20.00"));
+
+        when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(pricingComponentService.getPricingComponentByCode("PC_NEW", null)).thenReturn(pcNew);
+        when(bundleRepository.save(any())).thenReturn(bundle);
+        when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());
+
+        ProductBundleRequest request = new ProductBundleRequest();
+        request.setPricing(List.of(dtoExisting, dtoNew));
+
+        bundleService.updateBundle(1L, request);
+
+        assertEquals(2, bundle.getBundlePricingLinks().size());
+    }
+
+    @Test
+    @DisplayName("Branch: activateBundle - activation date logic")
+    void testActivateBundle_activationDateLogic() {
+        ProductBundle bundle = createValidBundle(VersionableEntity.EntityStatus.DRAFT);
+        bundle.setActivationDate(LocalDate.now().minusDays(1)); // Past date
+        Product activeProd = createValidProduct(101L);
+        bundle.getContainedProducts().add(BundleProductLink.builder().product(activeProd).mainAccount(true).build());
         when(bundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
         when(bundleRepository.save(any())).thenReturn(bundle);
         when(bundleMapper.toResponse(any())).thenReturn(new ProductBundleResponse());

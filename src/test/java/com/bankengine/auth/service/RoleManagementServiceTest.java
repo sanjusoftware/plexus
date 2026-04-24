@@ -13,16 +13,24 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.oauth2.jwt.Jwt.withTokenValue;
 
 @ExtendWith(MockitoExtension.class)
 class RoleManagementServiceTest {
@@ -89,7 +97,7 @@ class RoleManagementServiceTest {
     void getAllRoleNames_ShouldReturnList() {
         Role r1 = new Role(); r1.setName("A");
         Role r2 = new Role(); r2.setName("B");
-        when(roleRepository.findAll()).thenReturn(java.util.List.of(r1, r2));
+        when(roleRepository.findAll()).thenReturn(List.of(r1, r2));
 
         assertThat(roleManagementService.getAllRoleNames()).containsExactly("A", "B");
     }
@@ -101,7 +109,7 @@ class RoleManagementServiceTest {
         Set<String> authorities = Set.of("catalog:product:read", "system:bank:write");
 
         assertThatThrownBy(() -> roleManagementService.saveRoleMapping(roleName, authorities))
-                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("Only SYSTEM bank admins can assign system:* authorities.");
     }
 
@@ -124,17 +132,78 @@ class RoleManagementServiceTest {
         existingRole.setName("ADMIN");
         when(roleRepository.findByName("ADMIN")).thenReturn(Optional.of(existingRole));
 
-        Jwt jwt = Jwt.withTokenValue("mock-token")
+        Jwt jwt = withTokenValue("mock-token")
                 .header("alg", "none")
-                .claim("roles", java.util.List.of("ADMIN", "OTHER_ROLE"))
+                .claim("roles", List.of("ADMIN", "OTHER_ROLE"))
                 .build();
         JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
 
         assertThatThrownBy(() -> roleManagementService.deleteRole("ADMIN", authentication))
-                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("cannot delete a role assigned to your own account");
 
         verify(roleRepository, never()).delete(any(Role.class));
         verify(permissionMappingService, never()).evictAllRolePermissionsCache();
+    }
+
+    @Test
+    @DisplayName("Branch: deleteRole - system admin check")
+    void testDeleteRole_systemAdmin() {
+        Role role = new Role(); role.setName("SYSTEM_ADMIN");
+        when(roleRepository.findByName("SYSTEM_ADMIN")).thenReturn(Optional.of(role));
+        assertThrows(AccessDeniedException.class, () -> roleManagementService.deleteRole("SYSTEM_ADMIN", null));
+    }
+
+    @Test
+    @DisplayName("Branch: extractCurrentUserRoles - various cases")
+    void testExtractCurrentUserRoles() {
+        Role role = new Role(); role.setName("TARGET");
+        when(roleRepository.findByName("TARGET")).thenReturn(Optional.of(role));
+
+        // null auth
+        roleManagementService.deleteRole("TARGET", null);
+        verify(roleRepository).delete(role);
+        reset(roleRepository);
+        when(roleRepository.findByName("TARGET")).thenReturn(Optional.of(role));
+
+        // JwtAuthenticationToken with null claims
+        JwtAuthenticationToken jwtAuthNull = mock(JwtAuthenticationToken.class);
+        when(jwtAuthNull.getTokenAttributes()).thenReturn(null);
+        roleManagementService.deleteRole("TARGET", jwtAuthNull);
+        verify(roleRepository).delete(role);
+        reset(roleRepository);
+        when(roleRepository.findByName("TARGET")).thenReturn(Optional.of(role));
+
+        // OAuth2User
+        OAuth2User oauth2User = mock(OAuth2User.class);
+        when(oauth2User.getAttributes()).thenReturn(Map.of("roles", List.of("TARGET")));
+        Authentication auth1 = mock(Authentication.class);
+        when(auth1.getPrincipal()).thenReturn(oauth2User);
+        assertThrows(AccessDeniedException.class, () -> roleManagementService.deleteRole("TARGET", auth1));
+
+        // Jwt
+        Jwt jwt = withTokenValue("token").header("alg", "none").claim("roles", "TARGET").build();
+        Authentication auth2 = mock(Authentication.class);
+        when(auth2.getPrincipal()).thenReturn(jwt);
+        assertThrows(AccessDeniedException.class, () -> roleManagementService.deleteRole("TARGET", auth2));
+
+        // Map
+        Map<String, Object> principalMap = Map.of("roles", List.of("TARGET"));
+        Authentication auth3 = mock(Authentication.class);
+        when(auth3.getPrincipal()).thenReturn(principalMap);
+        assertThrows(AccessDeniedException.class, () -> roleManagementService.deleteRole("TARGET", auth3));
+
+        // Single string role in map
+        Map<String, Object> principalMapSingle = Map.of("roles", "TARGET");
+        Authentication auth4 = mock(Authentication.class);
+        when(auth4.getPrincipal()).thenReturn(principalMapSingle);
+        assertThrows(AccessDeniedException.class, () -> roleManagementService.deleteRole("TARGET", auth4));
+    }
+
+    @Test
+    @DisplayName("Branch: getAllRoleMappings success")
+    void testGetAllRoleMappings() {
+        when(roleRepository.findAll()).thenReturn(List.of(new Role()));
+        assertFalse(roleManagementService.getAllRoleMappings().isEmpty());
     }
 }

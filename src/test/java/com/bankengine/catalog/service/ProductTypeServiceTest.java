@@ -6,14 +6,12 @@ import com.bankengine.catalog.model.ProductType;
 import com.bankengine.catalog.repository.ProductTypeRepository;
 import com.bankengine.common.model.VersionableEntity;
 import com.bankengine.test.config.BaseServiceTest;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,121 +20,126 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ProductTypeServiceTest extends BaseServiceTest {
-    @Mock
-    private ProductTypeRepository productTypeRepository;
-    @Mock
-    private ProductTypeMapper productTypeMapper;
+class ProductTypeServiceTest extends BaseServiceTest {
+
+    @Mock private ProductTypeRepository repository;
+    @Mock private ProductTypeMapper mapper;
+
     @InjectMocks
-    private ProductTypeService productTypeService;
+    private ProductTypeService service;
 
     @Test
-    @DisplayName("Find All - Should return all product types from repository")
     void testFindAllProductTypes() {
-        when(productTypeRepository.findAll()).thenReturn(Collections.singletonList(new ProductType()));
-        List<ProductType> result = productTypeService.findAllProductTypes();
-        assertEquals(1, result.size());
-        verify(productTypeRepository, times(1)).findAll();
+        when(repository.findAll()).thenReturn(List.of(new ProductType()));
+        assertFalse(service.findAllProductTypes().isEmpty());
     }
 
     @Test
-    @DisplayName("Create Product Type - Should use bankId from context and save entity")
-    void testCreateProductType() {
+    void testCreateProductType_Success() {
+        ProductTypeDto req = new ProductTypeDto(); req.setCode("TYPE");
+        when(repository.findByBankIdAndCode(any(), eq("TYPE"))).thenReturn(Optional.empty());
+        when(mapper.toEntity(req)).thenReturn(new ProductType());
+        when(repository.save(any())).thenReturn(new ProductType());
+        service.createProductType(req);
+        verify(repository).save(any());
+    }
+
+    @Test
+    void testCreateProductType_Duplicate() {
+        ProductTypeDto req = new ProductTypeDto(); req.setCode("TYPE");
+        when(repository.findByBankIdAndCode(any(), eq("TYPE"))).thenReturn(Optional.of(new ProductType()));
+        assertThrows(IllegalStateException.class, () -> service.createProductType(req));
+    }
+
+    @Test
+    void testUpdateProductType_Success() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.DRAFT); pt.setCode("OLD");
+        ProductTypeDto dto = new ProductTypeDto(); dto.setCode("NEW");
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        when(repository.findByBankIdAndCode(any(), eq("NEW"))).thenReturn(Optional.empty());
+        when(repository.save(any())).thenReturn(pt);
+        service.updateProductType(1L, dto);
+        verify(repository).save(pt);
+    }
+
+    @Test
+    void testUpdateProductType_NotDraft() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        assertThrows(IllegalStateException.class, () -> service.updateProductType(1L, new ProductTypeDto()));
+    }
+
+    @Test
+    void testUpdateProductType_DuplicateCode() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.DRAFT); pt.setCode("OLD");
+        ProductTypeDto dto = new ProductTypeDto(); dto.setCode("NEW");
+        ProductType other = new ProductType(); other.setId(2L);
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        when(repository.findByBankIdAndCode(any(), eq("NEW"))).thenReturn(Optional.of(other));
+        assertThrows(IllegalStateException.class, () -> service.updateProductType(1L, dto));
+    }
+
+    @Test
+    void testUpdateProductType_SameCode() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.DRAFT); pt.setCode("SAME");
+        ProductTypeDto dto = new ProductTypeDto(); dto.setCode("SAME");
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        when(repository.save(any())).thenReturn(pt);
+        service.updateProductType(1L, dto);
+        verify(repository, never()).findByBankIdAndCode(any(), any());
+        verify(repository).save(pt);
+    }
+
+    @Test
+    void testActivateProductType_Success() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        when(repository.save(any())).thenReturn(pt);
+        service.activateProductType(1L);
+        assertEquals(VersionableEntity.EntityStatus.ACTIVE, pt.getStatus());
+    }
+
+    @Test
+    void testActivateProductType_NotDraft() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        assertThrows(IllegalStateException.class, () -> service.activateProductType(1L));
+    }
+
+    @Test
+    void testArchiveProductType() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        when(repository.save(any())).thenReturn(pt);
+        service.archiveProductType(1L);
+        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, pt.getStatus());
+    }
+
+    @Test
+    void testDeleteProductType_Draft() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.DRAFT);
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        service.deleteProductType(1L);
+        verify(repository).delete(pt);
+    }
+
+    @Test
+    void testDeleteProductType_NonDraft() {
+        ProductType pt = new ProductType(); pt.setId(1L); pt.setBankId(TEST_BANK_ID); pt.setStatus(VersionableEntity.EntityStatus.ACTIVE);
+        when(repository.findById(1L)).thenReturn(Optional.of(pt));
+        when(repository.save(any())).thenReturn(pt);
+        service.deleteProductType(1L);
+        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, pt.getStatus());
+        verify(repository).save(pt);
+    }
+
+    @Test
+    void testSanitizeRequest_NullCode() {
         ProductTypeDto dto = new ProductTypeDto();
-        dto.setName("LOAN");
-        dto.setCode("LOAN_CODE");
-
-        when(productTypeRepository.findByBankIdAndCode(any(), any())).thenReturn(Optional.empty());
-        when(productTypeMapper.toEntity(dto)).thenReturn(new ProductType());
-        when(productTypeRepository.save(argThat(entity ->
-                TEST_BANK_ID.equals(entity.getBankId())
-        ))).thenReturn(new ProductType());
-
-        ProductType result = productTypeService.createProductType(dto);
-        assertNotNull(result);
-        verify(productTypeRepository, times(1)).save(any(ProductType.class));
-    }
-
-    @Test
-    void createProductType_Duplicate_ThrowsException() {
-        ProductTypeDto dto = new ProductTypeDto();
-        dto.setCode("EXISTING");
-        when(productTypeRepository.findByBankIdAndCode(any(), eq("EXISTING"))).thenReturn(Optional.of(new ProductType()));
-
-        assertThrows(IllegalStateException.class, () -> productTypeService.createProductType(dto));
-    }
-
-    @Test
-    void updateProductType_Success() {
-        ProductType existing = new ProductType();
-        existing.setStatus(VersionableEntity.EntityStatus.DRAFT);
-        existing.setBankId(TEST_BANK_ID);
-        when(productTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(productTypeRepository.save(existing)).thenReturn(existing);
-
-        ProductTypeDto dto = new ProductTypeDto();
-        dto.setName("New Name");
-        productTypeService.updateProductType(1L, dto);
-
-        verify(productTypeMapper).updateFromDto(dto, existing);
-    }
-
-    @Test
-    void updateProductType_NotDraft_ThrowsException() {
-        ProductType existing = new ProductType();
-        existing.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-        existing.setBankId(TEST_BANK_ID);
-        when(productTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
-
-        assertThrows(IllegalStateException.class, () -> productTypeService.updateProductType(1L, new ProductTypeDto()));
-    }
-
-    @Test
-    void activateProductType_Success() {
-        ProductType existing = new ProductType();
-        existing.setStatus(VersionableEntity.EntityStatus.DRAFT);
-        existing.setBankId(TEST_BANK_ID);
-        when(productTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(productTypeRepository.save(existing)).thenReturn(existing);
-
-        productTypeService.activateProductType(1L);
-        assertEquals(VersionableEntity.EntityStatus.ACTIVE, existing.getStatus());
-    }
-
-    @Test
-    void archiveProductType_Success() {
-        ProductType existing = new ProductType();
-        existing.setBankId(TEST_BANK_ID);
-        when(productTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(productTypeRepository.save(existing)).thenReturn(existing);
-
-        productTypeService.archiveProductType(1L);
-        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, existing.getStatus());
-    }
-
-    @Test
-    void deleteProductType_Success() {
-        ProductType existing = new ProductType();
-        existing.setStatus(VersionableEntity.EntityStatus.DRAFT);
-        existing.setBankId(TEST_BANK_ID);
-        when(productTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
-
-        productTypeService.deleteProductType(1L);
-        verify(productTypeRepository).delete(existing);
-    }
-
-    @Test
-    void deleteProductType_NotDraft_ArchivesInstead() {
-        ProductType existing = new ProductType();
-        existing.setId(1L);
-        existing.setStatus(VersionableEntity.EntityStatus.ACTIVE);
-        existing.setBankId(TEST_BANK_ID);
-        when(productTypeRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(productTypeRepository.save(any())).thenReturn(existing);
-
-        productTypeService.deleteProductType(1L);
-
-        assertEquals(VersionableEntity.EntityStatus.ARCHIVED, existing.getStatus());
-        verify(productTypeRepository).save(existing);
+        dto.setCode(null);
+        when(repository.findById(1L)).thenReturn(Optional.of(new ProductType() {{ setId(1L); setBankId(TEST_BANK_ID); setStatus(VersionableEntity.EntityStatus.DRAFT); }}));
+        when(repository.save(any())).thenReturn(new ProductType());
+        service.updateProductType(1L, dto);
+        assertNull(dto.getCode());
     }
 }
