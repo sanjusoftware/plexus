@@ -63,7 +63,17 @@ jobs:
       - name: Build and push image (use pre-built jar)
         run: |
           IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}
-          docker build -f Dockerfile.ci -t "$IMAGE" .
+          # Create a minimal docker build context so .dockerignore doesn't exclude the built jar
+          mkdir -p docker-context
+          cp Dockerfile.ci docker-context/Dockerfile.ci
+          # copy the jar produced by the Gradle build into the context as app.jar to match Dockerfile.ci
+          if compgen -G "build/libs/*.jar" >/dev/null; then
+            cp build/libs/*.jar docker-context/app.jar
+          else
+            echo "No jar found in build/libs - did the build step succeed?";
+            exit 1
+          fi
+          docker build -f docker-context/Dockerfile.ci -t "$IMAGE" docker-context
           docker push "$IMAGE"
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
         id: set-image

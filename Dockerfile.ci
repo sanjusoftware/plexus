@@ -2,7 +2,8 @@ FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
 RUN useradd -ms /bin/bash bankuser
-COPY build/libs/*.jar app.jar
+# Expect the pre-built jar to be copied into the docker build context as `app.jar`
+COPY app.jar app.jar
 RUN chown bankuser:bankuser app.jar || true
 
 USER bankuser
