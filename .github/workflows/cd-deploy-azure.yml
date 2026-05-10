@@ -24,7 +24,11 @@ jobs:
           cache: gradle
 
       - name: Run Flyway Migration
-        run: ./gradlew flywayMigrate
+        run: |
+          run: |
+            echo "Running flywayMigrate..."
+            echo "DB URL: $SPRING_DATASOURCE_URL"
+            ./gradlew flywayMigrate --no-daemon --stacktrace
         env:
           SPRING_DATASOURCE_URL: ${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}
