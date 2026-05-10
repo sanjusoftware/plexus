@@ -19,6 +19,21 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Set up Node.js (for frontend build)
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Build frontend
+        working-directory: src/main/frontend
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+            npm run build
+          else
+            echo "No frontend package.json found, skipping frontend build"
+          fi
+
       - name: Build & Test
         run: ./gradlew build jacocoTestReport
 
@@ -43,7 +58,7 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build and push image
+      - name: Build and push image (use pre-built jar to avoid double build)
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }} .
+          docker build -f Dockerfile.ci -t ${{ secrets.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }} .
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}

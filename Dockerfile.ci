@@ -1,0 +1,11 @@
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+
+RUN useradd -ms /bin/bash bankuser
+COPY build/libs/*.jar app.jar
+RUN chown bankuser:bankuser app.jar || true
+
+USER bankuser
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+

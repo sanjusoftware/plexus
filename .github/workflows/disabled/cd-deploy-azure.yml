@@ -7,6 +7,7 @@ on:
 
 jobs:
   deploy-staging:
+    name: Deploy to Staging
     # Only run if the CI Build actually succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
@@ -23,12 +24,11 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Run Flyway Migration
+      - name: Run DB Migrations (Flyway)
         run: |
-          run: |
-            echo "Running flywayMigrate..."
-            echo "DB URL: $SPRING_DATASOURCE_URL"
-            ./gradlew flywayMigrate --no-daemon --stacktrace
+          echo "Running flywayMigrate..."
+          echo "DB URL: $SPRING_DATASOURCE_URL"
+          ./gradlew flywayMigrate --no-daemon --stacktrace
         env:
           SPRING_DATASOURCE_URL: ${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}
@@ -43,6 +43,7 @@ jobs:
           images: '${{ secrets.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.event.workflow_run.head_sha }}'
 
   deploy-production:
+    name: Deploy to Production
     runs-on: ubuntu-latest
     needs: deploy-staging
     environment:
