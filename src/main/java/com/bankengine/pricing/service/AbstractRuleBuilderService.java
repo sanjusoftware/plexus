@@ -37,24 +37,14 @@ public abstract class AbstractRuleBuilderService extends BaseService {
         this.droolsExpressionBuilder = droolsExpressionBuilder;
     }
 
-    // --- Template Methods (Subclasses must implement these) ---
     protected abstract String getFactType();
-
     protected abstract String getPackageSubPath();
-
     protected abstract String buildRHSAction(PricingComponent component, PricingTier tier);
-
     protected abstract List<PricingComponent> fetchComponents();
 
-    /**
-     * Public orchestration method to refresh Drools rules.
-     * This is called by both Admin UI (on save) and Integration Tests (on setup).
-     */
     public void rebuildRules() {
         kieContainerReloadService.reloadKieContainer(getSafeBankIdForDrl());
     }
-
-    // --- Core Orchestration ---
 
     public String buildAllRulesForCompilation() {
         StringBuilder drl = new StringBuilder();
@@ -62,8 +52,6 @@ public abstract class AbstractRuleBuilderService extends BaseService {
 
         List<PricingComponent> allComponents = fetchComponents();
 
-        // Ensure we only process each component (code + version) once to avoid duplicate rule names
-        // This handles cases where the repository might return duplicates due to join fetches
         List<PricingComponent> components = allComponents.stream()
                 .collect(Collectors.toMap(
                         c -> c.getCode() + ":" + c.getVersion(),
@@ -76,7 +64,6 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 .toList();
 
         for (PricingComponent component : components) {
-            // Deduplicate tiers by code to guard against duplicate join-fetch results
             List<PricingTier> tiers = component.getPricingTiers() == null ? List.of() :
                 component.getPricingTiers().stream()
                     .collect(Collectors.toMap(
@@ -96,10 +83,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
         }
 
         String finalDrl = components.isEmpty() ? buildPlaceholderRules() : drl.toString();
-
-        // --- DEBUG LOGGING ADDED HERE ---
         logGeneratedDrl(finalDrl);
-
         return finalDrl;
     }
 
@@ -116,7 +100,6 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 getPackageSubPath().toUpperCase(), getSafeBankIdForDrl(),
                 component.getCode(), component.getVersion(), tier.getCode());
 
-        // Added a debug print to the RHS (then) of the rule so you know if it fires
         String rhsWithLogging = String.format("""
                 log.info("🔥 Rule Fired: %s");
                 %s
@@ -133,8 +116,6 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 end""", ruleName, tier.getPriority(), buildLHSCondition(tier, component.getCode(), component.getVersion()), rhsWithLogging);
     }
 
-    // --- Common Shared Logic ---
-
     protected String getSafeBankIdForDrl() {
         String bankId = null;
         try {
@@ -144,10 +125,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
         }
 
         if (bankId == null) {
-            if (TenantContextHolder.isSystemMode()) {
-                return "system"; // Fallback for startup
-            }
-            // If not in system mode and still null, the context is broken
+            if (TenantContextHolder.isSystemMode()) return "system";
             throw new IllegalStateException("Bank ID is missing and System Mode is OFF.");
         }
         return bankId;
@@ -171,10 +149,6 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 """, getPackageSubPath(), safeBankId, factImport);
     }
 
-    /**
-     * @param componentCode Component Code
-     * @param componentVersion Component Version
-     */
     protected String buildLHSCondition(PricingTier tier, String componentCode, Integer componentVersion) {
         String bankId = tier.getBankId() != null ? tier.getBankId() : getSafeBankIdForDrl();
         String factFqn = getFactType();
@@ -182,35 +156,25 @@ public abstract class AbstractRuleBuilderService extends BaseService {
 
         StringBuilder conditionBuilder = new StringBuilder();
 
-        // 1. Context Filter: Bank and Component ID
         conditionBuilder.append(String.format("bankId == \"%s\"", bankId));
+        // GATEKEEPER: Rule only matches if the service explicitly allows this specific version
         conditionBuilder.append(String.format(", targetPricingComponentCodes contains \"%s:%d\"", componentCode, componentVersion));
         conditionBuilder.append(String.format(", activePricingTierCodes contains \"%s\"", tier.getCode()));
 
         if ("BundlePricingInput".equals(factName)) {
-            // Check against adjustments keySet using the unique component code
             conditionBuilder.append(String.format(", adjustments.keySet() not contains \"%s\"", componentCode));
         }
 
-        // 2. Automatic Threshold Logic (Min/Max)
-        String amountExpression = factName.equals("BundlePricingInput")
-                ? String.format("((java.math.BigDecimal) (customAttributes[\"%s\"] != null ? customAttributes[\"%s\"] : customAttributes[\"grossTotalAmount\"]))",
-                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT,
-                        PricingAttributeKeys.GROSS_TOTAL_AMOUNT)
-                : String.format("((java.math.BigDecimal) (customAttributes[\"%s\"] != null ? customAttributes[\"%s\"] : customAttributes[\"transactionAmount\"]))",
-                        PricingAttributeKeys.TRANSACTION_AMOUNT,
-                        PricingAttributeKeys.TRANSACTION_AMOUNT);
+        String amountAttr = factName.equals("BundlePricingInput") ? PricingAttributeKeys.GROSS_TOTAL_AMOUNT : PricingAttributeKeys.TRANSACTION_AMOUNT;
+        String amountExpression = String.format("((java.math.BigDecimal) (customAttributes[\"%s\"] != null ? customAttributes[\"%s\"] : java.math.BigDecimal.ZERO))", amountAttr, amountAttr);
 
         if (tier.getMinThreshold() != null) {
-            conditionBuilder.append(String.format(", %s >= new java.math.BigDecimal(\"%s\")",
-                    amountExpression, tier.getMinThreshold().toPlainString()));
+            conditionBuilder.append(String.format(", %s >= new java.math.BigDecimal(\"%s\")", amountExpression, tier.getMinThreshold().toPlainString()));
         }
         if (tier.getMaxThreshold() != null) {
-            conditionBuilder.append(String.format(", %s <= new java.math.BigDecimal(\"%s\")",
-                    amountExpression, tier.getMaxThreshold().toPlainString()));
+            conditionBuilder.append(String.format(", %s <= new java.math.BigDecimal(\"%s\")", amountExpression, tier.getMaxThreshold().toPlainString()));
         }
 
-        // 3. Custom Attributes (Segments, etc.) via DroolsExpressionBuilder
         if (tier.getConditions() != null && !tier.getConditions().isEmpty()) {
             conditionBuilder.append(", ");
             Iterator<TierCondition> it = tier.getConditions().iterator();
@@ -218,7 +182,6 @@ public abstract class AbstractRuleBuilderService extends BaseService {
                 TierCondition cond = it.next();
                 PricingInputMetadata metadata = metadataService.getMetadataEntityByKey(cond.getAttributeName(), bankId);
                 conditionBuilder.append(droolsExpressionBuilder.buildExpression(cond, metadata, factName));
-
                 if (it.hasNext()) {
                     String connector = cond.getConnector() != null ? cond.getConnector().name() : "AND";
                     conditionBuilder.append(connector.equalsIgnoreCase("OR") ? " || " : " && ");
@@ -227,11 +190,7 @@ public abstract class AbstractRuleBuilderService extends BaseService {
         }
 
         String mainPattern = String.format("        $input : %s ( %s )", factName, conditionBuilder.toString());
-
-        if ("PricingInput".equals(factName)) {
-            return mainPattern + String.format("\n        not PriceValue(componentCode == \"%s\")", componentCode);
-        }
-        return mainPattern;
+        return "PricingInput".equals(factName) ? mainPattern + String.format("\n        not PriceValue(componentCode == \"%s\")", componentCode) : mainPattern;
     }
 
     protected String buildPlaceholderRules() {

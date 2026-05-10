@@ -4,7 +4,7 @@ import { Zap, Settings, Play, Download, Loader2, Plus, Trash2, RefreshCw } from 
 import { AdminPage, AdminPageHeader } from '../../components/AdminPageLayout';
 import { PricingService, ProductPriceRequest, ProductPricingCalculationResult, PricingMetadata } from '../../services/PricingService';
 import PlexusSelect from '../../components/PlexusSelect';
-import { formatComponentLabelWithProRata, formatPercentageBaseHint, getSimulationFieldHelperText } from './ProductManagementPage.utils';
+import { formatComponentLabelWithProRata, getSimulationFieldHelperText } from './ProductManagementPage.utils';
 import { useAuth } from '../../context/AuthContext';
 import { useAbortSignal } from '../../hooks/useAbortSignal';
 import { useSystemPricingKeys } from '../../hooks/useSystemPricingKeys';
@@ -31,7 +31,6 @@ const PricingSimulationPage = () => {
     isSystemAmountKey,
     isSystemDateKey,
     isSystemCustomerSegmentKey,
-    hasSystemPricingKey,
   } = useSystemPricingKeys();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -295,7 +294,7 @@ const PricingSimulationPage = () => {
             type={inputType}
             className={`w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-900 transition focus:border-purple-500 ${isSystemAmountKey(key) ? 'pl-8' : ''}`}
             value={value}
-            onChange={(e) => updateScenarioInput(scenarioIdx, key, e.target.value)}
+            onChange={(e) => updateScenarioInput(scenarioIdx, key, parseInputValue(meta.dataType || '', e.target.value))}
           />
         </div>
         {helperText && <p className="mt-1 text-[10px] font-medium leading-snug text-gray-500">{helperText}</p>}

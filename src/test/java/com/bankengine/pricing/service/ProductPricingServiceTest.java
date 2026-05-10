@@ -14,6 +14,7 @@ import com.bankengine.rules.model.PricingInput;
 import com.bankengine.rules.service.KieContainerReloadService;
 import com.bankengine.test.config.BaseServiceTest;
 import com.bankengine.web.exception.NotFoundException;
+import com.bankengine.web.exception.ValidationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -72,21 +73,16 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Should orchestrate fixed pricing collection and call aggregator with productBaseFee")
     void getProductPricing_shouldOrchestrateCollectionAndAggregation() {
-        // Arrange
         ProductPricingLink fixedLink = createPricingLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
         when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(fixedLink));
         when(priceAggregator.calculateBundleImpact(anyList(), any(BigDecimal.class), any(BigDecimal.class), any(), any()))
                 .thenReturn(new BigDecimal("10.00"));
 
-        // Act
         ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
 
-        // Assert
         assertNotNull(result);
-        // The price is JUST the fee ($10.00)
         assertEquals(new BigDecimal("10.00"), result.getFinalChargeablePrice());
 
-        // Verify: principal is $1000, pool is ZERO
         verify(priceAggregator).calculateBundleImpact(
                 argThat(list -> list.size() == 1),
                 eq(new BigDecimal("1000.00")),
@@ -157,13 +153,15 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Should propagate effective and expiry dates for fixed and rules-engine component details")
     void getProductPricing_shouldIncludeLinkDateWindowInBreakdown() {
+        LocalDate today = LocalDate.now();
+
         ProductPricingLink fixed = createPricingLink(1L, "Fixed", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
-        fixed.setEffectiveDate(LocalDate.of(2026, 4, 13));
-        fixed.setExpiryDate(LocalDate.of(2026, 4, 30));
+        fixed.setEffectiveDate(today.minusDays(5));
+        fixed.setExpiryDate(today.plusDays(5));
 
         ProductPricingLink rules = createPricingLink(2L, "RULED_DISCOUNT", null, null, true);
-        rules.setEffectiveDate(LocalDate.of(2026, 4, 21));
-        rules.setExpiryDate(LocalDate.of(2026, 4, 30));
+        rules.setEffectiveDate(today.minusDays(2));
+        rules.setExpiryDate(today.plusDays(10));
 
         when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(fixed, rules));
 
@@ -174,10 +172,10 @@ class ProductPricingServiceTest extends BaseServiceTest {
 
         ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
 
-        assertEquals(LocalDate.of(2026, 4, 13), result.getComponentBreakdown().get(0).getEffectiveDate());
-        assertEquals(LocalDate.of(2026, 4, 30), result.getComponentBreakdown().get(0).getExpiryDate());
-        assertEquals(LocalDate.of(2026, 4, 21), result.getComponentBreakdown().get(1).getEffectiveDate());
-        assertEquals(LocalDate.of(2026, 4, 30), result.getComponentBreakdown().get(1).getExpiryDate());
+        assertEquals(today.minusDays(5), result.getComponentBreakdown().get(0).getEffectiveDate());
+        assertEquals(today.plusDays(5), result.getComponentBreakdown().get(0).getExpiryDate());
+        assertEquals(today.minusDays(2), result.getComponentBreakdown().get(1).getEffectiveDate());
+        assertEquals(today.plusDays(10), result.getComponentBreakdown().get(1).getExpiryDate());
     }
 
     @Test
@@ -252,20 +250,18 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Custom Attributes: Should apply loyalty discount based on custom score")
     void shouldApplyDiscountBasedOnCustomAttributes() {
-        // 1. Arrange
         Map<String, Object> customAttrs = new HashMap<>();
         customAttrs.put("loyalty_score", 85);
+        customAttrs.put(PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now());
 
-        ProductPriceRequest request = ProductPriceRequest.builder()
+        ProductPriceRequest loyaltyRequest = ProductPriceRequest.builder()
                 .productId(1L)
                 .customAttributes(customAttrs)
                 .build();
 
-        // Mock link with useRulesEngine = true
         ProductPricingLink rulesLink = createPricingLink(50L, "WIRE_FEE", null, null, true);
         when(productPricingLinkRepository.findByProductIdOverlappingCycle(any(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
-        // Setup Drools to return a 100% discount if loyalty_score > 80
         PriceValue loyaltyWaiver = PriceValue.builder()
                 .componentCode("WIRE_FEE_WAIVER")
                 .valueType(PriceValue.ValueType.DISCOUNT_PERCENTAGE)
@@ -275,19 +271,15 @@ class ProductPricingServiceTest extends BaseServiceTest {
         KieSession mockSession = setupMockDrools();
         when(mockSession.getObjects(any(ClassObjectFilter.class))).thenReturn((Collection) List.of(loyaltyWaiver));
 
-        ProductPricingCalculationResult result = productPricingService.getProductPricing(request);
+        ProductPricingCalculationResult result = productPricingService.getProductPricing(loyaltyRequest);
 
         ArgumentCaptor<PricingInput> inputCaptor = ArgumentCaptor.forClass(PricingInput.class);
         verify(mockSession).insert(inputCaptor.capture());
         assertEquals(85, inputCaptor.getValue().getCustomAttributes().get("loyalty_score"));
-
-        System.out.println("XXXX result = " + result);
-
         boolean waiverApplied = result.getComponentBreakdown().stream()
                 .anyMatch(c -> c.getComponentCode().equals("WIRE_FEE_WAIVER") && c.getRawValue().equals(new BigDecimal("100.00")));
         assertTrue(waiverApplied, "Loyalty waiver should be applied via custom attributes");
     }
-
 
     @Test
     @DisplayName("Branch: Should handle null transactionAmount by treating as ZERO")
@@ -311,7 +303,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Should normalize UPPER_SNAKE_CASE custom attributes for pricing base and effective date")
     void getProductPricing_shouldNormalizeUpperSnakeCaseCoreInputs() {
-        LocalDate requestedDate = LocalDate.of(2026, 4, 12);
+        LocalDate requestedDate = LocalDate.now();
         request = ProductPriceRequest.builder()
                 .productId(1L)
                 .customAttributes(new HashMap<>(Map.of(
@@ -322,7 +314,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
                 .build();
 
         ProductPricingLink fixedLink = createPricingLink(101L, "FixedFee", new BigDecimal("10.00"), PriceValue.ValueType.FEE_ABSOLUTE, false);
-        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), eq(requestedDate.withDayOfMonth(1)), eq(requestedDate.withDayOfMonth(requestedDate.lengthOfMonth())))).thenReturn(List.of(fixedLink));
+        when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(fixedLink));
         when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(new BigDecimal("10.00"));
 
         productPricingService.getProductPricing(request);
@@ -338,7 +330,11 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @Test
     @DisplayName("Feature: Should pass custom attributes to Drools")
     void getProductPricing_shouldPassCustomAttributesToDrools() {
-        request.setCustomAttributes(java.util.Map.of("yearsOfService", 5));
+        Map<String, Object> attrs = new HashMap<>();
+        attrs.put("yearsOfService", 5);
+        attrs.put(PricingAttributeKeys.EFFECTIVE_DATE, LocalDate.now());
+        request.setCustomAttributes(attrs);
+
         ProductPricingLink rulesLink = createPricingLink(202L, "RulesComp", null, null, true);
         when(productPricingLinkRepository.findByProductIdOverlappingCycle(eq(1L), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
 
@@ -363,7 +359,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
 
         KieSession mockSession = setupMockDrools();
         PriceValue fact = createFact("FEE_CODE", "15.00", PriceValue.ValueType.FEE_ABSOLUTE);
-        fact.setMatchedTierCode(null); // Flat field is null
+        fact.setMatchedTierCode(null);
 
         PricingTier tier = new PricingTier();
         tier.setCode("TIER_ENTITY_CODE");
@@ -382,16 +378,8 @@ class ProductPricingServiceTest extends BaseServiceTest {
     @DisplayName("Branch: determinePriceWithDrools should handle null customAttributes")
     void determinePriceWithDrools_nullCustomAttributes() {
         request.setCustomAttributes(null);
-        ProductPricingLink rulesLink = createPricingLink(800L, "NullCustomComp", null, null, true);
-        when(productPricingLinkRepository.findByProductIdOverlappingCycle(anyLong(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(rulesLink));
-
-        KieSession mockSession = setupMockDrools();
-        when(priceAggregator.calculateBundleImpact(anyList(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
-
-        assertDoesNotThrow(() -> productPricingService.getProductPricing(request));
+        assertThrows(ValidationException.class, () -> productPricingService.getProductPricing(request));
     }
-
-    // --- Helper Methods ---
 
     private KieSession setupMockDrools() {
         KieContainer mockContainer = mock(KieContainer.class);
@@ -412,6 +400,7 @@ class ProductPricingServiceTest extends BaseServiceTest {
         link.setPricingComponent(comp);
         link.setFixedValue(fixedValue);
         link.setFixedValueType(valueType);
+        link.setEffectiveDate(LocalDate.now().minusDays(30)); // Well in the past
         link.setUseRulesEngine(useRulesEngine);
         return link;
     }

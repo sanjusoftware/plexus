@@ -393,7 +393,7 @@ const PricingComponentsPage = () => {
 
                                 <div className="space-y-3">
                                     {/* Thresholds */}
-                                    {(tier.minThreshold !== null && tier.minThreshold !== undefined || tier.maxThreshold !== null && tier.maxThreshold !== undefined) && (
+                                    {((tier.minThreshold !== null && tier.minThreshold !== undefined) || (tier.maxThreshold !== null && tier.maxThreshold !== undefined)) && (
                                         <div className="flex items-center gap-4 mb-2">
                                             {tier.minThreshold !== null && tier.minThreshold !== undefined && (
                                                 <div className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">

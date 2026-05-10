@@ -45,26 +45,28 @@ public class ProductPricingService extends BaseService {
 
     @Transactional(readOnly = true)
     public ProductPricingCalculationResult getProductPricing(ProductPriceRequest request) {
+        if (request.getCustomAttributes() == null) {
+            throw new ValidationException("Custom attributes map must not be null (it can be empty).");
+        }
         verifyProductAccess(request.getProductId());
 
         Map<String, Object> normalizedAttributes = buildNormalizedCustomAttributes(request);
-        LocalDate effectiveDate = extractLocalDate(normalizedAttributes.get(ATTR_EFFECTIVE_DATE), LocalDate.now());
+        LocalDate requestedDate = extractLocalDate(normalizedAttributes.get(ATTR_EFFECTIVE_DATE), LocalDate.now());
 
-        // 1. Data Retrieval: Relaxed for cycle-based pro-rating
-        List<ProductPricingLink> activePricingLinks = getActivePricingLinks(request.getProductId(), effectiveDate);
+        List<ProductPricingLink> linksInCycle = getLinksByCycle(request.getProductId(), requestedDate);
+        if (linksInCycle.isEmpty()) {
+            throw new NotFoundException("No active pricing configuration found for product: " + request.getProductId());
+        }
 
-        // 2. Component Assembly
-        List<PriceComponentDetail> priceComponentDetails = assemblePricingComponents(activePricingLinks, normalizedAttributes);
+        List<PriceComponentDetail> priceComponentDetails = assemblePricingComponents(linksInCycle, requestedDate, normalizedAttributes);
 
-        // 3. Calculation
         BigDecimal transactionAmount = extractBigDecimal(normalizedAttributes.get(ATTR_TRANSACTION_AMOUNT), BigDecimal.ZERO);
-
         BigDecimal netImpact = priceAggregator.calculateBundleImpact(
                 priceComponentDetails,
                 transactionAmount,
                 BigDecimal.ZERO,
                 request.getEnrollmentDate(),
-                effectiveDate);
+                requestedDate);
 
         return ProductPricingCalculationResult.builder()
                 .finalChargeablePrice(netImpact)
@@ -76,47 +78,61 @@ public class ProductPricingService extends BaseService {
         getByIdSecurely(productRepository, productId, "Product");
     }
 
-    private List<ProductPricingLink> getActivePricingLinks(Long productId, LocalDate effectiveDate) {
-        // We fetch all links overlapping the month.
-        // If pro-rating is required, we must not strictly filter by 'effectiveDate' here,
-        // because the Aggregator needs the link to calculate partial-month fees.
-        List<ProductPricingLink> links = getLinksByCycle(productId, effectiveDate);
-
-        if (links.isEmpty()) {
-            throw new NotFoundException("No active pricing configuration found for product: "
-                    + productId + " in the cycle containing: " + effectiveDate);
-        }
-
-        return links;
-    }
-
-    private List<ProductPricingLink> getLinksByCycle(Long productId, LocalDate effectiveDate) {
-        LocalDate cycleReference = effectiveDate != null ? effectiveDate : LocalDate.now();
-        LocalDate cycleStart = cycleReference.withDayOfMonth(1);
-        LocalDate cycleEnd = cycleReference.withDayOfMonth(cycleReference.lengthOfMonth());
+    private List<ProductPricingLink> getLinksByCycle(Long productId, LocalDate requestedDate) {
+        LocalDate cycleStart = requestedDate.withDayOfMonth(1);
+        LocalDate cycleEnd = requestedDate.withDayOfMonth(requestedDate.lengthOfMonth());
         return productPricingLinkRepository.findByProductIdOverlappingCycle(productId, cycleStart, cycleEnd);
     }
 
     private List<PriceComponentDetail> assemblePricingComponents(List<ProductPricingLink> links,
+                                                                 LocalDate requestedDate,
                                                                  Map<String, Object> normalizedAttributes) {
+        List<ProductPricingLink> eligibleLinks = links.stream()
+                .filter(l -> isLinkEligibleForDate(l, requestedDate))
+                .toList();
+
         List<PriceComponentDetail> components = new ArrayList<>();
 
-        links.stream()
+        // Fixed Links
+        eligibleLinks.stream()
                 .filter(link -> !link.isUseRulesEngine() && link.getFixedValue() != null)
                 .map(this::mapFixedLinkToDetail)
                 .forEach(components::add);
 
-        List<ProductPricingLink> ruleBasedLinks = links.stream()
-                .filter(ProductPricingLink::isUseRulesEngine).toList();
+        // Rules Engine Links
+        List<ProductPricingLink> ruleBasedLinks = eligibleLinks.stream()
+                .filter(ProductPricingLink::isUseRulesEngine)
+                .toList();
 
         if (!ruleBasedLinks.isEmpty()) {
-            components.addAll(retrieveDynamicComponents(ruleBasedLinks, normalizedAttributes));
+            components.addAll(retrieveDynamicComponents(ruleBasedLinks, requestedDate, normalizedAttributes));
         }
 
         return components;
     }
 
+    private boolean isLinkEligibleForDate(ProductPricingLink link, LocalDate requestedDate) {
+        if (link.getEffectiveDate() == null) {
+            log.warn("Pricing link {} ignored: Missing Effective Date", link.getId());
+            return false;
+        }
+
+        boolean isActiveNow = !link.getEffectiveDate().isAfter(requestedDate)
+                && (link.getExpiryDate() == null || !link.getExpiryDate().isBefore(requestedDate));
+
+        if (isActiveNow) {
+            return true;
+        }
+
+        boolean proRata = link.getPricingComponent().isProRataApplicable();
+        boolean fullBreach = link.getPricingComponent().getPricingTiers().stream()
+                .anyMatch(PricingTier::isApplyChargeOnFullBreach);
+
+        return proRata || fullBreach;
+    }
+
     private List<PriceComponentDetail> retrieveDynamicComponents(List<ProductPricingLink> ruleLinks,
+                                                                 LocalDate requestedDate,
                                                                  Map<String, Object> normalizedAttributes) {
         Set<String> componentCodes = ruleLinks.stream()
                 .map(l -> l.getPricingComponent().getCode() + ":" + l.getPricingComponent().getVersion())
@@ -127,15 +143,12 @@ public class ProductPricingService extends BaseService {
                 .map(PricingTier::getCode)
                 .collect(Collectors.toSet());
 
-        Map<String, PricingLinkContext> linkContextByComponentCode = new HashMap<>();
-        ruleLinks.forEach(link -> {
-            String componentCode = link.getPricingComponent().getCode();
-            linkContextByComponentCode.put(componentCode, new PricingLinkContext(
-                    link.getTargetComponentCode(),
-                    link.getEffectiveDate(),
-                    link.getExpiryDate()
-            ));
-        });
+        Map<String, PricingLinkContext> linkContextByComponentCode = ruleLinks.stream()
+                .collect(Collectors.toMap(
+                        l -> l.getPricingComponent().getCode(),
+                        l -> new PricingLinkContext(l.getTargetComponentCode(), l.getEffectiveDate(), l.getExpiryDate()),
+                        (existing, replacement) -> existing
+                ));
 
         return determinePriceWithDrools(componentCodes, activeTierCodes, normalizedAttributes).stream()
                 .map(fact -> mapFactToDetail(fact, linkContextByComponentCode.get(fact.getComponentCode())))
@@ -168,28 +181,13 @@ public class ProductPricingService extends BaseService {
     private Map<String, Object> buildNormalizedCustomAttributes(ProductPriceRequest request) {
         Map<String, Object> attributes = new HashMap<>();
         if (request.getCustomAttributes() != null) {
-            rejectLegacySystemAliases(request.getCustomAttributes());
             attributes.putAll(request.getCustomAttributes());
         }
-
         attributes.putIfAbsent(ATTR_TRANSACTION_AMOUNT, BigDecimal.ZERO);
         attributes.putIfAbsent(ATTR_EFFECTIVE_DATE, LocalDate.now());
         attributes.putIfAbsent(ATTR_PRODUCT_ID, request.getProductId());
         attributes.putIfAbsent(ATTR_BANK_ID, getCurrentBankId());
         return attributes;
-    }
-
-    private void rejectLegacySystemAliases(Map<String, Object> incomingAttributes) {
-        List<String> legacyKeys = incomingAttributes.keySet().stream()
-                .filter(PricingAttributeKeys.LEGACY_ALIASES::contains)
-                .sorted()
-                .toList();
-        if (!legacyKeys.isEmpty()) {
-            throw new ValidationException("Legacy pricing attribute keys are not supported: "
-                    + String.join(", ", legacyKeys)
-                    + ". Use canonical keys: "
-                    + String.join(", ", PricingAttributeKeys.SYSTEM_KEYS));
-        }
     }
 
     private BigDecimal extractBigDecimal(Object value, BigDecimal defaultValue) {
@@ -198,7 +196,7 @@ public class ProductPricingService extends BaseService {
         if (value instanceof Number number) return BigDecimal.valueOf(number.doubleValue());
         try {
             return new BigDecimal(value.toString());
-        } catch (NumberFormatException ex) {
+        } catch (Exception ex) {
             return defaultValue;
         }
     }
@@ -227,7 +225,7 @@ public class ProductPricingService extends BaseService {
                 .build();
     }
 
-    private PriceComponentDetail mapFactToDetail(PriceValue fact, PricingLinkContext linkContext) {
+    private PriceComponentDetail mapFactToDetail(PriceValue fact, PricingLinkContext context) {
         boolean proRata = false;
         boolean fullBreach = false;
         String tierCode = fact.getMatchedTierCode();
@@ -245,13 +243,13 @@ public class ProductPricingService extends BaseService {
                 .rawValue(fact.getRawValue())
                 .valueType(fact.getValueType())
                 .sourceType("RULES_ENGINE")
-                .targetComponentCode(linkContext != null ? linkContext.targetComponentCode() : null)
+                .targetComponentCode(context != null ? context.targetComponentCode() : null)
                 .matchedTierId(fact.getMatchedTierId())
                 .matchedTierCode(tierCode)
                 .proRataApplicable(proRata)
                 .applyChargeOnFullBreach(fullBreach)
-                .effectiveDate(linkContext != null ? linkContext.effectiveDate() : null)
-                .expiryDate(linkContext != null ? linkContext.expiryDate() : null)
+                .effectiveDate(context != null ? context.effectiveDate() : null)
+                .expiryDate(context != null ? context.expiryDate() : null)
                 .build();
     }
 }
