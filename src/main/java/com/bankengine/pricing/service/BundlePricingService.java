@@ -88,18 +88,6 @@ public class BundlePricingService extends BaseService {
         if (request.getProducts() == null || request.getProducts().isEmpty()) {
             throw new ValidationException("Bundle has no products.");
         }
-        if (request.getCustomAttributes() != null) {
-            List<String> legacyKeys = request.getCustomAttributes().keySet().stream()
-                    .filter(PricingAttributeKeys.LEGACY_ALIASES::contains)
-                    .sorted()
-                    .toList();
-            if (!legacyKeys.isEmpty()) {
-                throw new ValidationException("Legacy pricing attribute keys are not supported: "
-                        + String.join(", ", legacyKeys)
-                        + ". Use canonical keys: "
-                        + String.join(", ", PricingAttributeKeys.SYSTEM_KEYS));
-            }
-        }
     }
 
     private List<ProductPricingResult> calculateIndividualProductFee(BundlePriceRequest request) {

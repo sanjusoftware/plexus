@@ -2,9 +2,6 @@ package com.bankengine.pricing.service;
 
 import java.util.Set;
 
-/**
- * Canonical system pricing attribute keys and rejected legacy aliases.
- */
 public final class PricingAttributeKeys {
 
     private PricingAttributeKeys() {
@@ -26,23 +23,6 @@ public final class PricingAttributeKeys {
             PRODUCT_BUNDLE_ID,
             GROSS_TOTAL_AMOUNT,
             BANK_ID
-    );
-
-    public static final Set<String> LEGACY_ALIASES = Set.of(
-            "customerSegment",
-            "transactionAmount",
-            "effectiveDate",
-            "productId",
-            "productBundleId",
-            "grossTotalAmount",
-            "bankId",
-            "customer_segment",
-            "transaction_amount",
-            "effective_date",
-            "product_id",
-            "product_bundle_id",
-            "gross_total_amount",
-            "bank_id"
     );
 }
 
