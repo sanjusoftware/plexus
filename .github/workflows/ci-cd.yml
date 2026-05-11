@@ -99,11 +99,11 @@ jobs:
       - name: Run DB Migrations (Flyway)
         run: |
           echo "Running flywayMigrate..."
-          ./gradlew flywayMigrate \
-            -Dflyway.url="${{ secrets.STAGING_SPRING_DATASOURCE_URL }}" \
-            -Dflyway.user="${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}" \
-            -Dflyway.password="${{ secrets.STAGING_SPRING_DATASOURCE_PASSWORD }}" \
-            --no-daemon
+          ./gradlew flywayMigrate --no-daemon --info
+        env:
+          SPRING_DATASOURCE_URL: ${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.STAGING_SPRING_DATASOURCE_PASSWORD }}
 
       - name: Deploy to Staging Web App
         uses: azure/webapps-deploy@v2

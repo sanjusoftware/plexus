@@ -58,6 +58,7 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     
     flywayMigration 'org.postgresql:postgresql'
+    flywayMigration 'org.flywaydb:flyway-database-postgresql:10.10.0'
     
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
@@ -85,12 +86,22 @@ flyway {
     password = System.getProperty('flyway.password') ?: System.getenv('SPRING_DATASOURCE_PASSWORD') ?: ''
     
     cleanDisabled = true 
-    if (url.contains("localhost")) {
+    if (url.contains("localhost") || url.contains("mem")) {
         cleanDisabled = false
     }
     
     baselineOnMigrate = true
     baselineVersion = '0'
+}
+
+tasks.named('flywayMigrate') {
+    doFirst {
+        println "DEBUG: Flyway URL is [${flyway.url}]"
+        println "DEBUG: Flyway User is [${flyway.user}]"
+        if (flyway.url == null || flyway.url.isEmpty() || flyway.url.contains("mem")) {
+            println "WARNING: Flyway is using default H2 or empty URL!"
+        }
+    }
 }
 
 def coverageExclusions = [
@@ -115,7 +126,7 @@ def npmAvailable = { ->
         def proc = npmCheckCmd.execute()
         proc.waitFor()
         return proc.exitValue() == 0
-    } catch(Exception e) {
+    } catch(Exception ignored) {
         return false
     }
 }
