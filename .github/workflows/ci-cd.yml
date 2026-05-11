@@ -63,18 +63,12 @@ jobs:
       - name: Build and Push Container Image
         run: |
           IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}
-          # Create a minimal docker build context so .dockerignore doesn't exclude the built jar
           mkdir -p docker-context
           cp Dockerfile.ci docker-context/Dockerfile.ci
-          # copy the jar produced by the Gradle build into the context as app.jar to match Dockerfile.ci
           if ls build/libs/*.jar >/dev/null 2>&1; then
             JAR_PATH=$(ls -1 build/libs/*.jar | head -n1)
-            echo "Found JAR: $JAR_PATH"
             cp "$JAR_PATH" docker-context/app.jar
           else
-            echo "No jar found in build/libs - did the build step succeed?";
-            echo "Listing build directory for debugging:";
-            ls -la build || true
             exit 1
           fi
           docker build -f docker-context/Dockerfile.ci -t "$IMAGE" docker-context
@@ -98,9 +92,10 @@ jobs:
 
       - name: Run DB Migrations (Flyway)
         run: |
-          echo "Running flywayMigrate..."
+          echo "Running flywayMigrate for Staging..."
           ./gradlew flywayMigrate --no-daemon --info
         env:
+          # Explicit mapping of environment-specific secrets to standard env vars
           SPRING_DATASOURCE_URL: ${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}
           SPRING_DATASOURCE_PASSWORD: ${{ secrets.STAGING_SPRING_DATASOURCE_PASSWORD }}
@@ -118,7 +113,17 @@ jobs:
     needs: deploy-staging
     environment: Production
     steps:
-      - name: Deploy to Production Web App (placeholder)
+      - uses: actions/checkout@v4
+      - name: Run DB Migrations (Production)
+        run: |
+          echo "Running flywayMigrate for Production..."
+          ./gradlew flywayMigrate --no-daemon
+        env:
+          # Assuming you follow the same pattern for Production secrets
+          SPRING_DATASOURCE_URL: ${{ secrets.PROD_SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.PROD_SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.PROD_SPRING_DATASOURCE_PASSWORD }}
+
+      - name: Deploy to Production Web App
         run: |
           echo "Production promotion: image = ${{ needs.build-and-push.outputs.image }}"
-

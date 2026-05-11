@@ -1,3 +1,13 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        // Adds PostgreSQL support to the Gradle plugin context (Flyway 10+)
+        classpath "org.flywaydb:flyway-database-postgresql:10.10.0"
+    }
+}
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.1'
@@ -22,10 +32,6 @@ jacoco {
     toolVersion = "0.8.11"
 }
 
-configurations {
-    flywayMigration
-}
-
 dependencies {
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
@@ -37,34 +43,28 @@ dependencies {
     implementation 'org.springframework.security:spring-security-oauth2-resource-server'
     implementation 'org.springframework.security:spring-security-oauth2-jose'
 
-    // FORCE UPGRADE for Transitive Vulnerabilities
     constraints {
         implementation('com.thoughtworks.xstream:xstream:1.4.21') {
             because 'fixes CVE-2024-47072 (High Severity DoS vulnerability)'
         }
     }
 
-    // Drools Dependencies
     def droolsVersion = '8.44.2.Final'
-    
     implementation "org.drools:drools-core:${droolsVersion}"
     implementation "org.drools:drools-compiler:${droolsVersion}"
     implementation "org.drools:drools-xml-support:${droolsVersion}"
     implementation "org.kie:kie-api:${droolsVersion}"
     implementation "org.kie:kie-ci:${droolsVersion}"
+
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
-    
-    flywayMigration 'org.postgresql:postgresql'
-    flywayMigration 'org.flywaydb:flyway-database-postgresql:10.10.0'
-    
+
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
 
     compileOnly 'org.projectlombok:lombok'
-    
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
@@ -80,12 +80,13 @@ dependencies {
 }
 
 flyway {
-    configurations = ['flywayMigration']
+    // Priority: CLI args > Environment Variables > Local H2
     url = System.getProperty('flyway.url') ?: System.getenv('SPRING_DATASOURCE_URL') ?: 'jdbc:h2:mem:testdb'
     user = System.getProperty('flyway.user') ?: System.getenv('SPRING_DATASOURCE_USERNAME') ?: 'sa'
     password = System.getProperty('flyway.password') ?: System.getenv('SPRING_DATASOURCE_PASSWORD') ?: ''
     
-    cleanDisabled = true 
+    // Safety: Disable clean by default. Enable only for H2/localhost.
+    cleanDisabled = true
     if (url.contains("localhost") || url.contains("mem")) {
         cleanDisabled = false
     }
@@ -98,27 +99,15 @@ tasks.named('flywayMigrate') {
     doFirst {
         println "DEBUG: Flyway URL is [${flyway.url}]"
         println "DEBUG: Flyway User is [${flyway.user}]"
-        if (flyway.url == null || flyway.url.isEmpty() || flyway.url.contains("mem")) {
-            println "WARNING: Flyway is using default H2 or empty URL!"
-        }
     }
 }
 
 def coverageExclusions = [
-    "**/dto/**",
-    "**/model/**",
-    "**/config/**",
-    "**/exception/**",
-    "**/*Application*",
-    "**/*MapperImpl*",
-    "org/drools/drl/parser/lang/**"
+    "**/dto/**", "**/model/**", "**/config/**", "**/exception/**",
+    "**/*Application*", "**/*MapperImpl*", "org/drools/drl/parser/lang/**"
 ]
 
 def frontendDir = "$projectDir/src/main/frontend"
-
-// Check if `npm` is available on the host. Tasks that require npm will be
-// skipped when npm is not present so the Java build can run on machines
-// without Node installed.
 def isWindows = System.properties['os.name'].toLowerCase().contains('windows')
 def npmCheckCmd = isWindows ? ['cmd','/c','where npm'] : ['sh','-c','which npm']
 def npmAvailable = { ->
@@ -164,36 +153,19 @@ tasks.register('copyFrontend', Copy) {
     into "$buildDir/resources/main/static"
 }
 
-// Frontend assets are needed for packaged artifacts, not for test-only runs.
-tasks.named('bootJar') {
-    dependsOn 'copyFrontend'
-}
-
-// resolveMainClassName and processResources need to wait for copyFrontend
-tasks.named('resolveMainClassName') {
-    dependsOn 'copyFrontend'
-}
-
-tasks.named('processResources') {
-    dependsOn 'copyFrontend'
-}
+tasks.named('bootJar') { dependsOn 'copyFrontend' }
+tasks.named('resolveMainClassName') { dependsOn 'copyFrontend' }
+tasks.named('processResources') { dependsOn 'copyFrontend' }
 
 tasks.named('test') {
     useJUnitPlatform()
-
-    jacoco {
-        excludes = ["org/drools/drl/parser/lang/*"]
-    }
-
+    jacoco { excludes = ["org/drools/drl/parser/lang/*"] }
     finalizedBy jacocoTestReport
 }
 
 jacocoTestReport {
     dependsOn test, compileJava
-    reports {
-        xml.required = true
-        html.required = true
-    }
+    reports { xml.required = true; html.required = true }
     afterEvaluate {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, exclude: coverageExclusions)
@@ -204,49 +176,25 @@ jacocoTestReport {
 jacocoTestCoverageVerification {
     dependsOn jacocoTestReport
     violationRules {
-        // TIER 1: CRITICAL (Pricing & Math)
         rule {
             element = 'PACKAGE'
             includes = ['com.bankengine.pricing.service*', 'com.bankengine.pricing.calculation*', 'com.bankengine.pricing.service.drl*']
-            limit {
-                counter = 'BRANCH'
-                minimum = 0.78
-            }
+            limit { counter = 'BRANCH'; minimum = 0.78 }
         }
-
-        // TIER 2: SECURITY (Auth & Tenancy)
         rule {
             element = 'PACKAGE'
             includes = ['com.bankengine.auth.service*', 'com.bankengine.auth.security*', 'com.bankengine.auth.config*']
-            limit {
-                counter = 'BRANCH'
-                minimum = 0.80
-            }
+            limit { counter = 'BRANCH'; minimum = 0.80 }
         }
-
-        // TIER 3: BUSINESS CORE (Catalog & FAT DTO logic)
         rule {
             element = 'PACKAGE'
             includes = ['com.bankengine.catalog.service*']
-            limit {
-                counter = 'BRANCH'
-                minimum = 0.80
-            }
+            limit { counter = 'BRANCH'; minimum = 0.80 }
         }
-
-        // TIER 4: THE REST (Global fallback)
         rule {
             element = 'BUNDLE'
-            limit {
-                counter = 'LINE'
-                minimum = 0.70
-            }
+            limit { counter = 'LINE'; minimum = 0.70 }
         }
-    }
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: coverageExclusions)
-        }))
     }
 }
 
