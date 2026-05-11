@@ -3,7 +3,6 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // Adds PostgreSQL support to the Gradle plugin context (Flyway 10+)
         classpath "org.flywaydb:flyway-database-postgresql:10.10.0"
     }
 }
@@ -80,17 +79,13 @@ dependencies {
 }
 
 flyway {
-    // Priority: CLI args > Environment Variables > Local H2
     url = System.getProperty('flyway.url') ?: System.getenv('SPRING_DATASOURCE_URL') ?: 'jdbc:h2:mem:testdb'
     user = System.getProperty('flyway.user') ?: System.getenv('SPRING_DATASOURCE_USERNAME') ?: 'sa'
     password = System.getProperty('flyway.password') ?: System.getenv('SPRING_DATASOURCE_PASSWORD') ?: ''
-    
-    // Safety: Disable clean by default. Enable only for H2/localhost.
     cleanDisabled = true
     if (url.contains("localhost") || url.contains("mem")) {
         cleanDisabled = false
     }
-    
     baselineOnMigrate = true
     baselineVersion = '0'
 }
@@ -102,20 +97,15 @@ tasks.named('flywayMigrate') {
     }
 }
 
-def coverageExclusions = [
-    "**/dto/**", "**/model/**", "**/config/**", "**/exception/**",
-    "**/*Application*", "**/*MapperImpl*", "org/drools/drl/parser/lang/**"
-]
-
+def coverageExclusions = ["**/dto/**", "**/model/**", "**/config/**", "**/exception/**", "**/*Application*", "**/*MapperImpl*", "org/drools/drl/parser/lang/**"]
 def frontendDir = "$projectDir/src/main/frontend"
-def isWindows = System.properties['os.name'].toLowerCase().contains('windows')
-def npmCheckCmd = isWindows ? ['cmd','/c','where npm'] : ['sh','-c','which npm']
+
 def npmAvailable = { ->
     try {
-        def proc = npmCheckCmd.execute()
-        proc.waitFor()
-        return proc.exitValue() == 0
-    } catch(Exception ignored) {
+        def isWin = System.properties['os.name'].toLowerCase().contains('windows')
+        def cmd = isWin ? ['cmd', '/c', 'where npm'] : ['sh', '-c', 'which npm']
+        return cmd.execute().waitFor() == 0
+    } catch (ignored) {
         return false
     }
 }
@@ -125,11 +115,7 @@ tasks.register('installFrontend', Exec) {
     workingDir "$frontendDir"
     inputs.file("$frontendDir/package.json")
     outputs.dir("$frontendDir/node_modules")
-    if (isWindows) {
-        commandLine 'cmd', '/c', 'npm', 'install'
-    } else {
-        commandLine 'npm', 'install'
-    }
+    commandLine ((System.properties['os.name'].toLowerCase().contains('windows') ? ['cmd', '/c'] : []) + ['npm', 'install'])
 }
 
 tasks.register('buildFrontend', Exec) {
@@ -139,11 +125,7 @@ tasks.register('buildFrontend', Exec) {
     inputs.dir("$frontendDir/src")
     inputs.dir("$frontendDir/public")
     outputs.dir("$frontendDir/build")
-    if (isWindows) {
-        commandLine 'cmd', '/c', 'npm', 'run', 'build'
-    } else {
-        commandLine 'npm', 'run', 'build'
-    }
+    commandLine ((System.properties['os.name'].toLowerCase().contains('windows') ? ['cmd', '/c'] : []) + ['npm', 'run', 'build'])
 }
 
 tasks.register('copyFrontend', Copy) {
