@@ -22,6 +22,10 @@ jacoco {
     toolVersion = "0.8.11"
 }
 
+configurations {
+    flywayMigration
+}
+
 dependencies {
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
@@ -42,47 +46,51 @@ dependencies {
 
     // Drools Dependencies
     def droolsVersion = '8.44.2.Final'
+    
     implementation "org.drools:drools-core:${droolsVersion}"
     implementation "org.drools:drools-compiler:${droolsVersion}"
     implementation "org.drools:drools-xml-support:${droolsVersion}"
     implementation "org.kie:kie-api:${droolsVersion}"
     implementation "org.kie:kie-ci:${droolsVersion}"
-
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
-    flywayConfigurations 'org.postgresql:postgresql'
+    
+    flywayMigration 'org.postgresql:postgresql'
+    
     runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.postgresql:postgresql'
 
     compileOnly 'org.projectlombok:lombok'
+    
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    runtimeOnly 'org.postgresql:postgresql'
-
-    // Redis Session Management
+    
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.session:spring-session-data-redis'
-
-    // Actuator for Health Checks
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-    // Optional: Improved observability
     implementation 'io.micrometer:micrometer-observation'
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 }
 
 flyway {
-    url = System.getenv('SPRING_DATASOURCE_URL') ?: 'jdbc:h2:mem:testdb'
-    user = System.getenv('SPRING_DATASOURCE_USERNAME') ?: 'sa'
-    password = System.getenv('SPRING_DATASOURCE_PASSWORD') ?: ''
+    configurations = ['flywayMigration']
+    url = System.getProperty('flyway.url') ?: System.getenv('SPRING_DATASOURCE_URL') ?: 'jdbc:h2:mem:testdb'
+    user = System.getProperty('flyway.user') ?: System.getenv('SPRING_DATASOURCE_USERNAME') ?: 'sa'
+    password = System.getProperty('flyway.password') ?: System.getenv('SPRING_DATASOURCE_PASSWORD') ?: ''
+    
+    cleanDisabled = true 
+    if (url.contains("localhost")) {
+        cleanDisabled = false
+    }
+    
     baselineOnMigrate = true
     baselineVersion = '0'
-    cleanDisabled = false
 }
 
 def coverageExclusions = [
