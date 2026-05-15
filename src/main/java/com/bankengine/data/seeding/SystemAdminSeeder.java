@@ -44,7 +44,7 @@ public class SystemAdminSeeder implements CommandLineRunner {
     @Value("${app.security.system-bank-admin-currency-code}")
     private String systemCurrencyCode;
 
-    @Value("${CLIENT_ID}")
+    @Value("${CLIENT_ID:${springdoc.swagger-ui.oauth.client-id:}}")
     private String defaultClientId;
 
     @Override
