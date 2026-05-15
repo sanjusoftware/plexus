@@ -51,17 +51,23 @@ jobs:
           login-server: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build and Push
+        id: set-image
         run: |
-          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}
+          # Use local variable to construct full path to avoid broad log masking
+          REGISTRY_URL=${{ secrets.ACR_LOGIN_SERVER }}
+          FULL_IMAGE_NAME=$REGISTRY_URL/plexus-bankengine:${{ github.sha }}
+          
           mkdir -p docker-context
           cp Dockerfile.ci docker-context/Dockerfile.ci
           JAR_PATH=$(ls -1 build/libs/*.jar | grep -v "plain" | head -n1)
           cp "$JAR_PATH" docker-context/app.jar
-          docker build -f docker-context/Dockerfile.ci -t "$IMAGE" docker-context
-          docker push "$IMAGE"
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
-        id: set-image
+          
+          docker build -f docker-context/Dockerfile.ci -t "$FULL_IMAGE_NAME" docker-context
+          docker push "$FULL_IMAGE_NAME"
+          
+          echo "image=$FULL_IMAGE_NAME" >> $GITHUB_OUTPUT
 
   deploy-staging:
     name: Deploy to Staging
@@ -135,7 +141,6 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'bank-engine-api'
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           images: '${{ needs.build-and-push.outputs.image }}'
 
   deploy-production:
@@ -209,5 +214,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'betterteller-prod'
-          publish-profile: ${{ secrets.PROD_AZURE_WEBAPP_PUBLISH_PROFILE }}
           images: '${{ needs.build-and-push.outputs.image }}'
