@@ -99,6 +99,7 @@ jobs:
               { "name": "SPRING_PROFILES_ACTIVE", "value": "staging", "slotSetting": false },
               { "name": "SPRING_SESSION_STORE_TYPE", "value": "none", "slotSetting": false },
               { "name": "SPRING_DATA_REDIS_REPOSITORIES_ENABLED", "value": "false", "slotSetting": false },
+              { "name": "SPRING_AUTOCONFIGURE_EXCLUDE", "value": "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration", "slotSetting": false },
               { "name": "SPRING_DATASOURCE_URL", "value": "${{ secrets.STAGING_SPRING_DATASOURCE_URL }}", "slotSetting": false },
               { "name": "SPRING_DATASOURCE_USERNAME", "value": "${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}", "slotSetting": false },
               { "name": "SPRING_DATASOURCE_PASSWORD", "value": "${{ secrets.STAGING_KEYVAULT_DB_PASSWORD_URI }}", "slotSetting": false },
