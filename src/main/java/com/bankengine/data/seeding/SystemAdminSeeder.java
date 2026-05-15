@@ -50,94 +50,98 @@ public class SystemAdminSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        System.out.println("--- Seeding System Admin: " + systemBankId + " with ISSUER: "+ systemIssuer +" ---");
+        String maskedClientId = (defaultClientId == null || defaultClientId.isBlank())
+                ? "MISSING/EMPTY"
+                : defaultClientId;
 
-        // Normalize issuer to ensure matching with JwtAuthConverter
+        System.out.println("--- Seeding System Admin: " + systemBankId + " ---");
+        System.out.println(">>> Configured ISSUER:    " + systemIssuer);
+        System.out.println(">>> Configured CLIENT_ID: " + maskedClientId);
+
         String normalizedIssuer = systemIssuer.replaceAll("/$", "");
-
         TenantContextHolder.setSystemMode(true);
         try {
             // 1. Manage System Bank Configuration
             bankConfigurationRepository.findByBankIdUnfiltered(systemBankId).ifPresentOrElse(
-                config -> {
-                    boolean updated = false;
-                    if (!normalizedIssuer.equalsIgnoreCase(config.getIssuerUrl())) {
-                        log.info("Syncing System Issuer: {} -> {}", config.getIssuerUrl(), normalizedIssuer);
-                        config.setIssuerUrl(normalizedIssuer);
-                        updated = true;
-                    }
-                    if (defaultClientId != null && !defaultClientId.isBlank() && !defaultClientId.equals(config.getClientId())) {
-                        log.info("Syncing System ClientID: {} -> {}", config.getClientId(), defaultClientId);
-                        config.setClientId(defaultClientId);
-                        updated = true;
-                    }
-                    if (config.getStatus() != BankStatus.ACTIVE) {
-                        config.setStatus(BankStatus.ACTIVE);
-                        updated = true;
-                    }
-                    if (!systemBankName.equals(config.getName())) {
+                    config -> {
+                        boolean updated = false;
+                        if (!normalizedIssuer.equalsIgnoreCase(config.getIssuerUrl())) {
+                            System.out.println("Syncing System Issuer: " + config.getIssuerUrl() + " -> " + normalizedIssuer);
+                            config.setIssuerUrl(normalizedIssuer);
+                            updated = true;
+                        }
+                        if (defaultClientId != null && !defaultClientId.isBlank() && !defaultClientId.equals(config.getClientId())) {
+                            System.out.println("Syncing System ClientID: " + config.getClientId() + " -> " + defaultClientId);
+                            config.setClientId(defaultClientId);
+                            updated = true;
+                        }
+                        if (config.getStatus() != BankStatus.ACTIVE) {
+                            config.setStatus(BankStatus.ACTIVE);
+                            updated = true;
+                        }
+                        if (!systemBankName.equals(config.getName())) {
+                            config.setName(systemBankName);
+                            updated = true;
+                        }
+                        if (!systemAdminName.equals(config.getAdminName())) {
+                            config.setAdminName(systemAdminName);
+                            updated = true;
+                        }
+                        if (!systemAdminEmail.equals(config.getAdminEmail())) {
+                            config.setAdminEmail(systemAdminEmail);
+                            updated = true;
+                        }
+                        if (!systemCurrencyCode.equals(config.getCurrencyCode())) {
+                            config.setCurrencyCode(systemCurrencyCode);
+                            updated = true;
+                        }
+                        if (updated) {
+                            bankConfigurationRepository.save(config);
+                            System.out.println(">>> SYSTEM bank configuration synchronized with environment settings.");
+                        }
+                    },
+                    () -> {
+                        BankConfiguration config = new BankConfiguration();
+                        config.setBankId(systemBankId);
                         config.setName(systemBankName);
-                        updated = true;
-                    }
-                    if (!systemAdminName.equals(config.getAdminName())) {
+                        config.setIssuerUrl(normalizedIssuer);
+                        config.setClientId(defaultClientId);
+                        config.setAllowProductInMultipleBundles(true);
+                        config.setStatus(BankStatus.ACTIVE);
                         config.setAdminName(systemAdminName);
-                        updated = true;
-                    }
-                    if (!systemAdminEmail.equals(config.getAdminEmail())) {
                         config.setAdminEmail(systemAdminEmail);
-                        updated = true;
-                    }
-                    if (!systemCurrencyCode.equals(config.getCurrencyCode())) {
                         config.setCurrencyCode(systemCurrencyCode);
-                        updated = true;
-                    }
-                    if (updated) {
                         bankConfigurationRepository.save(config);
-                        System.out.println(">>> SYSTEM bank configuration synchronized with environment settings.");
+                        System.out.println("Created root bank: " + systemBankId + " with client_id: " + defaultClientId);
                     }
-                },
-                () -> {
-                    BankConfiguration config = new BankConfiguration();
-                    config.setBankId(systemBankId);
-                    config.setName(systemBankName);
-                    config.setIssuerUrl(normalizedIssuer);
-                    config.setClientId(defaultClientId);
-                    config.setAllowProductInMultipleBundles(true);
-                    config.setStatus(BankStatus.ACTIVE);
-                    config.setAdminName(systemAdminName);
-                    config.setAdminEmail(systemAdminEmail);
-                    config.setCurrencyCode(systemCurrencyCode);
-                    bankConfigurationRepository.save(config);
-                    System.out.println("Created root bank: " + systemBankId + " with client_id: " + defaultClientId);
-                }
             );
 
             // 2. Manage SYSTEM_ADMIN Role
             Set<String> systemAdminAuthorities = new HashSet<>(Set.of(
-                "system:bank:write",
-                "system:bank:read",
-                "auth:role:write",
-                "auth:role:read",
-                "system:stats:read",
-                "bank:stats:read"
+                    "system:bank:write",
+                    "system:bank:read",
+                    "auth:role:write",
+                    "auth:role:read",
+                    "system:stats:read",
+                    "bank:stats:read"
             ));
 
             roleRepository.findByNameAndBankId("SYSTEM_ADMIN", systemBankId).ifPresentOrElse(
-                existingRole -> {
-                    if (!existingRole.getAuthorities().equals(systemAdminAuthorities)) {
-                        existingRole.setAuthorities(new HashSet<>(systemAdminAuthorities));
-                        roleRepository.save(existingRole);
-                        System.out.println("Updated SYSTEM_ADMIN authorities for " + systemBankId);
+                    existingRole -> {
+                        if (!existingRole.getAuthorities().equals(systemAdminAuthorities)) {
+                            existingRole.setAuthorities(new HashSet<>(systemAdminAuthorities));
+                            roleRepository.save(existingRole);
+                            System.out.println("Updated SYSTEM_ADMIN authorities for " + systemBankId);
+                        }
+                    },
+                    () -> {
+                        Role admin = new Role();
+                        admin.setName("SYSTEM_ADMIN");
+                        admin.setBankId(systemBankId);
+                        admin.setAuthorities(new HashSet<>(systemAdminAuthorities));
+                        roleRepository.save(admin);
+                        System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);
                     }
-                },
-                () -> {
-                    Role admin = new Role();
-                    admin.setName("SYSTEM_ADMIN");
-                    admin.setBankId(systemBankId);
-                    admin.setAuthorities(new HashSet<>(systemAdminAuthorities));
-                    roleRepository.save(admin);
-                    System.out.println("Seeded SYSTEM_ADMIN for " + systemBankId);
-                }
             );
         } finally {
             TenantContextHolder.clear();

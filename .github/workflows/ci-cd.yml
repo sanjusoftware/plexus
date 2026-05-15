@@ -97,6 +97,7 @@ jobs:
           app-settings-json: |
             [
               { "name": "SPRING_PROFILES_ACTIVE", "value": "staging", "slotSetting": false },
+              { "name": "APP_VERSION", "value": "${{ github.sha }}", "slotSetting": false },
               { "name": "SPRING_SESSION_STORE_TYPE", "value": "none", "slotSetting": false },
               { "name": "SPRING_DATA_REDIS_REPOSITORIES_ENABLED", "value": "false", "slotSetting": false },
               { "name": "SPRING_AUTOCONFIGURE_EXCLUDE", "value": "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration", "slotSetting": false },
@@ -109,7 +110,7 @@ jobs:
               { "name": "SWAGGER_AUTH_URL", "value": "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize", "slotSetting": false },
               { "name": "SWAGGER_TOKEN_URL", "value": "https://login.microsoftonline.com/organizations/oauth2/v2.0/token", "slotSetting": false },
               { "name": "CLIENT_ID", "value": "${{ secrets.AZURE_CLIENT_ID }}", "slotSetting": false },
-              { "name": "SWAGGER_API_SCOPE", "value": "${{ secrets.AZURE_API_SCOPE }}", "slotSetting": false },
+              { "name": "SWAGGER_API_SCOPE", "value": "${{ secrets.SWAGGER_API_SCOPE }}", "slotSetting": false },
               { "name": "APP_SECURITY_SYSTEM_ISSUER", "value": "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/v2.0", "slotSetting": false },
               { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
               { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ secrets.ACR_LOGIN_SERVER }}", "slotSetting": false },
@@ -123,6 +124,12 @@ jobs:
           SPRING_DATASOURCE_URL: ${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}
           SPRING_DATASOURCE_PASSWORD: ${{ steps.kv_staging.outputs.bankengine-db-password }}
+
+      - name: Log Deployment Details
+        run: |
+          echo "🚀 Deploying to STAGING"
+          echo "Image: ${{ needs.build-and-push.outputs.image }}"
+          echo "SHA: ${{ github.sha }}"
 
       - name: Deploy to Staging Web App
         uses: azure/webapps-deploy@v3
@@ -166,6 +173,7 @@ jobs:
           app-settings-json: |
             [
               { "name": "SPRING_PROFILES_ACTIVE", "value": "prod", "slotSetting": false },
+              { "name": "APP_VERSION", "value": "${{ github.sha }}", "slotSetting": false },
               { "name": "SPRING_SESSION_STORE_TYPE", "value": "none", "slotSetting": false },
               { "name": "SPRING_DATA_REDIS_REPOSITORIES_ENABLED", "value": "false", "slotSetting": false },
               { "name": "SPRING_DATASOURCE_URL", "value": "${{ secrets.PROD_SPRING_DATASOURCE_URL }}", "slotSetting": false },
@@ -176,6 +184,8 @@ jobs:
               { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI", "value": "https://login.microsoftonline.com/organizations/v2.0", "slotSetting": false },
               { "name": "SWAGGER_AUTH_URL", "value": "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize", "slotSetting": false },
               { "name": "SWAGGER_TOKEN_URL", "value": "https://login.microsoftonline.com/organizations/oauth2/v2.0/token", "slotSetting": false },
+              { "name": "CLIENT_ID", "value": "${{ secrets.AZURE_CLIENT_ID_PROD }}", "slotSetting": false },
+              { "name": "SWAGGER_API_SCOPE", "value": "${{ secrets.SWAGGER_API_SCOPE_PROD }}", "slotSetting": false },
               { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
               { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ secrets.ACR_LOGIN_SERVER }}", "slotSetting": false },
               { "name": "WEBSITES_PORT", "value": "8080", "slotSetting": false },
@@ -188,6 +198,12 @@ jobs:
           SPRING_DATASOURCE_URL: ${{ secrets.PROD_SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.PROD_SPRING_DATASOURCE_USERNAME }}
           SPRING_DATASOURCE_PASSWORD: ${{ steps.kv_prod.outputs.bankengine-db-password }}
+
+      - name: Log Deployment Details
+        run: |
+          echo "🚀 Deploying to PRODUCTION"
+          echo "Image: ${{ needs.build-and-push.outputs.image }}"
+          echo "SHA: ${{ github.sha }}"
 
       - name: Deploy to Production Web App
         uses: azure/webapps-deploy@v3
