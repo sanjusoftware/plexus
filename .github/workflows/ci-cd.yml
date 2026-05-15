@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  ACR_LOGIN_SERVER: bankengineacr.azurecr.io
+
 jobs:
   build-and-push:
     name: Build, Test and Push Image
@@ -48,16 +51,14 @@ jobs:
       - name: Log in to ACR
         uses: azure/docker-login@v2
         with:
-          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and Push
         id: set-image
         run: |
-          # Define variables locally for the build
-          REGISTRY_URL=${{ secrets.ACR_LOGIN_SERVER }}
-          FULL_IMAGE_NAME="$REGISTRY_URL/plexus-bankengine:${{ github.sha }}"
+          FULL_IMAGE_NAME="${{ env.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}"
           
           mkdir -p docker-context
           cp Dockerfile.ci docker-context/Dockerfile.ci
@@ -67,7 +68,6 @@ jobs:
           docker build -f docker-context/Dockerfile.ci -t "$FULL_IMAGE_NAME" docker-context
           docker push "$FULL_IMAGE_NAME"
           
-          # Explicitly export the output for the job
           echo "image=$FULL_IMAGE_NAME" >> "$GITHUB_OUTPUT"
 
   deploy-staging:
@@ -136,7 +136,6 @@ jobs:
         run: |
           echo "🚀 Deploying to STAGING"
           echo "Image: ${{ needs.build-and-push.outputs.image }}"
-          echo "SHA: ${{ github.sha }}"
 
       - name: Deploy to Staging Web App
         uses: azure/webapps-deploy@v3
