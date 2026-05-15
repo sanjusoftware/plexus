@@ -12,35 +12,27 @@ jobs:
     outputs:
       image: ${{ steps.set-image.outputs.image }}
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@v6
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: gradle
-
-      - name: Set up Node.js (for frontend build)
-        uses: actions/setup-node@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
-
       - name: Build frontend
         working-directory: src/main/frontend
         run: |
-          if [ -f package.json ]; then
-            npm ci
-            npm run build
-          else
-            echo "No frontend package.json found, skipping frontend build"
-          fi
-
-      - name: Build & Test Backend with JaCoCo
+          npm ci
+          npm run build
+      - name: Build & Test Backend
         run: ./gradlew clean build jacocoTestReport --no-daemon
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/reports/jacoco/test/jacocoTestReport.xml
@@ -54,29 +46,18 @@ jobs:
           retention-days: 14
 
       - name: Log in to ACR
-        uses: azure/docker-login@v1
+        uses: azure/docker-login@v2
         with:
           login-server: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Build and Push Container Image
+      - name: Build and Push
         run: |
           IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}
-          # Create a minimal docker build context so .dockerignore doesn't exclude the built jar
           mkdir -p docker-context
           cp Dockerfile.ci docker-context/Dockerfile.ci
-          # copy the jar produced by the Gradle build into the context as app.jar to match Dockerfile.ci
-          if ls build/libs/*.jar >/dev/null 2>&1; then
-            JAR_PATH=$(ls -1 build/libs/*.jar | head -n1)
-            echo "Found JAR: $JAR_PATH"
-            cp "$JAR_PATH" docker-context/app.jar
-          else
-            echo "No jar found in build/libs - did the build step succeed?";
-            echo "Listing build directory for debugging:";
-            ls -la build || true
-            exit 1
-          fi
+          JAR_PATH=$(ls -1 build/libs/*.jar | grep -v "plain" | head -n1)
+          cp "$JAR_PATH" docker-context/app.jar
           docker build -f docker-context/Dockerfile.ci -t "$IMAGE" docker-context
           docker push "$IMAGE"
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
@@ -88,25 +69,59 @@ jobs:
     needs: build-and-push
     environment: Staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get DB Password from Key Vault
+        uses: azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "plexus-bank-engine-vault"
+          secrets: 'bankengine-db-password' # The name of the secret in the vault
+        id: kv_staging
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Set Azure App Settings (Staging)
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: 'bank-engine-api'
+          mask-inputs: true
+          app-settings-json: |
+            [
+              { "name": "SPRING_PROFILES_ACTIVE", "value": "staging", "slotSetting": false },
+              { "name": "SPRING_SESSION_STORE_TYPE", "value": "none", "slotSetting": false },
+              { "name": "SPRING_DATA_REDIS_REPOSITORIES_ENABLED", "value": "false", "slotSetting": false },
+              { "name": "SPRING_DATASOURCE_URL", "value": "${{ secrets.STAGING_SPRING_DATASOURCE_URL }}", "slotSetting": false },
+              { "name": "SPRING_DATASOURCE_USERNAME", "value": "${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}", "slotSetting": false },
+              { "name": "SPRING_DATASOURCE_PASSWORD", "value": "${{ secrets.STAGING_KEYVAULT_DB_PASSWORD_URI }}", "slotSetting": false },
+              { "name": "SPRING_JPA_DATABASE_PLATFORM", "value": "org.hibernate.dialect.PostgreSQLDialect", "slotSetting": false },
+              { "name": "SPRING_JPA_HIBERNATE_DDL_AUTO", "value": "update", "slotSetting": false },
+              { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI", "value": "https://login.microsoftonline.com/organizations/v2.0", "slotSetting": false },
+              { "name": "SWAGGER_AUTH_URL", "value": "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize", "slotSetting": false },
+              { "name": "SWAGGER_TOKEN_URL", "value": "https://login.microsoftonline.com/organizations/oauth2/v2.0/token", "slotSetting": false },
+              { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
+              { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ secrets.ACR_LOGIN_SERVER }}", "slotSetting": false },
+              { "name": "WEBSITES_PORT", "value": "8080", "slotSetting": false },
+              { "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE", "value": "false", "slotSetting": false }
+            ]
+
       - name: Run DB Migrations (Flyway)
-        run: |
-          echo "Running flywayMigrate..."
-          ./gradlew flywayMigrate --no-daemon --stacktrace
+        run: ./gradlew flywayMigrate --no-daemon --info
         env:
           SPRING_DATASOURCE_URL: ${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.STAGING_SPRING_DATASOURCE_PASSWORD }}
+          SPRING_DATASOURCE_PASSWORD: ${{ steps.kv_staging.outputs.bankengine-db-password }}
 
       - name: Deploy to Staging Web App
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v3
         with:
           app-name: 'bank-engine-api'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
@@ -118,7 +133,61 @@ jobs:
     needs: deploy-staging
     environment: Production
     steps:
-      - name: Deploy to Production Web App (placeholder)
-        run: |
-          echo "Production promotion: image = ${{ needs.build-and-push.outputs.image }}"
+      - uses: actions/checkout@v6
 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get DB Password from Key Vault (Prod)
+        uses: azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "plexus-bank-engine-vault"
+          secrets: 'bankengine-db-password'
+        id: kv_prod
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Set Azure App Settings (Production)
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: 'betterteller-prod'
+          mask-inputs: true
+          app-settings-json: |
+            [
+              { "name": "SPRING_PROFILES_ACTIVE", "value": "prod", "slotSetting": false },
+              { "name": "SPRING_SESSION_STORE_TYPE", "value": "none", "slotSetting": false },
+              { "name": "SPRING_DATA_REDIS_REPOSITORIES_ENABLED", "value": "false", "slotSetting": false },
+              { "name": "SPRING_DATASOURCE_URL", "value": "${{ secrets.PROD_SPRING_DATASOURCE_URL }}", "slotSetting": false },
+              { "name": "SPRING_DATASOURCE_USERNAME", "value": "${{ secrets.PROD_SPRING_DATASOURCE_USERNAME }}", "slotSetting": false },
+              { "name": "SPRING_DATASOURCE_PASSWORD", "value": "${{ secrets.PROD_KEYVAULT_DB_PASSWORD_URI }}", "slotSetting": false },
+              { "name": "SPRING_JPA_DATABASE_PLATFORM", "value": "org.hibernate.dialect.PostgreSQLDialect", "slotSetting": false },
+              { "name": "SPRING_JPA_HIBERNATE_DDL_AUTO", "value": "validate", "slotSetting": false },
+              { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI", "value": "https://login.microsoftonline.com/organizations/v2.0", "slotSetting": false },
+              { "name": "SWAGGER_AUTH_URL", "value": "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize", "slotSetting": false },
+              { "name": "SWAGGER_TOKEN_URL", "value": "https://login.microsoftonline.com/organizations/oauth2/v2.0/token", "slotSetting": false },
+              { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
+              { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ secrets.ACR_LOGIN_SERVER }}", "slotSetting": false },
+              { "name": "WEBSITES_PORT", "value": "8080", "slotSetting": false },
+              { "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE", "value": "false", "slotSetting": false }
+            ]
+
+      - name: Run DB Migrations (Production)
+        run: ./gradlew flywayMigrate --no-daemon
+        env:
+          SPRING_DATASOURCE_URL: ${{ secrets.PROD_SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.PROD_SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ steps.kv_prod.outputs.bankengine-db-password }}
+
+      - name: Deploy to Production Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'betterteller-prod'
+          publish-profile: ${{ secrets.PROD_AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: '${{ needs.build-and-push.outputs.image }}'
