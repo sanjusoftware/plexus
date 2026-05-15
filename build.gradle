@@ -1,3 +1,12 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.flywaydb:flyway-database-postgresql:10.10.0"
+    }
+}
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.1'
@@ -33,14 +42,12 @@ dependencies {
     implementation 'org.springframework.security:spring-security-oauth2-resource-server'
     implementation 'org.springframework.security:spring-security-oauth2-jose'
 
-    // FORCE UPGRADE for Transitive Vulnerabilities
     constraints {
         implementation('com.thoughtworks.xstream:xstream:1.4.21') {
             because 'fixes CVE-2024-47072 (High Severity DoS vulnerability)'
         }
     }
 
-    // Drools Dependencies
     def droolsVersion = '8.44.2.Final'
     implementation "org.drools:drools-core:${droolsVersion}"
     implementation "org.drools:drools-compiler:${droolsVersion}"
@@ -52,7 +59,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
+
     runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.postgresql:postgresql'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -61,52 +70,42 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    runtimeOnly 'org.postgresql:postgresql'
-
-    // Redis Session Management
+    
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.session:spring-session-data-redis'
-
-    // Actuator for Health Checks
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-    // Optional: Improved observability
     implementation 'io.micrometer:micrometer-observation'
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 }
 
 flyway {
-    url = System.getenv('SPRING_DATASOURCE_URL') ?: 'jdbc:h2:mem:testdb'
-    user = System.getenv('SPRING_DATASOURCE_USERNAME') ?: 'sa'
-    password = System.getenv('SPRING_DATASOURCE_PASSWORD') ?: ''
+    url = System.getProperty('flyway.url') ?: System.getenv('SPRING_DATASOURCE_URL') ?: 'jdbc:h2:mem:testdb'
+    user = System.getProperty('flyway.user') ?: System.getenv('SPRING_DATASOURCE_USERNAME') ?: 'sa'
+    password = System.getProperty('flyway.password') ?: System.getenv('SPRING_DATASOURCE_PASSWORD') ?: ''
+    cleanDisabled = true
+    if (url.contains("localhost") || url.contains("mem")) {
+        cleanDisabled = false
+    }
     baselineOnMigrate = true
     baselineVersion = '0'
-    cleanDisabled = false
 }
 
-def coverageExclusions = [
-    "**/dto/**",
-    "**/model/**",
-    "**/config/**",
-    "**/exception/**",
-    "**/*Application*",
-    "**/*MapperImpl*",
-    "org/drools/drl/parser/lang/**"
-]
+tasks.named('flywayMigrate') {
+    doFirst {
+        println "DEBUG: Flyway URL is [${flyway.url}]"
+        println "DEBUG: Flyway User is [${flyway.user}]"
+    }
+}
 
+def coverageExclusions = ["**/dto/**", "**/model/**", "**/config/**", "**/exception/**", "**/*Application*", "**/*MapperImpl*", "org/drools/drl/parser/lang/**"]
 def frontendDir = "$projectDir/src/main/frontend"
 
-// Check if `npm` is available on the host. Tasks that require npm will be
-// skipped when npm is not present so the Java build can run on machines
-// without Node installed.
-def isWindows = System.properties['os.name'].toLowerCase().contains('windows')
-def npmCheckCmd = isWindows ? ['cmd','/c','where npm'] : ['sh','-c','which npm']
 def npmAvailable = { ->
     try {
-        def proc = npmCheckCmd.execute()
-        proc.waitFor()
-        return proc.exitValue() == 0
-    } catch(Exception e) {
+        def isWin = System.properties['os.name'].toLowerCase().contains('windows')
+        def cmd = isWin ? ['cmd', '/c', 'where npm'] : ['sh', '-c', 'which npm']
+        return cmd.execute().waitFor() == 0
+    } catch (ignored) {
         return false
     }
 }
@@ -116,11 +115,7 @@ tasks.register('installFrontend', Exec) {
     workingDir "$frontendDir"
     inputs.file("$frontendDir/package.json")
     outputs.dir("$frontendDir/node_modules")
-    if (isWindows) {
-        commandLine 'cmd', '/c', 'npm', 'install'
-    } else {
-        commandLine 'npm', 'install'
-    }
+    commandLine ((System.properties['os.name'].toLowerCase().contains('windows') ? ['cmd', '/c'] : []) + ['npm', 'install'])
 }
 
 tasks.register('buildFrontend', Exec) {
@@ -130,11 +125,7 @@ tasks.register('buildFrontend', Exec) {
     inputs.dir("$frontendDir/src")
     inputs.dir("$frontendDir/public")
     outputs.dir("$frontendDir/build")
-    if (isWindows) {
-        commandLine 'cmd', '/c', 'npm', 'run', 'build'
-    } else {
-        commandLine 'npm', 'run', 'build'
-    }
+    commandLine ((System.properties['os.name'].toLowerCase().contains('windows') ? ['cmd', '/c'] : []) + ['npm', 'run', 'build'])
 }
 
 tasks.register('copyFrontend', Copy) {
@@ -144,36 +135,19 @@ tasks.register('copyFrontend', Copy) {
     into "$buildDir/resources/main/static"
 }
 
-// Frontend assets are needed for packaged artifacts, not for test-only runs.
-tasks.named('bootJar') {
-    dependsOn 'copyFrontend'
-}
-
-// resolveMainClassName and processResources need to wait for copyFrontend
-tasks.named('resolveMainClassName') {
-    dependsOn 'copyFrontend'
-}
-
-tasks.named('processResources') {
-    dependsOn 'copyFrontend'
-}
+tasks.named('bootJar') { dependsOn 'copyFrontend' }
+tasks.named('resolveMainClassName') { dependsOn 'copyFrontend' }
+tasks.named('processResources') { dependsOn 'copyFrontend' }
 
 tasks.named('test') {
     useJUnitPlatform()
-
-    jacoco {
-        excludes = ["org/drools/drl/parser/lang/*"]
-    }
-
+    jacoco { excludes = ["org/drools/drl/parser/lang/*"] }
     finalizedBy jacocoTestReport
 }
 
 jacocoTestReport {
     dependsOn test, compileJava
-    reports {
-        xml.required = true
-        html.required = true
-    }
+    reports { xml.required = true; html.required = true }
     afterEvaluate {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, exclude: coverageExclusions)
@@ -184,49 +158,25 @@ jacocoTestReport {
 jacocoTestCoverageVerification {
     dependsOn jacocoTestReport
     violationRules {
-        // TIER 1: CRITICAL (Pricing & Math)
         rule {
             element = 'PACKAGE'
             includes = ['com.bankengine.pricing.service*', 'com.bankengine.pricing.calculation*', 'com.bankengine.pricing.service.drl*']
-            limit {
-                counter = 'BRANCH'
-                minimum = 0.78
-            }
+            limit { counter = 'BRANCH'; minimum = 0.78 }
         }
-
-        // TIER 2: SECURITY (Auth & Tenancy)
         rule {
             element = 'PACKAGE'
             includes = ['com.bankengine.auth.service*', 'com.bankengine.auth.security*', 'com.bankengine.auth.config*']
-            limit {
-                counter = 'BRANCH'
-                minimum = 0.80
-            }
+            limit { counter = 'BRANCH'; minimum = 0.80 }
         }
-
-        // TIER 3: BUSINESS CORE (Catalog & FAT DTO logic)
         rule {
             element = 'PACKAGE'
             includes = ['com.bankengine.catalog.service*']
-            limit {
-                counter = 'BRANCH'
-                minimum = 0.80
-            }
+            limit { counter = 'BRANCH'; minimum = 0.80 }
         }
-
-        // TIER 4: THE REST (Global fallback)
         rule {
             element = 'BUNDLE'
-            limit {
-                counter = 'LINE'
-                minimum = 0.70
-            }
+            limit { counter = 'LINE'; minimum = 0.70 }
         }
-    }
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: coverageExclusions)
-        }))
     }
 }
 
