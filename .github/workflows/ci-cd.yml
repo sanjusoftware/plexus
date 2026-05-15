@@ -116,6 +116,9 @@ jobs:
               { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
               { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ secrets.ACR_LOGIN_SERVER }}", "slotSetting": false },
               { "name": "WEBSITES_PORT", "value": "8080", "slotSetting": false },
+              { "name": "WEBSITES_CONTAINER_START_TIME_LIMIT", "value": "1800", "slotSetting": false },
+              { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
+              { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "https://${{ env.ACR_LOGIN_SERVER }}", "slotSetting": false },
               { "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE", "value": "false", "slotSetting": false }
             ]
 
@@ -125,6 +128,12 @@ jobs:
           SPRING_DATASOURCE_URL: ${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}
           SPRING_DATASOURCE_PASSWORD: ${{ steps.kv_staging.outputs.bankengine-db-password }}
+
+      - name: Log Deployment Details
+        run: |
+          echo "🚀 Deploying to STAGING"
+          echo "Registry: ${{ env.ACR_LOGIN_SERVER }}"
+          echo "Image: plexus-bankengine:${{ github.sha }}"
 
       - name: Deploy to Staging Web App
         uses: azure/webapps-deploy@v3
@@ -183,7 +192,10 @@ jobs:
               { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
               { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ secrets.ACR_LOGIN_SERVER }}", "slotSetting": false },
               { "name": "WEBSITES_PORT", "value": "8080", "slotSetting": false },
-              { "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE", "value": "false", "slotSetting": false }
+              { "name": "WEBSITES_CONTAINER_START_TIME_LIMIT", "value": "1800", "slotSetting": false },
+              { "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE", "value": "false", "slotSetting": false },
+              { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
+              { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "https://${{ env.ACR_LOGIN_SERVER }}", "slotSetting": false }
             ]
 
       - name: Run DB Migrations (Production)
@@ -196,8 +208,8 @@ jobs:
       - name: Log Deployment Details
         run: |
           echo "🚀 Deploying to PRODUCTION"
-          echo "Image: ${{ needs.build-and-push.outputs.image }}"
-          echo "SHA: ${{ github.sha }}"
+          echo "Registry: ${{ env.ACR_LOGIN_SERVER }}"
+          echo "Image: plexus-bankengine:${{ github.sha }}"
 
       - name: Deploy to Production Web App
         uses: azure/webapps-deploy@v3
