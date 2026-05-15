@@ -118,7 +118,7 @@ jobs:
             ]
 
       - name: Run DB Migrations (Flyway)
-        run: ./gradlew flywayMigrate --no-daemon --info
+        run: ./gradlew flywayMigrate --no-daemon
         env:
           SPRING_DATASOURCE_URL: ${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
           SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_SPRING_DATASOURCE_USERNAME }}

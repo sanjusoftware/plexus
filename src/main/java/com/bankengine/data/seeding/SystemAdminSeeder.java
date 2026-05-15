@@ -7,6 +7,7 @@ import com.bankengine.common.model.BankConfiguration;
 import com.bankengine.common.model.BankStatus;
 import com.bankengine.common.repository.BankConfigurationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
@@ -19,6 +20,7 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 @Order(1)
+@Slf4j
 public class SystemAdminSeeder implements CommandLineRunner {
 
     private final BankConfigurationRepository bankConfigurationRepository;
@@ -60,14 +62,14 @@ public class SystemAdminSeeder implements CommandLineRunner {
                 config -> {
                     boolean updated = false;
                     if (!normalizedIssuer.equalsIgnoreCase(config.getIssuerUrl())) {
+                        log.info("Syncing System Issuer: {} -> {}", config.getIssuerUrl(), normalizedIssuer);
                         config.setIssuerUrl(normalizedIssuer);
                         updated = true;
-                        System.out.println("Updated issuer for " + systemBankId);
                     }
-                    if (config.getClientId() == null || config.getClientId().isBlank()) {
+                    if (defaultClientId != null && !defaultClientId.isBlank() && !defaultClientId.equals(config.getClientId())) {
+                        log.info("Syncing System ClientID: {} -> {}", config.getClientId(), defaultClientId);
                         config.setClientId(defaultClientId);
                         updated = true;
-                        System.out.println("Updated client_id for " + systemBankId);
                     }
                     if (config.getStatus() != BankStatus.ACTIVE) {
                         config.setStatus(BankStatus.ACTIVE);
@@ -91,6 +93,7 @@ public class SystemAdminSeeder implements CommandLineRunner {
                     }
                     if (updated) {
                         bankConfigurationRepository.save(config);
+                        System.out.println(">>> SYSTEM bank configuration synchronized with environment settings.");
                     }
                 },
                 () -> {
