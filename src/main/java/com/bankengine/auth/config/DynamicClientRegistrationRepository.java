@@ -47,7 +47,7 @@ public class DynamicClientRegistrationRepository implements ClientRegistrationRe
         ClientRegistration.Builder builder = createBuilder(config.getIssuerUrl())
                 .registrationId(registrationId)
                 .clientId(config.getClientId())
-                .clientAuthenticationMethod(hasSecret ? ClientAuthenticationMethod.CLIENT_SECRET_BASIC : ClientAuthenticationMethod.NONE)
+                .clientAuthenticationMethod(hasSecret ? ClientAuthenticationMethod.CLIENT_SECRET_POST : ClientAuthenticationMethod.NONE)
                 .clientSecret(config.getClientSecret())
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .redirectUri("{baseUrl}/login/oauth2/code/callback")
