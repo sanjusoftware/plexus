@@ -7,28 +7,55 @@ on:
 
 env:
   ACR_LOGIN_SERVER: bankengineacr.azurecr.io
+  IMAGE_NAME: plexus-bankengine
 
 jobs:
+
   build-and-push:
     name: Build, Test and Push Image
     runs-on: ubuntu-latest
+
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+
     steps:
       - uses: actions/checkout@v6
+
+      - name: Generate Short SHA
+        id: vars
+        shell: bash
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+          IMAGE_NAME="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+
+          echo "======================================="
+          echo "Git Commit SHA  : $GITHUB_SHA"
+          echo "Short SHA Tag   : $SHORT_SHA"
+          echo "Docker Image    : $IMAGE_NAME"
+          echo "======================================="
+
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: gradle
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '20'
+
       - name: Build frontend
         working-directory: src/main/frontend
         run: |
           npm ci
           npm run build
+
       - name: Build & Test Backend
         run: ./gradlew clean build jacocoTestReport --no-daemon
 
@@ -53,25 +80,63 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build and Push
+      - name: Build and Push Docker Image
+        shell: bash
         run: |
-          FULL_IMAGE_NAME="${{ env.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}"
-          
+          FULL_IMAGE_NAME="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+
+          echo "======================================="
+          echo "Building Docker Image"
+          echo "Registry      : ${{ env.ACR_LOGIN_SERVER }}"
+          echo "Repository    : ${{ env.IMAGE_NAME }}"
+          echo "Tag           : ${SHORT_SHA}"
+          echo "Full Image    : ${FULL_IMAGE_NAME}"
+          echo "======================================="
+
           mkdir -p docker-context
+
           cp Dockerfile.ci docker-context/Dockerfile.ci
+
           JAR_PATH=$(ls -1 build/libs/*.jar | grep -v "plain" | head -n1)
+
+          echo "Using JAR:"
+          echo "$JAR_PATH"
+
           cp "$JAR_PATH" docker-context/app.jar
-          
-          docker build -f docker-context/Dockerfile.ci -t "$FULL_IMAGE_NAME" docker-context
+
+          docker build \
+            -f docker-context/Dockerfile.ci \
+            -t "$FULL_IMAGE_NAME" \
+            docker-context
+
+          echo "======================================="
+          echo "Docker Build Completed"
+          echo "======================================="
+
+          echo "======================================="
+          echo "Pushing Docker Image"
+          echo "Image : $FULL_IMAGE_NAME"
+          echo "======================================="
+
           docker push "$FULL_IMAGE_NAME"
+
+          echo "======================================="
+          echo "Docker Push Complete"
+          echo "Pushed Image : $FULL_IMAGE_NAME"
+          echo "======================================="
 
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: build-and-push
     environment: Staging
+
+    env:
+      SHORT_SHA: ${{ needs.build-and-push.outputs.short_sha }}
+
     steps:
       - uses: actions/checkout@v6
+
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -94,11 +159,10 @@ jobs:
         uses: azure/appservice-settings@v1
         with:
           app-name: 'bank-engine-api'
-          mask-inputs: true
           app-settings-json: |
             [
               { "name": "SPRING_PROFILES_ACTIVE", "value": "staging", "slotSetting": false },
-              { "name": "APP_VERSION", "value": "${{ github.sha }}", "slotSetting": false },
+              { "name": "APP_VERSION", "value": "${{ env.SHORT_SHA }}", "slotSetting": false },
               { "name": "SPRING_SESSION_STORE_TYPE", "value": "none", "slotSetting": false },
               { "name": "SPRING_DATA_REDIS_REPOSITORIES_ENABLED", "value": "false", "slotSetting": false },
               { "name": "SPRING_AUTOCONFIGURE_EXCLUDE", "value": "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration", "slotSetting": false },
@@ -114,7 +178,7 @@ jobs:
               { "name": "SWAGGER_API_SCOPE", "value": "${{ secrets.SWAGGER_API_SCOPE }}", "slotSetting": false },
               { "name": "APP_SECURITY_SYSTEM_ISSUER", "value": "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/v2.0", "slotSetting": false },
               { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
-              { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ secrets.ACR_LOGIN_SERVER }}", "slotSetting": false },
+              { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ env.ACR_LOGIN_SERVER }}", "slotSetting": false },
               { "name": "WEBSITES_PORT", "value": "8080", "slotSetting": false },
               { "name": "WEBSITES_CONTAINER_START_TIME_LIMIT", "value": "1800", "slotSetting": false },
               { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
@@ -130,25 +194,39 @@ jobs:
           SPRING_DATASOURCE_PASSWORD: ${{ steps.kv_staging.outputs.bankengine-db-password }}
 
       - name: Log Deployment Details
+        shell: bash
         run: |
-          echo "🚀 Deploying to STAGING"
-          echo "Registry: ${{ env.ACR_LOGIN_SERVER }}"
-          echo "Image: plexus-bankengine:${{ github.sha }}"
+          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+
+          echo "======================================="
+          echo "🚀 DEPLOYING TO STAGING"
+          echo "======================================="
+          echo "Registry      : ${{ env.ACR_LOGIN_SERVER }}"
+          echo "Repository    : ${{ env.IMAGE_NAME }}"
+          echo "Short SHA Tag : ${SHORT_SHA}"
+          echo "Full Image    : ${IMAGE}"
+          echo "Environment   : STAGING"
+          echo "======================================="
 
       - name: Deploy to Staging Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'bank-engine-api'
           package: ''
-          images: '${{ env.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}'
+          images: '${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}'
 
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: deploy-staging
     environment: Production
+
+    env:
+      SHORT_SHA: ${{ needs.build-and-push.outputs.short_sha }}
+
     steps:
       - uses: actions/checkout@v6
+
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -172,11 +250,10 @@ jobs:
         uses: azure/appservice-settings@v1
         with:
           app-name: 'betterteller-prod'
-          mask-inputs: true
           app-settings-json: |
             [
               { "name": "SPRING_PROFILES_ACTIVE", "value": "prod", "slotSetting": false },
-              { "name": "APP_VERSION", "value": "${{ github.sha }}", "slotSetting": false },
+              { "name": "APP_VERSION", "value": "${{ env.SHORT_SHA }}", "slotSetting": false },
               { "name": "SPRING_SESSION_STORE_TYPE", "value": "none", "slotSetting": false },
               { "name": "SPRING_DATA_REDIS_REPOSITORIES_ENABLED", "value": "false", "slotSetting": false },
               { "name": "SPRING_DATASOURCE_URL", "value": "${{ secrets.PROD_SPRING_DATASOURCE_URL }}", "slotSetting": false },
@@ -190,7 +267,7 @@ jobs:
               { "name": "CLIENT_ID", "value": "${{ secrets.AZURE_CLIENT_ID_PROD }}", "slotSetting": false },
               { "name": "SWAGGER_API_SCOPE", "value": "${{ secrets.SWAGGER_API_SCOPE_PROD }}", "slotSetting": false },
               { "name": "ACR_USE_MANAGED_IDENTITY_CREDENTIALS", "value": "true", "slotSetting": false },
-              { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ secrets.ACR_LOGIN_SERVER }}", "slotSetting": false },
+              { "name": "DOCKER_REGISTRY_SERVER_URL", "value": "${{ env.ACR_LOGIN_SERVER }}", "slotSetting": false },
               { "name": "WEBSITES_PORT", "value": "8080", "slotSetting": false },
               { "name": "WEBSITES_CONTAINER_START_TIME_LIMIT", "value": "1800", "slotSetting": false },
               { "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE", "value": "false", "slotSetting": false },
@@ -206,14 +283,23 @@ jobs:
           SPRING_DATASOURCE_PASSWORD: ${{ steps.kv_prod.outputs.bankengine-db-password }}
 
       - name: Log Deployment Details
+        shell: bash
         run: |
-          echo "🚀 Deploying to PRODUCTION"
-          echo "Registry: ${{ env.ACR_LOGIN_SERVER }}"
-          echo "Image: plexus-bankengine:${{ github.sha }}"
+          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+
+          echo "======================================="
+          echo "🚀 DEPLOYING TO PRODUCTION"
+          echo "======================================="
+          echo "Registry      : ${{ env.ACR_LOGIN_SERVER }}"
+          echo "Repository    : ${{ env.IMAGE_NAME }}"
+          echo "Short SHA Tag : ${SHORT_SHA}"
+          echo "Full Image    : ${IMAGE}"
+          echo "Environment   : PRODUCTION"
+          echo "======================================="
 
       - name: Deploy to Production Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'betterteller-prod'
           package: ''
-          images: '${{ env.ACR_LOGIN_SERVER }}/plexus-bankengine:${{ github.sha }}'
+          images: '${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}'
