@@ -123,15 +123,20 @@ public class SystemAdminSeeder implements CommandLineRunner {
                     "auth:role:write",
                     "auth:role:read",
                     "system:stats:read",
-                    "bank:stats:read"
+                    "bank:stats:read",
+                    "pricing:metadata:read"
             ));
 
             roleRepository.findByNameAndBankId("SYSTEM_ADMIN", systemBankId).ifPresentOrElse(
                     existingRole -> {
-                        if (!existingRole.getAuthorities().equals(systemAdminAuthorities)) {
-                            existingRole.setAuthorities(new HashSet<>(systemAdminAuthorities));
+                        boolean missingAny = systemAdminAuthorities.stream()
+                                .anyMatch(auth -> !existingRole.getAuthorities().contains(auth));
+                        if (missingAny) {
+                            existingRole.getAuthorities().addAll(systemAdminAuthorities);
                             roleRepository.save(existingRole);
-                            System.out.println("Updated SYSTEM_ADMIN authorities for " + systemBankId);
+                            System.out.println(">>> Appended missing baseline authorities to SYSTEM_ADMIN for " + systemBankId);
+                        } else {
+                            System.out.println(">>> SYSTEM_ADMIN authorities are already up-to-date for " + systemBankId);
                         }
                     },
                     () -> {

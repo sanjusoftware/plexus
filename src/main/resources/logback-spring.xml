@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <appender name="FILTERED_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>${CONSOLE_LOG_CHARSET}</charset>
+        </encoder>
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator>
+                <expression>
+                    logger.equals("org.springframework.security.web.FilterChainProxy") &amp;&amp;
+                    (message.contains("/actuator/health") || message.contains("/manifest.json"))
+                </expression>
+            </evaluator>
+            <OnMatch>DENY</OnMatch>
+            <OnMismatch>NEUTRAL</OnMismatch>
+        </filter>
+    </appender>
+
+    <springProfile name="staging,docker,dev">
+        <logger name="org.springframework.security" level="DEBUG" />
+        <logger name="org.springframework.security.oauth2" level="DEBUG" />
+        <logger name="com.bankengine" level="DEBUG" />
+        <logger name="org.hibernate.SQL" level="DEBUG" />
+
+        <root level="INFO">
+            <appender-ref ref="FILTERED_CONSOLE" />
+        </root>
+    </springProfile>
+
+    <springProfile name="prod">
+        <logger name="org.springframework.security" level="INFO" />
+        <logger name="org.springframework.security.oauth2" level="WARN" />
+        <logger name="com.bankengine" level="INFO" />
+        <logger name="org.hibernate.SQL" level="ERROR" />
+
+        <root level="INFO">
+            <appender-ref ref="FILTERED_CONSOLE" />
+        </root>
+    </springProfile>
+</configuration>
